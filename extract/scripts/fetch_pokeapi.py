@@ -63,7 +63,7 @@ def _catalog_parameters(url: str, context: str) -> tuple[int, int]:
     if (
         parsed.scheme != "https"
         or parsed.netloc != "pokeapi.co"
-        or parsed.path != "/api/v2/pokemon/"
+        or parsed.path not in {"/api/v2/pokemon", "/api/v2/pokemon/"}
         or parsed.fragment
         or set(parameters) != {"limit", "offset"}
         or any(len(values) != 1 for values in parameters.values())
@@ -242,10 +242,11 @@ def fetch_pokemon(
     records: list[dict[str, Any]] = []
     seen_ids: set[int] = set()
     offset = 0
+    url = _catalog_url(page_size, offset)
 
     for page_number in range(1, max_pages + 1):
-        url = _catalog_url(page_size, offset)
         document = _read_document(http, url, float(timeout))
+        _, offset = _catalog_parameters(url, "PokéAPI request")
         page_records, next_url = _parse_page(
             document,
             fetched_at=fetched_at,
@@ -261,7 +262,7 @@ def fetch_pokemon(
         if page_number == max_pages:
             return FetchResult(records, True)
         sleeper(REQUEST_INTERVAL)
-        _, offset = _catalog_parameters(next_url, "PokéAPI next URL")
+        url = next_url
 
     raise AssertionError("unreachable")
 

@@ -130,6 +130,18 @@ class FetchPokeAPITests(unittest.TestCase):
                 f"https://pokeapi.co/api/v2/pokemon/{record['id']}/",
             )
 
+    def test_follows_valid_api_continuation_without_trailing_slash(self):
+        continuation = "https://pokeapi.co/api/v2/pokemon?offset=2&limit=2"
+        first_page = page([pokemon(1), pokemon(2)], 2)
+        first_page["next"] = continuation
+        result, opener, sleeper = self.fetch(
+            [first_page, page([pokemon(3)], None)]
+        )
+
+        self.assertEqual([record["id"] for record in result.records], [1, 2, 3])
+        self.assertEqual(opener.calls[1][0].full_url, continuation)
+        sleeper.assert_called_once_with(1.0)
+
     def test_empty_catalog_is_a_success_and_makes_one_request(self):
         result, opener, sleeper = self.fetch([page([], None)])
         self.assertEqual(result.records, [])
@@ -203,6 +215,9 @@ class FetchPokeAPITests(unittest.TestCase):
             "http://pokeapi.co/api/v2/pokemon/?limit=2&offset=2",
             "https://pokeapi.co/api/v2/ability/?limit=2&offset=2",
             "https://pokeapi.co/api/v2/pokemon/1/",
+            "https://pokeapi.co/api/v2/pokemon-extra?limit=2&offset=2",
+            "https://user@pokeapi.co/api/v2/pokemon?limit=2&offset=2",
+            "https://pokeapi.co/api/v2/pokemon?limit=2&offset=2#other",
             "https://pokeapi.co/api/v2/pokemon/?limit=2&offset=4",
         )
         for next_url in bad_urls:
@@ -211,6 +226,7 @@ class FetchPokeAPITests(unittest.TestCase):
                 document["next"] = next_url
                 with self.assertRaisesRegex(MODULE.PokeAPIError, "catalog|pagination"):
                     self.fetch([document])
+
 
 
     def test_redirect_handler_and_final_response_reject_off_origin_urls(self):
