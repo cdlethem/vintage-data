@@ -7,7 +7,6 @@ import urllib.parse
 from pathlib import Path
 import unittest
 from unittest import mock
-import urllib.error
 
 SCRIPT = Path(__file__).with_name("fetch_digitraffic_rail.py")
 SPEC = importlib.util.spec_from_file_location("fetch_digitraffic_rail", SCRIPT)
@@ -46,6 +45,24 @@ def trains_response(trains=None):
     if trains is None:
         trains = [train_record()]
     return json.dumps(trains).encode("utf-8")
+
+def status_line_timeout(secret):
+    """Create a wrapped timeout from the real HTTP status-line reader."""
+    response = mock.Mock()
+    response.fp.readline.side_effect = TimeoutError(secret)
+    try:
+        MODULE.http.client.HTTPResponse._read_status(response)
+    except TimeoutError as error:
+        return urllib.error.URLError(error)
+
+
+def connection_timeout(secret):
+    """Create a wrapped timeout without a status-line frame."""
+    try:
+        raise TimeoutError(secret)
+    except TimeoutError as error:
+        return urllib.error.URLError(error)
+
 
 
 class FetchDigitrafficRailTests(unittest.TestCase):
@@ -191,6 +208,119 @@ class FetchDigitrafficRailTests(unittest.TestCase):
             urlopen.assert_called_once()
             self.assertIs(ctx.exception, error)
             self.assertEqual(ctx.exception.code, 403)
+        error.close()
+
+    def test_retries_status_line_timeout_once_after_station_cadence(self):
+        """Only a response-status timeout earns a delayed second request."""
+        secret = "https://user:password@example.invalid/?token=secret"
+        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=[
+            status_line_timeout(secret), Response(trains_response()),
+        ]) as urlopen:
+            with mock.patch.object(MODULE.time, "sleep") as sleep:
+                with mock.patch.object(MODULE.sys, "stderr", new_callable=io.StringIO) as stderr:
+                    records = list(MODULE.fetch_trains(timeout=12))
+        self.assertEqual(len(records), 1)
+        self.assertEqual(urlopen.call_count, 2)
+        self.assertEqual([call.kwargs for call in urlopen.call_args_list], [
+            {"timeout": 12}, {"timeout": 12},
+        ])
+        sleep.assert_called_once_with(60)
+        self.assertIn("phase=open category=timeout", stderr.getvalue())
+        self.assertNotIn(secret, stderr.getvalue())
+
+    def test_repeated_status_line_timeout_stops_after_two_requests(self):
+        """Repeated response-status timeouts preserve the final failure."""
+        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=[
+            status_line_timeout("secret"), status_line_timeout("secret"),
+        ]) as urlopen:
+            with mock.patch.object(MODULE.time, "sleep") as sleep:
+                with mock.patch.object(MODULE.sys, "stderr", new_callable=io.StringIO) as stderr:
+                    with self.assertRaises(urllib.error.URLError):
+                        list(MODULE.fetch_trains())
+        self.assertEqual(urlopen.call_count, 2)
+        sleep.assert_called_once_with(60)
+        self.assertEqual(stderr.getvalue().count("phase=open category=timeout"), 2)
+
+    def test_connection_timeout_is_not_retried(self):
+        """A connection timeout cannot be mistaken for a status-line timeout."""
+        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=connection_timeout("secret")) as urlopen:
+            with mock.patch.object(MODULE.time, "sleep") as sleep:
+                with self.assertRaises(urllib.error.URLError):
+                    list(MODULE.fetch_trains())
+        urlopen.assert_called_once()
+        sleep.assert_not_called()
+
+    def test_status_line_timeout_with_nonfinite_timeout_is_not_retried(self):
+        """Never make an additional request without a positive finite timeout."""
+        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=status_line_timeout("secret")) as urlopen:
+            with mock.patch.object(MODULE.time, "sleep") as sleep:
+                with self.assertRaises(urllib.error.URLError):
+                    list(MODULE.fetch_trains(timeout=float("inf")))
+        urlopen.assert_called_once()
+        sleep.assert_not_called()
+
+    def test_request_failures_report_elapsed_category_without_secrets(self):
+        """Opening and reading failures have bounded, redacted diagnostics."""
+        secret = "https://user:password@example.invalid/private?token=secret"
+        failures = (
+            (TimeoutError(secret), "timeout", "open"),
+            (urllib.error.URLError(TimeoutError(secret)), "timeout", "open"),
+            (urllib.error.URLError(secret), "url_error", "open"),
+            (urllib.error.HTTPError(secret, 503, secret, {}, None), "http_error", "open"),
+            (TimeoutError(secret), "timeout", "read"),
+            (OSError(secret), "request_error", "read"),
+        )
+        for error, category, phase in failures:
+            with self.subTest(category=category, phase=phase):
+                response = Response(b"[]")
+                response.read = mock.Mock(side_effect=error)
+                urlopen_result = response if phase == "read" else None
+                with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error if phase == "open" else None, return_value=urlopen_result) as urlopen:
+                    with mock.patch.object(MODULE.time, "monotonic", side_effect=[10.0, 10.125]):
+                        with mock.patch.object(MODULE.sys, "stderr", new_callable=io.StringIO) as stderr:
+                            with self.assertRaises(type(error)) as caught:
+                                list(MODULE.fetch_trains())
+                self.assertIs(caught.exception, error)
+                urlopen.assert_called_once()
+                self.assertEqual(stderr.getvalue(), f"{MODULE.SOURCE} request_failed phase={phase} category={category} elapsed_ms=125\n")
+                self.assertNotIn(secret, stderr.getvalue())
+                if isinstance(error, urllib.error.HTTPError):
+                    error.close()
+
+    def test_elapsed_time_is_clamped(self):
+        """Unexpected clock values cannot produce unbounded or negative output."""
+        for end, expected in ((9.0, 0), (1_000_000_000.0, 999_999_999)):
+            with self.subTest(end=end):
+                with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=TimeoutError("secret")):
+                    with mock.patch.object(MODULE.time, "monotonic", side_effect=[10.0, end]):
+                        with mock.patch.object(MODULE.sys, "stderr", new_callable=io.StringIO) as stderr:
+                            with self.assertRaises(TimeoutError):
+                                list(MODULE.fetch_trains())
+                self.assertEqual(stderr.getvalue(), f"{MODULE.SOURCE} request_failed phase=open category=timeout elapsed_ms={expected}\n")
+
+    def test_main_hides_original_exception_text(self):
+        """CLI errors retain a nonzero exit without printing authenticated URLs."""
+        secret = "https://user:password@example.invalid/?token=secret"
+        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=urllib.error.URLError(secret)):
+            with mock.patch("sys.argv", ["fetch_digitraffic_rail.py"]):
+                with mock.patch.object(MODULE.sys, "stderr", new_callable=io.StringIO) as stderr:
+                    with self.assertRaises(SystemExit) as caught:
+                        MODULE.main()
+        self.assertEqual(caught.exception.code, 1)
+        self.assertIn("category=url_error", stderr.getvalue())
+        self.assertIn("extraction_failed", stderr.getvalue())
+        self.assertNotIn(secret, stderr.getvalue())
+
+    def test_main_does_not_print_invalid_response_body(self):
+        """Validation failure exits without echoing the server response."""
+        secret = "private response body token=secret"
+        with mock.patch.object(MODULE.urllib.request, "urlopen", return_value=Response(secret.encode())):
+            with mock.patch("sys.argv", ["fetch_digitraffic_rail.py"]):
+                with mock.patch.object(MODULE.sys, "stderr", new_callable=io.StringIO) as stderr:
+                    with self.assertRaises(SystemExit) as caught:
+                        MODULE.main()
+        self.assertEqual(caught.exception.code, 1)
+        self.assertEqual(stderr.getvalue(), f"{MODULE.SOURCE} extraction_failed\n")
 
     def test_main_emits_newline_delimited_json(self):
         """main() writes records as newline-delimited JSON to stdout."""
