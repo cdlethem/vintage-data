@@ -10,22 +10,34 @@ chartConfig:
         type: line
         yAxisIndex: 0
       xAxis:
-      - name: Modifiedon (Day)
+      - name: Source modified on (UTC day)
       yAxis:
-      - name: Mean overseas spending percentage
+      - name: Mean overseas spending (percentage points)
     layout:
       xField: fct_nz_charities_modifiedon_day
       yField:
       - fct_nz_charities_average_percentagespentoverseas
   type: cartesian
-description: Mean non-null `percentagespentoverseas` among records by `modifiedon` day. Most rows do not
-  report this field, so the average describes only reporting organisations and days with no reported value
-  are absent rather than zero.
+description: Observation-weighted mean non-null `percentagespentoverseas`, in percentage points, by source
+  `modifiedon` UTC day in the rolling 30-day event-time window. It excludes unreported values and is non-summable
+  across snapshots, dates, or groups. New Zealand Charities Register data is licensed CC BY 3.0 NZ; attribution required.
 metricQuery:
   dimensions:
   - fct_nz_charities_modifiedon_day
   exploreName: fct_nz_charities
-  filters: {}
+  filters:
+    dimensions:
+      and:
+      - id: 743af8e8-4959-5fd8-9f17-e2fda81f5655
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nz_charities_modifiedon
+        values:
+        - 30
+      id: 65288477-b660-5cad-9893-0e149da965b0
   limit: 5000
   metrics:
   - fct_nz_charities_average_percentagespentoverseas

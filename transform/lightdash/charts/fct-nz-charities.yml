@@ -15,9 +15,10 @@ chartConfig:
       yField:
       - fct_nz_charities_distinct_entities
   type: cartesian
-description: Distinct `id` values by `registrationstatus` among observations in the selected window. Repeated
-  observations of an entity count once within each group. An entity that changed category can appear in
-  multiple groups; these groups are not additive and do not represent a current-state census.
+description: Distinct charities by registration status among physical snapshot observations fetched in the
+  rolling 30-day UTC window. Repeated snapshots count an `id` once per group, but entities can cross groups,
+  so this distinct count is non-additive and is not a current-state census. New Zealand Charities Register
+  data is licensed CC BY 3.0 NZ; attribution required.
 metricQuery:
   dimensions:
   - fct_nz_charities_registrationstatus
@@ -42,7 +43,7 @@ metricQuery:
   - descending: true
     fieldId: fct_nz_charities_distinct_entities
   tableCalculations: []
-name: Distinct id by registrationstatus
+name: Distinct charities by registration status
 slug: fct-nz-charities
 spaceSlug: vintage-marts
 tableConfig:
