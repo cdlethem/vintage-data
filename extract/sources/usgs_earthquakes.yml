@@ -1,0 +1,18 @@
+name: usgs_earthquakes
+script: fetch_usgs_earthquakes.py
+args: ["--timeout", "30"]
+schedule: "7,22,37,52 * * * *"  # UTC; proposed 15-minute schedule while disabled
+enabled: false
+retries: 2
+timeout_minutes: 5
+sink: local
+
+# Do not enable until an operator records a successful live USGS source smoke and
+# read-only Airflow import checks. Confined verification is offline and does not
+# mutate Airflow metadata.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "minute-level earthquake snapshots; the official all-day feed updates every minute and is polled every 15 minutes"
+rate_limit: "one bounded request per run to the public USGS all-day GeoJSON feed"
+licence: "USGS-authored data are U.S. Government works and generally public domain"
+attribution: "U.S. Geological Survey (USGS), https://earthquake.usgs.gov/"
+attribution_required: true
