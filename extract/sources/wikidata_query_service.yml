@@ -1,0 +1,26 @@
+name: wikidata_query_service
+script: fetch_wikidata_query_service.py
+args:
+  - --query
+  - >-
+    SELECT ?entity ?entityLabel ?description WHERE {
+      ?entity wdt:P31 wd:Q5 .
+      SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+      OPTIONAL { ?entity schema:description ?description FILTER(LANG(?description) = "en") }
+    }
+    ORDER BY ?entity
+    LIMIT 50
+  - --timeout-seconds
+  - "30"
+schedule: "17 3 * * 0"  # UTC; deliberately off-peak weekly polling
+enabled: false
+retries: 1
+timeout_minutes: 2
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "A bounded weekly sample of reusable entity metadata. Disabled until an operator performs the required live WDQS smoke check and Airflow import check. The query has a strict LIMIT 50; the fetcher makes one GET request and does not paginate."
+rate_limit: "WDQS public shared service; one bounded GET per weekly run, 30-second client timeout, retry once"
+licence: "Wikidata data — CC0 1.0 Universal"
+attribution_required: true
+attribution: "Wikidata contributors and Wikidata Query Service"
