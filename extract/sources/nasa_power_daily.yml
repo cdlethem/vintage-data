@@ -1,0 +1,25 @@
+name: nasa_power_daily
+script: fetch_nasa_power_daily.py
+# State-free scheduled runs use the previous complete UTC day. Operators can use
+# explicit inclusive --start/--end bounds for controlled historical retrieval.
+args: ["--smoke", "--latitude", "38.9072", "--longitude", "-77.0369", "--community", "AG", "--parameters", "T2M,PRECTOTCORR", "--format", "JSON", "--time-standard", "UTC"]
+schedule: "17 10 * * *"  # UTC
+enabled: false
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Keep the conservative daily cadence fixed. POWER Daily data can be revised,
+# but revision timing is not a reliable signal for adaptive scheduling.
+cadence:
+  auto: false
+
+# Do not enable until an operator records a successful live NASA POWER smoke and
+# a read-only Airflow import check. Offline tests mock HTTP and do not read or
+# mutate Airflow metadata.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily retrieval of the previous complete UTC day; adaptive cadence disabled"
+rate_limit: "no fixed public quota published; NASA POWER may throttle excessive requests, so use bounded ranges and a conservative schedule"
+licence: "NASA Earth Science Data and Information System policy; NASA content generally has no copyright restriction in the United States"
+attribution: "NASA POWER Project, NASA Langley Research Center, https://power.larc.nasa.gov/"
+attribution_required: true
