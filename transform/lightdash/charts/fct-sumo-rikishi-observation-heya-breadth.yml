@@ -1,0 +1,42 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sumo_rikishi_observation_updated_at_month
+          yRef:
+            field: fct_sumo_rikishi_observation_distinct_heya
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Updated at (Month)
+      yAxis:
+      - name: Distinct heya
+    layout:
+      xField: fct_sumo_rikishi_observation_updated_at_month
+      yField:
+      - fct_sumo_rikishi_observation_distinct_heya
+  type: cartesian
+description: Distinct non-null `heya` values among observations grouped by the UTC month of source `updated_at`. This measures represented stable breadth, not wrestler volume; null heya and months without source updates are absent.
+metricQuery:
+  dimensions:
+  - fct_sumo_rikishi_observation_updated_at_month
+  exploreName: fct_sumo_rikishi_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sumo_rikishi_observation_distinct_heya
+  sorts:
+  - descending: false
+    fieldId: fct_sumo_rikishi_observation_updated_at_month
+  tableCalculations: []
+name: Heya represented by source update month
+slug: fct-sumo-rikishi-observation-heya-breadth
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sumo_rikishi_observation_updated_at_month
+  - fct_sumo_rikishi_observation_distinct_heya
+tableName: fct_sumo_rikishi_observation
+version: 1
