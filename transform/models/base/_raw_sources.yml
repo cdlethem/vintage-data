@@ -9762,6 +9762,9 @@ sources:
     - name: hash
       description: Raw `hash` value supplied by `openfema_declarations`.
       data_type: VARCHAR
+    - name: disastercloseoutdate
+      description: Raw `disastercloseoutdate` value supplied by `openfema_declarations`.
+      data_type: TIMESTAMP WITH TIME ZONE
   - name: openligadb
     description: Insert-only raw records loaded for `openligadb`.
     columns: &id116

@@ -40,5 +40,6 @@ select
     "region",
     "designatedincidenttypes",
     "lastrefresh",
-    "hash"
+    "hash",
+    "disastercloseoutdate"
 from {{ source('raw', 'openfema_declarations') }}
