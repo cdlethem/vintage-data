@@ -151,6 +151,19 @@ class FetchPokeAPITests(unittest.TestCase):
         )
         sleeper.assert_called_once_with(MODULE.REQUEST_INTERVAL)
 
+    def test_continues_when_catalog_count_lags_next_page(self):
+        first_page = page([pokemon(1), pokemon(2)], 2)
+        first_page["count"] = 2
+        final_page = page([pokemon(3)], None)
+        final_page["count"] = 3
+
+        result, opener, sleeper = self.fetch([first_page, final_page])
+
+        self.assertFalse(result.truncated)
+        self.assertEqual([record["id"] for record in result.records], [1, 2, 3])
+        self.assertEqual(len(opener.calls), 2)
+        sleeper.assert_called_once_with(MODULE.REQUEST_INTERVAL)
+
     def test_follows_valid_api_continuation_without_trailing_slash(self):
         continuation = "https://pokeapi.co/api/v2/pokemon?offset=2&limit=2"
         first_page = page([pokemon(1), pokemon(2)], 2)
@@ -176,12 +189,13 @@ class FetchPokeAPITests(unittest.TestCase):
         self.assertIn("offset=5", opener.calls[2][0].full_url)
 
 
-    def test_rejects_looping_and_out_of_catalog_next_links(self):
-        for offset in (0, 100):
+    def test_rejects_looping_and_backward_next_links(self):
+        for offset in (0, 2):
             with self.subTest(offset=offset):
-                document = page([pokemon(1), pokemon(2)], offset)
+                first_page = page([pokemon(1), pokemon(2)], 2)
+                second_page = page([pokemon(3)], offset)
                 with self.assertRaisesRegex(MODULE.PokeAPIError, "catalog pagination"):
-                    self.fetch([document])
+                    self.fetch([first_page, second_page])
 
     def test_empty_catalog_is_a_success_and_makes_one_request(self):
         result, opener, sleeper = self.fetch([page([], None)])
