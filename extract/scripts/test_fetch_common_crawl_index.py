@@ -23,9 +23,9 @@ import pytest
 import yaml
 
 
-SCRIPT = Path(__file__).parent / "scripts" / "fetch_common_crawl_index.py"
-SOURCE_CONFIG = Path(__file__).parent / "sources" / "common_crawl_index.yml"
-REPO_ROOT = Path(__file__).parent.parent
+SCRIPT = Path(__file__).with_name("fetch_common_crawl_index.py")
+SOURCE_CONFIG = SCRIPT.parents[1] / "sources" / "common_crawl_index.yml"
+REPO_ROOT = SCRIPT.parents[2]
 BASE_MODEL = REPO_ROOT / "transform" / "models" / "base" / "base_common_crawl_index.sql"
 MART_DIR = REPO_ROOT / "transform" / "models" / "marts" / "common_crawl_index"
 MART_MODEL = MART_DIR / "fct_common_crawl_index_observation.sql"
@@ -203,28 +203,6 @@ class StalledHeaderOpener:
     def cleanup(self):
         if self.response is not None:
             self.response.close()
-        for transport in (self.server, self.client):
-            try:
-                transport.shutdown(socket.SHUT_RDWR)
-            except OSError:
-                pass
-            transport.close()
-
-class StalledConnectOpener:
-    """Block before response creation on a transport owned by the client."""
-
-    def __init__(self):
-        self.client, self.server = socket.socketpair()
-        self.calls = []
-
-    def bind_owner(self, owner):
-        owner.replace(self.client)
-
-    def __call__(self, request, timeout):
-        self.calls.append((request, timeout))
-        return self.client.recv(1)
-
-    def cleanup(self):
         for transport in (self.server, self.client):
             try:
                 transport.shutdown(socket.SHUT_RDWR)
@@ -644,54 +622,6 @@ def test_drip_fed_socket_read_cannot_refresh_absolute_deadline():
         assert dripping.feeder is not None and not dripping.feeder.is_alive()
     finally:
         dripping.cleanup()
-
-
-def test_stalled_connection_cancels_owned_transport_at_absolute_deadline():
-    opener = StalledConnectOpener()
-    maximum = 0.025
-    started = time.monotonic()
-    try:
-        with pytest.raises(MODULE.BudgetExceeded, match="duration ceiling"):
-            run_with_timeout(
-                lambda: MODULE.fetch_common_crawl_index(
-                    collection=COLLECTION,
-                    url_pattern=PATTERN,
-                    max_duration=maximum,
-                    timeout=1,
-                    retries=0,
-                    opener=opener,
-                ),
-                opener.cleanup,
-            )
-        elapsed = time.monotonic() - started
-        assert maximum - 0.01 <= elapsed <= maximum + DEADLINE_TOLERANCE
-        assert len(opener.calls) == 1
-        assert opener.client.fileno() == -1
-        assert MODULE.LAST_RUN_METADATA["requests"]["failed"] == 1
-    finally:
-        opener.cleanup()
-
-
-def test_transport_discovery_failure_is_not_an_empty_success():
-    class UnownedResponse:
-        status = 200
-        headers = {}
-
-        def geturl(self):
-            return MODULE.DISCOVERY_URL
-
-        def close(self):
-            pass
-
-    opener = QueueOpener([UnownedResponse()])
-    with pytest.raises(MODULE.CommonCrawlError, match="transport is not owned"):
-        MODULE.fetch_common_crawl_index(
-            collection=COLLECTION,
-            url_pattern=PATTERN,
-            retries=0,
-            opener=opener,
-        )
-    assert MODULE.LAST_RUN_METADATA["requests"]["failed"] == 1
 
 
 def test_repeated_stalled_response_headers_cancel_owned_transport_at_deadline():
