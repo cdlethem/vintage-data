@@ -1,0 +1,24 @@
+name: common_crawl_index
+script: fetch_common_crawl_index.py
+args: ["--timeout", "30"]
+schedule: "43 7 * * 2"  # UTC; fixed nonzero staggered minute, weekly on Tuesday
+enabled: true
+retries: 1
+timeout_minutes: 5
+sink: local
+
+# Preserve the explicit weekly schedule rather than allowing data-volume cadence tuning.
+cadence:
+  auto: false
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "weekly UTC snapshot of published Common Crawl index metadata"
+rate_limit: "one keyless collinfo.json request per run; 30-second request timeout, 2 MiB response cap, and 1,000-entry validation cap"
+licence: "Common Crawl corpus metadata; Common Crawl terms and source-site rights apply"
+attribution: "Common Crawl, https://commoncrawl.org/"
+attribution_required: true
+
+# Post-merge activation/completion gate: an authorized network- and runtime-capable
+# operator must record a live bounded response, valid emitted records, and successful
+# processing through the configured extract runner/manifest path. Offline fixtures do
+# not satisfy this gate.
