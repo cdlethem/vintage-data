@@ -1,0 +1,128 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 2fee0c3a-3e64-5c69-bcaf-536f5fca1c97
+    label: 'Library of Congress item observation: Digitized'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_library_of_congress_item_observation_digitized
+      tableName: fct_library_of_congress_item_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Library Of Congress
+slug: library-of-congress
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical observation fact for the bounded Library of Congress robotics books search. Each
+      row is one source, stable item identifier, and UTC collection timestamp (`observed_at`). The configured
+      query is a changing ranked slice of at most 200 observations per run, not a catalogue census. Repeated
+      snapshots preserve later catalogue and ranking changes; `item_date` is free-form source text and
+      is not event time.
+
+
+      **Grain:** source, item_id, observed_at
+
+
+      **What changes here:** how item and title coverage and reported digitization vary across daily observations
+      of the changing bounded robotics search slice.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - Data provided by the Library of Congress. `library_of_congress` — licence: Library of Congress
+      catalog metadata; attribution required: True. Source configuration: `extract/sources/library_of_congress.yml`.
+      Rights for linked collection material vary by item; consult the item-specific rights and access
+      statement before reuse.'
+    hideFrame: false
+    title: Library of Congress item observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Library of Congress item observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct items by collection day
+    chartSlug: fct-library-of-congress-item-observation-observed-items
+    hideTitle: false
+    title: Distinct items by collection day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct titles by collection day
+    chartSlug: fct-library-of-congress-item-observation-observed-titles
+    hideTitle: false
+    title: Distinct titles by collection day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Reported digitized status by collection day
+    chartSlug: fct-library-of-congress-item-observation-digitization-mix
+    hideTitle: false
+    title: Reported digitized status by collection day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 1
+  properties:
+    showDivider: true
+    text: Library of Congress item observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Distinct items by reported digitized status
+    chartSlug: fct-library-of-congress-item-observation
+    hideTitle: false
+    title: Distinct items by reported digitized status
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 28
+- h: 10
+  properties:
+    chartName: Library of Congress item observation — observations
+    chartSlug: fct-library-of-congress-item-observation-details
+    hideTitle: false
+    title: Library of Congress item observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 28
+version: 1
