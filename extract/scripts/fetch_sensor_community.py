@@ -65,12 +65,40 @@ Stdlib only.
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.request
 from datetime import datetime, timezone
 
 BASE = "https://data.sensor.community"
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"   # REQUIRED
+SUMMARY_PREFIX = "VINTAGE_RUN_SUMMARY\t"
+MAX_SUMMARY_BYTES = 65_536
+MAX_ERROR_CHARS = 1_000
+
+
+class SensorCommunityFetchError(RuntimeError):
+    def __init__(self, phase: str, cause: BaseException):
+        self.phase = phase
+        self.cause = cause
+        super().__init__(str(cause))
+
+
+def _safe_error(exc: BaseException) -> str:
+    """Return a bounded, single-line diagnostic without common credentials."""
+    detail = f"{type(exc).__name__}: {exc}"
+    detail = re.sub(r"(?i)\b(bearer|basic)\s+[^\s,;]+", r"\1 [REDACTED]", detail)
+    detail = re.sub(r"(?i)(authorization|api[_-]?key|token|password|secret)\s*[:=]\s*([^&\s,;]+)",
+                    r"\1=[REDACTED]", detail)
+    detail = re.sub(r"(https?://)[^/\s:@]+(?::[^/\s@]*)?@", r"\1[REDACTED]@", detail)
+    return " ".join(detail.split())[:MAX_ERROR_CHARS] or "unspecified error"
+
+
+def _emit_summary(payload: dict) -> None:
+    line = SUMMARY_PREFIX + json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
+    if len((line + "\n").encode("utf-8")) >= MAX_SUMMARY_BYTES:
+        raise AssertionError("run summary exceeds protocol size limit")
+    print(line, file=sys.stderr)
 
 # Observed failure rails in live data. Flag, don't silently drop.
 SUSPECT = {
@@ -84,8 +112,16 @@ PM_TYPES = {"P0": "pm1", "P1": "pm10", "P2": "pm25", "P4": "pm4"}
 def _get(path: str):
     req = urllib.request.Request(f"{BASE}/{path}",
                                  headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=90) as resp:
-        return json.load(resp)
+    try:
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            try:
+                return json.load(resp)
+            except Exception as exc:
+                raise SensorCommunityFetchError("decode", exc) from exc
+    except SensorCommunityFetchError:
+        raise
+    except Exception as exc:
+        raise SensorCommunityFetchError("request", exc) from exc
 
 
 def _num(v):
@@ -194,18 +230,30 @@ def main(argv=None):
     args = parser.parse_args(argv)
     rows = fetch_by_country(args.country) if args.country else fetch_all(args.clean_only, args.outdoor_only)
     total = 0; countries = set(); sensors = set(); reading_ids = set(); indoors = exact = clean = 0; ts = []
-    for row in rows:
-        print(json.dumps(row, ensure_ascii=False)); total += 1
-        countries.add(row["country"]); sensors.add(row["sensor_id"]); reading_ids.add(row["id"])
-        indoors += bool(row["indoor"]); exact += bool(row["exact_location"]); clean += bool(row["is_clean"])
-        if row["ts"]: ts.append(row["ts"])
-    print("VINTAGE_RUN_SUMMARY\t" + json.dumps({
+    try:
+        for row in rows:
+            print(json.dumps(row, ensure_ascii=False)); total += 1
+            countries.add(row["country"]); sensors.add(row["sensor_id"]); reading_ids.add(row["id"])
+            indoors += bool(row["indoor"]); exact += bool(row["exact_location"]); clean += bool(row["is_clean"])
+            if row["ts"]: ts.append(row["ts"])
+    except Exception as exc:
+        phase = exc.phase if isinstance(exc, SensorCommunityFetchError) else "iteration"
+        cause = exc.cause if isinstance(exc, SensorCommunityFetchError) else exc
+        error = _safe_error(cause)
+        _emit_summary({
+            "health": "failed", "completeness": "failed", "records": total,
+            "error": error, "requests": {"attempted": 1},
+            "partitions": {"attempted": 1, "succeeded": 0, "failed": 1},
+            "metrics": {"failure_phase": phase},
+        })
+        return 1
+    _emit_summary({
         "health": "healthy", "completeness": "complete", "records": total,
         "requests": {"attempted": 1}, "partitions": {"attempted": 1, "succeeded": 1, "failed": 0},
         "coverage": {"retrieval_mode": "country" if args.country else "global", "countries": len(countries),
                      "time_min": min(ts) if ts else None, "time_max": max(ts) if ts else None},
         "metrics": {"distinct_readings": len(reading_ids), "distinct_sensors": len(sensors),
-                    "indoor": indoors, "exact_location": exact, "clean": clean}}), file=sys.stderr)
+                    "indoor": indoors, "exact_location": exact, "clean": clean}})
     return 0
 
 
