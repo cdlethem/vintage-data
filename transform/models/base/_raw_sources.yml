@@ -1305,6 +1305,84 @@ sources:
     - name: language
       description: Raw `language` value supplied by `codeforces`.
       data_type: VARCHAR
+  - name: common_crawl_index
+    description: Insert-only raw records loaded for `common_crawl_index`.
+    columns: &id169
+    - name: _row_id
+      description: Raw `_row_id` value supplied by `common_crawl_index`.
+      data_type: VARCHAR
+    - name: _source
+      description: Raw `_source` value supplied by `common_crawl_index`.
+      data_type: VARCHAR
+    - name: _batch_id
+      description: Identifier of the raw load batch that produced this row.
+      data_type: VARCHAR
+    - name: _source_file
+      description: Raw source file from which this row was loaded.
+      data_type: VARCHAR
+    - name: _file_row_num
+      description: One-based row position in the raw source file.
+      data_type: BIGINT
+    - name: _dt
+      description: Raw `_dt` value supplied by `common_crawl_index`.
+      data_type: DATE
+    - name: _extract_started_at
+      description: Raw `_extract_started_at` value supplied by `common_crawl_index`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _load_id
+      description: Identifier of the load job that inserted this row.
+      data_type: VARCHAR
+    - name: _loaded_at
+      description: UTC timestamp at which the load layer inserted this row.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _content_hash
+      description: Stable hash of the raw record content used for lineage and deduplication.
+      data_type: VARCHAR
+    - name: _payload
+      description: Complete raw record payload retained for lineage and schema evolution.
+      data_type: JSON
+    - name: source
+      description: Raw `source` value supplied by `common_crawl_index`.
+      data_type: VARCHAR
+    - name: id
+      description: Raw `id` value supplied by `common_crawl_index`.
+      data_type: VARCHAR
+    - name: fetched_at
+      description: Raw `fetched_at` value supplied by `common_crawl_index`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: collection_id
+      description: Raw `collection_id` value supplied by `common_crawl_index`.
+      data_type: VARCHAR
+    - name: query_url_pattern
+      description: Raw `query_url_pattern` value supplied by `common_crawl_index`.
+      data_type: VARCHAR
+    - name: index_url
+      description: Raw `index_url` value supplied by `common_crawl_index`.
+      data_type: VARCHAR
+    - name: query_page
+      description: Raw `query_page` value supplied by `common_crawl_index`.
+      data_type: BIGINT
+    - name: urlkey
+      description: Raw `urlkey` value supplied by `common_crawl_index`.
+      data_type: VARCHAR
+    - name: url
+      description: Raw `url` value supplied by `common_crawl_index`.
+      data_type: VARCHAR
+    - name: crawl_timestamp
+      description: Raw `crawl_timestamp` value supplied by `common_crawl_index`.
+      data_type: VARCHAR
+    - name: mime_type
+      description: Raw `mime_type` value supplied by `common_crawl_index`.
+      data_type: VARCHAR
+    - name: status_code
+      description: Raw `status_code` value supplied by `common_crawl_index`.
+      data_type: VARCHAR
+    - name: digest
+      description: Raw `digest` value supplied by `common_crawl_index`.
+      data_type: VARCHAR
+    - name: content_length
+      description: Raw `content_length` value supplied by `common_crawl_index`.
+      data_type: BIGINT
   - name: crossref_new_dois
     description: Insert-only raw records loaded for `crossref_new_dois`.
     columns: &id017
@@ -13613,6 +13691,10 @@ models:
   description: Thin governed view over the `codeforces` raw source. Values and load lineage are preserved
     without semantic cleaning.
   columns: *id016
+- name: base_common_crawl_index
+  description: Thin governed view over the `common_crawl_index` raw source. Values and load lineage
+    are preserved without semantic cleaning.
+  columns: *id169
 - name: base_crossref_new_dois
   description: Thin governed view over the `crossref_new_dois` raw source. Values and load lineage are
     preserved without semantic cleaning.

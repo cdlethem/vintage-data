@@ -1,0 +1,232 @@
+version: 2
+models:
+- name: fct_common_crawl_index_observation
+  description: >-
+    Bounded observations of Common Crawl CDX index metadata. Each row identifies one
+    collection-aware capture observed by one explicit narrow query, with query and
+    raw-load lineage retained. Archived response bodies are not fetched.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, collection_id, capture_id, observed_at
+      label: Common Crawl index observation
+      group_label: Common Crawl index
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: common_crawl_index_observation_key
+      vintage:
+        visualization:
+          dimension: mime_type
+          metric: distinct_captures
+          time: observed_at
+          window_days: 30
+          title: Distinct indexed captures by MIME type
+          description: Distinct collection-aware capture identifiers observed by MIME type in the selected window.
+          detail_fields:
+          - observed_at
+          - collection_id
+          - capture_id
+          - url
+          - source_loaded_at
+          sources:
+          - '`common_crawl_index` — Common Crawl index metadata; source configuration: `extract/sources/common_crawl_index.yml`.'
+          analysis:
+            headline: how indexed captures and reported response sizes vary across crawl time and MIME type.
+            event_time: crawled_at
+            grain: DAY
+            controls:
+            - collection_id
+            - mime_type
+            - status_code
+            trends:
+            - slug: captures-by-crawl-day
+              kind: total
+              metric: distinct_captures
+              time: crawled_at
+              grain: DAY
+              title: Distinct captures by crawl day
+              description: Distinct collection-aware capture identifiers by reported Common Crawl timestamp.
+              width: half
+            - slug: average-indexed-length
+              kind: total
+              metric: average_content_length
+              time: crawled_at
+              grain: DAY
+              title: Average indexed response length
+              description: Average non-null response length reported in CDX metadata; this is not downloaded body volume.
+              width: half
+            - slug: captures-by-mime
+              kind: breakdown
+              metric: distinct_captures
+              breakdown: mime_type
+              top_n: 8
+              time: crawled_at
+              grain: DAY
+              title: Captures by MIME type
+              description: Distinct captures by the eight largest reported MIME-type series; remaining values are excluded.
+              width: full
+  columns:
+  - name: common_crawl_index_observation_key
+    description: Stable hash of source, collection, capture identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension: {type: string, label: Common Crawl index observation key, hidden: true}
+  - name: source_name
+    description: Extractor source identifier.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Source name, hidden: false}
+  - name: collection_id
+    description: Explicit Common Crawl collection identifier used for discovery and query.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Collection id, hidden: false}
+  - name: capture_id
+    description: Collection-aware capture identifier generated from immutable CDX identity fields.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_captures:
+            type: count_distinct
+            label: Distinct capture
+            description: Distinct collection-aware capture identifiers among matching observations.
+            format: '#,##0'
+        dimension: {type: string, label: Capture id, hidden: false}
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the CDX record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals: [RAW, DAY, WEEK, MONTH, YEAR]
+  - name: crawled_at
+    description: UTC timestamp parsed from the Common Crawl CDX crawl timestamp.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Crawled at
+          hidden: false
+          time_intervals: [RAW, DAY, WEEK, MONTH, YEAR]
+  - name: url
+    description: URL represented by the Common Crawl index record.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: URL, hidden: false}
+  - name: urlkey
+    description: CDX canonical URL key supplied by Common Crawl.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: URL key, hidden: false}
+  - name: mime_type
+    description: MIME type reported by the Common Crawl index.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: MIME type, hidden: false}
+  - name: status_code
+    description: HTTP status code reported by the CDX record, retained as text.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Status code, hidden: false}
+  - name: digest
+    description: Content digest reported by the Common Crawl index.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Digest, hidden: false}
+  - name: content_length
+    description: Response length in bytes reported by CDX metadata; no body was downloaded.
+    data_type: bigint
+    config:
+      meta:
+        dimension: {type: number, label: Content length, hidden: false, format: '#,##0'}
+        metrics:
+          average_content_length:
+            type: average
+            label: Average indexed response length
+            description: Average non-null CDX response length among matching observations.
+            format: '#,##0.00'
+  - name: query_url_pattern
+    description: Exact narrow URL pattern sent to the Common Crawl index.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Query URL pattern, hidden: false}
+  - name: index_url
+    description: Official HTTPS collection endpoint obtained from collection discovery.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Index URL, hidden: false}
+  - name: query_page
+    description: Zero-based Common Crawl query page carrying this record.
+    data_type: bigint
+    config:
+      meta:
+        dimension: {type: number, label: Query page, hidden: false, format: '#,##0'}
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: ' batch id', hidden: true}
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: ' load id', hidden: true}
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: ' source file', hidden: true}
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension: {type: number, label: ' file row num', hidden: true, format: '#,##0'}
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals: [RAW, DAY, WEEK, MONTH, YEAR]
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw-load timestamp represented by matching mart rows.
+  - name: _content_hash
+    description: Hash of the original raw record content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: ' content hash', hidden: true}
