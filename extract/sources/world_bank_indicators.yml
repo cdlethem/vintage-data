@@ -1,0 +1,30 @@
+name: world_bank_indicators
+script: fetch_world_bank_indicators.py
+# The scheduled request is a bounded recent-year snapshot of a maintained indicator
+# basket. Page and record limits fail closed rather than publishing partial coverage.
+args: ["--page-size", "1000", "--max-pages", "10", "--max-records", "10000", "--timeout", "60"]
+schedule: "19 10 8 * *"  # UTC; conservative monthly refresh for revised annual data
+enabled: false
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Historical extraction is separate from the scheduled snapshot. Each unit requests
+# exactly one year and remains bounded independently for reviewable cost and recovery.
+backfill:
+  unit: year
+  start: "1960"
+  args: ["--start-year", "{yyyy}", "--end-year", "{yyyy}", "--page-size", "1000", "--max-pages", "3", "--max-records", "3000", "--timeout", "60"]
+  pace_seconds: 3
+  timeout_minutes: 10
+
+# Do not enable until an operator records a successful live-source smoke and a
+# read-only Airflow import check with its required environment available. Offline
+# verification mocks HTTP and neither reads nor mutates Airflow metadata. Historical
+# backfill execution additionally requires a recorded bounded-plan and cost review.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "monthly bounded snapshot of recent annual World Bank indicator revisions; historical backfill is separately paced one year per unit from 1960"
+rate_limit: "World Bank Indicators API; serial pagination capped at 10 pages and 10,000 observations per scheduled run"
+licence: "World Bank Dataset Terms of Use; individual indicators may carry additional source terms"
+attribution: "World Bank, World Development Indicators, https://data.worldbank.org/"
+attribution_required: true
