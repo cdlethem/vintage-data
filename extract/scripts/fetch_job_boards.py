@@ -30,6 +30,11 @@ from job_boards_lib.catalog import load_catalog
 from job_boards_lib.common import CLIENT
 
 
+# The runner rejects summaries above 64 KiB of JSON payload. Keep the same
+# limit here; failure details are optional, but aggregate counts are not.
+SUMMARY_MAX_BYTES = 64 * 1024
+
+
 def fetch_board(board: Board, max_per_board: int = 10000) -> list[dict]:
     """Fetch one board atomically; a paging failure emits no partial board."""
     return list(fetch(board, max_per_board))
@@ -92,10 +97,22 @@ def fetch_catalog(boards: list[Board], workers: int = 12, max_per_board: int = 1
         "completeness": "failed" if broad_failure else ("partial" if failed else "complete"),
         "records": records,
         "partitions": {"attempted": total, "succeeded": succeeded, "failed": failed,
-                       "failures": sorted(failures, key=lambda t: t["tenant"])[:100]},
+                       "failures": []},
         "metrics": {"tenants_attempted": total, "tenants_succeeded": succeeded,
                     "tenants_failed": failed, "tenant_records_total": records},
     }
+    failures_out = payload["partitions"]["failures"]
+    # Measure with the exact JSON encoding used on stderr (including escaping).
+    # Long or non-ASCII tokens/errors can exceed the cap even with only 100
+    # entries. Retain the lexicographically earliest details that fit.
+    budget = SUMMARY_MAX_BYTES - len(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
+    for failure in sorted(failures, key=lambda t: t["tenant"])[:100]:
+        size = len(json.dumps(failure, separators=(",", ":")).encode("utf-8"))
+        size += bool(failures_out)  # comma between entries
+        if size > budget:
+            continue
+        failures_out.append(failure)
+        budget -= size
     print("VINTAGE_RUN_SUMMARY\t" + json.dumps(payload, separators=(",", ":")), file=sys.stderr)
     if broad_failure:
         raise RuntimeError(f"provider-wide failure: {failed}/{total} tenants failed")
