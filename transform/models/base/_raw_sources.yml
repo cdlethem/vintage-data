@@ -9105,6 +9105,9 @@ sources:
     - name: facebookname
       description: Raw `facebookname` value supplied by `nz_charities`.
       data_type: VARCHAR
+    - name: twittername
+      description: Raw `twittername` value supplied by `nz_charities`.
+      data_type: VARCHAR
     - name: socialnetworkname
       description: Raw `socialnetworkname` value supplied by `nz_charities`.
       data_type: VARCHAR

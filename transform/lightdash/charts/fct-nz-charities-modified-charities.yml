@@ -18,14 +18,27 @@ chartConfig:
       yField:
       - fct_nz_charities_distinct_entities
   type: cartesian
-description: Distinct `id` values by `modifiedon` day. This is a count of registered entities whose source
-  record was revised, not a count of newly registered charities; days with no revision are absent rather
-  than zero.
+description: Distinct `id` values by `modifiedon` source-event day in the rolling 30-day UTC window. Repeated
+  snapshots of the same revision count once per day, while an entity revised on multiple days appears
+  on each day. This is SCD2-like revision history, not new registrations; an absent day means no matching
+  observed revision, not zero revision activity.
 metricQuery:
   dimensions:
   - fct_nz_charities_modifiedon_day
   exploreName: fct_nz_charities
-  filters: {}
+  filters:
+    dimensions:
+      and:
+      - id: 41da7d72-9946-5b9f-9492-b66a2f9785f8
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nz_charities_modifiedon
+        values:
+        - 30
+      id: 05c496cb-ae07-5ac9-a222-d744100d36aa
   limit: 5000
   metrics:
   - fct_nz_charities_distinct_entities

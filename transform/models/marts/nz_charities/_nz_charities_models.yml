@@ -4,7 +4,8 @@ models:
   description: Physical daily snapshot of New Zealand Charities Register organisation observations. Each
     row is one source, organisation identifier, and fetch timestamp, with the published organisation attributes
     and nested register details retained alongside load lineage. Repeated copies of the same observation
-    grain are resolved to the latest loaded file row.
+    grain are resolved to the latest loaded file row. Successive observations form SCD2-like history rather
+    than a current-state census.
   config:
     contract:
       enforced: true
@@ -23,10 +24,10 @@ models:
           time: fetched_at
           window_days: 30
           title: Distinct id by registrationstatus
-          description: Distinct `id` values by `registrationstatus` among observations in the selected
-            window. Repeated observations of an entity count once within each group. An entity that changed
-            category can appear in multiple groups; these groups are not additive and do not represent
-            a current-state census.
+          description: Distinct `id` values by `registrationstatus` among observations fetched in the rolling
+            30-day UTC window. Repeated snapshots of an entity count once within each group, but an entity
+            that changed category can appear in multiple groups. The groups are non-additive and do not
+            represent a current-state census; an empty result means no matching observations, not zero charities.
           detail_fields:
           - fetched_at
           - id
@@ -40,6 +41,7 @@ models:
               profile varies by organisation type.
             event_time: modifiedon
             grain: DAY
+            window_days: 30
             controls:
             - postaladdresscity
             - legalstructure
@@ -52,9 +54,10 @@ models:
               time: modifiedon
               grain: DAY
               title: Charities modified per day
-              description: Distinct `id` values by `modifiedon` day. This is a count of registered entities
-                whose source record was revised, not a count of newly registered charities; days with no
-                revision are absent rather than zero.
+              description: Distinct `id` values by `modifiedon` source-event day in the rolling 30-day UTC
+                window. Repeated snapshots of the same revision count once per day, while an entity revised
+                on multiple days appears on each day. This is SCD2-like revision history, not new registrations;
+                an absent day means no matching observed revision, not zero revision activity.
               width: half
             - slug: overseas-spending
               kind: total
@@ -62,9 +65,10 @@ models:
               time: modifiedon
               grain: DAY
               title: Reported overseas spending share by revision day
-              description: Mean non-null `percentagespentoverseas` among records by `modifiedon` day. Most
-                rows do not report this field, so the average describes only reporting organisations and
-                days with no reported value are absent rather than zero.
+              description: Observation-weighted mean of non-null `percentagespentoverseas`, in percentage
+                points, by `modifiedon` source-event day in the rolling 30-day UTC window. Repeated snapshots
+                have equal weight, so this is not a current-state estimate or an additive spending total. An
+                absent day means no matching reported value, not zero overseas spending.
               width: half
             - slug: revisions-by-legal-structure
               kind: breakdown
@@ -74,9 +78,10 @@ models:
               time: modifiedon
               grain: DAY
               title: Modified charities by legal structure
-              description: Distinct `id` values revised on each `modifiedon` day, compared across the
-                largest legal-structure groups. The remaining structures are excluded rather than
-                aggregated; this is revision activity, not a current census.
+              description: Distinct `id` values revised on each `modifiedon` source-event day in the rolling
+                30-day UTC window, compared across the seven largest legal-structure groups. Remaining groups
+                are excluded, not aggregated. Repeated snapshots count once within a day and group, but groups
+                and days are non-additive SCD2-like revision history; empty results do not prove zero activity.
               width: full
             - slug: registrations-by-city
               kind: composition
@@ -86,9 +91,10 @@ models:
               time: dateregistered
               grain: DAY
               title: Registered charities by city and registration day
-              description: Distinct `id` values stacked by postal city on each `dateregistered` day. Bars
-                show the mix among the eight largest cities and exclude the remainder rather than
-                aggregating it; a missing day means no registrations in the mart.
+              description: Distinct `id` values stacked by postal city on each `dateregistered` source-event
+                day in the rolling 30-day UTC window. Bars show the eight largest cities and exclude the
+                remainder rather than aggregating it. Groups are non-additive if an entity appears under
+                multiple cities; a missing day means no matching observed registrations, not zero activity.
               width: full
   columns:
   - name: charity_observation_key
@@ -584,10 +590,10 @@ models:
         metrics:
           average_percentagespentoverseas:
             type: average
-            label: Mean overseas spending percentage
-            description: Mean non-null `percentagespentoverseas` reported by charities in each selected
-              revision window. This measure excludes organisations with no reported percentage and is
-              not a sum of spending.
+            label: Mean overseas spending (percentage points)
+            description: Observation-weighted mean of non-null `percentagespentoverseas` values in percentage
+              points. Each retained snapshot has equal weight, so repeated snapshots and polling frequency
+              can affect the result. This is neither a current-state estimate nor an additive spending total.
             format: '#,##0.00'
         dimension:
           type: number

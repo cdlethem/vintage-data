@@ -58,7 +58,8 @@ tiles:
     content: 'Physical daily snapshot of New Zealand Charities Register organisation observations. Each
       row is one source, organisation identifier, and fetch timestamp, with the published organisation
       attributes and nested register details retained alongside load lineage. Repeated copies of the same
-      observation grain are resolved to the latest loaded file row.
+      observation grain are resolved to the latest loaded file row. Successive observations form SCD2-like
+      history rather than a current-state census.
 
 
       **Grain:** source, id, fetched_at

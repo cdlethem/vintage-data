@@ -74,6 +74,7 @@ select
     "charitablepurpose",
     "entitystructure",
     "facebookname",
+    "twittername",
     "socialnetworkname",
     "overseasoperationafrica",
     "overseasoperationantarctica",

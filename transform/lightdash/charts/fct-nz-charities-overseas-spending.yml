@@ -12,20 +12,33 @@ chartConfig:
       xAxis:
       - name: Modifiedon (Day)
       yAxis:
-      - name: Mean overseas spending percentage
+      - name: Mean overseas spending (percentage points)
     layout:
       xField: fct_nz_charities_modifiedon_day
       yField:
       - fct_nz_charities_average_percentagespentoverseas
   type: cartesian
-description: Mean non-null `percentagespentoverseas` among records by `modifiedon` day. Most rows do not
-  report this field, so the average describes only reporting organisations and days with no reported value
-  are absent rather than zero.
+description: Observation-weighted mean of non-null `percentagespentoverseas`, in percentage points, by
+  `modifiedon` source-event day in the rolling 30-day UTC window. Repeated snapshots have equal weight,
+  so this is not a current-state estimate or an additive spending total. An absent day means no matching
+  reported value, not zero overseas spending.
 metricQuery:
   dimensions:
   - fct_nz_charities_modifiedon_day
   exploreName: fct_nz_charities
-  filters: {}
+  filters:
+    dimensions:
+      and:
+      - id: 07135307-57d9-50e0-8313-6c599b57aa40
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nz_charities_modifiedon
+        values:
+        - 30
+      id: 7d6a5859-111a-5c75-b1bf-5ba36005854a
   limit: 5000
   metrics:
   - fct_nz_charities_average_percentagespentoverseas

@@ -15,9 +15,10 @@ chartConfig:
       yField:
       - fct_nz_charities_distinct_entities
   type: cartesian
-description: Distinct `id` values by `registrationstatus` among observations in the selected window. Repeated
-  observations of an entity count once within each group. An entity that changed category can appear in
-  multiple groups; these groups are not additive and do not represent a current-state census.
+description: Distinct `id` values by `registrationstatus` among observations fetched in the rolling 30-day
+  UTC window. Repeated snapshots of an entity count once within each group, but an entity that changed
+  category can appear in multiple groups. The groups are non-additive and do not represent a current-state
+  census; an empty result means no matching observations, not zero charities.
 metricQuery:
   dimensions:
   - fct_nz_charities_registrationstatus

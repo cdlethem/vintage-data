@@ -22,15 +22,28 @@ chartConfig:
       yField:
       - fct_nz_charities_distinct_entities
   type: cartesian
-description: Distinct `id` values revised on each `modifiedon` day, compared across the largest legal-structure
-  groups. The remaining structures are excluded rather than aggregated; this is revision activity, not
-  a current census.
+description: Distinct `id` values revised on each `modifiedon` source-event day in the rolling 30-day
+  UTC window, compared across the seven largest legal-structure groups. Remaining groups are excluded,
+  not aggregated. Repeated snapshots count once within a day and group, but groups and days are non-additive
+  SCD2-like revision history; empty results do not prove zero activity.
 metricQuery:
   dimensions:
   - fct_nz_charities_modifiedon_day
   - fct_nz_charities_legalstructure
   exploreName: fct_nz_charities
-  filters: {}
+  filters:
+    dimensions:
+      and:
+      - id: dcba8dc4-df60-5f71-94ff-f8b1adb2a9ab
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nz_charities_modifiedon
+        values:
+        - 30
+      id: 25967cc6-67ca-5c9b-8ea3-dc206656e10e
   limit: 5000
   metrics:
   - fct_nz_charities_distinct_entities
