@@ -1,0 +1,47 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      series:
+      - encode:
+          xRef: {field: fct_openfda_recall_observation_observed_at_day}
+          yRef: {field: fct_openfda_recall_observation_distinct_recalls}
+        type: bar
+        yAxisIndex: 0
+      xAxis: [{name: Observed at (Day)}]
+      yAxis: [{name: Distinct recalls}]
+    layout:
+      xField: fct_openfda_recall_observation_observed_at_day
+      yField: [fct_openfda_recall_observation_distinct_recalls]
+  type: cartesian
+description: Distinct observed `recall_id` values per UTC fetch day by country. The eight largest countries are
+  shown; smaller countries are excluded rather than aggregated.
+metricQuery:
+  dimensions:
+  - fct_openfda_recall_observation_observed_at_day
+  - fct_openfda_recall_observation_country
+  exploreName: fct_openfda_recall_observation
+  filters:
+    dimensions:
+      and:
+      - id: 6cfd7787-bd7e-5f39-850c-17a297b0d4b1
+        operator: inThePast
+        settings: {completed: false, unitOfTime: days}
+        target: {fieldId: fct_openfda_recall_observation_observed_at}
+        values: [30]
+  limit: 5000
+  metrics: [fct_openfda_recall_observation_distinct_recalls]
+  sorts: [{descending: false, fieldId: fct_openfda_recall_observation_observed_at_day}]
+  tableCalculations: []
+name: Observed recall country mix
+slug: fct-openfda-recall-observation-country-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openfda_recall_observation_observed_at_day
+  - fct_openfda_recall_observation_country
+  - fct_openfda_recall_observation_distinct_recalls
+pivotConfig:
+  columns: [fct_openfda_recall_observation_country]
+tableName: fct_openfda_recall_observation
+version: 1

@@ -1,0 +1,39 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef: {field: fct_openfda_recall_observation_classification}
+          yRef: {field: fct_openfda_recall_observation_distinct_recalls}
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_openfda_recall_observation_classification
+      yField: [fct_openfda_recall_observation_distinct_recalls]
+  type: cartesian
+description: Distinct `recall_id` values by FDA classification among observations in the selected UTC fetch-time
+  window. Repeated fetches count a recall once in each classification; revised recalls can appear in multiple
+  classifications, so groups are not additive.
+metricQuery:
+  dimensions: [fct_openfda_recall_observation_classification]
+  exploreName: fct_openfda_recall_observation
+  filters:
+    dimensions:
+      and:
+      - id: 6cfd7787-bd7e-5f39-850c-17a297b0d4b1
+        operator: inThePast
+        settings: {completed: false, unitOfTime: days}
+        target: {fieldId: fct_openfda_recall_observation_observed_at}
+        values: [30]
+  limit: 20
+  metrics: [fct_openfda_recall_observation_distinct_recalls]
+  sorts: [{descending: true, fieldId: fct_openfda_recall_observation_distinct_recalls}]
+  tableCalculations: []
+name: Distinct recalls by classification
+slug: fct-openfda-recall-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: [fct_openfda_recall_observation_classification, fct_openfda_recall_observation_distinct_recalls]
+tableName: fct_openfda_recall_observation
+version: 1

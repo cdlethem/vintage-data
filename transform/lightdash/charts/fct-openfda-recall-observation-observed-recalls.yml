@@ -1,0 +1,40 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef: {field: fct_openfda_recall_observation_observed_at_day}
+          yRef: {field: fct_openfda_recall_observation_distinct_recalls}
+        type: line
+        yAxisIndex: 0
+      xAxis: [{name: Observed at (Day)}]
+      yAxis: [{name: Distinct recalls}]
+    layout:
+      xField: fct_openfda_recall_observation_observed_at_day
+      yField: [fct_openfda_recall_observation_distinct_recalls]
+  type: cartesian
+description: Distinct `recall_id` values present on each UTC extractor fetch day. This is an observed catalogue
+  level, not newly reported recalls; repeated polling and source revisions can change it. Days without a successful
+  fetch are absent rather than zero.
+metricQuery:
+  dimensions: [fct_openfda_recall_observation_observed_at_day]
+  exploreName: fct_openfda_recall_observation
+  filters:
+    dimensions:
+      and:
+      - id: 6cfd7787-bd7e-5f39-850c-17a297b0d4b1
+        operator: inThePast
+        settings: {completed: false, unitOfTime: days}
+        target: {fieldId: fct_openfda_recall_observation_observed_at}
+        values: [30]
+  limit: 5000
+  metrics: [fct_openfda_recall_observation_distinct_recalls]
+  sorts: [{descending: false, fieldId: fct_openfda_recall_observation_observed_at_day}]
+  tableCalculations: []
+name: Distinct recalls per fetch day
+slug: fct-openfda-recall-observation-observed-recalls
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: [fct_openfda_recall_observation_observed_at_day, fct_openfda_recall_observation_distinct_recalls]
+tableName: fct_openfda_recall_observation
+version: 1

@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities: [Day, Week, Month, Year]
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over collection time and sparse FDA report dates. Observation windows and
+  aggregation limitations are stated with each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 00b86d80-2275-5884-b721-7068e35ecb9f
+    label: 'OpenFDA recall observation: Classification'
+    operator: equals
+    required: false
+    target: {fieldId: fct_openfda_recall_observation_classification, tableName: fct_openfda_recall_observation}
+    values: []
+  - disabled: true
+    id: 55101907-0055-547d-aeff-02be6df47eea
+    label: 'OpenFDA recall observation: Status'
+    operator: equals
+    required: false
+    target: {fieldId: fct_openfda_recall_observation_status, tableName: fct_openfda_recall_observation}
+    values: []
+  - disabled: true
+    id: f0ba13cc-f875-5135-ac81-da3ed135ef43
+    label: 'OpenFDA recall observation: Firm'
+    operator: equals
+    required: false
+    target: {fieldId: fct_openfda_recall_observation_firm, tableName: fct_openfda_recall_observation}
+    values: []
+  - disabled: true
+    id: 0baa13bf-bc06-5f99-89f5-e98ae6e9e2d2
+    label: 'OpenFDA recall observation: State'
+    operator: equals
+    required: false
+    target: {fieldId: fct_openfda_recall_observation_state, tableName: fct_openfda_recall_observation}
+    values: []
+  - disabled: true
+    id: 9ad45e0d-26c2-55f8-b4fc-d146b8e18f99
+    label: 'OpenFDA recall observation: Country'
+    operator: equals
+    required: false
+    target: {fieldId: fct_openfda_recall_observation_country, tableName: fct_openfda_recall_observation}
+    values: []
+  - disabled: true
+    id: 7b2bf0dd-80a6-519d-9d9b-3e006060f8f4
+    label: 'OpenFDA recall observation: Source name'
+    operator: equals
+    required: false
+    target: {fieldId: fct_openfda_recall_observation_source_name, tableName: fct_openfda_recall_observation}
+    values: []
+  metrics: []
+  tableCalculations: []
+name: OpenFDA
+slug: openfda
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 7
+  properties:
+    content: 'Physical append-only observation fact for openFDA enforcement recalls. Each row records one recall
+      identifier at one extractor fetch timestamp. Duplicate raw copies at that grain retain the latest load;
+      subsequent source revisions remain separate observations, not SCD2 current state.
+
+
+      **Grain:** source_name, recall_id, observed_at
+
+
+      **What changes here:** the recalled-product catalogue returned by polling, and distinct recalls by FDA
+      report date.
+
+
+      **Window:** ranked and detail tiles cover the past 30 days of `observed_at` (UTC). Collection-time trends
+      are observed catalogue levels, not newly reported recalls. FDA report-date trends count distinct recall
+      identifiers and are sparse: absent dates do not mean zero recalls.
+
+
+      **Limitations:** polling may miss source changes between fetches; recalled records can be revised or removed
+      by FDA; this dashboard does not infer new recalls from observation counts or sum text quantities. Drug
+      adverse-event records are outside this enforcement-recall contract.
+
+
+      **Provenance**
+
+      - `openfda` — openFDA, public domain. Source configuration: `extract/sources/openfda.yml`.'
+    hideFrame: false
+    title: OpenFDA recall observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties: {showDivider: true, text: OpenFDA recall observation — change over time}
+  type: heading
+  w: 36
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct recalls per fetch day
+    chartSlug: fct-openfda-recall-observation-observed-recalls
+    hideTitle: false
+    title: Distinct recalls per fetch day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 8
+- h: 10
+  properties:
+    chartName: Distinct recalls by FDA report date
+    chartSlug: fct-openfda-recall-observation-reported-recalls
+    hideTitle: false
+    title: Distinct recalls by FDA report date
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 8
+- h: 10
+  properties:
+    chartName: Observed firm classification mix
+    chartSlug: fct-openfda-recall-observation-classification-mix
+    hideTitle: false
+    title: Observed firm classification mix
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 18
+- h: 10
+  properties:
+    chartName: Observed recall country mix
+    chartSlug: fct-openfda-recall-observation-country-mix
+    hideTitle: false
+    title: Observed recall country mix
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 18
+- h: 1
+  properties: {showDivider: true, text: OpenFDA recall observation — latest window}
+  type: heading
+  w: 36
+  x: 0
+  y: 28
+- h: 10
+  properties:
+    chartName: Distinct recalls by classification
+    chartSlug: fct-openfda-recall-observation
+    hideTitle: false
+    title: Distinct recalls by classification
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 29
+- h: 10
+  properties:
+    chartName: OpenFDA recall observation — observations
+    chartSlug: fct-openfda-recall-observation-details
+    hideTitle: false
+    title: OpenFDA recall observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 29
+version: 1

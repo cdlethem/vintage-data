@@ -1,0 +1,283 @@
+version: 2
+models:
+- name: fct_openfda_recall_observation
+  description: Physical append-only observation fact for openFDA enforcement recalls. Each row records one recall
+    identifier at one extractor fetch timestamp, retaining reported recall fields and raw-load lineage. Repeated
+    copies of the same source, recall, and observation timestamp retain the latest loaded row; this is not an SCD2
+    current-state table, and revisions remain visible as separate observations.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, recall_id, observed_at
+      label: OpenFDA recall observation
+      group_label: OpenFDA
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: recall_observation_key
+      vintage:
+        visualization:
+          dimension: classification
+          metric: distinct_recalls
+          time: observed_at
+          window_days: 30
+          title: Distinct recalls by classification
+          description: Distinct `recall_id` values by FDA classification among observations in the selected UTC
+            fetch-time window. Repeated fetches count a recall once in each classification; a revised recall can
+            appear in multiple classifications, so groups are not additive.
+          detail_fields:
+          - observed_at
+          - recall_id
+          - firm
+          - classification
+          - status
+          - report_date
+          - source_loaded_at
+          sources:
+          - '`openfda` — openFDA, public domain; attribution required: False. Source configuration:
+            `extract/sources/openfda.yml`.'
+          analysis:
+            headline: how the recalled-product catalogue observed by the extractor changes, and how distinct
+              recalls are distributed across FDA report dates.
+            event_time: report_date
+            grain: DAY
+            controls:
+            - classification
+            - status
+            - firm
+            - state
+            - country
+            - source_name
+            trends:
+            - slug: observed-recalls
+              kind: total
+              metric: distinct_recalls
+              time: observed_at
+              grain: DAY
+              title: Distinct recalls per fetch day
+              description: Distinct `recall_id` values present on each UTC extractor fetch day. This is an observed
+                catalogue level, not newly reported recalls; repeated polling and source revisions can change it.
+                Days without a successful fetch are absent rather than zero.
+              width: half
+            - slug: reported-recalls
+              kind: total
+              metric: distinct_recalls
+              time: report_date
+              grain: DAY
+              title: Distinct recalls by FDA report date
+              description: Distinct `recall_id` values by the FDA-reported date, not by collection time. Current raw
+                data spans only two report dates, so this is sparse event data rather than a dense daily series;
+                dates without records are absent rather than zero.
+              width: half
+            - slug: classification-mix
+              kind: composition
+              metric: distinct_firms
+              breakdown: classification
+              top_n: 8
+              time: observed_at
+              grain: DAY
+              title: Observed firm classification mix
+              description: Distinct recalling `firm` values per UTC fetch day stacked by FDA classification.
+                This is a catalogue composition; repeated observations do not indicate newly reported recalls.
+              width: full
+            - slug: country-mix
+              kind: composition
+              metric: distinct_recalls
+              breakdown: country
+              top_n: 8
+              time: observed_at
+              grain: DAY
+              title: Observed recall country mix
+              description: Distinct observed `recall_id` values per UTC fetch day stacked by country. The eight
+                largest countries are shown; smaller countries are excluded rather than aggregated.
+              width: full
+  columns:
+  - name: recall_observation_key
+    description: Stable hash of the source name, recall identifier, and UTC observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null
+    - unique
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Recall observation key
+          hidden: true
+  - name: source_name
+    description: openFDA enforcement-recall source identifier supplied by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: recall_id
+    description: FDA recall number or event identifier.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_recalls:
+            type: count_distinct
+            label: Distinct recalls
+            description: Distinct `recall_id` values. Repeated fetch observations count once within each selected
+              group and time bucket; this metric does not measure newly reported recalls.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Recall id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this recall observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals: [RAW, DAY, WEEK, MONTH, YEAR]
+  - name: report_date
+    description: FDA report date parsed from the YYYYMMDD source value; this can be absent or sparse.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: FDA report date
+          hidden: false
+          time_intervals: [RAW, DAY, WEEK, MONTH, YEAR]
+  - name: recall_initiation_date
+    description: FDA recall initiation date parsed from the YYYYMMDD source value.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Recall initiation date
+          hidden: false
+          time_intervals: [RAW, DAY, WEEK, MONTH, YEAR]
+  - name: status
+    description: Recall status reported by FDA.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Status, hidden: false}
+  - name: classification
+    description: FDA recall classification, such as Class I, II, or III.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Classification, hidden: false}
+  - name: firm
+    description: Recalling firm reported by FDA.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_firms:
+            type: count_distinct
+            label: Distinct firms
+            description: Distinct recalling firms represented by matching recall observations.
+            format: '#,##0'
+        dimension: {type: string, label: Firm, hidden: false}
+  - name: state
+    description: State reported by FDA for the recalling firm.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: State, hidden: false}
+  - name: country
+    description: Country reported by FDA for the recalling firm.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_countries:
+            type: count_distinct
+            label: Distinct countries
+            description: Distinct countries represented by matching recall observations.
+            format: '#,##0'
+        dimension: {type: string, label: Country, hidden: false}
+  - name: product
+    description: Product description reported by FDA.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Product, hidden: false}
+  - name: reason
+    description: Reason for recall reported by FDA.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Reason, hidden: false}
+  - name: quantity
+    description: Product quantity as FDA-provided text; it is not additive and has no numeric metric.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Quantity, hidden: false}
+  - name: distribution
+    description: Distribution pattern reported by FDA.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Distribution, hidden: false}
+  - name: _batch_id
+    description: Load batch identifier that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: ' batch id', hidden: true}
+  - name: _load_id
+    description: Load job identifier that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: ' load id', hidden: true}
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: ' source file', hidden: true}
+  - name: _file_row_num
+    description: Row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension: {type: number, label: ' file row num', hidden: true, format: '#,##0'}
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals: [RAW, DAY, WEEK, MONTH, YEAR]
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time this table was published.
+  - name: _content_hash
+    description: Hash of the original raw record content for lineage and replay.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: ' content hash', hidden: true}
+  - name: _payload
+    description: Complete raw record payload retained for lineage and schema evolution.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' payload'
+          hidden: true
+          sql: CAST(${TABLE}._payload AS VARCHAR)

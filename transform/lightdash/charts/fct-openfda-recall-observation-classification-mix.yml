@@ -1,0 +1,47 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      series:
+      - encode:
+          xRef: {field: fct_openfda_recall_observation_observed_at_day}
+          yRef: {field: fct_openfda_recall_observation_distinct_firms}
+        type: bar
+        yAxisIndex: 0
+      xAxis: [{name: Observed at (Day)}]
+      yAxis: [{name: Distinct firms}]
+    layout:
+      xField: fct_openfda_recall_observation_observed_at_day
+      yField: [fct_openfda_recall_observation_distinct_firms]
+  type: cartesian
+description: Distinct recalling `firm` values per UTC fetch day stacked by FDA classification. This is a catalogue
+  composition; repeated observations do not indicate newly reported recalls.
+metricQuery:
+  dimensions:
+  - fct_openfda_recall_observation_observed_at_day
+  - fct_openfda_recall_observation_classification
+  exploreName: fct_openfda_recall_observation
+  filters:
+    dimensions:
+      and:
+      - id: 6cfd7787-bd7e-5f39-850c-17a297b0d4b1
+        operator: inThePast
+        settings: {completed: false, unitOfTime: days}
+        target: {fieldId: fct_openfda_recall_observation_observed_at}
+        values: [30]
+  limit: 5000
+  metrics: [fct_openfda_recall_observation_distinct_firms]
+  sorts: [{descending: false, fieldId: fct_openfda_recall_observation_observed_at_day}]
+  tableCalculations: []
+name: Observed firm classification mix
+slug: fct-openfda-recall-observation-classification-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openfda_recall_observation_observed_at_day
+  - fct_openfda_recall_observation_classification
+  - fct_openfda_recall_observation_distinct_firms
+pivotConfig:
+  columns: [fct_openfda_recall_observation_classification]
+tableName: fct_openfda_recall_observation
+version: 1

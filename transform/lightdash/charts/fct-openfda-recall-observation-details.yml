@@ -1,0 +1,35 @@
+chartConfig:
+  config: {}
+  type: table
+description: Bounded detail records for append-only openFDA enforcement-recall observations. Repeated copies of
+  a source, recall, and observation timestamp retain the latest loaded row; later source revisions remain separate
+  observations rather than being collapsed into current state.
+metricQuery:
+  dimensions: &id001
+  - fct_openfda_recall_observation_observed_at
+  - fct_openfda_recall_observation_recall_id
+  - fct_openfda_recall_observation_firm
+  - fct_openfda_recall_observation_classification
+  - fct_openfda_recall_observation_status
+  - fct_openfda_recall_observation_report_date
+  - fct_openfda_recall_observation_source_loaded_at
+  exploreName: fct_openfda_recall_observation
+  filters:
+    dimensions:
+      and:
+      - id: 6cfd7787-bd7e-5f39-850c-17a297b0d4b1
+        operator: inThePast
+        settings: {completed: false, unitOfTime: days}
+        target: {fieldId: fct_openfda_recall_observation_observed_at}
+        values: [30]
+  limit: 100
+  metrics: []
+  sorts: [{descending: true, fieldId: fct_openfda_recall_observation_observed_at}]
+  tableCalculations: []
+name: OpenFDA recall observation — observations
+slug: fct-openfda-recall-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_openfda_recall_observation
+version: 1
