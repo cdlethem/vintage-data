@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_parliament_procedural_activity_first_scheduled_week
+          yRef:
+            field: fct_uk_parliament_procedural_activity_distinct_procedural_items
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: First scheduled at (Week)
+      yAxis:
+      - name: Distinct procedural items
+    layout:
+      xField: fct_uk_parliament_procedural_activity_first_scheduled_week
+      yField:
+      - fct_uk_parliament_procedural_activity_distinct_procedural_items
+  type: cartesian
+description: "Source: UK Parliament BusinessItem OData feed, Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Distinct procedural items by the UTC week of their earliest scheduled BusinessItemDate, limited to the latest 365 days of `first_business_item_at`. The first date summarizes each observed version; revisions and items spanning multiple dates mean this is not an additive schedule-date total."
+metricQuery:
+  dimensions:
+  - fct_uk_parliament_procedural_activity_first_scheduled_week
+  exploreName: fct_uk_parliament_procedural_activity
+  filters:
+    dimensions:
+      and:
+      - id: b17daaae-bbc6-476d-a8d3-af16dd5e0d19
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_parliament_procedural_activity_first_business_item_at
+        values:
+        - 365
+  limit: 5000
+  metrics:
+  - fct_uk_parliament_procedural_activity_distinct_procedural_items
+  sorts:
+  - descending: false
+    fieldId: fct_uk_parliament_procedural_activity_first_scheduled_week
+  tableCalculations: []
+name: Procedural items first scheduled weekly
+slug: fct-uk-parliament-procedural-activity-scheduled-items-weekly
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_parliament_procedural_activity_first_scheduled_week
+  - fct_uk_parliament_procedural_activity_distinct_procedural_items
+tableName: fct_uk_parliament_procedural_activity
+version: 1

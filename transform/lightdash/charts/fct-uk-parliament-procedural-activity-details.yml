@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: "Source: UK Parliament BusinessItem OData feed, Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Latest 30 UTC days of retained observation versions. `observed_at` is extractor observation time; `laying_at` and scheduled timestamps are Parliamentary business dates. This append-only history is not a current snapshot."
+metricQuery:
+  dimensions: &detail_fields
+  - fct_uk_parliament_procedural_activity_observed_at
+  - fct_uk_parliament_procedural_activity_procedural_item_id
+  - fct_uk_parliament_procedural_activity_laying_at
+  - fct_uk_parliament_procedural_activity_business_item_date_count
+  - fct_uk_parliament_procedural_activity_first_business_item_at
+  - fct_uk_parliament_procedural_activity_last_business_item_at
+  - fct_uk_parliament_procedural_activity_source_loaded_at
+  exploreName: fct_uk_parliament_procedural_activity
+  filters:
+    dimensions:
+      and:
+      - id: 89d60f7e-803b-4242-bb55-aafd9ab62f52
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_parliament_procedural_activity_observed_at
+        values:
+        - 30
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_uk_parliament_procedural_activity_observed_at
+  tableCalculations: []
+name: UK Parliament procedural activity — observations
+slug: fct-uk-parliament-procedural-activity-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *detail_fields
+tableName: fct_uk_parliament_procedural_activity
+version: 1

@@ -1,0 +1,50 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_parliament_procedural_activity_business_item_date_count
+          yRef:
+            field: fct_uk_parliament_procedural_activity_distinct_procedural_items
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_uk_parliament_procedural_activity_business_item_date_count
+      yField:
+      - fct_uk_parliament_procedural_activity_distinct_procedural_items
+  type: cartesian
+description: "Source: UK Parliament BusinessItem OData feed, Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Distinct `procedural_item_id` values by raw scheduled-date count among observations made in the latest 30 UTC days. Repeated revisions count once within each count bucket, but this is an observation-window distribution, not a current snapshot."
+metricQuery:
+  dimensions:
+  - fct_uk_parliament_procedural_activity_business_item_date_count
+  exploreName: fct_uk_parliament_procedural_activity
+  filters:
+    dimensions:
+      and:
+      - id: 25ca6c4a-1d2c-4dfc-8d13-ea65a0b5d30e
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_parliament_procedural_activity_observed_at
+        values:
+        - 30
+  limit: 100
+  metrics:
+  - fct_uk_parliament_procedural_activity_distinct_procedural_items
+  sorts:
+  - descending: true
+    fieldId: fct_uk_parliament_procedural_activity_distinct_procedural_items
+  tableCalculations: []
+name: Procedural items by scheduled date count
+slug: fct-uk-parliament-procedural-activity
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_parliament_procedural_activity_business_item_date_count
+  - fct_uk_parliament_procedural_activity_distinct_procedural_items
+tableName: fct_uk_parliament_procedural_activity
+version: 1

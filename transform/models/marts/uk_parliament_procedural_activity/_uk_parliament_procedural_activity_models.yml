@@ -1,0 +1,348 @@
+version: 2
+models:
+- name: fct_uk_parliament_procedural_activity
+  description: "Hourly append-only observation history of UK Parliament BusinessItem procedural records. Each row is one source relation, procedural item, and extractor observation timestamp; repeated raw deliveries at that grain retain only the latest loaded row. This is not a current snapshot or SCD2 table: revisions remain as separate observations, and an item with multiple scheduled business dates can appear in overlapping date categories, so observations and category totals are not additive across time or categories."
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_relation, procedural_item_id, observed_at
+      label: UK Parliament procedural activity
+      group_label: UK Parliament
+      default_time_dimension:
+        field: observed_at
+        interval: WEEK
+      primary_key: uk_parliament_proc_8e07a1
+      vintage:
+        visualization:
+          dimension: business_item_date_count
+          metric: distinct_procedural_items
+          time: observed_at
+          window_days: 30
+          title: Procedural items by scheduled date count
+          description: Distinct Parliament `procedural_item_id` values by raw scheduled-date count among observations in the latest 30 UTC days. Revisions are retained, so this is an observation-window distribution rather than a current snapshot.
+          detail_fields:
+          - observed_at
+          - procedural_item_id
+          - laying_at
+          - business_item_date_count
+          - first_business_item_at
+          - last_business_item_at
+          - source_loaded_at
+          sources:
+          - 'UK Parliament BusinessItem OData feed — Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Source configuration: `extract/sources/uk_parliament_procedural_activity.yml`.'
+          analysis:
+            headline: how observed UK Parliament procedural-item revisions relate to laying and scheduled business dates.
+            event_time: laying_at
+            grain: WEEK
+            controls:
+            - source_relation
+            - business_item_date_count
+            trends:
+            - slug: items-laid-weekly
+              kind: total
+              metric: distinct_procedural_items
+              time: laying_at
+              grain: WEEK
+              title: Procedural items laid weekly
+              description: Distinct `procedural_item_id` values by the UTC week Parliament reports they were laid. This is a business-date grouping, not extractor observation time; retained revisions count once per week.
+              width: half
+            - slug: scheduled-items-weekly
+              kind: total
+              metric: distinct_procedural_items
+              time: first_business_item_at
+              time_dimension: first_scheduled
+              title: Procedural items first scheduled weekly
+              description: Distinct `procedural_item_id` values by the earliest UTC scheduled business date in each observation. Items spanning dates and revisions make weekly totals non-additive across groups.
+              width: half
+            - slug: average-schedule-dates-weekly
+              kind: total
+              metric: avg_schedule_dates
+              time: laying_at
+              grain: WEEK
+              title: Average scheduled dates per laid item weekly
+              description: Observation-weighted average raw BusinessItemDate entries by UTC laying week; it does not deduplicate revisions into a current schedule.
+              width: half
+            - slug: schedule-date-count-mix
+              kind: composition
+              metric: distinct_procedural_items
+              breakdown: business_item_date_count
+              top_n: 10
+              time: laying_at
+              grain: WEEK
+              title: Procedural items by scheduled date count weekly
+              description: Distinct procedural items by UTC laying week, stacked by raw scheduled-date count. The ten largest count categories are shown; smaller categories are excluded rather than aggregated.
+              width: half
+  columns:
+  - name: uk_parliament_procedural_activity_observation_key
+    description: Stable hash of the raw source relation, Parliament procedural item identifier, and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Procedural activity observation key
+          hidden: true
+          name: uk_parliament_proc_8e07a1
+  - name: source_relation
+    description: Raw loader relation that supplied the retained observation.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source relation
+          hidden: false
+  - name: source_name
+    description: Source identifier supplied by the UK Parliament extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: procedural_item_id
+    description: Parliament BusinessItem LocalId for the observed procedural item.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        metrics:
+          distinct_procedural_items:
+            type: count_distinct
+            label: Distinct procedural items
+            description: Distinct Parliament `procedural_item_id` values in the selected group and time window. Repeated revisions count once per group, but an item associated with multiple scheduled dates can occur in multiple date groups; grouped totals are not additive.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Procedural item id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed this BusinessItem version; this is observation time, not a parliamentary business date.
+    data_type: timestamp with time zone
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          observed_item_versions:
+            type: count
+            label: Observed item versions
+            description: Count of emitted BusinessItem observation versions. Revisions are intentionally retained, so this is not a count of new or currently active procedural items.
+            format: '#,##0'
+  - name: laying_at
+    description: UTC timestamp when Parliament reports the procedural item was laid; this is the laying event time.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Laid at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: business_item_dates
+    description: Raw BusinessItemDate JSON array from the source, preserved unchanged for audit and future parsing.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Business item dates JSON
+          hidden: true
+          sql: CAST(${TABLE}.business_item_dates AS VARCHAR)
+  - name: business_item_date_count
+    description: Number of scheduled business-date entries in the raw BusinessItemDate array for this observation.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          avg_schedule_dates:
+            type: average
+            label: Average scheduled dates per laid item
+            description: Average raw BusinessItemDate entries per retained procedural-item observation. It is observation-weighted and does not deduplicate revisions across weeks.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Scheduled date count
+          hidden: false
+          format: '#,##0'
+  - name: first_business_item_at
+    description: Earliest UTC scheduled business date parsed from the raw BusinessItemDate array for this observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: First scheduled at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: first_business_date
+        additional_dimensions:
+          first_scheduled:
+            type: timestamp
+            label: First scheduled at
+            description: Earliest scheduled business timestamp, exposed under a short key so week field IDs remain within Postgres's identifier limit.
+            sql: ${TABLE}.first_business_item_at
+            time_intervals:
+            - DAY
+            - WEEK
+            - MONTH
+            - YEAR
+  - name: last_business_item_at
+    description: Latest UTC scheduled business date parsed from the raw BusinessItemDate array for this observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Last scheduled at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_row_id
+    description: Raw warehouse row identifier for the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Load batch identifier that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Extraction partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the retained source batch began.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Load operation identifier that inserted the retained source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation into raw storage.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw-load timestamp represented by matching rows; not the publisher's observation time.
+  - name: content_hash
+    description: Hash of the original raw record content retained for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true
