@@ -173,8 +173,11 @@ def _parse_page(
 ) -> tuple[list[dict[str, Any]], str | None]:
     if not isinstance(document, dict):
         raise PokeAPIError("PokéAPI response must be a JSON object")
-    if "results" not in document or "next" not in document:
-        raise PokeAPIError("PokéAPI response must contain results and next")
+    if "count" not in document or "results" not in document or "next" not in document:
+        raise PokeAPIError("PokéAPI response must contain count, results and next")
+    count = document["count"]
+    if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+        raise PokeAPIError("PokéAPI response count must be a non-negative integer")
     results = document["results"]
     next_url = document["next"]
     if not isinstance(results, list):
@@ -213,9 +216,13 @@ def _parse_page(
     if next_url is not None:
         next_limit, next_offset = _catalog_parameters(next_url, "PokéAPI next URL")
         expected_offset = current_offset + page_size
-        if next_limit != page_size or next_offset != expected_offset:
+        if (
+            next_limit != page_size
+            or next_offset != expected_offset
+            or next_offset >= count
+        ):
             raise PokeAPIError(
-                "PokéAPI next URL does not continue the requested catalog pagination"
+                "PokéAPI next URL does not continue within the catalog pagination"
             )
     return page_records, next_url
 
