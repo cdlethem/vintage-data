@@ -1,0 +1,43 @@
+name: common_crawl_index
+script: fetch_common_crawl_index.py
+# One explicit collection and one narrow path-prefix query. The extractor first
+# verifies the collection against the official discovery document and never fetches WARC bodies.
+args:
+  - "--collection"
+  - "CC-MAIN-2026-30"
+  - "--url-pattern"
+  - "https://www.commoncrawl.org/blog/*"
+  - "--page-size"
+  - "1"
+  - "--max-pages"
+  - "2"
+  - "--max-records"
+  - "500"
+  - "--max-bytes"
+  - "8388608"
+  - "--max-duration"
+  - "120"
+  - "--timeout"
+  - "10"
+  - "--retries"
+  - "2"
+schedule: "29 6 12 * *"  # UTC; proposed conservative monthly metadata sample
+# External live, raw-load, warehouse, and scheduled-run evidence are required before activation.
+enabled: false
+retries: 1
+timeout_minutes: 5
+sink: local
+run_summary:
+  required: true
+
+# Fixed cadence: index availability is not an activity signal.
+cadence:
+  auto: false
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "disabled monthly bounded metadata sample from one explicit collection and one narrow Common Crawl blog path prefix"
+rate_limit: "local caps: one collection discovery, one page-count request, 2 data pages, 500 emitted records, 8 MiB streamed response data, 120 seconds total duration, 10-second requests, and 2 bounded retries; 429 and transient 5xx responses never become empty successes"
+licence: "Common Crawl index metadata is provided under Common Crawl's Terms of Use; indexed content retains its original rights"
+attribution: "Common Crawl, https://commoncrawl.org/"
+attribution_required: true
+coverage_note: "Bounded metadata-only CDX sample for one configured collection and URL path prefix; not an exhaustive crawl, cross-collection history, or archived-content download. Truncation and skipped rows are reported in the required run summary."
