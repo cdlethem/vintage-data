@@ -1,0 +1,28 @@
+name: europe_pmc
+script: fetch_europe_pmc.py
+args:
+  - "--query"
+  - "FIRST_PDATE:[2026-01-01 TO 2026-12-31]"
+  - "--page-size"
+  - "100"
+  - "--max-pages"
+  - "5"
+  - "--max-records"
+  - "500"
+  - "--timeout"
+  - "30"
+  - "--retries"
+  - "2"
+  - "--rate-limit-seconds"
+  - "0.25"
+schedule: "23 3 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "A bounded 2026 publication-date query. Cursor state resumes partial pulls; a run reports incomplete coverage when its five-page or 500-record cap is reached. This is metadata only, not a full-text corpus crawl."
+rate_limit: "Public REST API without a token; extractor waits at least 0.25 seconds between requests and retries transport failures twice."
+licence: "Europe PMC metadata and linked content have record-specific reuse terms."
+attribution_required: true
