@@ -1,0 +1,65 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_parliament_procedural_activity_laid_at_week
+          yRef:
+            field: fct_uk_parliament_procedural_activity_distinct_items
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Laid at (Week)
+      yAxis:
+      - name: Distinct procedural items
+    layout:
+      xField: fct_uk_parliament_procedural_activity_laid_at_week
+      yField:
+      - fct_uk_parliament_procedural_activity_distinct_items
+  type: cartesian
+description: Distinct procedural items by publisher `laid_at` week, restricted to items seen in extractor
+  observations from the past 30 UTC days and laying dates from the past 365 UTC days. Repeated observed
+  versions count once per laying week; missing weeks are absent, not zero.
+metricQuery:
+  dimensions:
+  - fct_uk_parliament_procedural_activity_laid_at_week
+  exploreName: fct_uk_parliament_procedural_activity
+  filters:
+    dimensions:
+      and:
+      - id: 00000000-0000-5000-8000-000000000005
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_parliament_procedural_activity_laid_at
+        values:
+        - 365
+      - id: 00000000-0000-5000-8000-000000000006
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_parliament_procedural_activity_observed_at
+        values:
+        - 30
+      id: 00000000-0000-5000-8000-000000000007
+  limit: 5000
+  metrics:
+  - fct_uk_parliament_procedural_activity_distinct_items
+  sorts:
+  - descending: false
+    fieldId: fct_uk_parliament_procedural_activity_laid_at_week
+  tableCalculations: []
+name: Distinct items laid by week
+slug: fct-uk-parliament-procedural-activity-items-laid-weekly
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_parliament_procedural_activity_laid_at_week
+  - fct_uk_parliament_procedural_activity_distinct_items
+tableName: fct_uk_parliament_procedural_activity
+version: 1

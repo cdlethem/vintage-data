@@ -1,0 +1,65 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_parliament_procedural_activity_first_scheduled_at_week
+          yRef:
+            field: fct_uk_parliament_procedural_activity_distinct_items
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: First scheduled at (Week)
+      yAxis:
+      - name: Distinct procedural items
+    layout:
+      xField: fct_uk_parliament_procedural_activity_first_scheduled_at_week
+      yField:
+      - fct_uk_parliament_procedural_activity_distinct_items
+  type: cartesian
+description: Distinct procedural items by their earliest parseable BusinessItemDate, restricted to items
+  seen in the past 30 UTC days and schedule dates in the past 365 UTC days. Later schedule changes do not
+  become extra items; missing weeks are absent, not zero.
+metricQuery:
+  dimensions:
+  - fct_uk_parliament_procedural_activity_first_scheduled_at_week
+  exploreName: fct_uk_parliament_procedural_activity
+  filters:
+    dimensions:
+      and:
+      - id: 00000000-0000-5000-8000-000000000008
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_parliament_procedural_activity_first_scheduled_at
+        values:
+        - 365
+      - id: 00000000-0000-5000-8000-000000000009
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_parliament_procedural_activity_observed_at
+        values:
+        - 30
+      id: 00000000-0000-5000-8000-000000000010
+  limit: 5000
+  metrics:
+  - fct_uk_parliament_procedural_activity_distinct_items
+  sorts:
+  - descending: false
+    fieldId: fct_uk_parliament_procedural_activity_first_scheduled_at_week
+  tableCalculations: []
+name: Distinct scheduled items by first schedule week
+slug: fct-uk-parliament-procedural-activity-scheduled-items-weekly
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_parliament_procedural_activity_first_scheduled_at_week
+  - fct_uk_parliament_procedural_activity_distinct_items
+tableName: fct_uk_parliament_procedural_activity
+version: 1
