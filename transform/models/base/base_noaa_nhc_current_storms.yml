@@ -1,0 +1,64 @@
+version: 2
+
+sources:
+  - name: raw_noaa_nhc_current_storms
+    description: Raw insert-only NOAA/NHC current-storm observations written by the load layer.
+    database: extract
+    schema: raw
+    tables:
+      - name: noaa_nhc_current_storms
+        description: Complete extractor records, including loader lineage and preserved JSON payloads.
+        columns:
+          - {name: _row_id, data_type: varchar, description: Deterministic physical raw-row identifier.}
+          - {name: _source, data_type: varchar, description: Loader source name.}
+          - {name: _batch_id, data_type: varchar, description: Extraction batch identifier.}
+          - {name: _source_file, data_type: varchar, description: Committed NDJSON path.}
+          - {name: _file_row_num, data_type: bigint, description: One-based row position in the source file.}
+          - {name: _dt, data_type: date, description: Extraction date partition.}
+          - {name: _extract_started_at, data_type: timestamp with time zone, description: UTC extraction start time.}
+          - {name: _load_id, data_type: varchar, description: Load job identifier.}
+          - {name: _loaded_at, data_type: timestamp with time zone, description: UTC raw-load time.}
+          - {name: _content_hash, data_type: varchar, description: Stable hash of the complete extractor record.}
+          - {name: _payload, data_type: json, description: Complete extractor record retained for lineage and schema evolution.}
+          - {name: source, data_type: varchar, description: Extractor source name.}
+          - {name: id, data_type: varchar, description: Observation key derived from official storm id and fetch timestamp.}
+          - {name: fetched_at, data_type: timestamp with time zone, description: UTC time when CurrentStorms.json was fetched.}
+
+models:
+  - name: base_noaa_nhc_current_storms
+    description: >-
+      Raw-backed NOAA/NHC current-storm observations at official storm identifier and fetch timestamp grain.
+      Advisory time is publisher metadata and is intentionally distinct from fetched_at. Repeated unchanged
+      snapshots remain separate observations; replaying the same committed raw file remains loader-idempotent.
+      Complete normalized records, source storm objects, unknown fields, and response metadata remain in JSON.
+    columns:
+      - {name: _row_id, data_type: varchar, description: Deterministic physical raw-row identifier.}
+      - {name: _source, data_type: varchar, description: Loader source name.}
+      - {name: _batch_id, data_type: varchar, description: Extraction batch identifier.}
+      - {name: _source_file, data_type: varchar, description: Committed NDJSON path.}
+      - {name: _file_row_num, data_type: bigint, description: One-based row position in the source file.}
+      - {name: _dt, data_type: date, description: Extraction date partition.}
+      - {name: _extract_started_at, data_type: timestamp with time zone, description: UTC extraction start time.}
+      - {name: _load_id, data_type: varchar, description: Load job identifier.}
+      - {name: _loaded_at, data_type: timestamp with time zone, description: UTC raw-load time.}
+      - {name: _content_hash, data_type: varchar, description: Stable hash of the complete extractor record.}
+      - {name: _payload, data_type: json, description: Complete normalized extractor record.}
+      - {name: source, data_type: varchar, description: Constant noaa_nhc_current_storms source name.}
+      - {name: id, data_type: varchar, description: SHA-256 observation key over source, official storm id, and fetched_at.}
+      - {name: fetched_at, data_type: timestamp with time zone, description: UTC endpoint fetch time; this is the observation time.}
+      - {name: storm_id, data_type: varchar, description: Stable official NHC storm identifier.}
+      - {name: name, data_type: varchar, description: NHC storm name; nullable.}
+      - {name: basin, data_type: varchar, description: "NHC basin code, supplied by the feed or derived from storm_id; nullable."}
+      - {name: classification, data_type: varchar, description: NHC storm classification; nullable.}
+      - {name: intensity_kt, data_type: double, description: Maximum sustained wind intensity in knots; nullable.}
+      - {name: pressure_mb, data_type: double, description: Minimum central pressure in millibars; nullable.}
+      - {name: latitude, data_type: double, description: Storm center latitude in decimal degrees north; nullable.}
+      - {name: longitude, data_type: double, description: Storm center longitude in decimal degrees east; nullable.}
+      - {name: movement_direction_degrees, data_type: double, description: Motion direction in degrees clockwise from true north; nullable.}
+      - {name: movement_speed_kt, data_type: double, description: Forward motion speed in knots; nullable.}
+      - {name: advisory_at, data_type: timestamp with time zone, description: UTC advisory update time published by NHC; distinct from fetched_at and nullable.}
+      - {name: public_advisory_url, data_type: varchar, description: Official NHC public advisory product URL; nullable.}
+      - {name: forecast_advisory_url, data_type: varchar, description: Official NHC forecast advisory product URL; nullable.}
+      - {name: wind_speed_probabilities_url, data_type: varchar, description: Official NHC wind-speed probabilities product URL; nullable.}
+      - {name: raw_storm, data_type: json, description: "Complete original storm object, including unknown fields."}
+      - {name: raw_response, data_type: json, description: "Complete original CurrentStorms response, including response-level unknown fields."}
