@@ -1,0 +1,14 @@
+name: ilostat_sdmx
+script: fetch_ilostat_sdmx.py
+args: ["--timeout", "60"]
+schedule: "37 14 * * *"  # UTC
+enabled: false
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "bounded two-calendar-year observations for ILO employment by country, sex, and age; daily polling captures revisions without querying the catalogue"
+rate_limit: "no published hard limit; one bounded SDMX data request per daily run"
+licence: "ILOSTAT bulk download terms; International Labour Organization attribution required"
+attribution_required: true
