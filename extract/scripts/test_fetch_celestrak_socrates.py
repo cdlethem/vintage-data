@@ -38,7 +38,7 @@ FIRST_HEADING = ["Data&amp;Graphs", "NORADCatalogNumber", "Name [Ops Status]", "
 SECOND_HEADING = ["MaxProbability", "DilutionThreshold(km)"]
 
 
-def table_document(rows=1, headers=None, malformed_row=None, duplicate=False):
+def table_document(rows=1, headers=None, malformed_row=None, duplicate=False, numeric_override=None):
     first = FIRST_HEADING if headers is None else headers
 
     def heading(cells):
@@ -58,6 +58,13 @@ def table_document(rows=1, headers=None, malformed_row=None, duplicate=False):
         second_cells = ["50 km All", str(200 + item), "OBJECT_B", "0.2", "0.0001", "0.1"]
         if index == malformed_row:
             second_cells.pop()
+        if numeric_override is not None and index == rows - 1:
+            field, value = numeric_override
+            cells, position = {
+                "range": (first_cells, 5), "speed": (first_cells, 6),
+                "probability": (second_cells, 4), "dilution": (second_cells, 5),
+            }[field]
+            cells[position] = value
         body.extend((data(first_cells), data(second_cells)))
     return ("<html><table><tr><th>Navigation</th></tr></table><table>"
             "<tr><th>Data current as of 2026 Sep 27</th></tr>"
@@ -300,6 +307,33 @@ class FetchCelestrakSocratesTests(unittest.TestCase):
                 summary = json.loads(stderr.getvalue().split("\t", 1)[1])
                 self.assertEqual(summary["records"], 0)
                 self.assertEqual(summary["metrics"]["failure_phase"], phase)
+
+    def test_invalid_table_numbers_in_later_event_block_all_publication(self):
+        cases = [(field, value) for field in ("range", "speed", "probability", "dilution")
+                 for value in ("NaN", "Infinity", "-Infinity", "1e999", "-1")]
+        cases.append(("probability", "1.0001"))
+        for field, value in cases:
+            with self.subTest(field=field, value=value):
+                document = table_document(rows=2, numeric_override=(field, value))
+                stdout, stderr = io.StringIO(), io.StringIO()
+                with mock.patch.object(MODULE.urllib.request, "urlopen", return_value=Response([document])), \
+                     contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                    self.assertEqual(MODULE.main(["--mode", "table"]), 1)
+                self.assertEqual(stdout.getvalue(), "")
+                summary = json.loads(stderr.getvalue().split("\t", 1)[1])
+                self.assertEqual(summary["records"], 0)
+                self.assertEqual(summary["metrics"]["failure_phase"], "table_row_validation")
+
+    def test_table_numbers_accept_finite_nonnegative_values_and_unit_probability(self):
+        document = table_document(numeric_override=("probability", "1"))
+        document = document.replace(b"<span>1.5</span>", b"<span>0</span>")
+        document = document.replace(b"<span>12.3</span>", b"<span>0</span>")
+        document = document.replace(b"<span>0.1</span></td></tr><tr><th>Data Fields:",
+                                    b"<span>0</span></td></tr><tr><th>Data Fields:")
+        with mock.patch.object(MODULE.urllib.request, "urlopen", return_value=Response([document])):
+            record, = MODULE.fetch_conjunctions(mode="table")
+        self.assertEqual((record["tca_range_km"], record["tca_relative_speed_km_s"],
+                          record["max_prob"], record["dilution_km"]), (0, 0, 1, 0))
 
     def test_unclosed_final_table_row_fails_without_publication(self):
         complete = table_document(rows=2)
