@@ -1,0 +1,26 @@
+name: gitlab_public_projects
+script: fetch_gitlab_public_projects.py
+# Three page-number pages ranked by recent activity form a bounded sample, not a consistent or exhaustive snapshot; projects can move between pages during a run.
+args: ["--per-page", "50", "--max-pages", "3", "--order-by", "last_activity_at", "--sort", "desc", "--timeout", "20", "--retries", "2", "--retry-budget", "180"]
+schedule: "41 9 8 * *"  # UTC; conservative monthly refresh of ranked public metadata
+enabled: false
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Keep disabled until authorized operators record both the required unauthenticated
+# live smoke and a successful configured DAG publication with the resulting raw
+# relation available to the load layer. Database-backed raw-source synchronization
+# and consistency validation remain an external gate until that relation exists.
+#
+# The extractor sends no credentials or token headers. One scheduled attempt makes at
+# most three serial requests, with at most two retries per page and one run-wide
+# 180-second retry budget. The 10-minute task timeout also accommodates the separate
+# Airflow retry; manual runs are additional service use.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "monthly bounded sample of up to 150 public GitLab projects ranked by last activity"
+rate_limit: "local cap: 3 pages/run, 50 projects/page, 2 retries/request, 180-second run-wide retry budget; respects bounded Retry-After delays"
+licence: "GitLab API project metadata; underlying project content and metadata may carry project-specific terms"
+attribution: "GitLab, https://gitlab.com/"
+attribution_required: true
+coverage_note: "Ranked page-number pagination is mutable and bounded; this source is neither a consistent snapshot nor exhaustive GitLab project coverage. Deduplicate within a run by stable GitLab project id."
