@@ -1,0 +1,17 @@
+name: eurostat_statistics
+script: fetch_eurostat_statistics.py
+# Annual EU-27 GDP at current prices: one geography, unit, national-account
+# aggregate, frequency, and period. Every filter is explicit and bounded.
+args: ["nama_10_gdp", "freq=A&unit=CP_MEUR&na_item=B1GQ&geo=EU27_2020&time=2024"]
+schedule: "15 7 * * 1"  # UTC; weekly to capture Eurostat revisions
+# Enable only after an operator has completed the live API smoke check.
+enabled: false
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Weekly revision poll for annual EU-27 GDP at current prices. The query fixes freq=A, unit=CP_MEUR, na_item=B1GQ, geo=EU27_2020, and time=2024; change time deliberately when advancing the annual vintage. Disabled pending a live source smoke check."
+rate_limit: "unpublished; one bounded JSON-stat request per scheduled run"
+licence: "Eurostat data policy; attribution required"
+attribution_required: true
