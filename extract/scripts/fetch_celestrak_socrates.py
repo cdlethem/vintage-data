@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Fetch CelesTrak SOCRATES conjunctions.
 
-The official filtered HTML endpoint timed out during the 2026-09-06 remediation
-check, so production deliberately remains on the verified CSV export. Table mode
-is retained only as an explicit manual recovery path, never silently selected.
+The filtered HTML endpoint is unverified in production. CSV remains the scheduled
+default and the explicit rollback mode; table retrieval requires --mode table.
 """
 from __future__ import annotations
 
@@ -30,20 +29,150 @@ MAX_ERROR_CHARS = 240
 LAST_REQUEST: dict[str, object] = {}
 
 
+def _display_column(label: str) -> str | None:
+    """Map SOCRATES display labels, not CSV export headers, to record fields."""
+    normalized = re.sub(r"[^a-z0-9]+", " ", label.lower()).strip()
+    if normalized.startswith(("norad", "catalog number", "catalog id", "cat id", "ssc")):
+        return "NORAD_CAT_ID"
+    if normalized.startswith(("object name", "satellite name", "satellite", "name")):
+        return "OBJECT_NAME"
+    if normalized.startswith(("tca", "time of closest approach")):
+        return "TCA"
+    if normalized.startswith(("min range", "minimum range")):
+        return "TCA_RANGE"
+    if normalized.startswith(("rel speed", "relative speed")):
+        return "TCA_RELATIVE_SPEED"
+    if normalized.startswith(("max prob", "maximum probability")):
+        return "MAX_PROB"
+    if normalized.startswith("dilution"):
+        return "DILUTION"
+    return None
+
+
+def _display_headers(cells: list[str], object_number: int) -> list[str | None] | None:
+    columns = []
+    for cell in cells:
+        field = _display_column(cell)
+        columns.append(f"{field}_{object_number}" if field in {"NORAD_CAT_ID", "OBJECT_NAME"} else field)
+    expected = {f"NORAD_CAT_ID_{object_number}", f"OBJECT_NAME_{object_number}"}
+    mapped = [field for field in columns if field is not None]
+    return columns if expected.issubset(mapped) and len(set(mapped)) == len(mapped) else None
+
+
+def _table_records(parser: TableParser, maximum: int, fetched_at: str) -> list[dict]:
+    rows = parser.rows
+    start = next(((index, number, rows[index][2], rows[index + 1][2])
+                  for index, (number, is_header, cells) in enumerate(rows[:-1])
+                  if is_header and len(cells) == 7
+                  and rows[index + 1][0] == number and rows[index + 1][1]
+                  and len(rows[index + 1][2]) == 6), None)
+    if start is None:
+        _mark_parse_failure("table_header_validation")
+        raise ValueError("SOCRATES table missing two display heading rows")
+    heading_index, table_number, first_cells, second_cells = start
+    first_headers = _display_headers(first_cells, 1)
+    second_headers = _display_headers(second_cells, 2)
+    if table_number in parser.unclosed_rows or parser._table_depth or parser._row is not None:
+        _mark_parse_failure("table_row_validation")
+        raise ValueError("SOCRATES table has an unfinished row")
+    if first_headers is None or second_headers is None or set(filter(None, first_headers + second_headers)) != REQUIRED:
+        _mark_parse_failure("table_header_validation")
+        raise ValueError("SOCRATES table missing required display fields")
+
+    records = []
+    seen = set()
+    pending: list[str] | None = None
+    header_pair = 0
+    for number, is_header, cells in rows[heading_index + 2:]:
+        if number != table_number:
+            break
+        if is_header:
+            if pending is not None:
+                _mark_parse_failure("table_row_validation")
+                raise ValueError("SOCRATES table has an incomplete event")
+            expected = first_headers if header_pair == 0 else second_headers
+            if (_display_headers(cells, header_pair + 1) != expected
+                    or len(cells) != (7 if header_pair == 0 else 6)):
+                _mark_parse_failure("table_header_validation")
+                raise ValueError("SOCRATES table has changed display headings")
+            header_pair = 1 - header_pair
+            continue
+        if header_pair:
+            _mark_parse_failure("table_header_validation")
+            raise ValueError("SOCRATES table has an incomplete heading pair")
+        if pending is None:
+            if len(cells) != 7:
+                _mark_parse_failure("table_row_validation")
+                raise ValueError("SOCRATES table has an incomplete first object")
+            pending = cells
+            continue
+        if len(cells) != 6:
+            _mark_parse_failure("table_row_validation")
+            raise ValueError("SOCRATES table has an incomplete second object")
+        values = dict(zip(first_headers + second_headers, pending + cells))
+        try:
+            record = _record(values, fetched_at)
+            if not record["norad_id_1"].isdigit() or not record["norad_id_2"].isdigit() or not record["tca"]:
+                raise ValueError("SOCRATES table has invalid object IDs or TCA")
+        except (KeyError, TypeError, ValueError) as exc:
+            _mark_parse_failure("table_row_validation")
+            raise ValueError(f"SOCRATES table event {len(records) + 1}: {_safe_error(exc)}") from exc
+        if record["id"] in seen:
+            _mark_parse_failure("table_row_validation")
+            raise ValueError("SOCRATES table has a duplicate event")
+        seen.add(record["id"])
+        records.append(record)
+        pending = None
+    if pending is not None or header_pair or not records or len(records) > maximum:
+        _mark_parse_failure("table_row_validation")
+        raise ValueError(f"SOCRATES table expected 1 to {maximum} complete events")
+    return records
+
+
 class TableParser(HTMLParser):
     def __init__(self):
-        super().__init__(); self.rows = []; self._row = None; self._cell = None
+        super().__init__()
+        self.rows: list[tuple[int, bool, list[str]]] = []
+        self.unclosed_rows: set[int] = set()
+        self._table = 0
+        self._table_depth = 0
+        self._row: list[str] | None = None
+        self._header = False
+        self._cell: list[str] | None = None
+
     def handle_starttag(self, tag, attrs):
-        if tag == "tr": self._row = []
-        elif tag in {"th", "td"} and self._row is not None: self._cell = []
+        if tag == "table":
+            if self._table_depth == 0:
+                self._table += 1
+            self._table_depth += 1
+        elif tag == "tr" and self._table_depth == 1:
+            if self._row is not None:
+                self.unclosed_rows.add(self._table)
+            self._row = []
+            self._header = False
+        elif tag in {"th", "td"} and self._row is not None:
+            self._cell = []
+            if tag == "th":
+                self._header = True
+
     def handle_data(self, data):
-        if self._cell is not None: self._cell.append(data)
+        if self._cell is not None:
+            self._cell.append(data)
+
     def handle_endtag(self, tag):
         if tag in {"th", "td"} and self._cell is not None:
-            self._row.append("".join(self._cell).strip()); self._cell = None
+            self._row.append("".join(self._cell).strip())
+            self._cell = None
         elif tag == "tr" and self._row is not None:
-            if self._row: self.rows.append(self._row)
+            self.rows.append((self._table, self._header, self._row))
             self._row = None
+            self._cell = None
+        elif tag == "table" and self._table_depth:
+            if self._table_depth == 1 and self._row is not None:
+                self.unclosed_rows.add(self._table)
+                self._row = None
+                self._cell = None
+            self._table_depth -= 1
 
 
 def _rounded(seconds: float) -> float:
@@ -179,14 +308,22 @@ def fetch_conjunctions(sort: str = "maxProb", limit: int | None = None, mode: st
                 raise
         yield from records
         return
-    if mode != "table": raise ValueError(f"unknown mode {mode!r}")
-    text, status, attempts, byte_count, elapsed = _get(f"{BASE}/table-socrates.php?NAME=,&ORDER=MAXPROB&MAX={limit or 100}")
-    parser = TableParser(); parser.feed(text)
-    header_index = next((i for i, row in enumerate(parser.rows) if REQUIRED.issubset(row)), None)
-    if header_index is None: raise ValueError("SOCRATES table missing documented headers")
-    headers = parser.rows[header_index]
-    for cells in parser.rows[header_index + 1:]:
-        if len(cells) == len(headers): yield _record(dict(zip(headers, cells)), fetched_at)
+    if mode != "table":
+        raise ValueError(f"unknown mode {mode!r}")
+    if sort != "maxProb" or limit is not None and not 1 <= limit <= 100:
+        _mark_parse_failure("table_parameters")
+        raise ValueError("SOCRATES table requires maxProb sort and a limit from 1 to 100")
+    maximum = 100 if limit is None else limit
+    text, status, attempts, byte_count, elapsed = _get(
+        f"{BASE}/table-socrates.php?NAME=,&ORDER=MAXPROB&MAX={maximum}")
+    if status != 200:
+        _mark_parse_failure("http_response")
+        raise ValueError(f"SOCRATES table returned HTTP {status}")
+    parser = TableParser()
+    parser.feed(text)
+    parser.close()
+    records = _table_records(parser, maximum, fetched_at)
+    yield from records
 
 
 def main(argv: list[str] | None = None) -> int:
