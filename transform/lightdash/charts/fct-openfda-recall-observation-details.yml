@@ -1,9 +1,11 @@
 chartConfig:
   config: {}
   type: table
-description: Physical observation fact for openFDA food-enforcement recalls. Each row is one source,
-  recall identifier, and UTC fetch timestamp. Daily polling republishes recalls, so records are repeated
-  observations rather than SCD2 states; duplicate copies at that grain retain the latest load lineage.
+description: Physical observation fact for openFDA food-enforcement recalls. Each row is one source, recall
+  identifier, and UTC fetch timestamp. Daily polling republishes recalls, so the mart is append-only observation
+  history rather than SCD2; duplicate copies at that grain retain the latest load and file-row lineage.
+  openFDA can revise records and publishes batch updates over days or weeks, so observations are neither
+  real-time alerts nor proof of when a recall first became public.
 metricQuery:
   dimensions: &id001
   - fct_openfda_recall_observation_observed_at
@@ -18,7 +20,7 @@ metricQuery:
   filters:
     dimensions:
       and:
-      - id: 904391b0-d66a-55cf-b182-0d27d623bed4
+      - id: aa1ff1a4-2d36-5435-9862-62757aff6f5d
         operator: inThePast
         settings:
           completed: false
@@ -27,7 +29,7 @@ metricQuery:
           fieldId: fct_openfda_recall_observation_observed_at
         values:
         - 30
-      id: 1494064b-36f7-5895-b131-d59220907384
+      id: 486363e2-1b93-5544-a9f6-e74eada19958
   limit: 100
   metrics: []
   sorts:
