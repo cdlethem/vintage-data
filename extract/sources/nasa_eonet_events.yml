@@ -1,0 +1,18 @@
+name: nasa_eonet_events
+script: fetch_nasa_eonet_events.py
+args: ["--limit", "100"]
+schedule: "19 * * * *"  # UTC; proposed hourly schedule while this source remains disabled
+enabled: false
+retries: 2
+timeout_minutes: 10
+sink: local
+
+# Do not enable until an operator records a successful live EONET source smoke and
+# Airflow import checks. Confined verification is offline and must not mutate Airflow.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "hourly open-event snapshots; one request capped at 100 observations"
+rate_limit: "one serial bounded request per run; no endpoint pagination is assumed"
+licence: "NASA EONET aggregation; linked source-provider terms may also apply"
+attribution: "NASA Earth Observatory Natural Event Tracker (EONET), https://eonet.gsfc.nasa.gov/"
+attribution_required: true
+precision_note: "General-reference event locations from source reports; not authoritative for emergency response or precise event boundaries."
