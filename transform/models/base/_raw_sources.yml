@@ -9477,6 +9477,9 @@ sources:
     - name: description
       description: Raw `description` value supplied by `open311`.
       data_type: VARCHAR
+    - name: media_url
+      description: Raw `media_url` value supplied by `open311`.
+      data_type: VARCHAR
     - name: requested_datetime
       description: Raw `requested_datetime` value supplied by `open311`.
       data_type: TIMESTAMP WITH TIME ZONE
