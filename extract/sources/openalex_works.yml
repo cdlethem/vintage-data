@@ -1,0 +1,36 @@
+name: openalex_works
+script: fetch_openalex_works.py
+args: ["--days-back", "2", "--max-pages", "10", "--max-records", "1000"]
+schedule: "37 5 * * *"  # UTC; one local daily scheduled run
+enabled: false
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Keep disabled until an operator records both a successful live OpenAlex smoke and a
+# read-only Airflow import check. Confined verification uses mocked HTTP only and must
+# not read or mutate Airflow metadata.
+#
+# Upstream policy evidence, checked 2026-09-17:
+# - OpenAlex's authoritative authentication/pricing page documents a free API-key
+#   budget of $1/day and a $0.0001 charge per result for list/filter/search requests:
+#   https://docs.openalex.org/how-to-use-the-api/rate-limits-and-authentication
+# - The same page documents a 100 requests/second rate limit. These are upstream
+#   account-wide limits, not quotas promised by this source; operators must re-check
+#   the page because OpenAlex can revise plans and keyless service policy.
+# - OPENALEX_API_KEY is optional locally. When present it is sent as api_key; no key or
+#   budget is embedded in this repository.
+#
+# Scheduled usage is at most 10 serial requests per daily run (per_page=100, at most
+# 1,000 unique works), or at most $0.10 of documented result charges when all pages
+# are full. The Airflow retry is a separate run and can make up to 10 more requests;
+# operator-triggered/manual runs are also additional and are not included in the
+# one-scheduled-run/day figure. Incomplete coverage fails instead of truncating.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily two-day rolling publication-date overlap; at most 10 requests in the scheduled run, excluding retries and manual runs"
+rate_limit: "local cap 10 serial requests/run; upstream documents $1/day free-key budget, $0.0001/list result, and 100 requests/second at the cited policy URL (checked 2026-09-17)"
+licence: "OpenAlex metadata — CC0, https://docs.openalex.org/additional-help/faq#how-is-openalex-licensed"
+attribution: "OpenAlex, https://openalex.org/"
+attribution_required: false
+deduplication_note: "The rolling publication-date overlap intentionally re-fetches works; deduplicate across runs by stable OpenAlex work id (W...). Duplicate IDs within cursor pages are emitted once and cannot satisfy meta.count."
+coverage_note: "Publication-date polling is not an exact newly-indexed-record feed: records can be indexed or corrected after the rolling window, and publication_date is not an ingestion timestamp. This source is a narrow climate-adaptation enrichment slice, not an OpenAlex corpus crawl."
