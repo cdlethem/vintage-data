@@ -1,0 +1,18 @@
+name: bls_public_api
+script: fetch_bls_public_api.py
+args: []
+schedule: "1 16 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Fixed daily cadence initially; adaptive scheduling is intentionally disabled.
+cadence:
+  auto: false
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily bounded history for selected national labor-market indicators; captures new releases and revisions"
+rate_limit: "BLS public JSON API; one bounded POST request per daily run"
+licence: "US federal public data"
+attribution_required: false
