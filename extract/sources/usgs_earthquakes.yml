@@ -1,0 +1,15 @@
+name: usgs_earthquakes
+script: fetch_usgs_earthquakes.py
+args: ["--timeout", "30"]
+schedule: "7-59/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 5
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "USGS all-day GeoJSON feed updates about once per minute; a 15-minute poll captures new events and revisions conservatively"
+rate_limit: "Official keyless public feed; exactly one all_day.geojson request per run"
+licence: "USGS earthquake data are public-domain U.S. government information; follow USGS data-use guidance for any third-party content"
+attribution_required: true
+attribution_note: "Credit the U.S. Geological Survey when publishing or redistributing derived earthquake data"
