@@ -1,0 +1,14 @@
+name: nasa_eonet_events
+script: fetch_nasa_eonet_events.py
+args: []
+schedule: "19 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "open-event discovery and general reference; EONET geometries and timestamps are not authoritative spatial or temporal measurements"
+rate_limit: "keyless NASA EONET v3 API; conservative hourly poll, 50 events per request"
+licence: "NASA EONET; retain NASA/source attribution"
+attribution_required: true
