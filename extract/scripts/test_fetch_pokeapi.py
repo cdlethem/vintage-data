@@ -246,6 +246,63 @@ class FetchPokeAPITests(unittest.TestCase):
                 with self.assertRaisesRegex(MODULE.PokeAPIError, "catalog|pagination"):
                     self.fetch([document])
 
+    def test_rejected_next_reports_bounded_shape_without_url_contents(self):
+        cases = (
+            (
+                "http://user:password@pokeapi.co/api/v2/pokemon/"
+                "?limit=2&offset=2&token=secret#fragment",
+                "scheme=http hostname=pokeapi.co path=catalog-slash "
+                "query-keys=limit:one,offset:one,other:yes",
+            ),
+            (
+                "https://other.example/api/v2/ability/"
+                "?limit=2&offset=2",
+                "scheme=https hostname=other path=other "
+                "query-keys=limit:one,offset:one,other:no",
+            ),
+            (
+                "https://pokeapi.co/api/v2/pokemon?limit=secret&offset=2",
+                "scheme=https hostname=pokeapi.co path=catalog-no-slash "
+                "query-keys=limit:one,offset:one,other:no",
+            ),
+            (
+                "https://pokeapi.co/api/v2/pokemon/?limit=2&limit=secret&offset=2",
+                "scheme=https hostname=pokeapi.co path=catalog-slash "
+                "query-keys=limit:multiple,offset:one,other:no",
+            ),
+            (
+                "https://pokeapi.co/api/v2/pokemon/?limit=2&offset=0",
+                "scheme=https hostname=pokeapi.co path=catalog-slash "
+                "query-keys=limit:one,offset:one,other:no",
+            ),
+            (
+                "https://[secret/api/v2/pokemon/?limit=2&offset=2",
+                "scheme=invalid hostname=invalid path=invalid query-keys=invalid",
+            ),
+        )
+        for next_url, shape in cases:
+            with self.subTest(next_url=next_url):
+                document = page([pokemon(1), pokemon(2)], None)
+                document["next"] = next_url
+                opener = FixtureOpener([document])
+                stderr = io.StringIO()
+                stdout = io.StringIO()
+                with (
+                    mock.patch.object(MODULE.urllib.request, "build_opener", return_value=opener),
+                    contextlib.redirect_stderr(stderr),
+                    contextlib.redirect_stdout(stdout),
+                    self.assertRaises(SystemExit) as raised,
+                ):
+                    MODULE.main(["pokemon", "2"])
+                self.assertEqual(raised.exception.code, 1)
+                self.assertEqual(len(opener.calls), 1)
+                self.assertEqual(stdout.getvalue(), "")
+                diagnostic = stderr.getvalue()
+                self.assertIn(shape, diagnostic)
+                self.assertNotIn(next_url, diagnostic)
+                for private_part in ("user", "password", "secret", "fragment", "token=", "other.example"):
+                    self.assertNotIn(private_part, diagnostic)
+
 
 
     def test_redirect_handler_and_final_response_reject_off_origin_urls(self):
