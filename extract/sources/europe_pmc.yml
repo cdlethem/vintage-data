@@ -1,0 +1,14 @@
+name: europe_pmc
+script: fetch_europe_pmc.py
+args: ["--query", "FIRST_PDATE:[NOW-14DAY TO NOW]", "--page-size", "100", "--max-pages", "4", "--max-records", "400", "--timeout", "30", "--retries", "2", "--request-interval", "0.5"]
+schedule: "37 6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily conservative poll of FIRST_PDATE:[NOW-14DAY TO NOW]; coverage is explicitly partial: at most 4 cursor pages and 400 records per run, resumed across runs. A completed traversal restarts at '*' on the next run, intentionally replaying the date window so stable SOURCE:ID identifiers support downstream reconciliation of newly or late-indexed records and metadata/annotation revisions. Cursor state advances only after fetch, annotation, serialization and stdout flush succeed. Delivery is not exactly-once: a runner or sink failure after the script writes state but before staged-output commit discards that output although the cursor advanced; replay then depends on completing the traversal and the record remaining inside the rolling query window. Full-text links are retained, but full text is never crawled."
+rate_limit: "anonymous production REST and annotations endpoints; one request per 0.5 seconds, 3 attempts maximum per request, bounded to search and annotation requests for 4 pages"
+licence: "Europe PMC metadata and text-mined annotations; record-level source rights may vary, and linked full text is not downloaded"
+attribution_required: true
