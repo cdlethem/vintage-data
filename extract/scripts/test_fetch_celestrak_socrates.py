@@ -31,6 +31,18 @@ def csv_document(rows=1):
 def valid_then_malformed_csv_document():
     return csv_document(1) + b"101,201,OBJECT_C,OBJECT_D,2026-09-17T00:01:00Z,invalid,12.3,0.0001,\n"
 
+def table_document(rows=1, headers=HEADERS, malformed_row=None):
+    heading = "".join(f"<th>{header}</th>" for header in headers)
+    body = []
+    for index in range(rows):
+        cells = [str(100 + index), str(200 + index), "OBJECT &amp; A", "OBJECT_B",
+                 f"2026-09-17T00:{index:02d}:00Z", "1.5", "12.3", "0.0001", ""]
+        if index == malformed_row:
+            cells.pop()
+        body.append("<tr>" + "".join(f"<td><span>{cell}</span></td>" for cell in cells) + "</tr>")
+    return ("<html><table><tr><th>Navigation</th></tr></table><table><tr>" + heading +
+            "</tr>" + "".join(body) + "</table></html>").encode()
+
 
 class Response:
     def __init__(self, chunks, status=200, content_length=None):
@@ -187,6 +199,80 @@ class FetchCelestrakSocratesTests(unittest.TestCase):
         self.assertEqual(summary["metrics"]["failure_phase"], "csv_row_validation")
         self.assertEqual(summary["metrics"]["status"], 200)
         self.assertEqual(summary["metrics"]["received_bytes"], len(document))
+
+    def test_table_mode_fetches_at_most_100_max_probability_rows_without_changing_csv_default(self):
+        document = table_document(100)
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with mock.patch.object(MODULE.urllib.request, "urlopen", return_value=Response([document], content_length=len(document))) as urlopen, \
+             contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            self.assertEqual(MODULE.main(["--mode", "table"]), 0)
+
+        self.assertEqual(urlopen.call_args.args[0].full_url,
+                         f"{MODULE.BASE}/table-socrates.php?NAME=,&ORDER=MAXPROB&MAX=100")
+        records = [json.loads(line) for line in stdout.getvalue().splitlines()]
+        self.assertEqual(len(records), 100)
+        self.assertEqual(records[0]["id"], "100:200:2026-09-17T00:00:00Z")
+        self.assertEqual(records[0]["object_name_1"], "OBJECT & A")
+        self.assertEqual(records[-1]["norad_id_2"], "299")
+        summary = json.loads(stderr.getvalue().split("\t", 1)[1])
+        self.assertEqual(summary["health"], "healthy")
+        self.assertEqual(summary["metrics"]["pair_count"], 100)
+        self.assertEqual(summary["metrics"]["parsed_rows"], 100)
+
+    def test_default_mode_remains_csv_and_table_limit_is_bounded(self):
+        csv_payload = csv_document(1)
+        table_payload = table_document(2)
+        for args, payload, url, expected in (
+            ([], csv_payload, f"{MODULE.BASE}/sort-maxProb.csv", 1),
+            (["--mode", "table", "--limit", "2"], table_payload,
+             f"{MODULE.BASE}/table-socrates.php?NAME=,&ORDER=MAXPROB&MAX=2", 2),
+        ):
+            with self.subTest(args=args), \
+                 mock.patch.object(MODULE.urllib.request, "urlopen", return_value=Response([payload])) as urlopen, \
+                 contextlib.redirect_stdout(io.StringIO()) as stdout, \
+                 contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(MODULE.main(args), 0)
+                self.assertEqual(len(stdout.getvalue().splitlines()), expected)
+                self.assertEqual(urlopen.call_args.args[0].full_url, url)
+
+    def test_table_mode_rejects_unsupported_sort_and_limit_before_request(self):
+        for sort, limit in (("minRange", 100), ("maxProb", 101), ("maxProb", 0), ("maxProb", -1)):
+            with self.subTest(sort=sort, limit=limit), \
+                 mock.patch.object(MODULE.urllib.request, "urlopen") as urlopen, \
+                 contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(MODULE.main(["--mode", "table", "--sort", sort, "--limit", str(limit)]), 1)
+                urlopen.assert_not_called()
+
+    def test_invalid_table_schema_or_row_publishes_nothing(self):
+        cases = [
+            (table_document(headers=HEADERS[:-1]), "table_header_validation"),
+            (table_document(rows=2, malformed_row=1), "table_row_validation"),
+            (table_document(rows=0), "table_row_validation"),
+            (table_document(rows=101), "table_row_validation"),
+            (table_document(rows=1).replace(b"<td><span>1.5", b"<td><span>invalid"), "table_row_validation"),
+            (table_document(rows=1).replace(b"</table></html>", b"<tr></tr></table></html>"), "table_row_validation"),
+        ]
+        for document, phase in cases:
+            with self.subTest(phase=phase, document_length=len(document)):
+                stdout, stderr = io.StringIO(), io.StringIO()
+                with mock.patch.object(MODULE.urllib.request, "urlopen", return_value=Response([document])), \
+                     contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                    self.assertEqual(MODULE.main(["--mode", "table"]), 1)
+                self.assertEqual(stdout.getvalue(), "")
+                summary = json.loads(stderr.getvalue().split("\t", 1)[1])
+                self.assertEqual(summary["records"], 0)
+                self.assertEqual(summary["metrics"]["failure_phase"], phase)
+
+    def test_table_http_status_failure_never_parses_body(self):
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with mock.patch.object(MODULE.urllib.request, "urlopen", return_value=Response([table_document()], status=503)), \
+             contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            self.assertEqual(MODULE.main(["--mode", "table"]), 1)
+        self.assertEqual(stdout.getvalue(), "")
+        summary = json.loads(stderr.getvalue().split("\t", 1)[1])
+        self.assertEqual(summary["metrics"]["status"], 503)
+        self.assertEqual(summary["metrics"]["failure_phase"], "http_response")
 
     def test_incomplete_read_partial_data_is_diagnostic_only(self):
         partial = b"abc"
