@@ -1,0 +1,68 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_openfda_recall_observation_report_date_day
+          yRef:
+            field: fct_openfda_recall_observation_distinct_recalls
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Report date (Day)
+      yAxis:
+      - name: Distinct recalls
+    layout:
+      stack: true
+      xField: fct_openfda_recall_observation_report_date_day
+      yField:
+      - fct_openfda_recall_observation_distinct_recalls
+  type: cartesian
+description: Distinct recalls by FDA classification and report date in the 30-day event window. Up to
+  three classifications are stacked; repeated polls count once per group, revisions can move recalls
+  between groups, and dates without reported recalls are absent.
+metricQuery:
+  dimensions:
+  - fct_openfda_recall_observation_report_date_day
+  - fct_openfda_recall_observation_classification
+  exploreName: fct_openfda_recall_observation
+  filters:
+    dimensions:
+      and:
+      - id: 861ea70f-90dc-5844-aa2d-3e67746dd5cb
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_openfda_recall_observation_report_date
+        values:
+        - 30
+      id: e483c248-fc1c-5818-a78e-7d1188de7afb
+  limit: 5000
+  metrics:
+  - fct_openfda_recall_observation_distinct_recalls
+  sorts:
+  - descending: true
+    fieldId: fct_openfda_recall_observation_distinct_recalls
+  - descending: false
+    fieldId: fct_openfda_recall_observation_report_date_day
+  tableCalculations: []
+name: Recall classification mix by report date
+pivotConfig:
+  columns:
+  - fct_openfda_recall_observation_classification
+slug: fct-openfda-recall-observation-classification-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openfda_recall_observation_report_date_day
+  - fct_openfda_recall_observation_classification
+  - fct_openfda_recall_observation_distinct_recalls
+tableName: fct_openfda_recall_observation
+version: 1

@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_openfda_recall_observation_classification
+          yRef:
+            field: fct_openfda_recall_observation_distinct_recalls
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_openfda_recall_observation_classification
+      yField:
+      - fct_openfda_recall_observation_distinct_recalls
+  type: cartesian
+description: Distinct `recall_id` values by FDA classification among fetches in the past 30 UTC days.
+  Repeated polls count a recall once within each classification; revisions can move a recall between groups,
+  so groups are not additive and are not a current-state census.
+metricQuery:
+  dimensions:
+  - fct_openfda_recall_observation_classification
+  exploreName: fct_openfda_recall_observation
+  filters:
+    dimensions:
+      and:
+      - id: b1a11d64-7467-57f8-a29c-310da68974eb
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_openfda_recall_observation_observed_at
+        values:
+        - 30
+      id: 4712f06e-eb33-5774-84e4-d9e98cd322a2
+  limit: 20
+  metrics:
+  - fct_openfda_recall_observation_distinct_recalls
+  sorts:
+  - descending: true
+    fieldId: fct_openfda_recall_observation_distinct_recalls
+  tableCalculations: []
+name: Distinct recalls by classification
+slug: fct-openfda-recall-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openfda_recall_observation_classification
+  - fct_openfda_recall_observation_distinct_recalls
+tableName: fct_openfda_recall_observation
+version: 1

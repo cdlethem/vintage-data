@@ -1,0 +1,178 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: openFDA food-enforcement recall observations and sparse report-date trends. Operator targeted
+  dev build and chart preview against real data are required before production publication.
+filters:
+  dimensions:
+  - disabled: true
+    id: df98011c-c2d5-5dd5-930e-e72906a32cd7
+    label: 'OpenFDA recall observation: Firm'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openfda_recall_observation_firm
+      tableName: fct_openfda_recall_observation
+    values: []
+  - disabled: true
+    id: e85f948e-4b3c-55ee-925f-de46bc438008
+    label: 'OpenFDA recall observation: Status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openfda_recall_observation_status
+      tableName: fct_openfda_recall_observation
+    values: []
+  - disabled: true
+    id: 0497951a-c28b-53a0-8d8b-336d3f755e38
+    label: 'OpenFDA recall observation: Classification'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openfda_recall_observation_classification
+      tableName: fct_openfda_recall_observation
+    values: []
+  - disabled: true
+    id: 97cdf3b9-d41d-52a7-b831-dc84e3fbaea2
+    label: 'OpenFDA recall observation: State'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openfda_recall_observation_state
+      tableName: fct_openfda_recall_observation
+    values: []
+  - disabled: true
+    id: 84c9359c-9b2e-57e9-92f7-01ec49d22ddf
+    label: 'OpenFDA recall observation: Country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openfda_recall_observation_country
+      tableName: fct_openfda_recall_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: OpenFDA Recalls
+slug: openfda
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 7
+  properties:
+    content: 'Physical observation fact for openFDA food-enforcement recalls. Each row is one source,
+      recall identifier, and UTC fetch timestamp. Daily polling republishes recalls, so this is append-only
+      observation history rather than SCD2; duplicate copies at the observation grain retain the latest
+      load lineage. This contract excludes drug adverse-event records.
+
+
+      **Grain:** source_name, recall_id, observed_at
+
+
+      **What changes here:** distinct food-enforcement recalls across sparse FDA report dates,
+      classifications, and countries, plus catalogue levels across fetch days.
+
+
+      **Windows:** observation charts and records cover the past 30 days of `observed_at` (UTC). Event
+      trends use separate 30-day `report_date` windows. The current raw data spans only two report dates,
+      so absent dates are not zeroes and no dense daily series is implied.
+
+
+      **Limitations:** openFDA is polled daily, is not real time, and can batch or revise records over days
+      or weeks. Observation counts are not newly reported recalls; charts count distinct recall IDs, and
+      quantity remains unaggregated source text. A targeted operator dev build and Lightdash chart preview
+      against real data are required before production publication.
+
+
+      **Provenance**
+
+      - Data provided by openFDA, a U.S. Food and Drug Administration public-domain API. `openfda` —
+      licence: openFDA — public domain; attribution required: False. Source configuration:
+      `extract/sources/openfda.yml`.'
+    hideFrame: false
+    title: OpenFDA recall observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: OpenFDA recall observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Recalling firms present by fetch day
+    chartSlug: fct-openfda-recall-observation-observed-recalls
+    hideTitle: false
+    title: Recalling firms present by fetch day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 8
+- h: 10
+  properties:
+    chartName: Recalls by FDA report date
+    chartSlug: fct-openfda-recall-observation-reported-recalls
+    hideTitle: false
+    title: Recalls by FDA report date
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 8
+- h: 10
+  properties:
+    chartName: Recall classification mix by report date
+    chartSlug: fct-openfda-recall-observation-classification-mix
+    hideTitle: false
+    title: Recall classification mix by report date
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 18
+- h: 10
+  properties:
+    chartName: Recall country mix by report date
+    chartSlug: fct-openfda-recall-observation-country-mix
+    hideTitle: false
+    title: Recall country mix by report date
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 28
+- h: 1
+  properties:
+    showDivider: true
+    text: OpenFDA recall observation — latest 30-day UTC fetch window
+  type: heading
+  w: 36
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Distinct recalls by classification
+    chartSlug: fct-openfda-recall-observation
+    hideTitle: false
+    title: Distinct recalls by classification
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 39
+- h: 10
+  properties:
+    chartName: OpenFDA recall observation — observations
+    chartSlug: fct-openfda-recall-observation-details
+    hideTitle: false
+    title: OpenFDA recall observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 39
+version: 1
