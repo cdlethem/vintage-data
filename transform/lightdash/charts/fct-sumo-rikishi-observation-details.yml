@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Insert-only physical observation fact for the sumo-api.com rikishi roster. Each row is one wrestler from the rikishi source at one UTC fetch timestamp, with profile attributes and raw-load lineage. Basho records are excluded before keys or metrics are derived. Replayed rows at the same source, rikishi, and observation timestamp are deterministically reduced to the latest loaded copy; later observations remain separate snapshots.
+metricQuery:
+  dimensions: &id001
+  - fct_sumo_rikishi_observation_observed_at
+  - fct_sumo_rikishi_observation_rikishi_id
+  - fct_sumo_rikishi_observation_shikona_en
+  - fct_sumo_rikishi_observation_current_rank
+  - fct_sumo_rikishi_observation_rank_division
+  - fct_sumo_rikishi_observation_heya
+  - fct_sumo_rikishi_observation_updated_at
+  - fct_sumo_rikishi_observation_source_loaded_at
+  exploreName: fct_sumo_rikishi_observation
+  filters:
+    dimensions:
+      and:
+      - id: c93dbb34-9dff-53de-a910-4743796f5af0
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sumo_rikishi_observation_observed_at
+        values:
+        - 30
+      id: 75b8d1fb-ed57-5ff2-aec9-bb304d040ff9
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_sumo_rikishi_observation_observed_at
+  tableCalculations: []
+name: Sumo rikishi observation — observations
+slug: fct-sumo-rikishi-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_sumo_rikishi_observation
+version: 1

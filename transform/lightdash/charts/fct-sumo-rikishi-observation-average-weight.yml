@@ -1,0 +1,42 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sumo_rikishi_observation_updated_at_month
+          yRef:
+            field: fct_sumo_rikishi_observation_average_weight_kg
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Updated at (Month)
+      yAxis:
+      - name: Mean reported weight (kg)
+    layout:
+      xField: fct_sumo_rikishi_observation_updated_at_month
+      yField:
+      - fct_sumo_rikishi_observation_average_weight_kg
+  type: cartesian
+description: Mean non-null reported weight in kilograms across retained observations, grouped by UTC source update month. Every observation has equal weight, so repeated snapshots can overweight wrestlers; this is non-additive and null weights are omitted.
+metricQuery:
+  dimensions:
+  - fct_sumo_rikishi_observation_updated_at_month
+  exploreName: fct_sumo_rikishi_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sumo_rikishi_observation_average_weight_kg
+  sorts:
+  - descending: false
+    fieldId: fct_sumo_rikishi_observation_updated_at_month
+  tableCalculations: []
+name: Mean reported weight by source update month
+slug: fct-sumo-rikishi-observation-average-weight
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sumo_rikishi_observation_updated_at_month
+  - fct_sumo_rikishi_observation_average_weight_kg
+tableName: fct_sumo_rikishi_observation
+version: 1

@@ -1,0 +1,155 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: e18f71bb-4ebe-5d5a-a493-26559c5ce3c0
+    label: 'Sumo rikishi observation: Rank division'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sumo_rikishi_observation_rank_division
+      tableName: fct_sumo_rikishi_observation
+    values: []
+  - disabled: true
+    id: bdb8c449-fbbd-5e59-aaec-5e4ef41aef18
+    label: 'Sumo rikishi observation: Heya'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sumo_rikishi_observation_heya
+      tableName: fct_sumo_rikishi_observation
+    values: []
+  - disabled: true
+    id: b8d364b7-e5ae-5d0e-9bcb-98e49158a827
+    label: 'Sumo rikishi observation: Current rank'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sumo_rikishi_observation_current_rank
+      tableName: fct_sumo_rikishi_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Sumo
+slug: sumo
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Insert-only physical observation fact for the sumo-api.com rikishi roster. Each row is one wrestler from the rikishi source at one UTC fetch timestamp, with profile attributes and raw-load lineage. Basho records are excluded before keys or metrics are derived. Replayed rows at the same source, rikishi, and observation timestamp are deterministically reduced to the latest loaded copy; later observations remain separate snapshots.
+
+
+      **Grain:** source_system, rikishi_id, observed_at
+
+
+      **What changes here:** how wrestler updates, rank mix, stable breadth, and reported physique change across the sparse roster snapshots.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state their own axis and window. Empty charts mean no matching published observations; they do not establish that no events occurred.
+
+
+      **Provenance**
+
+      - `sumo_rikishi` — sumo-api.com; licence: sumo-api.com — public; attribution required: False. Source configuration: `extract/sources/sumo.yml`.'
+    hideFrame: false
+    title: Sumo rikishi observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Sumo rikishi observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Wrestlers by source update month
+    chartSlug: fct-sumo-rikishi-observation-rikishi-updated
+    hideTitle: false
+    title: Wrestlers by source update month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Heya represented by source update month
+    chartSlug: fct-sumo-rikishi-observation-heya-breadth
+    hideTitle: false
+    title: Heya represented by source update month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported height by source update month
+    chartSlug: fct-sumo-rikishi-observation-average-height
+    hideTitle: false
+    title: Mean reported height by source update month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean reported weight by source update month
+    chartSlug: fct-sumo-rikishi-observation-average-weight
+    hideTitle: false
+    title: Mean reported weight by source update month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 17
+- h: 10
+  properties:
+    chartName: Wrestler rank-division mix by source update month
+    chartSlug: fct-sumo-rikishi-observation-rank-mix
+    hideTitle: false
+    title: Wrestler rank-division mix by source update month
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Sumo rikishi observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct wrestlers by rank division
+    chartSlug: fct-sumo-rikishi-observation
+    hideTitle: false
+    title: Distinct wrestlers by rank division
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Sumo rikishi observation — observations
+    chartSlug: fct-sumo-rikishi-observation-details
+    hideTitle: false
+    title: Sumo rikishi observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

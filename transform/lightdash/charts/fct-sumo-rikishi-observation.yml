@@ -1,0 +1,51 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sumo_rikishi_observation_rank_division
+          yRef:
+            field: fct_sumo_rikishi_observation_distinct_rikishi
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_sumo_rikishi_observation_rank_division
+      yField:
+      - fct_sumo_rikishi_observation_distinct_rikishi
+  type: cartesian
+description: Distinct `rikishi_id` values by derived `rank_division` among roster observations in the past 30 UTC days. Null or unrecognized ranks are omitted by the grouping, wrestlers can appear in more than one division after a rank change, and repeated snapshots mean division groups are not additive or a latest-roster census.
+metricQuery:
+  dimensions:
+  - fct_sumo_rikishi_observation_rank_division
+  exploreName: fct_sumo_rikishi_observation
+  filters:
+    dimensions:
+      and:
+      - id: c93dbb34-9dff-53de-a910-4743796f5af0
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sumo_rikishi_observation_observed_at
+        values:
+        - 30
+      id: 75b8d1fb-ed57-5ff2-aec9-bb304d040ff9
+  limit: 20
+  metrics:
+  - fct_sumo_rikishi_observation_distinct_rikishi
+  sorts:
+  - descending: true
+    fieldId: fct_sumo_rikishi_observation_distinct_rikishi
+  tableCalculations: []
+name: Distinct wrestlers by rank division
+slug: fct-sumo-rikishi-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sumo_rikishi_observation_rank_division
+  - fct_sumo_rikishi_observation_distinct_rikishi
+tableName: fct_sumo_rikishi_observation
+version: 1

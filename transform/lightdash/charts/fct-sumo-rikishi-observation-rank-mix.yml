@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_sumo_rikishi_observation_updated_at_month
+          yRef:
+            field: fct_sumo_rikishi_observation_distinct_rikishi
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Updated at (Month)
+      yAxis:
+      - name: Distinct wrestlers
+    layout:
+      stack: true
+      xField: fct_sumo_rikishi_observation_updated_at_month
+      yField:
+      - fct_sumo_rikishi_observation_distinct_rikishi
+  type: cartesian
+description: Distinct `rikishi_id` values by UTC source update month, stacked across the six recognized derived divisions. Null or unrecognized ranks are excluded, and a wrestler observed in multiple divisions can count in each, so segments are not a current-state census.
+metricQuery:
+  dimensions:
+  - fct_sumo_rikishi_observation_updated_at_month
+  - fct_sumo_rikishi_observation_rank_division
+  exploreName: fct_sumo_rikishi_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sumo_rikishi_observation_distinct_rikishi
+  sorts:
+  - descending: true
+    fieldId: fct_sumo_rikishi_observation_distinct_rikishi
+  - descending: false
+    fieldId: fct_sumo_rikishi_observation_updated_at_month
+  tableCalculations: []
+name: Wrestler rank-division mix by source update month
+pivotConfig:
+  columns:
+  - fct_sumo_rikishi_observation_rank_division
+slug: fct-sumo-rikishi-observation-rank-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sumo_rikishi_observation_updated_at_month
+  - fct_sumo_rikishi_observation_rank_division
+  - fct_sumo_rikishi_observation_distinct_rikishi
+tableName: fct_sumo_rikishi_observation
+version: 1
