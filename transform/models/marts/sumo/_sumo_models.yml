@@ -1,0 +1,378 @@
+version: 2
+models:
+- name: fct_sumo_rikishi_observation
+  description: Insert-only physical observation fact for the sumo-api.com rikishi roster. Each row is one wrestler from the rikishi source at one UTC fetch timestamp, with profile attributes and raw-load lineage. Basho records are excluded before keys or metrics are derived. Replayed rows at the same source, rikishi, and observation timestamp are deterministically reduced to the latest loaded copy; later observations remain separate snapshots.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_system, rikishi_id, observed_at
+      label: Sumo rikishi observation
+      group_label: Sumo
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: rikishi_observation_key
+      vintage:
+        visualization:
+          dimension: rank_division
+          metric: distinct_rikishi
+          time: observed_at
+          window_days: 30
+          title: Distinct wrestlers by rank division
+          description: Distinct `rikishi_id` values by derived `rank_division` among roster observations in the past 30 UTC days. Null or unrecognized ranks are omitted by the grouping, wrestlers can appear in more than one division after a rank change, and repeated snapshots mean division groups are not additive or a latest-roster census.
+          detail_fields:
+          - observed_at
+          - rikishi_id
+          - shikona_en
+          - current_rank
+          - rank_division
+          - heya
+          - updated_at
+          - source_loaded_at
+          sources:
+          - '`sumo_rikishi` — sumo-api.com; licence: sumo-api.com — public; attribution required: False. Source configuration: `extract/sources/sumo.yml`.'
+          analysis:
+            headline: how wrestler updates, rank mix, stable breadth, and reported physique change across the sparse roster snapshots.
+            event_time: updated_at
+            grain: MONTH
+            controls:
+            - rank_division
+            - heya
+            - current_rank
+            trends:
+            - slug: rikishi-updated
+              kind: total
+              metric: distinct_rikishi
+              time: updated_at
+              grain: MONTH
+              title: Wrestlers by source update month
+              description: Distinct `rikishi_id` values by the UTC month of sumo-api.com `updated_at`. Null update timestamps and absent months are omitted, and this is source profile-update coverage rather than the number of extractor observations.
+              width: half
+            - slug: heya-breadth
+              kind: total
+              metric: distinct_heya
+              time: updated_at
+              grain: MONTH
+              title: Heya represented by source update month
+              description: Distinct non-null `heya` values among observations grouped by the UTC month of source `updated_at`. This measures represented stable breadth, not wrestler volume; null heya and months without source updates are absent.
+              width: half
+            - slug: average-height
+              kind: total
+              metric: average_height_cm
+              time: updated_at
+              grain: MONTH
+              title: Mean reported height by source update month
+              description: Mean non-null reported height in centimetres across retained observations, grouped by UTC source update month. Every observation has equal weight, so repeated snapshots can overweight wrestlers; this is non-additive and null heights are omitted.
+              width: half
+            - slug: average-weight
+              kind: total
+              metric: average_weight_kg
+              time: updated_at
+              grain: MONTH
+              title: Mean reported weight by source update month
+              description: Mean non-null reported weight in kilograms across retained observations, grouped by UTC source update month. Every observation has equal weight, so repeated snapshots can overweight wrestlers; this is non-additive and null weights are omitted.
+              width: half
+            - slug: rank-mix
+              kind: composition
+              metric: distinct_rikishi
+              breakdown: rank_division
+              top_n: 6
+              time: updated_at
+              grain: MONTH
+              title: Wrestler rank-division mix by source update month
+              description: Distinct `rikishi_id` values by UTC source update month, stacked across the six recognized derived divisions. Null or unrecognized ranks are excluded, and a wrestler observed in multiple divisions can count in each, so segments are not a current-state census.
+              width: full
+  columns:
+  - name: rikishi_observation_key
+    description: Stable hash of source_system, rikishi_id, and the UTC observed_at timestamp defining the insert-only observation grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '8 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '8 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Rikishi observation key
+          hidden: true
+  - name: source_system
+    description: Raw stream identifier supplied by the load layer; the payload source filter is applied separately before this value is keyed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source system
+          hidden: false
+  - name: rikishi_id
+    description: Wrestler identifier supplied by sumo-api.com.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '8 days'
+    config:
+      meta:
+        metrics:
+          distinct_rikishi:
+            type: count_distinct
+            label: Distinct wrestlers
+            description: Distinct non-null `rikishi_id` values in each time and filter group. Repeated snapshots of one wrestler count once within a group, but a wrestler can count in multiple rank groups after a change.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Rikishi id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this roster snapshot from sumo-api.com.
+    data_type: timestamp with time zone
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '8 days'
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: shikona_en
+    description: Romanized ring name reported by sumo-api.com at observation time; may be null in sparse source records.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Shikona (English)
+          hidden: false
+  - name: shikona_jp
+    description: Japanese-script ring name reported by sumo-api.com at observation time; may be null.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Shikona (Japanese)
+          hidden: false
+  - name: current_rank
+    description: Free-text current rank reported by sumo-api.com at observation time; null values are preserved.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Current rank
+          hidden: false
+  - name: rank_division
+    description: Division derived from the current_rank prefix. Yokozuna, Ozeki, Sekiwake, Komusubi, and Maegashira map to Makuuchi; Juryo, Makushita, Sandanme, Jonidan, and Jonokuchi map to their named divisions. Null or unrecognized ranks remain null.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Rank division
+          hidden: false
+  - name: heya
+    description: Stable or training stable reported for the wrestler at observation time; null values are preserved.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_heya:
+            type: count_distinct
+            label: Distinct heya
+            description: Distinct non-null `heya` values in each time and filter group. This is stable breadth, not wrestler volume, and repeated snapshots do not add a heya within one group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Heya
+          hidden: false
+  - name: height_cm
+    description: Wrestler height in centimetres reported by sumo-api.com at observation time; null values are preserved.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_height_cm:
+            type: average
+            label: Mean reported height (cm)
+            description: Observation-weighted mean of non-null reported height. Repeated snapshots can overweight wrestlers; this metric is non-additive and is not a latest-roster average.
+            format: '#,##0.0'
+        dimension:
+          type: number
+          label: Height (cm)
+          hidden: false
+          format: '#,##0.0'
+  - name: weight_kg
+    description: Wrestler weight in kilograms reported by sumo-api.com at observation time; null values are preserved.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_weight_kg:
+            type: average
+            label: Mean reported weight (kg)
+            description: Observation-weighted mean of non-null reported weight. Repeated snapshots can overweight wrestlers; this metric is non-additive and is not a latest-roster average.
+            format: '#,##0.0'
+        dimension:
+          type: number
+          label: Weight (kg)
+          hidden: false
+          format: '#,##0.0'
+  - name: debut
+    description: Debut value reported by sumo-api.com without imposing a date interpretation; sparse or historical formats remain unchanged.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Debut
+          hidden: false
+  - name: updated_at
+    description: UTC timestamp when sumo-api.com reports the wrestler profile was last updated; null values are preserved and omitted from update-time charts.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_row_id
+    description: Raw load row identifier for the retained roster observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained roster observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the retained source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained raw observation and the deterministic replay winner ordering uses it.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the source profile update or publication time.
+  - name: content_hash
+    description: Hash of the original raw record content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true
+unit_tests:
+- name: filters_basho_and_deduplicates_rikishi_observations
+  description: Mixed rikishi/basho input proves the payload source filter runs before key generation and the latest loaded duplicate wins deterministically.
+  model: fct_sumo_rikishi_observation
+  overrides:
+    macros:
+      is_incremental: false
+  given:
+  - input: ref('base_sumo')
+    format: dict
+    rows:
+    - {_row_id: old, _source: sumo, _batch_id: batch-old, _source_file: old.jsonl, _file_row_num: 1, _dt: '2026-09-01', _extract_started_at: '2026-09-01 00:00:00+00', _load_id: load-old, _loaded_at: '2026-09-01 00:05:00+00', _content_hash: hash-old, _payload: '{}', source: sumo_rikishi, id: '42', fetched_at: '2026-09-01 00:00:00+00', shikona_en: Old name, shikona_jp: null, current_rank: Maegashira 6 East, heya: Test-beya, height_cm: 180.0, weight_kg: 150.0, debut: '2020.01', updated_at: '2026-08-30 21:30:59+00'}
+    - {_row_id: new, _source: sumo, _batch_id: batch-new, _source_file: new.jsonl, _file_row_num: 2, _dt: '2026-09-01', _extract_started_at: '2026-09-01 00:00:00+00', _load_id: load-new, _loaded_at: '2026-09-01 00:06:00+00', _content_hash: hash-new, _payload: '{}', source: sumo_rikishi, id: '42', fetched_at: '2026-09-01 00:00:00+00', shikona_en: New name, shikona_jp: null, current_rank: Maegashira 6 East, heya: Test-beya, height_cm: 180.0, weight_kg: 150.0, debut: '2020.01', updated_at: '2026-08-30 21:30:59+00'}
+    - {_row_id: basho, _source: sumo, _batch_id: batch-basho, _source_file: basho.jsonl, _file_row_num: 1, _dt: '2026-09-01', _extract_started_at: '2026-09-01 00:00:00+00', _load_id: load-basho, _loaded_at: '2026-09-01 00:07:00+00', _content_hash: hash-basho, _payload: '{}', source: sumo_basho, id: '202609', fetched_at: '2026-09-01 00:00:00+00', shikona_en: null, shikona_jp: null, current_rank: null, heya: null, height_cm: null, weight_kg: null, debut: null, updated_at: null}
+  expect:
+    rows:
+    - {source_system: sumo, rikishi_id: '42', observed_at: '2026-09-01 00:00:00+00', shikona_en: New name, rank_division: Makuuchi, source_row_id: new, source_loaded_at: '2026-09-01 00:06:00+00', content_hash: hash-new}
