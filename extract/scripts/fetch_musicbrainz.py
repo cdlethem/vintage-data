@@ -42,29 +42,91 @@ right to block generic ones.
 Stdlib only.
 """
 import json
+import math
 import os
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 BASE = "https://musicbrainz.org/ws/2"
 _MIN_INTERVAL = 1.0  # MusicBrainz's documented limit: 1 request/second, strictly
-_last_request = [0.0]
+_MAX_ATTEMPTS = 3
+_FALLBACK_RETRY_DELAYS = (1.0, 2.0)
+_MIN_RETRY_DELAY = 1.0
+_MAX_RETRY_DELAY = 30.0
+_MAX_RETRY_WAIT = 60.0
+_REQUEST_TIMEOUT = 30
+_last_request = [None]
+
+
+def _retry_after_delay(value, now):
+    """Return a bounded Retry-After delay, or None for an unusable value."""
+    if value is None:
+        return None
+    try:
+        delay = float(value)
+    except (TypeError, ValueError):
+        try:
+            retry_at = parsedate_to_datetime(value)
+        except (TypeError, ValueError, IndexError, OverflowError):
+            return None
+        if retry_at is None:
+            return None
+        if retry_at.tzinfo is None:
+            retry_at = retry_at.replace(tzinfo=timezone.utc)
+        delay = (retry_at - now).total_seconds()
+    if not math.isfinite(delay):
+        return None
+    return min(_MAX_RETRY_DELAY, max(_MIN_RETRY_DELAY, delay))
 
 
 def _get(url):
-    wait = _MIN_INTERVAL - (time.monotonic() - _last_request[0])
-    if wait > 0:
-        time.sleep(wait)
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT,
-                                                "Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        doc = json.load(resp)
-    _last_request[0] = time.monotonic()
-    return doc
+    """Fetch one release query with 503-only retries and strict request-start pacing.
+
+    A query has at most three HTTP attempts. Retry-After (delta-seconds or HTTP-date)
+    is clamped to 1--30 seconds; retry waiting is capped at 60 seconds per query.
+    With Airflow's two task retries, this bounds a query to nine attempts and 180
+    seconds of retry waiting across task attempts. Each task has at most three
+    30-second HTTP calls plus 60 seconds of retry waiting, within ten minutes.
+    """
+    retry_wait = 0.0
+    for attempt in range(1, _MAX_ATTEMPTS + 1):
+        retry_delay = 0.0
+        if attempt > 1:
+            retry_delay = _retry_after_delay(retry_after, datetime.now(timezone.utc))
+            if retry_delay is None:
+                retry_delay = _FALLBACK_RETRY_DELAYS[attempt - 2]
+            retry_delay = min(retry_delay, _MAX_RETRY_WAIT - retry_wait)
+            retry_wait += retry_delay
+        target = time.monotonic() + retry_delay
+        if _last_request[0] is not None:
+            target = max(target, _last_request[0] + _MIN_INTERVAL)
+        wait = target - time.monotonic()
+        if wait > 0:
+            time.sleep(wait)
+        # Record the start, including failures, before opening the connection.
+        _last_request[0] = time.monotonic()
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT,
+                                                    "Accept": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=_REQUEST_TIMEOUT) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError as error:
+            if error.code != 503:
+                error.close()
+                raise
+            if attempt == _MAX_ATTEMPTS:
+                error.close()
+                raise RuntimeError(
+                    f"MusicBrainz HTTP 503 after {_MAX_ATTEMPTS} attempts"
+                ) from None
+            retry_after = error.headers.get("Retry-After") if error.headers else None
+            error.close()
 
 
 def search_releases(query: str, limit: int = 25, offset: int = 0):
