@@ -6,22 +6,22 @@ chartConfig:
           xRef:
             field: fct_library_of_congress_item_observation_observed_at_day
           yRef:
-            field: fct_library_of_congress_item_observation_distinct_items
+            field: fct_library_of_congress_item_observation_distinct_date_labels
         type: line
         yAxisIndex: 0
       xAxis:
       - name: Observed at (Day)
       yAxis:
-      - name: Distinct items
+      - name: Distinct item-date labels
     layout:
       xField: fct_library_of_congress_item_observation_observed_at_day
       yField:
-      - fct_library_of_congress_item_observation_distinct_items
+      - fct_library_of_congress_item_observation_distinct_date_labels
   type: cartesian
-description: Distinct `item_id` values present on each UTC `observed_at` collection day in the past 90
-  days. This is a catalogue level for the bounded, changing robotics-search slice, not a flow of new Library
-  of Congress items or a catalogue census. Missing collection days are absent rather than zero, and repeated
-  observations within a day count once.
+description: Distinct non-null `item_date` labels represented on each UTC `observed_at` collection day
+  in the past 90 days. This is catalogue breadth for the bounded, changing slice, not a flow of dated
+  events; labels are free-form source text. Missing collection days are absent rather than zero, and repeated
+  observations within a day do not increase the count.
 metricQuery:
   dimensions:
   - fct_library_of_congress_item_observation_observed_at_day
@@ -29,7 +29,7 @@ metricQuery:
   filters:
     dimensions:
       and:
-      - id: 84b156df-9feb-54c9-9b14-7a0d55ef9632
+      - id: 469598cf-15b8-5a6c-87ca-c680ac464f15
         operator: inThePast
         settings:
           completed: false
@@ -38,27 +38,27 @@ metricQuery:
           fieldId: fct_library_of_congress_item_observation_observed_at
         values:
         - 90
-      - id: 68012e7d-985b-58d0-ae44-9133ad8e8472
+      - id: fb503af8-140a-5c51-aa34-36ec074b08fa
         operator: equals
         target:
           fieldId: fct_library_of_congress_item_observation_digitized
         values:
         - true
         - false
-      id: dd34ff0c-e0b3-5cb7-b62e-bf9dfcaafb58
+      id: 8a04918d-7d92-58ac-bc76-fcfebc4fe2fa
   limit: 5000
   metrics:
-  - fct_library_of_congress_item_observation_distinct_items
+  - fct_library_of_congress_item_observation_distinct_date_labels
   sorts:
   - descending: false
     fieldId: fct_library_of_congress_item_observation_observed_at_day
   tableCalculations: []
-name: Distinct observed items by collection day
-slug: fct-library-of-congress-item-observation-observed-items
+name: Represented item-date labels by collection day
+slug: fct-library-of-congress-item-observation-date-label-breadth
 spaceSlug: vintage-marts
 tableConfig:
   columnOrder:
   - fct_library_of_congress_item_observation_observed_at_day
-  - fct_library_of_congress_item_observation_distinct_items
+  - fct_library_of_congress_item_observation_distinct_date_labels
 tableName: fct_library_of_congress_item_observation
 version: 1
