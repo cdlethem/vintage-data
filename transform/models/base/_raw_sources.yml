@@ -13308,6 +13308,111 @@ sources:
     - name: watched_url
       description: Raw `watched_url` value supplied by `wayback_cdx`.
       data_type: VARCHAR
+  - name: who_gho_odata
+    description: Insert-only raw records loaded for `who_gho_odata`.
+    columns: &who_gho_odata
+    - name: _row_id
+      description: Raw `_row_id` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: _source
+      description: Raw `_source` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: _batch_id
+      description: Identifier of the raw load batch that produced this row.
+      data_type: VARCHAR
+    - name: _source_file
+      description: Raw source file from which this row was loaded.
+      data_type: VARCHAR
+    - name: _file_row_num
+      description: One-based row position in the raw source file.
+      data_type: BIGINT
+    - name: _dt
+      description: Raw `_dt` value supplied by `who_gho_odata`.
+      data_type: DATE
+    - name: _extract_started_at
+      description: Raw `_extract_started_at` value supplied by `who_gho_odata`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _load_id
+      description: Identifier of the load job that inserted this row.
+      data_type: VARCHAR
+    - name: _loaded_at
+      description: UTC timestamp at which the load layer inserted this row.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _content_hash
+      description: Stable hash of the raw record content used for lineage and deduplication.
+      data_type: VARCHAR
+    - name: _payload
+      description: Complete raw record payload retained for lineage and schema evolution.
+      data_type: JSON
+    - name: source
+      description: Raw `source` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: id
+      description: Raw `id` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: fetched_at
+      description: Raw `fetched_at` value supplied by `who_gho_odata`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: observation_identity
+      description: Raw `observation_identity` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: upstream_id
+      description: Raw `upstream_id` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: indicator_code
+      description: Raw `indicator_code` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: geography_type
+      description: Raw `geography_type` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: geography_code
+      description: Raw `geography_code` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: parent_geography_code
+      description: Raw `parent_geography_code` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: parent_geography_name
+      description: Raw `parent_geography_name` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: period_type
+      description: Raw `period_type` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: period
+      description: Raw `period` value supplied by `who_gho_odata`.
+      data_type: BIGINT
+    - name: numeric_value
+      description: Raw `numeric_value` value supplied by `who_gho_odata`.
+      data_type: DOUBLE
+    - name: display_value
+      description: Raw `display_value` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: low
+      description: Raw `low` value supplied by `who_gho_odata`.
+      data_type: DOUBLE
+    - name: high
+      description: Raw `high` value supplied by `who_gho_odata`.
+      data_type: DOUBLE
+    - name: comments
+      description: Raw `comments` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: date
+      description: Raw `date` value supplied by `who_gho_odata`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: time_dimension_value
+      description: Raw `time_dimension_value` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: time_dimension_begin
+      description: Raw `time_dimension_begin` value supplied by `who_gho_odata`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: time_dimension_end
+      description: Raw `time_dimension_end` value supplied by `who_gho_odata`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: dimensions
+      description: Raw `dimensions` value supplied by `who_gho_odata`.
+      data_type: JSON
+    - name: source_url
+      description: Raw `source_url` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
   - name: wikimedia_changes
     description: Insert-only raw records loaded for `wikimedia_changes`.
     columns: &id164
