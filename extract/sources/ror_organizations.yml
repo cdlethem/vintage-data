@@ -1,0 +1,33 @@
+name: ror_organizations
+script: fetch_ror_organizations.py
+# Inclusive UTC last-modified dates intentionally overlap one day. ROR's search API
+# defaults to active organizations, so the fetcher explicitly requests active,
+# inactive, and withdrawn records. A result above either ceiling fails visibly;
+# this source never falls back to a full-registry export or partial output.
+args: ["--days-back", "2", "--max-pages", "5", "--max-records", "100", "--max-requests", "15", "--timeout", "20", "--retries", "2", "--retry-budget", "120"]
+schedule: "23 7 * * *"  # UTC; daily recent-change poll with one overlap day
+enabled: false
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Keep disabled until an authorized operator records the network-enabled live smoke,
+# exact configured scheduled invocation/output validation, and scheduling/DAG
+# activation checks against the reviewed revision. Offline discovery and verification
+# use mocked HTTP only and must never contact ROR. Warehouse sync/check, development
+# dbt parse, pipeline build, preview, trusted review, provider checks, expected-head
+# matching, observed merge, deployment, and activation remain external gates.
+#
+# Scheduled use is at most five result pages and 100 organizations. HTTP retries are
+# additionally bounded by 15 attempts and a 120-second run-wide retry budget. Airflow's
+# retry and operator/manual runs are separate service use. ROR's page-number results
+# can change during a run; incomplete, changing, duplicate, or over-ceiling results
+# fail before NDJSON is emitted.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily two-date inclusive UTC admin.last_modified.date window with one overlap day"
+rate_limit: "local cap: 5 pages, 100 records, 15 HTTP attempts, 2 retries/request, 120-second retry budget; Retry-After capped at 60 seconds"
+licence: "ROR data is CC0; https://ror.org/about/faqs/#how-is-ror-data-licensed"
+attribution: "Research Organization Registry (ROR), https://ror.org/"
+attribution_required: false
+deduplication_note: "The overlap intentionally re-fetches changed organizations; deduplicate across runs by full https://ror.org/... id."
+coverage_note: "Recent-change polling includes active, inactive, and withdrawn records but is not a registry snapshot. A busy window above local ceilings fails visibly and requires an authorized bounded rerun; it never triggers a full-registry API export."
