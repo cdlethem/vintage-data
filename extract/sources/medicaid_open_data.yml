@@ -1,0 +1,23 @@
+name: medicaid_open_data
+script: fetch_medicaid_open_data.py
+args: ["--page-size", "100", "--max-pages", "100", "--timeout", "30"]
+schedule: "41 6 * * *"  # UTC; proposed daily catalog snapshot while disabled
+enabled: false
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Keep disabled until an authorized network-enabled operator runs the exact --no-state
+# smoke against the official API, records revision/timestamp/exit status, reconciled
+# pagination totals, unique dataset count, and NDJSON envelope validation, then records
+# scheduled raw landing and stateful unchanged-record suppression through the approved
+# source-validation and source_scheduling workflows. Offline fixtures are not activation
+# evidence. Independent review remains required.
+#
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily complete catalog metadata snapshot; unchanged UUID/modified pairs are suppressed only after the next run verifies the exact prior stdout artifact by digest under the local raw landing path; missing evidence safely replays records"
+rate_limit: "at most 100 serial requests per run with page-size capped at 100; normal historical catalog size requires only a few requests"
+licence: "U.S. Centers for Medicare & Medicaid Services public catalog metadata; linked dataset and distribution terms may vary"
+attribution: "Centers for Medicare & Medicaid Services, Medicaid Open Data, https://data.medicaid.gov/"
+attribution_required: true
+coverage_note: "Catalog metadata and public distribution links only; this extractor does not download distributions and must not be treated as Medicaid analytical measures. The historical count of 243 is not a fixed expected total."
