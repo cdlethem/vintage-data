@@ -1,0 +1,53 @@
+name: common_crawl_index
+script: fetch_common_crawl_index.py
+args: ["--page-size", "1", "--max-pages", "5", "--timeout", "30"]
+schedule: "37 */4 * * *"  # UTC; initial four-hour cadence
+# Activation requires the separately authorized live API, loader, and RAW count gates.
+enabled: false
+retries: 1
+timeout_minutes: 30
+sink: local
+
+# The extractor emits one JSON object per line with a stable source/id/fetched_at
+# envelope and scalar top-level fields, allowing automatic RAW schema inference.
+format: ndjson
+schema_detection: auto
+sample_lines: 500
+keep_payload: true
+detect_temporal: true
+column_types:
+  source: string
+  id: string
+  fetched_at: timestamp
+
+# Automatic cadence starts at four hours and may step through the repository ladder
+# to one day when successive crawl snapshots contain no new records.
+cadence:
+  auto: true
+  floor_minutes: 240
+  min_minutes: 240
+  max_minutes: 1440
+  volatile_keys: [fetched_at]
+
+curated_domains:
+  - bbc.com
+  - cdc.gov
+  - github.com
+  - noaa.gov
+  - openai.com
+  - un.org
+  - wikipedia.org
+  - worldbank.org
+
+resource_keys:
+  - common_crawl_index
+  - common_crawl_api
+  - extract_sink_resource
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Bounded snapshots from one crawl resolved per run; automatic stepping from four hours to daily follows observed novelty."
+rate_limit: "Keyless public API; sequential domain requests, five-page cap per domain, 30-second request timeout, and domain-level failure isolation."
+licence: "Common Crawl Terms of Use; crawl metadata is publicly available and archived content retains originating-site rights."
+attribution: "Common Crawl, https://commoncrawl.org/"
+attribution_required: true
+coverage_note: "Curated-domain index metadata only; this does not download archived page content and is not a complete crawl export."
