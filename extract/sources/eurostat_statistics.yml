@@ -1,0 +1,30 @@
+name: eurostat_statistics
+script: fetch_eurostat_statistics.py
+# One explicitly filtered dataset request with a fixed two-calendar-year bound.
+# Update both period endpoints deliberately; never remove the non-time filters.
+args:
+  - "--dataset-code"
+  - "demo_pjan"
+  - "--query"
+  - "freq=A&unit=NR&age=TOTAL&sex=T&geo=EU27_2020&sinceTimePeriod=2025&untilTimePeriod=2026&format=JSON&lang=en"
+  - "--timeout"
+  - "60"
+schedule: "23 15 * * *"  # UTC
+# Keep disabled until an operator records a successful live-source smoke and a
+# read-only Airflow import check. Offline tests never contact Eurostat or mutate
+# Airflow metadata.
+enabled: false
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Eurostat revisions are useful daily snapshots, not an activity signal.
+cadence:
+  auto: false
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "one bounded two-calendar-year population request per daily run"
+rate_limit: "no published hard limit; one JSON statistics request per daily run"
+licence: "Eurostat copyright and free re-use policy"
+attribution: "Eurostat, https://ec.europa.eu/eurostat/"
+attribution_required: true
