@@ -53,12 +53,20 @@ def fetch_counts(minutes: int = 90, timeout: int = 30, watermark: str = "", prog
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(); parser.add_argument("--minutes", type=int, default=90); parser.add_argument("--state-file"); parser.add_argument("--no-state", action="store_true"); parser.add_argument("--timeout", type=int, default=30)
-    args = parser.parse_args(argv); path = state_path(args.state_file); watermark = "" if args.no_state else load_watermark(path); progress = {"sensing_datetime": watermark}; records = 0
+    args = parser.parse_args(argv)
+    records = 0
     try:
-        for record in fetch_counts(args.minutes, args.timeout, watermark, progress): print(json.dumps(record, ensure_ascii=False)); records += 1
+        path = state_path(args.state_file)
+        watermark = "" if args.no_state else load_watermark(path)
+        progress = {"sensing_datetime": watermark}
+        for record in fetch_counts(args.minutes, args.timeout, watermark, progress):
+            print(json.dumps(record, ensure_ascii=False))
+            records += 1
+        if not args.no_state and progress["sensing_datetime"] > watermark:
+            save_watermark(path, progress["sensing_datetime"])
     except Exception as exc:
-        print(SUMMARY_PREFIX + json.dumps({"health":"failed", "completeness":"failed", "records":records, "error":str(exc)}), file=sys.stderr); return 1
-    if not args.no_state and progress["sensing_datetime"] > watermark: save_watermark(path, progress["sensing_datetime"])
+        print(SUMMARY_PREFIX + json.dumps({"health":"failed", "completeness":"failed", "records":records, "error":str(exc)}), file=sys.stderr)
+        return 1
     print(SUMMARY_PREFIX + json.dumps({"health":"healthy", "completeness":"complete", "records":records, "coverage":{"watermark_before":watermark, "watermark_after":progress["sensing_datetime"]}, "requests":{"attempted":1}}), file=sys.stderr)
     return 0
 if __name__ == "__main__": raise SystemExit(main())
