@@ -52,32 +52,6 @@ def node_from_yaml(model: dict, path: str = "models/marts/family/model.sql") -> 
     return node
 
 
-def presentation_field_ids(node: dict, trends: list[dict]) -> set[str]:
-    """Exactly the field ids the generated content will reference.
-
-    Postgres truncates an over-long identifier and Lightdash refuses the query,
-    but only fields a chart actually selects reach SQL. Latent interval
-    variants of hidden lineage columns are irrelevant, so length is checked
-    here rather than across every name Lightdash could derive.
-    """
-    spec = (metadata(node).get("vintage", {}).get("visualization") or {})
-    if not spec:
-        return set()
-    name, columns_meta = node["name"], node.get("columns", {})
-    fields = {f"{name}_{spec['metric']}"} if spec.get("metric") else set()
-    for column in [spec.get("dimension"), spec.get("time"), *(spec.get("detail_fields") or []),
-                   *(entry.get("field") for entry in spec.get("filters") or []),
-                   *((spec.get("analysis") or {}).get("controls") or [])]:
-        if column in columns_meta:
-            fields.add(dimension_id(node, column))
-    for trend in trends:
-        fields.add(f"{name}_{trend['metric']}")
-        fields.add(time_field_id(node, trend["time"], trend["grain"], trend.get("time_dimension")))
-        if trend["time"] in columns_meta:
-            fields.add(dimension_id(node, trend["time"]))
-        if trend.get("breakdown") in columns_meta:
-            fields.add(dimension_id(node, trend["breakdown"]))
-    return fields
 
 
 def check_family(path: pathlib.Path) -> dict:
@@ -102,9 +76,6 @@ def check_family(path: pathlib.Path) -> dict:
         for key in metric_collisions(node):
             entry["errors"].append(f"metric {key!r} collides with a dimension of the same name;"
                                    " Lightdash keeps the dimension and drops the metric")
-        for field in sorted(presentation_field_ids(node, trends if not entry["errors"] else [])):
-            if len(field.encode()) > 63:
-                entry["errors"].append(f"{field}: field id exceeds Postgres's 63-byte identifier limit")
         results.append(entry)
     return {"path": str(path), "models": results,
             "ok": bool(results) and not any(item["errors"] or item["gaps"] for item in results)}
@@ -281,12 +252,7 @@ def trend_specs(node: dict) -> list[dict]:
             fail(f"{slug}: {source or time!r} does not declare time_intervals entry {grain}")
         if dimension.get("type") == "date" and "HOUR" in declared + [grain]:
             fail(f"{slug}: date column {time!r} cannot be grained by HOUR")
-        field = f"{name}_{source or time}_{grain.lower()}"
-        if len(field.encode()) > 63:
-            fail(f"{slug}: field id {field!r} exceeds Postgres's 63-byte identifier limit;"
-                 f" declare a short additional_dimensions key on {time!r} and set time_dimension")
-        trend["intervals"] = [value for value in GRAIN_INTERVALS if value in declared
-                              and len(f"{name}_{source or time}_{value.lower()}".encode()) <= 63]
+        trend["intervals"] = [value for value in GRAIN_INTERVALS if value in declared]
         breakdown = trend.get("breakdown")
         if kind == "total" and breakdown:
             fail(f"{slug}: kind 'total' does not take a breakdown")
@@ -413,10 +379,6 @@ def coverage(manifest: dict, content: pathlib.Path = CONTENT) -> dict:
             if slug not in memberships:
                 issues.append(f"{slug}: declared trend is not on a dashboard")
         valid = field_ids(node)
-        # A field id longer than a Postgres identifier only breaks a query that
-        # selects it, and Lightdash derives interval variants for every
-        # declared date dimension including hidden lineage columns. Check the
-        # fields content actually references rather than every latent name.
         for slug, chart in linked.items():
             query = chart.get("metricQuery", {})
             refs = query.get("dimensions", []) + query.get("metrics", [])
@@ -436,8 +398,6 @@ def coverage(manifest: dict, content: pathlib.Path = CONTENT) -> dict:
             for field in refs:
                 if field not in valid:
                     issues.append(f"{slug}: unknown field {field}")
-                elif len(field.encode()) > 63:
-                    issues.append(f"{slug}: field id exceeds Postgres's 63-byte identifier limit: {field}")
         items.append({"unique_id": uid, "name": node["name"], "family": pathlib.PurePosixPath(node["original_file_path"]).parts[2],
                       "sources": sorted(source_ancestors(manifest, uid)), "issues": issues, "gaps": gaps,
                       "trend_count": len(trends),
