@@ -20,6 +20,7 @@ select
     "service_name",
     "service_code",
     "description",
+    media_url,
     "requested_datetime",
     "updated_datetime",
     "address",
