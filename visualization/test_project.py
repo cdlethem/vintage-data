@@ -165,3 +165,25 @@ class ContentTest(unittest.TestCase):
             chart=content.render(manifest)['charts/fct-demo.yml']
             self.assertEqual(chart['metricQuery']['dimensions'],['fct_demo_cat'])
             self.assertEqual(chart['metricQuery']['filters']['dimensions']['and'][0]['target']['fieldId'],'fct_demo_time')
+
+    def test_long_lightdash_field_ids_are_queryable_but_physical_identifiers_are_bounded(self):
+        manifest=model_fixture()
+        node=manifest['nodes']['model.vintage_data.fct_demo']
+        node['name']='fct_uk_parliament_procedural_activity'
+        metric='average_business_item_date_count'
+        node['config']['meta']['metrics']={metric:{'type':'average','sql':'${TABLE}.amount'}}
+        visualization=node['config']['meta']['vintage']['visualization']
+        visualization['metric']=metric
+        for trend in visualization['analysis']['trends']:
+            trend['metric']=metric
+        field_id=f"{node['name']}_{metric}"
+        self.assertEqual(field_id,'fct_uk_parliament_procedural_activity_average_business_item_date_count')
+        self.assertGreater(len(field_id.encode()),63)
+        with tempfile.TemporaryDirectory() as directory:
+            path=pathlib.Path(directory)
+            content.write_content(manifest,destination=path)
+            self.assertTrue(project.coverage(manifest,path)['ok'])
+            self.assertIn(field_id,content.render(manifest)['charts/fct-uk-parliament-procedural-activity.yml']['metricQuery']['metrics'])
+            node['alias']='a'*64
+            with self.assertRaises(ValueError):
+                project.bundle(manifest,path,'serving_database')
