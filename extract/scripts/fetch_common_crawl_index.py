@@ -1,291 +1,446 @@
 #!/usr/bin/env python3
-"""Fetch bounded Common Crawl index metadata as deterministic NDJSON.
+"""Fetch bounded domain snapshots from a Common Crawl CDX index as NDJSON.
 
-The public ``collinfo.json`` document describes the available crawl indexes.
-This extractor makes one request, limits the response body and entry count,
-validates the complete document before emitting records, and orders records by
-Common Crawl's stable collection ID. It does not query the CDX indexes or fetch
-crawl content.
+Collection metadata supplies crawl IDs and their crawl-specific CDX endpoints.
+A watchlist invocation resolves that metadata once, then uses the selected crawl for
+every domain. Output contains flat scalar fields suitable for automatic schema
+inference.
 """
 
 from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
-import http.client
 import json
 import os
 import re
-import socket
 import sys
-from typing import Any, Sequence
+from typing import Any, Iterator, Sequence
 import urllib.error
 import urllib.parse
 import urllib.request
 
 SOURCE = "common_crawl_index"
-URL = "https://index.commoncrawl.org/collinfo.json"
-DEFAULT_TIMEOUT = 30
-MAX_TIMEOUT = 120
-MAX_RESPONSE_BYTES = 2 * 1024 * 1024
-MAX_INDEXES = 1000
-MAX_DIAGNOSTIC_CHARS = 500
+COLLINFO_URL = "https://index.commoncrawl.org/collinfo.json"
+DEFAULT_TIMEOUT = 30.0
+DEFAULT_PAGE_SIZE = 1
+DEFAULT_MAX_PAGES = 5
+MAX_RESPONSE_BYTES = 32 * 1024 * 1024
+CURATED_DOMAINS = (
+    "bbc.com",
+    "cdc.gov",
+    "github.com",
+    "noaa.gov",
+    "openai.com",
+    "un.org",
+    "wikipedia.org",
+    "worldbank.org",
+)
+
+_CRAWL_ID_RE = re.compile(r"^CC-MAIN-\d{4}-\d{2}$")
+_TIMESTAMP_RE = re.compile(r"^\d{14}$")
+
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or (
     "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 )
-_CREDENTIALS_IN_URL = re.compile(r"(?i)\b(https?://)[^/\s:@]+(?::[^/\s@]*)?@")
-_SECRET_VALUE = re.compile(
-    r"(?i)\b(authorization|proxy-authorization|api[-_]?key|access[-_]?token|"
-    r"token|password|secret)\s*([:=])\s*(?:bearer\s+|basic\s+)?[^\s&]+"
-)
 
 
-class CommonCrawlIndexError(RuntimeError):
-    """The metadata request or response could not satisfy the extract contract."""
+class CommonCrawlError(RuntimeError):
+    """A Common Crawl response did not satisfy the extractor contract."""
 
 
-def _safe_diagnostic(detail: object) -> str:
-    text = " ".join(
-        "".join(character if character.isprintable() else " " for character in str(detail)).split()
+def _request(url: str) -> urllib.request.Request:
+    return urllib.request.Request(
+        url,
+        headers={"Accept": "application/json", "User-Agent": USER_AGENT},
+        method="GET",
     )
-    text = _CREDENTIALS_IN_URL.sub(r"\1[redacted]@", text)
-    text = _SECRET_VALUE.sub(r"\1\2[redacted]", text)
-    if not text:
-        text = type(detail).__name__
-    if len(text) > MAX_DIAGNOSTIC_CHARS:
-        text = f"{text[: MAX_DIAGNOSTIC_CHARS - 3]}..."
-    return text
 
 
-class SafeArgumentParser(argparse.ArgumentParser):
-    def error(self, message: str) -> None:
-        self.exit(2, f"{SOURCE}: argument error: {_safe_diagnostic(message)}\n")
+def _validate_positive(name: str, value: float) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+        raise ValueError(f"{name} must be positive")
 
 
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+def _read_response(url: str, timeout: float) -> bytes:
+    with urllib.request.urlopen(_request(url), timeout=timeout) as response:
+        payload = response.read(MAX_RESPONSE_BYTES + 1)
+    if not isinstance(payload, bytes):
+        raise CommonCrawlError(f"response from {url!r} was not bytes")
+    if len(payload) > MAX_RESPONSE_BYTES:
+        raise CommonCrawlError(f"response from {url!r} exceeded {MAX_RESPONSE_BYTES} bytes")
+    return payload
 
 
-def _required_text(row: dict[str, Any], field: str, index: int) -> str:
-    value = row.get(field)
-    if (
-        not isinstance(value, str)
-        or not value
-        or value.strip() != value
-        or len(value) > 1000
-    ):
-        raise CommonCrawlIndexError(
-            f"malformed metadata entry {index}: {field} must be a nonempty string"
-        )
-    return value
-
-
-def _required_https_url(row: dict[str, Any], field: str, index: int) -> str:
-    value = _required_text(row, field, index)
-    parsed = urllib.parse.urlsplit(value)
-    if parsed.scheme != "https" or not parsed.netloc or parsed.username is not None:
-        raise CommonCrawlIndexError(
-            f"malformed metadata entry {index}: {field} must be a public HTTPS URL"
-        )
-    return value
-
-def _validate_unicode_scalars(value: Any) -> None:
-    """Reject strings that cannot be represented as Unicode scalar values."""
-    pending = [value]
-    while pending:
-        current = pending.pop()
-        if isinstance(current, str):
-            if any(
-                0xD800 <= ord(character) <= 0xDFFF or ord(character) > 0x10FFFF
-                for character in current
-            ):
-                raise CommonCrawlIndexError(
-                    "Common Crawl returned a non-Unicode-scalar string"
-                )
-        elif isinstance(current, list):
-            pending.extend(current)
-        elif isinstance(current, dict):
-            pending.extend(current.keys())
-            pending.extend(current.values())
-
-
-
-
-def parse_response(document: Any, fetched_at: str) -> list[dict[str, Any]]:
-    """Validate and deterministically normalize a complete collinfo document."""
-    if not isinstance(document, list):
-        raise CommonCrawlIndexError("malformed metadata response: expected an array")
-    if not document:
-        raise CommonCrawlIndexError("malformed metadata response: index list is empty")
-    if len(document) > MAX_INDEXES:
-        raise CommonCrawlIndexError(
-            f"metadata response exceeds the {MAX_INDEXES}-entry safety limit"
-        )
-
-    records: list[dict[str, Any]] = []
-    seen_ids: set[str] = set()
-    for index, row in enumerate(document):
-        if not isinstance(row, dict):
-            raise CommonCrawlIndexError(
-                f"malformed metadata entry {index}: expected an object"
-            )
-        collection_id = _required_text(row, "id", index)
-        if collection_id in seen_ids:
-            raise CommonCrawlIndexError(
-                f"malformed metadata entry {index}: duplicate collection id"
-            )
-        seen_ids.add(collection_id)
-        name = _required_text(row, "name", index)
-        timegate = _required_https_url(row, "timegate", index)
-        cdx_api = _required_https_url(row, "cdx-api", index)
-        cdx_toolkit = row.get("cdx-toolkit")
-        if cdx_toolkit is not None:
-            cdx_toolkit = _required_https_url(row, "cdx-toolkit", index)
-
-        records.append(
-            {
-                "source": SOURCE,
-                "fetched_at": fetched_at,
-                "id": collection_id,
-                "name": name,
-                "timegate": timegate,
-                "cdx_api": cdx_api,
-                "cdx_toolkit": cdx_toolkit,
-                "raw": row,
-            }
-        )
-
-    records.sort(key=lambda record: record["id"])
-    return records
-
-
-def _read_document(response: Any) -> Any:
-    status = getattr(response, "status", None)
-    if status is None and hasattr(response, "getcode"):
-        status = response.getcode()
-    if status is not None and not 200 <= status < 300:
-        raise CommonCrawlIndexError(f"Common Crawl returned HTTP {status}")
-
-    headers = getattr(response, "headers", None)
-    declared_length = headers.get("Content-Length") if headers is not None else None
-    if declared_length is not None:
-        try:
-            expected_bytes = int(declared_length)
-        except (TypeError, ValueError) as error:
-            raise CommonCrawlIndexError("Common Crawl returned invalid Content-Length") from error
-        if expected_bytes < 0:
-            raise CommonCrawlIndexError("Common Crawl returned invalid Content-Length")
-        if expected_bytes > MAX_RESPONSE_BYTES:
-            raise CommonCrawlIndexError(
-                f"Common Crawl response exceeds the {MAX_RESPONSE_BYTES}-byte safety limit"
-            )
-    else:
-        expected_bytes = None
-
-    body = response.read(MAX_RESPONSE_BYTES + 1)
-    if not isinstance(body, bytes):
-        raise CommonCrawlIndexError("Common Crawl returned an invalid response body")
-    if len(body) > MAX_RESPONSE_BYTES:
-        raise CommonCrawlIndexError(
-            f"Common Crawl response exceeds the {MAX_RESPONSE_BYTES}-byte safety limit"
-        )
-    if expected_bytes is not None and len(body) != expected_bytes:
-        raise CommonCrawlIndexError("Common Crawl returned an incomplete response")
+def _read_json(url: str, timeout: float, *, context: str) -> Any:
+    payload = _read_response(url, timeout)
 
     def reject_nonstandard_number(value: str) -> None:
         raise ValueError(f"non-standard JSON number {value}")
 
     try:
-        document = json.loads(body.decode("utf-8"), parse_constant=reject_nonstandard_number)
-    except (UnicodeDecodeError, ValueError, RecursionError) as error:
-        raise CommonCrawlIndexError("Common Crawl returned malformed JSON") from error
-
-    _validate_unicode_scalars(document)
-    return document
+        return json.loads(payload.decode("utf-8"), parse_constant=reject_nonstandard_number)
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        raise CommonCrawlError(f"{context} returned malformed JSON") from exc
 
 
-def fetch_index_metadata(timeout: int = DEFAULT_TIMEOUT) -> list[dict[str, Any]]:
-    """Make one bounded metadata request and return fully validated records."""
-    if isinstance(timeout, bool) or not isinstance(timeout, int) or not 1 <= timeout <= MAX_TIMEOUT:
-        raise ValueError(f"timeout must be an integer from 1 to {MAX_TIMEOUT} seconds")
-
-    request = urllib.request.Request(
-        URL,
-        headers={"Accept": "application/json", "User-Agent": USER_AGENT},
-        method="GET",
+def _with_query(url: str, parameters: dict[str, object]) -> str:
+    parts = urllib.parse.urlsplit(url)
+    query = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
+    query.extend((key, str(value)) for key, value in parameters.items())
+    return urllib.parse.urlunsplit(
+        (parts.scheme, parts.netloc, parts.path, urllib.parse.urlencode(query), parts.fragment)
     )
+
+
+def _valid_index_url(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    parsed = urllib.parse.urlsplit(value)
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc) and parsed.username is None
+
+
+def discover_crawls(
+    collinfo_url: str = COLLINFO_URL,
+    *,
+    timeout: float = DEFAULT_TIMEOUT,
+) -> list[dict[str, str]]:
+    """Return validated crawl IDs and their crawl-specific CDX endpoints."""
+    _validate_positive("timeout", timeout)
+    document = _read_json(collinfo_url, float(timeout), context="collection metadata")
+    if not isinstance(document, list):
+        raise CommonCrawlError("collection metadata must be a JSON list")
+
+    crawls: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for position, item in enumerate(document):
+        if not isinstance(item, dict):
+            raise CommonCrawlError(f"collection metadata item {position} must be an object")
+        crawl_id = item.get("id")
+        index_url = item.get("cdx-api")
+        if not isinstance(crawl_id, str) or not _CRAWL_ID_RE.fullmatch(crawl_id):
+            raise CommonCrawlError(f"collection metadata item {position} has an invalid id")
+        if not _valid_index_url(index_url):
+            raise CommonCrawlError(
+                f"collection metadata item {position} has an invalid cdx-api URL"
+            )
+        if crawl_id in seen:
+            raise CommonCrawlError(f"collection metadata repeats crawl {crawl_id!r}")
+        seen.add(crawl_id)
+        crawls.append({"id": crawl_id, "cdx-api": index_url})
+    if not crawls:
+        raise CommonCrawlError("collection metadata contains no crawls")
+    return crawls
+
+
+def select_crawl(
+    crawls: Sequence[dict[str, str]], crawl_id: str | None = None
+) -> dict[str, str]:
+    """Select an explicit crawl, or the newest crawl by Common Crawl ID."""
+    if crawl_id is not None:
+        for crawl in crawls:
+            if crawl["id"] == crawl_id:
+                return crawl
+        raise CommonCrawlError(f"crawl {crawl_id!r} is not present in collection metadata")
+    return max(crawls, key=lambda crawl: crawl["id"])
+
+
+def resolve_crawl(
+    crawl_id: str | None = None,
+    *,
+    collinfo_url: str = COLLINFO_URL,
+    timeout: float = DEFAULT_TIMEOUT,
+) -> dict[str, str]:
+    """Resolve a crawl ID to the CDX URL advertised by collection metadata."""
+    return select_crawl(
+        discover_crawls(collinfo_url=collinfo_url, timeout=timeout), crawl_id=crawl_id
+    )
+
+
+def _normalize_domain(domain: str) -> str:
+    if not isinstance(domain, str):
+        raise ValueError("domain must be a string")
+    value = domain.strip().lower().rstrip(".")
+    labels = value.split(".")
+    if (
+        not value
+        or len(value) > 253
+        or "://" in value
+        or "/" in value
+        or ":" in value
+        or any(
+            not label
+            or len(label) > 63
+            or label.startswith("-")
+            or label.endswith("-")
+            or not re.fullmatch(r"[a-z0-9-]+", label)
+            for label in labels
+        )
+    ):
+        raise ValueError(f"invalid domain {domain!r}")
+    return value
+
+
+def _page_count(
+    domain: str,
+    index_url: str,
+    *,
+    page_size: int,
+    timeout: float,
+) -> int:
+    url = _with_query(
+        index_url,
+        {
+            "url": f"{domain}/*",
+            "matchType": "domain",
+            "output": "json",
+            "pageSize": page_size,
+            "showNumPages": "true",
+        },
+    )
+    document = _read_json(url, timeout, context=f"page metadata for {domain}")
+    if not isinstance(document, dict):
+        raise CommonCrawlError(f"page metadata for {domain} must be an object")
+    pages = document.get("pages")
+    if isinstance(pages, bool) or not isinstance(pages, int) or pages < 0:
+        raise CommonCrawlError(f"page metadata for {domain} has an invalid pages value")
+    return pages
+
+
+def _parse_page(payload: bytes, *, domain: str, page: int) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+
+    def reject_nonstandard_number(value: str) -> None:
+        raise ValueError(f"non-standard JSON number {value}")
+
+    for line_number, raw_line in enumerate(payload.splitlines(), 1):
+        if not raw_line.strip():
+            continue
+        try:
+            row = json.loads(raw_line.decode("utf-8"), parse_constant=reject_nonstandard_number)
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+            raise CommonCrawlError(
+                f"index page {page} for {domain} has malformed JSON on line {line_number}"
+            ) from exc
+        if not isinstance(row, dict):
+            raise CommonCrawlError(
+                f"index page {page} for {domain} line {line_number} must be an object"
+            )
+        rows.append(row)
+    return rows
+
+
+def _optional_string(row: dict[str, Any], key: str) -> str | None:
+    value = row.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, (str, int)) or isinstance(value, bool):
+        raise CommonCrawlError(f"index record field {key!r} must be scalar")
+    return str(value)
+
+
+def _optional_integer(row: dict[str, Any], key: str) -> int | None:
+    value = row.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise CommonCrawlError(f"index record field {key!r} must be an integer")
+    if isinstance(value, int):
+        number = value
+    elif isinstance(value, str) and re.fullmatch(r"[+-]?\d+", value):
+        number = int(value)
+    else:
+        raise CommonCrawlError(f"index record field {key!r} must be an integer")
+    if number < 0:
+        raise CommonCrawlError(f"index record field {key!r} must not be negative")
+    return number
+
+
+def normalize_record(
+    row: dict[str, Any],
+    *,
+    crawl_id: str,
+    domain: str,
+    fetched_at: str,
+) -> dict[str, Any]:
+    """Map one CDX object to a stable, flat, auto-inferable record."""
+    if not isinstance(crawl_id, str) or not _CRAWL_ID_RE.fullmatch(crawl_id):
+        raise CommonCrawlError("index record has an invalid crawl id")
+    url_key = row.get("urlkey")
+    timestamp = row.get("timestamp")
+    url = row.get("url")
+    warc_filename = row.get("filename")
+    if not isinstance(url_key, str) or not url_key:
+        raise CommonCrawlError("index record has an invalid urlkey")
+    if not isinstance(timestamp, str) or not _TIMESTAMP_RE.fullmatch(timestamp):
+        raise CommonCrawlError("index record has an invalid timestamp")
+    if not isinstance(url, str) or not url:
+        raise CommonCrawlError("index record has an invalid url")
+    if not isinstance(warc_filename, str) or not warc_filename.strip():
+        raise CommonCrawlError("index record has an invalid filename")
+    warc_offset = _optional_integer(row, "offset")
+    if warc_offset is None:
+        raise CommonCrawlError("index record is missing required field 'offset'")
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            document = _read_document(response)
-    except urllib.error.HTTPError as error:
-        raise CommonCrawlIndexError(f"Common Crawl returned HTTP {error.code}") from error
-    except (socket.timeout, TimeoutError) as error:
-        raise CommonCrawlIndexError(f"Common Crawl timed out after {timeout} seconds") from error
-    except urllib.error.URLError as error:
-        if isinstance(error.reason, (socket.timeout, TimeoutError)):
-            raise CommonCrawlIndexError(
-                f"Common Crawl timed out after {timeout} seconds"
-            ) from error
-        raise CommonCrawlIndexError("network error while contacting Common Crawl") from error
-    except http.client.IncompleteRead as error:
-        raise CommonCrawlIndexError("Common Crawl returned an incomplete response") from error
-    except http.client.HTTPException as error:
-        raise CommonCrawlIndexError("HTTP protocol error while contacting Common Crawl") from error
-    except OSError as error:
-        raise CommonCrawlIndexError("network error while contacting Common Crawl") from error
+        captured_at = datetime.strptime(timestamp, "%Y%m%d%H%M%S").replace(
+            tzinfo=timezone.utc
+        ).isoformat()
+    except ValueError as exc:
+        raise CommonCrawlError("index record has an invalid timestamp") from exc
 
-    return parse_response(document, _utc_now())
+    capture_id = ":".join(
+        (
+            crawl_id,
+            urllib.parse.quote(url_key, safe=""),
+            timestamp,
+            urllib.parse.quote(warc_filename, safe=""),
+            str(warc_offset),
+        )
+    )
+    return {
+        "source": SOURCE,
+        "id": capture_id,
+        "fetched_at": fetched_at,
+        "crawl_id": crawl_id,
+        "watched_domain": domain,
+        "url_key": url_key,
+        "timestamp": timestamp,
+        "captured_at": captured_at,
+        "url": url,
+        "mime_type": _optional_string(row, "mime"),
+        "detected_mime_type": _optional_string(row, "mime-detected"),
+        "status_code": _optional_string(row, "status"),
+        "digest": _optional_string(row, "digest"),
+        "content_length": _optional_integer(row, "length"),
+        "warc_offset": warc_offset,
+        "warc_filename": warc_filename,
+        "languages": _optional_string(row, "languages"),
+        "encoding": _optional_string(row, "encoding"),
+    }
 
-def _serialize_records(records: list[dict[str, Any]]) -> bytes:
-    """Validate and encode the complete NDJSON payload before emission."""
-    _validate_unicode_scalars(records)
+
+def fetch_domain(
+    domain: str,
+    crawl: dict[str, str],
+    *,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    max_pages: int = DEFAULT_MAX_PAGES,
+    timeout: float = DEFAULT_TIMEOUT,
+    fetched_at: str | None = None,
+) -> Iterator[dict[str, Any]]:
+    """Yield normalized records from bounded CDX pages for one domain."""
+    _validate_positive("page_size", page_size)
+    _validate_positive("max_pages", max_pages)
+    _validate_positive("timeout", timeout)
+    normalized_domain = _normalize_domain(domain)
     try:
-        lines = [
-            json.dumps(
-                record,
-                ensure_ascii=False,
-                allow_nan=False,
-                separators=(",", ":"),
-                sort_keys=True,
-            ).encode("utf-8")
-            for record in records
-        ]
-    except (TypeError, ValueError, UnicodeEncodeError, RecursionError) as error:
-        raise CommonCrawlIndexError(
-            "validated metadata could not be serialized as UTF-8"
-        ) from error
-    return b"\n".join(lines) + b"\n"
+        crawl_id = crawl["id"]
+        index_url = crawl["cdx-api"]
+    except (KeyError, TypeError) as exc:
+        raise ValueError("crawl must contain id and cdx-api") from exc
+    if not isinstance(crawl_id, str) or not _CRAWL_ID_RE.fullmatch(crawl_id):
+        raise ValueError("crawl id must be a valid Common Crawl ID")
+    if not _valid_index_url(index_url):
+        raise ValueError("crawl cdx-api must be an HTTP(S) URL")
+
+    observed_at = fetched_at or datetime.now(timezone.utc).isoformat()
+    pages = min(
+        _page_count(
+            normalized_domain,
+            index_url,
+            page_size=int(page_size),
+            timeout=float(timeout),
+        ),
+        int(max_pages),
+    )
+    for page in range(pages):
+        url = _with_query(
+            index_url,
+            {
+                "url": f"{normalized_domain}/*",
+                "matchType": "domain",
+                "output": "json",
+                "pageSize": int(page_size),
+                "page": page,
+            },
+        )
+        payload = _read_response(url, float(timeout))
+        for row in _parse_page(payload, domain=normalized_domain, page=page):
+            yield normalize_record(
+                row,
+                crawl_id=crawl_id,
+                domain=normalized_domain,
+                fetched_at=observed_at,
+            )
 
 
+def fetch_watchlist(
+    domains: Sequence[str] = CURATED_DOMAINS,
+    *,
+    crawl_id: str | None = None,
+    collinfo_url: str = COLLINFO_URL,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    max_pages: int = DEFAULT_MAX_PAGES,
+    timeout: float = DEFAULT_TIMEOUT,
+    fetched_at: str | None = None,
+) -> Iterator[dict[str, Any]]:
+    """Fetch every domain while isolating domain-specific HTTP and data failures."""
+    _validate_positive("page_size", page_size)
+    _validate_positive("max_pages", max_pages)
+    _validate_positive("timeout", timeout)
+    crawl = resolve_crawl(
+        crawl_id=crawl_id,
+        collinfo_url=collinfo_url,
+        timeout=float(timeout),
+    )
+    observed_at = fetched_at or datetime.now(timezone.utc).isoformat()
+    for domain in domains:
+        try:
+            yield from fetch_domain(
+                domain,
+                crawl,
+                page_size=int(page_size),
+                max_pages=int(max_pages),
+                timeout=float(timeout),
+                fetched_at=observed_at,
+            )
+        except Exception as exc:
+            print(f"{SOURCE}: skipping {domain!r}: {exc!r}", file=sys.stderr)
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = SafeArgumentParser(
-        description="Fetch bounded Common Crawl index metadata as NDJSON."
-    )
-    parser.add_argument(
-        "--timeout",
-        type=int,
-        default=DEFAULT_TIMEOUT,
-        help=f"HTTP timeout in seconds (1-{MAX_TIMEOUT}; default: {DEFAULT_TIMEOUT})",
-    )
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("domains", nargs="*", help="domains to fetch; defaults to curated set")
+    parser.add_argument("--crawl-id")
+    parser.add_argument("--collinfo-url", default=COLLINFO_URL)
+    parser.add_argument("--page-size", type=int, default=DEFAULT_PAGE_SIZE)
+    parser.add_argument("--max-pages", type=int, default=DEFAULT_MAX_PAGES)
+    parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT)
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        records = fetch_index_metadata(timeout=args.timeout)
-        payload = _serialize_records(records)
-    except (CommonCrawlIndexError, ValueError) as error:
-        print(f"{SOURCE}: {_safe_diagnostic(error)}", file=sys.stderr)
+        records = list(
+            fetch_watchlist(
+                args.domains or CURATED_DOMAINS,
+                crawl_id=args.crawl_id,
+                collinfo_url=args.collinfo_url,
+                page_size=args.page_size,
+                max_pages=args.max_pages,
+                timeout=args.timeout,
+            )
+        )
+        payload = "".join(
+            json.dumps(record, ensure_ascii=False, allow_nan=False, separators=(",", ":"), sort_keys=True)
+            + "\n"
+            for record in sorted(records, key=lambda record: record["id"])
+        )
+    except (CommonCrawlError, OSError, ValueError, urllib.error.URLError) as exc:
+        print(f"{SOURCE}: {exc}", file=sys.stderr)
         return 1
-
-    stdout_buffer = getattr(sys.stdout, "buffer", None)
-    if stdout_buffer is None:
-        sys.stdout.write(payload.decode("utf-8"))
-    else:
-        stdout_buffer.write(payload)
+    sys.stdout.write(payload)
     return 0
 
 
