@@ -1,0 +1,17 @@
+name: nws_active_alerts
+script: fetch_nws_active_alerts.py
+args: []
+schedule: "17,47 * * * *"  # UTC; proposed schedule while this source remains disabled
+enabled: false
+retries: 2
+timeout_minutes: 10
+sink: local
+
+# Do not enable until an operator records successful live NWS API smoke and Airflow
+# import checks. Sandbox verification is intentionally offline and does not mutate Airflow.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "proposed twice-hourly active-alert snapshots; enough resolution for alert changes without rapid polling"
+rate_limit: "api.weather.gov requests a descriptive User-Agent and does not publish a fixed quota; pagination is serial and the proposed schedule is conservative"
+licence: "US National Weather Service / US Government work, public domain"
+attribution: "National Weather Service (NWS), https://www.weather.gov/"
+attribution_required: false
