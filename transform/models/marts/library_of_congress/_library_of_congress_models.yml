@@ -1,0 +1,106 @@
+version: 2
+models:
+- name: fct_library_of_congress_item_observation
+  description: >-
+    Daily physical observation fact for the bounded Library of Congress books search slice. Each row is
+    one source, stable item identifier, and extractor observation timestamp. The configured robotics slice
+    changes with search ranking and catalog updates and is not a complete or consistent catalog snapshot.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, item_id, observed_at
+      label: Library of Congress item observation
+      group_label: Library of Congress
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: library_of_congress_item_observation_key
+  columns:
+  - name: library_of_congress_item_observation_key
+    description: Stable hash of source, item identifier, and observation timestamp defining the row grain.
+    data_type: varchar
+    data_tests:
+    - not_null
+    - unique
+  - name: source
+    description: Source identifier supplied by the extractor.
+    data_type: varchar
+    data_tests:
+    - not_null
+  - name: item_id
+    description: Stable Library of Congress item identifier returned by the API.
+    data_type: varchar
+    data_tests:
+    - not_null
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the item.
+    data_type: timestamp with time zone
+    data_tests:
+    - not_null
+  - name: title
+    description: Item title supplied by the Library of Congress API, when present.
+    data_type: varchar
+  - name: item_date
+    description: Primary date label supplied by the Library of Congress API, when present.
+    data_type: varchar
+  - name: dates
+    description: JSON array of date values associated with the item.
+    data_type: json
+  - name: contributors
+    description: JSON array of contributor values associated with the item.
+    data_type: json
+  - name: subjects
+    description: JSON array of subject values associated with the item.
+    data_type: json
+  - name: digitized
+    description: Whether the API reports that the item is digitized, when supplied.
+    data_type: boolean
+  - name: online_formats
+    description: JSON array of online format labels reported for the item.
+    data_type: json
+  - name: mime_types
+    description: JSON array of MIME types reported for the item.
+    data_type: json
+  - name: canonical_url
+    description: Canonical Library of Congress item URL returned by the API.
+    data_type: varchar
+  - name: resources
+    description: Complete JSON resource metadata returned by the API; linked content is not downloaded.
+    data_type: json
+  - name: resource_links
+    description: JSON array of resource URLs found in API metadata; the extractor does not request them.
+    data_type: json
+  - name: raw_item
+    description: Complete Library of Congress API item object retained for schema evolution and audit.
+    data_type: json
+  - name: source_payload
+    description: Complete extractor record retained by the raw loader.
+    data_type: json
+  - name: source_row_id
+    description: Raw load row identifier for the retained observation.
+    data_type: varchar
+  - name: source_batch_id
+    description: Identifier of the extract batch that supplied the retained observation.
+    data_type: varchar
+  - name: source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+  - name: source_file_row_number
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the retained source batch started.
+    data_type: timestamp with time zone
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained observation.
+    data_type: varchar
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+  - name: content_hash
+    description: Hash of the original raw extractor record for lineage and replay auditing.
+    data_type: varchar

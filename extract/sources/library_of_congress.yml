@@ -1,0 +1,26 @@
+name: library_of_congress
+script: fetch_library_of_congress.py
+# Two link-paginated pages form a bounded changing search slice, not the complete or a consistent Library of Congress catalog snapshot.
+args: ["--query", "robotics", "--page-size", "100", "--max-pages", "2", "--timeout", "30"]
+schedule: "23 10 * * *"  # UTC; daily after authorized activation
+enabled: false
+retries: 0
+timeout_minutes: 10
+sink: local
+
+# Keep disabled until authorized operators record a live one-page smoke extraction
+# and a configured scheduled run emitting valid NDJSON. Actual raw loading,
+# database-backed raw-source synchronization/check, and a selected dbt build are
+# separate external activation/completion gates. This extractor retrieves only
+# search JSON metadata and does not download any linked digital content.
+#
+# At most two API requests are normally made per scheduled attempt. Requests,
+# including redirects, are paced more than three seconds apart (below 20/minute),
+# and only HTTPS loc.gov /books pagination or redirect links are followed.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily bounded robotics search slice of at most 200 item observations"
+rate_limit: "local cap: 2 pages/run, 100 items/page, serial requests paced at least 3.1 seconds apart"
+licence: "Library of Congress catalog metadata; rights for linked collection material vary by item"
+attribution: "Library of Congress, https://www.loc.gov/"
+attribution_required: true
+coverage_note: "The ranked robotics search changes as catalog records and ranking change; this bounded slice is not a complete catalog, an exhaustive robotics collection, or a consistent snapshot."
