@@ -14,6 +14,9 @@ import argparse
 import gzip
 import json
 import os
+import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -40,10 +43,32 @@ def _get(station: str, timeout: int):
             "User-Agent": USER_AGENT,
         },
     )
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        body = response.read()
-        if response.headers.get("Content-Encoding", "").lower() == "gzip":
-            body = gzip.decompress(body)
+    started = time.monotonic()
+    phase = "open"
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            phase = "read"
+            body = response.read()
+            encoding = response.headers.get("Content-Encoding", "").lower()
+    except Exception as exc:
+        if isinstance(exc, urllib.error.HTTPError):
+            category = "http_error"
+        elif isinstance(exc, TimeoutError) or (
+            isinstance(exc, urllib.error.URLError) and isinstance(exc.reason, TimeoutError)
+        ):
+            category = "timeout"
+        elif isinstance(exc, urllib.error.URLError):
+            category = "url_error"
+        else:
+            category = "request_error"
+        elapsed_ms = min(999_999_999, max(0, int((time.monotonic() - started) * 1000)))
+        print(
+            f"{SOURCE} request_failed phase={phase} category={category} elapsed_ms={elapsed_ms}",
+            file=sys.stderr,
+        )
+        raise
+    if encoding == "gzip":
+        body = gzip.decompress(body)
     data = json.loads(body)
     if not isinstance(data, list):
         raise ValueError("Digitraffic response is not a train list")
@@ -75,8 +100,12 @@ def main():
     parser.add_argument("--limit", type=int, default=100)
     parser.add_argument("--timeout", type=int, default=30)
     args = parser.parse_args()
-    for record in fetch_trains(args.station, max(0, args.limit), args.timeout):
-        print(json.dumps(record, ensure_ascii=False))
+    try:
+        for record in fetch_trains(args.station, max(0, args.limit), args.timeout):
+            print(json.dumps(record, ensure_ascii=False))
+    except Exception:
+        print(f"{SOURCE} extraction_failed", file=sys.stderr)
+        raise SystemExit(1) from None
 
 
 if __name__ == "__main__":
