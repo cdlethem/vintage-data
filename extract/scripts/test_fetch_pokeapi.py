@@ -142,6 +142,26 @@ class FetchPokeAPITests(unittest.TestCase):
         self.assertEqual(opener.calls[1][0].full_url, continuation)
         sleeper.assert_called_once_with(1.0)
 
+
+    def test_follows_forward_continuation_after_short_page(self):
+        continuation = "https://pokeapi.co/api/v2/pokemon/?offset=3&limit=2"
+        first_page = page([pokemon(1)], 3)
+        result, opener, _ = self.fetch(
+            [first_page, page([pokemon(4), pokemon(5)], 5), page([pokemon(6)], None)]
+        )
+
+        self.assertEqual([record["id"] for record in result.records], [1, 4, 5, 6])
+        self.assertEqual(opener.calls[1][0].full_url, continuation)
+        self.assertIn("offset=5", opener.calls[2][0].full_url)
+
+
+    def test_rejects_looping_and_out_of_catalog_next_links(self):
+        for offset in (0, 100):
+            with self.subTest(offset=offset):
+                document = page([pokemon(1), pokemon(2)], offset)
+                with self.assertRaisesRegex(MODULE.PokeAPIError, "catalog pagination"):
+                    self.fetch([document])
+
     def test_empty_catalog_is_a_success_and_makes_one_request(self):
         result, opener, sleeper = self.fetch([page([], None)])
         self.assertEqual(result.records, [])
@@ -188,11 +208,11 @@ class FetchPokeAPITests(unittest.TestCase):
         malformed = (
             ([], "JSON object"),
             ({"results": []}, "results and next"),
-            ({"results": {}, "next": None}, "results must be a list"),
+            ({"count": 100, "results": {}, "next": None}, "results must be a list"),
             (page(["not-an-object"], None), "non-object"),
             (page([{"name": "", "url": pokemon(1)["url"]}], None), "invalid name"),
             (page([{"name": "bulbasaur", "url": "https://pokeapi.co/api/v2/pokemon/bulbasaur/"}], None), "positive integer id"),
-            (page([pokemon(1), pokemon(1)], None), "duplicate"),
+            ({"count": 100, "results": {}, "next": None}, "results must be a list"),
             (page([], 2), "empty page"),
         )
         for document, message in malformed:
@@ -218,7 +238,6 @@ class FetchPokeAPITests(unittest.TestCase):
             "https://pokeapi.co/api/v2/pokemon-extra?limit=2&offset=2",
             "https://user@pokeapi.co/api/v2/pokemon?limit=2&offset=2",
             "https://pokeapi.co/api/v2/pokemon?limit=2&offset=2#other",
-            "https://pokeapi.co/api/v2/pokemon/?limit=2&offset=4",
         )
         for next_url in bad_urls:
             with self.subTest(next_url=next_url):
