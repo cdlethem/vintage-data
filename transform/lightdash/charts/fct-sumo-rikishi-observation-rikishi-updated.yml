@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sumo_rikishi_observation_updated_at_day
+          yRef:
+            field: fct_sumo_rikishi_observation_distinct_rikishi
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Updated at (Day)
+      yAxis:
+      - name: Distinct rikishi
+    layout:
+      xField: fct_sumo_rikishi_observation_updated_at_day
+      yField:
+      - fct_sumo_rikishi_observation_distinct_rikishi
+  type: cartesian
+description: Distinct `rikishi_id` values by source-reported `updated_at` date over the prior 365 UTC
+  days. `updated_at` is sparse and nullable, so missing dates and null timestamps are excluded rather
+  than zero; repeated snapshots do not add wrestlers. Source is sumo-api.com via `extract/sources/sumo.yml`.
+metricQuery:
+  dimensions:
+  - fct_sumo_rikishi_observation_updated_at_day
+  exploreName: fct_sumo_rikishi_observation
+  filters:
+    dimensions:
+      and:
+      - id: 25c59e05-2ee3-52dc-a6cd-be13ac4de058
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sumo_rikishi_observation_updated_at
+        values:
+        - 365
+      id: e7387ab7-cffb-5c6b-875f-ea262634599b
+  limit: 5000
+  metrics:
+  - fct_sumo_rikishi_observation_distinct_rikishi
+  sorts:
+  - descending: false
+    fieldId: fct_sumo_rikishi_observation_updated_at_day
+  tableCalculations: []
+name: Distinct rikishi by source update date
+slug: fct-sumo-rikishi-observation-rikishi-updated
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sumo_rikishi_observation_updated_at_day
+  - fct_sumo_rikishi_observation_distinct_rikishi
+tableName: fct_sumo_rikishi_observation
+version: 1

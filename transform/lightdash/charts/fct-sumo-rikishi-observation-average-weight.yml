@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sumo_rikishi_observation_observed_at_day
+          yRef:
+            field: fct_sumo_rikishi_observation_average_weight_kg
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Average weight (kg)
+    layout:
+      xField: fct_sumo_rikishi_observation_observed_at_day
+      yField:
+      - fct_sumo_rikishi_observation_average_weight_kg
+  type: cartesian
+description: Non-additive average snapshot `weight_kg` by UTC collection date for records fetched in the
+  past 30 days. Repeated snapshots and changing categories are not additive; null measurements are excluded
+  from each mean. Source is sumo-api.com via `extract/sources/sumo.yml`.
+metricQuery:
+  dimensions:
+  - fct_sumo_rikishi_observation_observed_at_day
+  exploreName: fct_sumo_rikishi_observation
+  filters:
+    dimensions:
+      and:
+      - id: e9e8a35a-29cc-5318-a613-e7034f32d2ab
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sumo_rikishi_observation_observed_at
+        values:
+        - 30
+      id: e801b224-6be0-577e-a8c2-bd5bb27cb090
+  limit: 5000
+  metrics:
+  - fct_sumo_rikishi_observation_average_weight_kg
+  sorts:
+  - descending: false
+    fieldId: fct_sumo_rikishi_observation_observed_at_day
+  tableCalculations: []
+name: Average weight by collection date
+slug: fct-sumo-rikishi-observation-average-weight
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sumo_rikishi_observation_observed_at_day
+  - fct_sumo_rikishi_observation_average_weight_kg
+tableName: fct_sumo_rikishi_observation
+version: 1

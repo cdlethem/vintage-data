@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sumo_rikishi_observation_updated_at_day
+          yRef:
+            field: fct_sumo_rikishi_observation_distinct_heya
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Updated at (Day)
+      yAxis:
+      - name: Distinct heya
+    layout:
+      xField: fct_sumo_rikishi_observation_updated_at_day
+      yField:
+      - fct_sumo_rikishi_observation_distinct_heya
+  type: cartesian
+description: Distinct non-null snapshot `heya` values by source-reported `updated_at` date over the prior
+  365 UTC days. Heya changes and repeated snapshots make time buckets non-additive; sparse or null event
+  timestamps are excluded rather than zero. Source is sumo-api.com via `extract/sources/sumo.yml`.
+metricQuery:
+  dimensions:
+  - fct_sumo_rikishi_observation_updated_at_day
+  exploreName: fct_sumo_rikishi_observation
+  filters:
+    dimensions:
+      and:
+      - id: 91e5392e-5e06-5c64-9dd2-05c2b3fccf54
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sumo_rikishi_observation_updated_at
+        values:
+        - 365
+      id: c54aaf09-d6a3-5ddc-87dd-04ffad148a0d
+  limit: 5000
+  metrics:
+  - fct_sumo_rikishi_observation_distinct_heya
+  sorts:
+  - descending: false
+    fieldId: fct_sumo_rikishi_observation_updated_at_day
+  tableCalculations: []
+name: Distinct heya by source update date
+slug: fct-sumo-rikishi-observation-heya-breadth
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sumo_rikishi_observation_updated_at_day
+  - fct_sumo_rikishi_observation_distinct_heya
+tableName: fct_sumo_rikishi_observation
+version: 1
