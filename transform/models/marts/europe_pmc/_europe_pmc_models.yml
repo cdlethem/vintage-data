@@ -1,0 +1,517 @@
+version: 2
+models:
+- name: fct_europe_pmc_publication_observation
+  description: Daily physical observation fact for publications returned by the bounded Europe PMC search. Each row is one Europe PMC source-qualified article identifier at one extractor observation timestamp, preserving publication metadata, point-in-time citation and availability fields, and raw-load lineage. Replayed copies at the same grain retain the latest loaded row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, article_id, observed_at
+      label: Europe PMC publication observation
+      group_label: Europe PMC
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: europe_pmc_publication_observation_key
+      vintage:
+        visualization:
+          dimension: publication_source
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Observed publications by publication source
+          description: Distinct `article_id` values by Europe PMC `publication_source` within the bounded UTC observation window. Repeated snapshots of an article count once per source group; this is observed rolling-window coverage, not a complete Europe PMC census.
+          detail_fields:
+          - observed_at
+          - article_id
+          - publication_source
+          - title
+          - first_publication_date
+          - cited_by_count
+          - is_open_access
+          sources:
+          - '`europe_pmc` — Europe PMC metadata and text-mined annotations; record-level source rights may vary; attribution required: True. Source configuration: `extract/sources/europe_pmc.yml`.'
+          analysis:
+            headline: how the publications observed in Europe PMC's rolling FIRST_PDATE replay change by publication date, source, citation level, and open-access status.
+            event_time: first_publication_date
+            grain: DAY
+            window_days: 30
+            snapshot_days: 2
+            controls:
+            - publication_source
+            - language
+            - publication_status
+            - is_open_access
+            trends:
+            - slug: observed-publications
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              window_days: 30
+              title: Observed publications by observation day
+              snapshot_days: null
+              description: Distinct `article_id` values returned on each UTC extractor observation day. This is a collection level from a bounded rolling FIRST_PDATE query; replayed windows, cursor continuation, the four-page cap, and unsuccessful extract days make it neither a publication flow nor a complete catalogue count.
+              width: half
+            - slug: new-publications
+              kind: total
+              metric: distinct_entities
+              time: first_publication_date
+              time_dimension: published
+              grain: DAY
+              window_days: 30
+              snapshot_days: 2
+              title: Observed publications by first publication day
+              description: Distinct `article_id` values in the latest two UTC observation days, grouped by Europe PMC `first_publication_date` within the past 30 days. The extractor replays a rolling 14-day FIRST_PDATE query, so this is a bounded snapshot of recently dated publications, not proof that every item first appeared in the feed that day; absent dates are absent rather than zero.
+              width: half
+            - slug: citation-level
+              kind: total
+              metric: avg_cited_by_count
+              time: first_publication_date
+              time_dimension: published
+              grain: DAY
+              window_days: 30
+              snapshot_days: 2
+              title: Mean observed citations by first publication day
+              description: Mean Europe PMC `cited_by_count` among retained publication snapshots from the latest two UTC observation days, grouped by `first_publication_date`. Citation counts are point-in-time levels and each retained snapshot has equal weight; this is not citation accrual or an additive total.
+              width: half
+            - slug: publication-source-mix
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: publication_source
+              top_n: 6
+              time: first_publication_date
+              time_dimension: published
+              grain: DAY
+              window_days: 30
+              snapshot_days: 2
+              title: Publication-source mix by first publication day
+              description: Distinct `article_id` values in the latest two UTC observation days, split across the six busiest Europe PMC publication sources by first publication day. Remaining sources are excluded rather than aggregated; rolling replay and extraction caps mean the lines describe observed mix, not complete publication output.
+              width: full
+            - slug: open-access-composition
+              kind: composition
+              metric: distinct_entities
+              breakdown: is_open_access
+              top_n: 3
+              time: first_publication_date
+              time_dimension: published
+              grain: DAY
+              window_days: 30
+              snapshot_days: 2
+              title: Open-access composition by first publication day
+              description: Distinct `article_id` values in the latest two UTC observation days, stacked by Europe PMC's point-in-time `is_open_access` flag and first publication day. Null, true, and false can each form a segment; rolling replay and extraction caps make this observed composition rather than a complete publication census.
+              width: full
+  columns:
+  - name: europe_pmc_publication_observation_key
+    description: Stable hash of the source label, source-qualified article identifier, and observation timestamp defining the row grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Europe PMC publication observation key
+          hidden: true
+          name: observation_key
+  - name: source_name
+    description: Extractor source label; currently `europe_pmc`.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: article_id
+    description: Stable source-qualified Europe PMC article identifier in `PUBLICATION_SOURCE:PUBLICATION_ID` form.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct publications
+            description: Distinct `article_id` values represented by retained point-in-time Europe PMC observations in each group. Replayed snapshots of one article count once within a group; this does not establish complete catalogue coverage.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Article id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp shared by records fetched in one Europe PMC extractor run.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: publication_source
+    description: Uppercase Europe PMC source namespace, such as MED or PMC, used with `publication_id` to identify the article.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publication source
+          hidden: false
+  - name: publication_id
+    description: Identifier assigned within the Europe PMC publication source namespace.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publication id
+          hidden: false
+  - name: pmid
+    description: PubMed identifier reported by Europe PMC, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: PMID
+          hidden: false
+  - name: pmcid
+    description: PubMed Central identifier reported by Europe PMC, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: PMCID
+          hidden: false
+  - name: doi
+    description: Digital Object Identifier reported by Europe PMC, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: DOI
+          hidden: false
+  - name: title
+    description: Whitespace-normalized publication title reported by Europe PMC.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: abstract
+    description: Whitespace-normalized abstract text reported by Europe PMC, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Abstract
+          hidden: true
+  - name: author_string
+    description: Display-ready author string reported by Europe PMC.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Authors
+          hidden: false
+  - name: authors
+    description: JSON array of normalized authors, identifiers, and affiliations reported by Europe PMC.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Author details
+          hidden: true
+          sql: CAST(${TABLE}.authors AS VARCHAR)
+  - name: journal
+    description: JSON object containing journal title, identifiers, issue, volume, and publication-date metadata.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Journal details
+          hidden: true
+          sql: CAST(${TABLE}.journal AS VARCHAR)
+  - name: publication_year
+    description: Publication year text reported by Europe PMC without inferred precision.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publication year
+          hidden: false
+  - name: first_publication_date
+    description: Calendar date Europe PMC reports as the publication's first publication date.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: First publication date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        additional_dimensions:
+          published:
+            type: date
+            label: First published
+            description: First publication date exposed under a short key so date-grained field identifiers remain portable.
+            sql: ${TABLE}.first_publication_date
+            time_intervals:
+            - DAY
+            - WEEK
+            - MONTH
+            - YEAR
+  - name: first_index_date
+    description: Calendar date Europe PMC reports as the publication's first index date.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: First index date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: publication_status
+    description: Publication status code reported by Europe PMC, such as ppublish or epublish.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publication status
+          hidden: false
+  - name: publication_types
+    description: JSON array of publication types reported by Europe PMC.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publication types
+          hidden: true
+          sql: CAST(${TABLE}.publication_types AS VARCHAR)
+  - name: language
+    description: Publication language code reported by Europe PMC.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Language
+          hidden: false
+  - name: keywords
+    description: JSON array of publication keywords reported by Europe PMC.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Keywords
+          hidden: true
+          sql: CAST(${TABLE}.keywords AS VARCHAR)
+  - name: mesh_headings
+    description: JSON array of Medical Subject Headings reported by Europe PMC.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: MeSH headings
+          hidden: true
+          sql: CAST(${TABLE}.mesh_headings AS VARCHAR)
+  - name: grants
+    description: JSON array of grant metadata reported by Europe PMC.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Grants
+          hidden: true
+          sql: CAST(${TABLE}.grants AS VARCHAR)
+  - name: cited_by_count
+    description: Number of citing publications reported by Europe PMC at `observed_at`; this mutable point-in-time level is not an increment.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          avg_cited_by_count:
+            type: average
+            label: Mean observed cited-by count
+            description: Average non-null Europe PMC `cited_by_count` across retained point-in-time publication snapshots in each group. Every snapshot has equal weight; repeated polling can affect the mean, and it is neither citation growth nor an additive total.
+            format: '#,##0.0'
+        dimension:
+          type: number
+          label: Cited-by count
+          hidden: false
+          format: '#,##0'
+  - name: is_open_access
+    description: Whether Europe PMC marked the publication as open access at observation time.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is open access
+          hidden: false
+  - name: has_pdf
+    description: Whether Europe PMC reported an available PDF at observation time.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Has PDF
+          hidden: false
+  - name: in_epmc
+    description: Whether Europe PMC reported the publication as present in Europe PMC at observation time.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: In Europe PMC
+          hidden: false
+  - name: in_pmc
+    description: Whether Europe PMC reported the publication as present in PubMed Central at observation time.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: In PMC
+          hidden: false
+  - name: source_url
+    description: Canonical Europe PMC article URL assembled from the publication source and identifier.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source URL
+          hidden: false
+  - name: full_text_links
+    description: JSON array of Europe PMC and advertised full-text links available at observation time.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Full-text links
+          hidden: true
+          sql: CAST(${TABLE}.full_text_links AS VARCHAR)
+  - name: annotations
+    description: JSON array of text-mined annotations returned for the article by the Europe PMC annotations API.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Annotations
+          hidden: true
+          sql: CAST(${TABLE}.annotations AS VARCHAR)
+  - name: retrieval
+    description: JSON object recording the bounded query, cursor, page, search URL, and annotations URL used for this observation.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Retrieval details
+          hidden: true
+          sql: CAST(${TABLE}.retrieval AS VARCHAR)
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Batch id
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained Europe PMC observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: File row number
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the publication or observation time.
+  - name: _content_hash
+    description: Load-layer hash of the original raw observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_europe_pmc_publication_observation_observed_at_day
+          yRef:
+            field: fct_europe_pmc_publication_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct publications
+    layout:
+      xField: fct_europe_pmc_publication_observation_observed_at_day
+      yField:
+      - fct_europe_pmc_publication_observation_distinct_entities
+  type: cartesian
+description: Distinct `article_id` values returned on each UTC extractor observation day. This is a collection level from a bounded rolling FIRST_PDATE query; replayed windows, cursor continuation, the four-page cap, and unsuccessful extract days make it neither a publication flow nor a complete catalogue count.
+metricQuery:
+  dimensions:
+  - fct_europe_pmc_publication_observation_observed_at_day
+  exploreName: fct_europe_pmc_publication_observation
+  filters:
+    dimensions:
+      and:
+      - id: e36fcfc2-8ec4-5c4e-a0a0-ed0b8cd03b01
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_europe_pmc_publication_observation_observed_at
+        values:
+        - 30
+      id: ff3b2a6c-fe1f-5c89-8c2e-f98ac3a06172
+  limit: 5000
+  metrics:
+  - fct_europe_pmc_publication_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_europe_pmc_publication_observation_observed_at_day
+  tableCalculations: []
+name: Observed publications by observation day
+slug: fct-europe-pmc-publication-observation-observed-publications
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_europe_pmc_publication_observation_observed_at_day
+  - fct_europe_pmc_publication_observation_distinct_entities
+tableName: fct_europe_pmc_publication_observation
+version: 1

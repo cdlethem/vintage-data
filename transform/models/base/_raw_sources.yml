@@ -1941,6 +1941,135 @@ sources:
     - name: timeseveritychanged
       description: Raw `timeseveritychanged` value supplied by `environment_agency_floods`.
       data_type: TIMESTAMP WITH TIME ZONE
+  - name: europe_pmc
+    description: Insert-only raw records loaded for `europe_pmc`.
+    columns: &id170
+    - name: _row_id
+      description: Raw `_row_id` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: _source
+      description: Raw `_source` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: _batch_id
+      description: Identifier of the raw load batch that produced this row.
+      data_type: VARCHAR
+    - name: _source_file
+      description: Raw source file from which this row was loaded.
+      data_type: VARCHAR
+    - name: _file_row_num
+      description: One-based row position in the raw source file.
+      data_type: BIGINT
+    - name: _dt
+      description: Raw `_dt` value supplied by `europe_pmc`.
+      data_type: DATE
+    - name: _extract_started_at
+      description: Raw `_extract_started_at` value supplied by `europe_pmc`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _load_id
+      description: Identifier of the load job that inserted this row.
+      data_type: VARCHAR
+    - name: _loaded_at
+      description: UTC timestamp at which the load layer inserted this row.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _content_hash
+      description: Stable hash of the raw record content used for lineage and deduplication.
+      data_type: VARCHAR
+    - name: _payload
+      description: Complete raw record payload retained for lineage and schema evolution.
+      data_type: JSON
+    - name: source
+      description: Raw `source` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: id
+      description: Raw `id` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: fetched_at
+      description: Raw `fetched_at` value supplied by `europe_pmc`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: publication_source
+      description: Raw `publication_source` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: publication_id
+      description: Raw `publication_id` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: pmid
+      description: Raw `pmid` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: pmcid
+      description: Raw `pmcid` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: doi
+      description: Raw `doi` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: title
+      description: Raw `title` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: abstract
+      description: Raw `abstract` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: author_string
+      description: Raw `author_string` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: authors
+      description: Raw `authors` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: journal
+      description: Raw `journal` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: publication_year
+      description: Raw `publication_year` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: first_publication_date
+      description: Raw `first_publication_date` value supplied by `europe_pmc`.
+      data_type: DATE
+    - name: first_index_date
+      description: Raw `first_index_date` value supplied by `europe_pmc`.
+      data_type: DATE
+    - name: publication_status
+      description: Raw `publication_status` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: publication_types
+      description: Raw `publication_types` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: language
+      description: Raw `language` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: keywords
+      description: Raw `keywords` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: mesh_headings
+      description: Raw `mesh_headings` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: grants
+      description: Raw `grants` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: cited_by_count
+      description: Raw `cited_by_count` value supplied by `europe_pmc`.
+      data_type: BIGINT
+    - name: is_open_access
+      description: Raw `is_open_access` value supplied by `europe_pmc`.
+      data_type: BOOLEAN
+    - name: in_epmc
+      description: Raw `in_epmc` value supplied by `europe_pmc`.
+      data_type: BOOLEAN
+    - name: in_pmc
+      description: Raw `in_pmc` value supplied by `europe_pmc`.
+      data_type: BOOLEAN
+    - name: has_pdf
+      description: Raw `has_pdf` value supplied by `europe_pmc`.
+      data_type: BOOLEAN
+    - name: source_url
+      description: Raw `source_url` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: full_text_links
+      description: Raw `full_text_links` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: annotations
+      description: Raw `annotations` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: retrieval
+      description: Raw `retrieval` value supplied by `europe_pmc`.
+      data_type: JSON
   - name: faa_nas_status
     description: Insert-only raw records loaded for `faa_nas_status`.
     columns: &id025
@@ -13831,6 +13960,10 @@ models:
   description: Thin governed view over the `environment_agency_floods` raw source. Values and load lineage
     are preserved without semantic cleaning.
   columns: *id024
+- name: base_europe_pmc
+  description: Thin governed view over the `europe_pmc` raw source. Values and load lineage are preserved
+    without semantic cleaning.
+  columns: *id170
 - name: base_faa_nas_status
   description: Thin governed view over the `faa_nas_status` raw source. Values and load lineage are preserved
     without semantic cleaning.

@@ -1,0 +1,63 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_europe_pmc_publication_observation_published_day
+          yRef:
+            field: fct_europe_pmc_publication_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: First publication date (Day)
+      yAxis:
+      - name: Distinct publications
+    layout:
+      xField: fct_europe_pmc_publication_observation_published_day
+      yField:
+      - fct_europe_pmc_publication_observation_distinct_entities
+  type: cartesian
+description: Distinct `article_id` values in the latest two UTC observation days, grouped by Europe PMC `first_publication_date` within the past 30 days. The extractor replays a rolling 14-day FIRST_PDATE query, so this is a bounded snapshot of recently dated publications, not proof that every item first appeared in the feed that day; absent dates are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_europe_pmc_publication_observation_published_day
+  exploreName: fct_europe_pmc_publication_observation
+  filters:
+    dimensions:
+      and:
+      - id: 08fe6c0c-45f3-5c61-93ea-4f1cd29c66e2
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_europe_pmc_publication_observation_first_publication_date
+        values:
+        - 30
+      - id: 524dc0f7-093e-5437-ae8e-d550940d44ef
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_europe_pmc_publication_observation_observed_at
+        values:
+        - 2
+      id: 6771c038-97e6-501b-b410-bbd19451258c
+  limit: 5000
+  metrics:
+  - fct_europe_pmc_publication_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_europe_pmc_publication_observation_published_day
+  tableCalculations: []
+name: Observed publications by first publication day
+slug: fct-europe-pmc-publication-observation-new-publications
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_europe_pmc_publication_observation_published_day
+  - fct_europe_pmc_publication_observation_distinct_entities
+tableName: fct_europe_pmc_publication_observation
+version: 1

@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical observation fact for publications returned by the bounded Europe PMC search. Each row is one Europe PMC source-qualified article identifier at one extractor observation timestamp, preserving publication metadata, point-in-time citation and availability fields, and raw-load lineage. Replayed copies at the same grain retain the latest loaded row.
+metricQuery:
+  dimensions: &id001
+  - fct_europe_pmc_publication_observation_observed_at
+  - fct_europe_pmc_publication_observation_article_id
+  - fct_europe_pmc_publication_observation_publication_source
+  - fct_europe_pmc_publication_observation_title
+  - fct_europe_pmc_publication_observation_first_publication_date
+  - fct_europe_pmc_publication_observation_cited_by_count
+  - fct_europe_pmc_publication_observation_is_open_access
+  exploreName: fct_europe_pmc_publication_observation
+  filters:
+    dimensions:
+      and:
+      - id: 46895d32-a309-5b8e-8adf-c1f84cbc7f3c
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_europe_pmc_publication_observation_observed_at
+        values:
+        - 30
+      id: 4652c1cb-0172-5b06-9609-587599d207d0
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_europe_pmc_publication_observation_observed_at
+  tableCalculations: []
+name: Europe PMC publication observation — observations
+slug: fct-europe-pmc-publication-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_europe_pmc_publication_observation
+version: 1

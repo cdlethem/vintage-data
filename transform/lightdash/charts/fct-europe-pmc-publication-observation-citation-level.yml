@@ -1,0 +1,63 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_europe_pmc_publication_observation_published_day
+          yRef:
+            field: fct_europe_pmc_publication_observation_avg_cited_by_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: First publication date (Day)
+      yAxis:
+      - name: Mean observed cited-by count
+    layout:
+      xField: fct_europe_pmc_publication_observation_published_day
+      yField:
+      - fct_europe_pmc_publication_observation_avg_cited_by_count
+  type: cartesian
+description: Mean Europe PMC `cited_by_count` among retained publication snapshots from the latest two UTC observation days, grouped by `first_publication_date`. Citation counts are point-in-time levels and each retained snapshot has equal weight; this is not citation accrual or an additive total.
+metricQuery:
+  dimensions:
+  - fct_europe_pmc_publication_observation_published_day
+  exploreName: fct_europe_pmc_publication_observation
+  filters:
+    dimensions:
+      and:
+      - id: 0ebdc74b-7058-5c62-a4ac-3a3ab6208ee4
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_europe_pmc_publication_observation_first_publication_date
+        values:
+        - 30
+      - id: c0ebd4c7-b8ee-5cdd-9eda-0266ed0f2ba2
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_europe_pmc_publication_observation_observed_at
+        values:
+        - 2
+      id: 36d06883-6959-5c09-8bdf-ad4d25ed770b
+  limit: 5000
+  metrics:
+  - fct_europe_pmc_publication_observation_avg_cited_by_count
+  sorts:
+  - descending: false
+    fieldId: fct_europe_pmc_publication_observation_published_day
+  tableCalculations: []
+name: Mean observed citations by first publication day
+slug: fct-europe-pmc-publication-observation-citation-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_europe_pmc_publication_observation_published_day
+  - fct_europe_pmc_publication_observation_avg_cited_by_count
+tableName: fct_europe_pmc_publication_observation
+version: 1

@@ -1,0 +1,167 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 5fea6e5e-2b15-50ba-930e-ed1c02523cf4
+    label: 'Europe PMC publication observation: Publication source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_europe_pmc_publication_observation_publication_source
+      tableName: fct_europe_pmc_publication_observation
+    values: []
+  - disabled: true
+    id: 0bb8c999-7016-5ee0-9dbb-bc73ea41aab5
+    label: 'Europe PMC publication observation: Language'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_europe_pmc_publication_observation_language
+      tableName: fct_europe_pmc_publication_observation
+    values: []
+  - disabled: true
+    id: 5b94e9bf-ccc2-5bfc-b672-23d574cd62af
+    label: 'Europe PMC publication observation: Publication status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_europe_pmc_publication_observation_publication_status
+      tableName: fct_europe_pmc_publication_observation
+    values: []
+  - disabled: true
+    id: bd076acb-2d5a-5a6d-91a1-be77bbc02fa9
+    label: 'Europe PMC publication observation: Is open access'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_europe_pmc_publication_observation_is_open_access
+      tableName: fct_europe_pmc_publication_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Europe Pmc
+slug: europe-pmc
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical observation fact for publications returned by the bounded Europe PMC search. Each row is one Europe PMC source-qualified article identifier at one extractor observation timestamp, preserving publication metadata, point-in-time citation and availability fields, and raw-load lineage. Replayed copies at the same grain retain the latest loaded row.
+
+
+      **Grain:** source_name, article_id, observed_at
+
+
+      **What changes here:** how the publications observed in Europe PMC''s rolling FIRST_PDATE replay change by publication date, source, citation level, and open-access status.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state their own axis and window. Empty charts mean no matching published observations; they do not establish that no events occurred.
+
+
+      **Replay/snapshot semantics:** the extractor queries `FIRST_PDATE:[NOW-14DAY TO NOW]`, advances a cursor through at most four pages and 400 records per run, then restarts completed traversals to replay the rolling window. Event-time trends use only the latest two UTC observation days so repeated historical snapshots remain bounded. These charts describe observed bounded snapshots, not complete Europe PMC publication output or first-seen events.
+
+
+      **Provenance**
+
+      - `europe_pmc` — Europe PMC metadata and text-mined annotations; record-level source rights may vary; attribution required: True. Source configuration: `extract/sources/europe_pmc.yml`.'
+    hideFrame: false
+    title: Europe PMC publication observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Europe PMC publication observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Observed publications by observation day
+    chartSlug: fct-europe-pmc-publication-observation-observed-publications
+    hideTitle: false
+    title: Observed publications by observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Observed publications by first publication day
+    chartSlug: fct-europe-pmc-publication-observation-new-publications
+    hideTitle: false
+    title: Observed publications by first publication day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean observed citations by first publication day
+    chartSlug: fct-europe-pmc-publication-observation-citation-level
+    hideTitle: false
+    title: Mean observed citations by first publication day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Publication-source mix by first publication day
+    chartSlug: fct-europe-pmc-publication-observation-publication-source-mix
+    hideTitle: false
+    title: Publication-source mix by first publication day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Open-access composition by first publication day
+    chartSlug: fct-europe-pmc-publication-observation-open-access-composition
+    hideTitle: false
+    title: Open-access composition by first publication day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Europe PMC publication observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Observed publications by publication source
+    chartSlug: fct-europe-pmc-publication-observation
+    hideTitle: false
+    title: Observed publications by publication source
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Europe PMC publication observation — observations
+    chartSlug: fct-europe-pmc-publication-observation-details
+    hideTitle: false
+    title: Europe PMC publication observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

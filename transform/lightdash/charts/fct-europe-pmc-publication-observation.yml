@@ -1,0 +1,51 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_europe_pmc_publication_observation_publication_source
+          yRef:
+            field: fct_europe_pmc_publication_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_europe_pmc_publication_observation_publication_source
+      yField:
+      - fct_europe_pmc_publication_observation_distinct_entities
+  type: cartesian
+description: Distinct `article_id` values by Europe PMC `publication_source` within the bounded UTC observation window. Repeated snapshots of an article count once per source group; this is observed rolling-window coverage, not a complete Europe PMC census.
+metricQuery:
+  dimensions:
+  - fct_europe_pmc_publication_observation_publication_source
+  exploreName: fct_europe_pmc_publication_observation
+  filters:
+    dimensions:
+      and:
+      - id: d3f5e284-46e3-596b-85ac-f4173bf7a9d8
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_europe_pmc_publication_observation_observed_at
+        values:
+        - 30
+      id: f6d26f0b-aaac-5c5e-b9ec-08c339819c33
+  limit: 20
+  metrics:
+  - fct_europe_pmc_publication_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_europe_pmc_publication_observation_distinct_entities
+  tableCalculations: []
+name: Observed publications by publication source
+slug: fct-europe-pmc-publication-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_europe_pmc_publication_observation_publication_source
+  - fct_europe_pmc_publication_observation_distinct_entities
+tableName: fct_europe_pmc_publication_observation
+version: 1

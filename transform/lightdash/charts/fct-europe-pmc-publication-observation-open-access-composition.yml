@@ -1,0 +1,75 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_europe_pmc_publication_observation_published_day
+          yRef:
+            field: fct_europe_pmc_publication_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: First publication date (Day)
+      yAxis:
+      - name: Distinct publications
+    layout:
+      stack: true
+      xField: fct_europe_pmc_publication_observation_published_day
+      yField:
+      - fct_europe_pmc_publication_observation_distinct_entities
+  type: cartesian
+description: Distinct `article_id` values in the latest two UTC observation days, stacked by Europe PMC's point-in-time `is_open_access` flag and first publication day. Null, true, and false can each form a segment; rolling replay and extraction caps make this observed composition rather than a complete publication census.
+metricQuery:
+  dimensions:
+  - fct_europe_pmc_publication_observation_published_day
+  - fct_europe_pmc_publication_observation_is_open_access
+  exploreName: fct_europe_pmc_publication_observation
+  filters:
+    dimensions:
+      and:
+      - id: c64f7b32-4774-5c62-8421-7d80703eb985
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_europe_pmc_publication_observation_first_publication_date
+        values:
+        - 30
+      - id: a2947a86-f3b5-5cd4-a393-66319cf9bedb
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_europe_pmc_publication_observation_observed_at
+        values:
+        - 2
+      id: b778108a-1d2f-5586-9262-994f118f96c4
+  limit: 5000
+  metrics:
+  - fct_europe_pmc_publication_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_europe_pmc_publication_observation_distinct_entities
+  - descending: false
+    fieldId: fct_europe_pmc_publication_observation_published_day
+  tableCalculations: []
+name: Open-access composition by first publication day
+pivotConfig:
+  columns:
+  - fct_europe_pmc_publication_observation_is_open_access
+slug: fct-europe-pmc-publication-observation-open-access-composition
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_europe_pmc_publication_observation_published_day
+  - fct_europe_pmc_publication_observation_is_open_access
+  - fct_europe_pmc_publication_observation_distinct_entities
+tableName: fct_europe_pmc_publication_observation
+version: 1
