@@ -2,9 +2,11 @@ version: 2
 models:
 - name: fct_nz_charities
   description: Physical daily snapshot of New Zealand Charities Register organisation observations. Each
-    row is one source, organisation identifier, and fetch timestamp, with the published organisation attributes
-    and nested register details retained alongside load lineage. Repeated copies of the same observation
-    grain are resolved to the latest loaded file row.
+    row is one source, organisation identifier, and fetch timestamp; `fetched_at` is the UTC observation
+    time, while `modifiedon` is the source-record revision event and `dateregistered` is the original
+    registration event. Published organisation attributes and nested register details are retained alongside
+    load lineage. Repeated copies of the same observation grain are resolved to the latest loaded file row;
+    this is a snapshot/SCD2-style history, not a current-state census.
   config:
     contract:
       enforced: true
@@ -22,11 +24,10 @@ models:
           metric: distinct_entities
           time: fetched_at
           window_days: 30
-          title: Distinct id by registrationstatus
-          description: Distinct `id` values by `registrationstatus` among observations in the selected
-            window. Repeated observations of an entity count once within each group. An entity that changed
-            category can appear in multiple groups; these groups are not additive and do not represent
-            a current-state census.
+          description: Non-additive distinct count of `id` values by `registrationstatus` among observations
+            in the selected window. Repeated observations of an entity count once within each group. An
+            entity that changed category can appear in multiple groups; do not sum groups or interpret this
+            as a current-state census.
           detail_fields:
           - fetched_at
           - id
@@ -52,9 +53,9 @@ models:
               time: modifiedon
               grain: DAY
               title: Charities modified per day
-              description: Distinct `id` values by `modifiedon` day. This is a count of registered entities
-                whose source record was revised, not a count of newly registered charities; days with no
-                revision are absent rather than zero.
+              description: Non-additive distinct count of `id` values by `modifiedon` day. This counts
+                registered entities whose source record was revised, not newly registered charities; days
+                with no revision are absent rather than zero.
               width: half
             - slug: overseas-spending
               kind: total
@@ -62,9 +63,9 @@ models:
               time: modifiedon
               grain: DAY
               title: Reported overseas spending share by revision day
-              description: Mean non-null `percentagespentoverseas` among records by `modifiedon` day. Most
-                rows do not report this field, so the average describes only reporting organisations and
-                days with no reported value are absent rather than zero.
+              description: Mean non-null `percentagespentoverseas`, in percentage points, among records by
+                `modifiedon` day. It is non-summable and describes only reporting organisations; days with
+                no reported value are absent rather than zero.
               width: half
             - slug: revisions-by-legal-structure
               kind: breakdown
@@ -74,9 +75,9 @@ models:
               time: modifiedon
               grain: DAY
               title: Modified charities by legal structure
-              description: Distinct `id` values revised on each `modifiedon` day, compared across the
-                largest legal-structure groups. The remaining structures are excluded rather than
-                aggregated; this is revision activity, not a current census.
+              description: Non-additive distinct count of `id` values revised on each `modifiedon` day,
+                compared across the largest legal-structure groups. The remaining structures are excluded
+                rather than aggregated; this is revision activity, not a current census.
               width: full
             - slug: registrations-by-city
               kind: composition
@@ -86,9 +87,9 @@ models:
               time: dateregistered
               grain: DAY
               title: Registered charities by city and registration day
-              description: Distinct `id` values stacked by postal city on each `dateregistered` day. Bars
-                show the mix among the eight largest cities and exclude the remainder rather than
-                aggregating it; a missing day means no registrations in the mart.
+              description: Non-additive distinct count of `id` values stacked by postal city on each
+                `dateregistered` day. Bars show the mix among the eight largest cities and exclude the
+                remainder rather than aggregating it; a missing day means no registrations in the mart.
               width: full
   columns:
   - name: charity_observation_key
@@ -117,7 +118,8 @@ models:
           label: Source
           hidden: false
   - name: id
-    description: Charity identifier reported by the New Zealand Charities Register.
+    description: Charity identifier reported by the New Zealand Charities Register. Use `distinct_entities`,
+      not a row count, because this physical daily snapshot repeats an entity across fetches.
     data_type: varchar
     config:
       meta:
@@ -125,17 +127,18 @@ models:
           distinct_entities:
             type: count_distinct
             label: Distinct id
-            description: Distinct `id` values by `registrationstatus` among observations in the selected
-              window. Repeated observations of an entity count once within each group. An entity that
-              changed category can appear in multiple groups; these groups are not additive and do not
-              represent a current-state census.
+            description: Non-additive distinct count of `id` values by `registrationstatus` among observations
+              in the selected window. Repeated observations of an entity count once within each group. An
+              entity that changed category can appear in multiple groups; do not sum groups or interpret this
+              as a current-state census.
             format: '#,##0'
         dimension:
           type: string
           label: Id
           hidden: false
   - name: fetched_at
-    description: Timestamp at which the source organisation record was fetched.
+    description: UTC timestamp at which the source organisation record was fetched; observation time in the
+      physical daily snapshot, distinct from source revision and registration event times.
     data_type: timestamp with time zone
     config:
       meta:
@@ -461,7 +464,8 @@ models:
           label: Companiesofficenumber
           hidden: false
   - name: dateregistered
-    description: Timestamp when the organisation was registered.
+    description: Source-reported original registration timestamp; use for registration-event trends, not
+      the UTC snapshot observation time.
     data_type: timestamp with time zone
     config:
       meta:
@@ -577,23 +581,23 @@ models:
           label: Organisationaltype
           hidden: false
   - name: percentagespentoverseas
-    description: Reported percentage of expenditure spent overseas.
+    description: Reported share of expenditure spent overseas, expressed in percentage points.
     data_type: bigint
     config:
       meta:
         metrics:
           average_percentagespentoverseas:
             type: average
-            label: Mean overseas spending percentage
-            description: Mean non-null `percentagespentoverseas` reported by charities in each selected
-              revision window. This measure excludes organisations with no reported percentage and is
-              not a sum of spending.
-            format: '#,##0.00'
+            label: Mean overseas spending share (percentage points)
+            description: Non-summable mean of non-null `percentagespentoverseas`, expressed in percentage
+              points. It excludes organisations with no reported percentage and must not be summed across
+              repeated snapshots or groups.
+            format: '#,##0.00 "pp"'
         dimension:
           type: number
-          label: Percentagespentoverseas
+          label: Percentagespentoverseas (percentage points)
           hidden: false
-          format: '#,##0'
+          format: '#,##0 "pp"'
   - name: registrationstatus
     description: Current registration status reported by the register.
     data_type: varchar
@@ -686,7 +690,8 @@ models:
           label: Othernames
           hidden: false
   - name: modifiedon
-    description: Timestamp when the source organisation record was last modified.
+    description: Source-reported timestamp when the organisation record was last modified; use for
+      revision-event trends, distinct from UTC fetch and registration times.
     data_type: timestamp with time zone
     config:
       meta:
@@ -735,6 +740,15 @@ models:
         dimension:
           type: string
           label: Facebookname
+          hidden: false
+  - name: twittername
+    description: Twitter name reported by the organisation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Twittername
           hidden: false
   - name: socialnetworkname
     description: Other social-network name reported by the organisation.

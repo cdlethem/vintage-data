@@ -1,10 +1,9 @@
 chartConfig:
   config: {}
   type: table
-description: Physical daily snapshot of New Zealand Charities Register organisation observations. Each
-  row is one source, organisation identifier, and fetch timestamp, with the published organisation attributes
-  and nested register details retained alongside load lineage. Repeated copies of the same observation
-  grain are resolved to the latest loaded file row.
+description: Physical daily snapshot observations in the rolling 30-day UTC `fetched_at` window. Each row is
+  one source, organisation identifier, and fetch timestamp; repeated copies of that observation grain retain
+  the latest loaded file row. This is snapshot/SCD2 history, not a current-state census.
 metricQuery:
   dimensions: &id001
   - fct_nz_charities_fetched_at

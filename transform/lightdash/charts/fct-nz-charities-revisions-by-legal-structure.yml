@@ -14,23 +14,34 @@ chartConfig:
         type: line
         yAxisIndex: 0
       xAxis:
-      - name: Modifiedon (Day)
+      - name: Source revision date (UTC day)
       yAxis:
-      - name: Distinct id
+      - name: Distinct charities
     layout:
       xField: fct_nz_charities_modifiedon_day
       yField:
       - fct_nz_charities_distinct_entities
   type: cartesian
-description: Distinct `id` values revised on each `modifiedon` day, compared across the largest legal-structure
-  groups. The remaining structures are excluded rather than aggregated; this is revision activity, not
-  a current census.
+description: Non-additive distinct count of `id` values revised on each source `modifiedon` day in the rolling
+  30-day UTC window, compared across the largest legal-structure groups. Remaining structures are excluded
+  rather than aggregated; this is revision activity, not a current-state census.
 metricQuery:
   dimensions:
   - fct_nz_charities_modifiedon_day
   - fct_nz_charities_legalstructure
   exploreName: fct_nz_charities
-  filters: {}
+  filters:
+    dimensions:
+      and:
+      - id: 544d6fa6-1e84-5014-8a91-854ba0b5ce54
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nz_charities_modifiedon
+        values:
+        - 30
   limit: 5000
   metrics:
   - fct_nz_charities_distinct_entities

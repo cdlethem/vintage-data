@@ -14,24 +14,35 @@ chartConfig:
         type: bar
         yAxisIndex: 0
       xAxis:
-      - name: Dateregistered (Day)
+      - name: Source registration date (UTC day)
       yAxis:
-      - name: Distinct id
+      - name: Distinct charities
     layout:
       stack: true
       xField: fct_nz_charities_dateregistered_day
       yField:
       - fct_nz_charities_distinct_entities
   type: cartesian
-description: Distinct `id` values stacked by postal city on each `dateregistered` day. Bars show the mix
-  among the eight largest cities and exclude the remainder rather than aggregating it; a missing day means
-  no registrations in the mart.
+description: Non-additive distinct count of `id` values stacked by postal city on each source `dateregistered`
+  day in the rolling 30-day UTC window. Bars show the mix among the eight largest cities and exclude the
+  remainder rather than aggregating it; a missing day means no registrations in the mart.
 metricQuery:
   dimensions:
   - fct_nz_charities_dateregistered_day
   - fct_nz_charities_postaladdresscity
   exploreName: fct_nz_charities
-  filters: {}
+  filters:
+    dimensions:
+      and:
+      - id: b2394383-74c4-575c-b43f-666a5e7542bb
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nz_charities_dateregistered
+        values:
+        - 30
   limit: 5000
   metrics:
   - fct_nz_charities_distinct_entities

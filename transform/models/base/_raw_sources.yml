@@ -9084,6 +9084,9 @@ sources:
     - name: legalstructure
       description: Raw `legalstructure` value supplied by `nz_charities`.
       data_type: VARCHAR
+    - name: twittername
+      description: Raw `twittername` value supplied by `nz_charities`.
+      data_type: VARCHAR
   - name: nz_visa_wait_times
     description: Insert-only raw records loaded for `nz_visa_wait_times`.
     columns: &id107

@@ -9,15 +9,19 @@ chartConfig:
             field: fct_nz_charities_distinct_entities
         type: bar
         yAxisIndex: 0
+      xAxis:
+      - name: Registration status
+      yAxis:
+      - name: Distinct charities
     layout:
       flipAxes: true
       xField: fct_nz_charities_registrationstatus
       yField:
       - fct_nz_charities_distinct_entities
   type: cartesian
-description: Distinct `id` values by `registrationstatus` among observations in the selected window. Repeated
-  observations of an entity count once within each group. An entity that changed category can appear in
-  multiple groups; these groups are not additive and do not represent a current-state census.
+description: Non-additive distinct count of `id` values by `registrationstatus` in the rolling 30-day UTC
+  `fetched_at` observation window. Repeated observations of an entity count once within each group. An entity
+  that changed category can appear in multiple groups; do not sum groups or interpret this as a current-state census.
 metricQuery:
   dimensions:
   - fct_nz_charities_registrationstatus

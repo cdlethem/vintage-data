@@ -10,22 +10,33 @@ chartConfig:
         type: line
         yAxisIndex: 0
       xAxis:
-      - name: Modifiedon (Day)
+      - name: Source revision date (UTC day)
       yAxis:
-      - name: Distinct id
+      - name: Distinct charities
     layout:
       xField: fct_nz_charities_modifiedon_day
       yField:
       - fct_nz_charities_distinct_entities
   type: cartesian
-description: Distinct `id` values by `modifiedon` day. This is a count of registered entities whose source
-  record was revised, not a count of newly registered charities; days with no revision are absent rather
-  than zero.
+description: Non-additive distinct count of `id` values by source `modifiedon` revision day in the rolling
+  30-day UTC window. This counts registered entities whose source record was revised, not newly registered
+  charities; days with no revision are absent rather than zero.
 metricQuery:
   dimensions:
   - fct_nz_charities_modifiedon_day
   exploreName: fct_nz_charities
-  filters: {}
+  filters:
+    dimensions:
+      and:
+      - id: 1d173c62-67ca-567e-bb87-b70c9ce2d83b
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nz_charities_modifiedon
+        values:
+        - 30
   limit: 5000
   metrics:
   - fct_nz_charities_distinct_entities

@@ -6,8 +6,8 @@ config:
   - Year
   defaultDateZoomGranularity: Day
   isDateZoomDisabled: false
-description: Source-family trends over time. Observation windows and aggregation notes are shown with
-  each chart.
+description: Snapshot-safe source-family trends over time. Observation windows, source-event axes, units,
+  and aggregation limits are shown with each chart.
 filters:
   dimensions:
   - disabled: true
@@ -55,27 +55,32 @@ tabs: []
 tiles:
 - h: 6
   properties:
-    content: 'Physical daily snapshot of New Zealand Charities Register organisation observations. Each
-      row is one source, organisation identifier, and fetch timestamp, with the published organisation
-      attributes and nested register details retained alongside load lineage. Repeated copies of the same
-      observation grain are resolved to the latest loaded file row.
+    content: 'Physical daily snapshot/SCD2-style history of New Zealand Charities Register organisation observations.
+      Each row is one source, organisation identifier, and UTC fetch timestamp; repeated copies of the same
+      observation grain retain the latest loaded file row. This is not a current-state census.
 
 
       **Grain:** source, id, fetched_at
 
 
-      **What changes here:** when registered charities are revised and how their published overseas-spending
-      profile varies by organisation type.
+      **Time meanings:** `fetched_at` is the UTC snapshot observation time. `modifiedon` is the source-record
+      revision event time. `dateregistered` is the original source registration event time.
 
 
-      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
-      their own axis and window. Empty charts mean no matching published observations; they do not establish
-      that no events occurred.
+      **What changes here:** revision-event activity and the reported overseas-spending share by revision
+      day. Trend axes use their named source-event timestamp and rolling 30-day UTC bounds; counts are
+      non-additive distinct charities, and overseas spending is a non-summable mean in percentage points.
 
 
-      **Provenance**
+      **Latest window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC). Empty charts
+      mean no matching published observations; they do not establish that no events occurred.
 
-      - `nz_charities` — licence: CC BY 3.0 NZ; attribution required: True. Source configuration: `extract/sources/nz_charities.yml`.'
+
+      **Provenance and attribution**
+
+
+      - New Zealand Charities Register `nz_charities` data is licensed under CC BY 3.0 NZ; attribution is
+        required. Source configuration: `extract/sources/nz_charities.yml`.'
     hideFrame: false
     title: Nz charities
   type: markdown
