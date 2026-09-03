@@ -3,7 +3,7 @@ script: fetch_musicbrainz.py
 args: []
 schedule: "40 * * * *"  # UTC
 enabled: true
-retries: 1
+retries: 2
 timeout_minutes: 10
 sink: local
 

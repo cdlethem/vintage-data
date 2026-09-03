@@ -3,7 +3,7 @@ script: fetch_sec_edgar.py
 args: []
 schedule: "1-51/10 * * * *"  # UTC
 enabled: true
-retries: 1
+retries: 2
 timeout_minutes: 10
 sink: local
 
