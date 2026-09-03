@@ -65,14 +65,28 @@ def check_source(name, cfg, window_start):
     }
     if meta.get("notes"):
         out["notes"] = meta["notes"]
-    failures = sorted(src_dir.glob("dt=*/*.fail.json"))
+    # Merge success + failure events on a timeline so we can tell "flaky but
+    # currently up" (failures scattered among successes) from "down now"
+    # (failures trailing the last success). The latter is the real alarm.
+    events = []
+    for m in manifests:
+        events.append((json.loads(m.read_text())["started_at"], "ok"))
     out["failed_runs"] = 0
-    for m in failures:
+    for m in sorted(src_dir.glob("dt=*/*.fail.json")):
         info = json.loads(m.read_text())
+        events.append((info["started_at"], "fail"))
         if datetime.fromisoformat(info["started_at"]) >= window_start:
             out["failed_runs"] += 1
             err = (info.get("error") or "").strip().splitlines()
             out["last_error"] = err[-1][:160] if err else f"exit {info.get('exit_code')}"
+    events.sort()
+    consecutive = 0
+    for _, kind in reversed(events):
+        if kind == "fail":
+            consecutive += 1
+        else:
+            break
+    out["consecutive_failures"] = consecutive
 
     if not manifests:
         # Never succeeded — either it hasn't reached its first cron tick yet
@@ -128,27 +142,72 @@ def check_source(name, cfg, window_start):
     return out
 
 
+def classify(r):
+    """Deterministic health status. Reliable failure signals (staleness,
+    repeated crashes, config drift) are PROBLEM; softer signals (isolated
+    failures, frozen novelty/values) are WATCH because several sources have
+    legitimate quiet periods that only the notes/model can dismiss. Everything
+    else is OK — so a healthy pipeline needs no model call at all."""
+    if not r.get("enabled", True):
+        return "OK"  # intentionally paused; not a health signal
+    if r.get("value_keys_missing"):
+        return "PROBLEM"  # monitoring misconfig — the drift check is blind
+    if r.get("stale"):
+        return "PROBLEM"
+    gap = r.get("expected_gap_min") or 0
+    if r.get("no_data_yet"):
+        # Only a problem for a fast source that should have produced by now.
+        return "PROBLEM" if gap and gap < 1440 else "WATCH"
+    if r.get("consecutive_failures", 0) >= 3:
+        return "PROBLEM"  # trailing failures since last success — down now
+    if r.get("failed_runs", 0) >= 1:
+        return "WATCH"  # flaky but recovered — worth a note, not an alarm
+    if r["type"] == "feed" and r.get("id_novelty") == 0.0 and gap and gap <= 60:
+        return "WATCH"  # a fast feed with no new ids — often quiet hours, check notes
+    if r["type"] == "status" and r.get("value_change_fraction") == 0.0 and gap and gap <= 30:
+        return "WATCH"  # frozen values on a source that should be drifting
+    return "OK"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--window-hours", type=int, default=24)
     ap.add_argument("--json", action="store_true", help="one JSON array instead of lines")
+    ap.add_argument("--triage", action="store_true",
+                    help="print STATUS: line + only WATCH/PROBLEM source objects")
     args = ap.parse_args()
     window_start = datetime.now(timezone.utc) - timedelta(hours=args.window_hours)
 
     results = []
     for yml in sorted(SOURCES_DIR.glob("*.yml")):
         cfg = read_yml(yml)
-        results.append(check_source(cfg.get("name", yml.stem), cfg, window_start))
+        r = check_source(cfg.get("name", yml.stem), cfg, window_start)
+        r["status"] = classify(r)
+        results.append(r)
+
+    problems = [r["source"] for r in results if r["status"] == "PROBLEM"]
+    watches = [r["source"] for r in results if r["status"] == "WATCH"]
+    gen = datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+    if args.triage:
+        # Compact: a verdict line plus only the sources needing a look. This is
+        # what a scheduled model call consumes — small input, small output.
+        flagged = [r for r in results if r["status"] != "OK"]
+        print(f"STATUS: {'PROBLEM' if problems else 'WATCH' if watches else 'OK'} "
+              f"| {len(results)} sources, window={args.window_hours}h, generated={gen}")
+        print(f"PROBLEM: {problems or 'none'}")
+        print(f"WATCH: {watches or 'none'}")
+        for r in flagged:
+            print(json.dumps(r, separators=(",", ":")))
+        return
 
     if args.json:
         print(json.dumps(results, indent=1))
     else:
         for r in results:
             print(json.dumps(r, separators=(",", ":")))
-    flags = [r["source"] for r in results if r.get("stale") or r.get("zero_record_runs", 0) > 2]
-    print(f"# {len(results)} sources, window={args.window_hours}h, "
-          f"generated={datetime.now(timezone.utc).isoformat(timespec='seconds')}, "
-          f"flagged={flags or 'none'}", file=sys.stdout)
+    print(f"# {len(results)} sources, window={args.window_hours}h, generated={gen}, "
+          f"PROBLEM={problems or 'none'}, WATCH={watches or 'none'}", file=sys.stdout)
 
 
 if __name__ == "__main__":

@@ -1,69 +1,48 @@
-# Extract pipeline sanity check
+# Extract pipeline — flagged-source assessment
 
-You are the monitoring agent for a data-extraction pipeline. Airflow schedules
-~27 sources that poll public APIs and land NDJSON files. Your job: read the
-health digest below and decide, per source, whether it is collecting a healthy
-time series or something needs attention. You change nothing; you report.
+You are the monitoring agent for a data-extraction pipeline that polls ~27
+public APIs and lands NDJSON time series. A deterministic triage step has
+already classified every source. Sources that are healthy are NOT shown to
+you. Your job is to look at the handful of FLAGGED sources below and, for
+each, decide whether it is a real issue or an expected quiet period — using
+the per-source `notes`, which record known-normal behavior.
 
-## How to read the digest
+You change nothing; you report. Keep it short.
 
-One JSON object per source. Key fields:
+## How to read each flagged source object
 
-- `type` — what "healthy" means for this source:
-  - **feed**: new ids should appear across real polling intervals. `id_novelty`
-    (fraction of the latest run's ids not present in the previous run) near 0
-    across several intervals means the window is stuck or the upstream stalled.
-  - **status**: same ids every run; `value_change_fraction` is what matters.
-    Near 0 across a gap much longer than `expected_gap_min` means frozen data.
-  - **snapshot**: periodic full snapshot; only staleness and record-count
-    stability matter. Low novelty is normal.
-- `stale` — true when the last successful run is older than twice the expected
-  gap (plus slack). The manifest only records successes, so staleness is also
-  how repeated *failures* show up here.
-- `no_data_yet` — the source has never landed a run. Fine for a long-cadence
-  source that hasn't reached its first tick; a problem for a short-cadence one.
-- `failed_runs` / `last_error` — runs whose script crashed (after Airflow's own
-  retries). One isolated failure on a flaky upstream is worth only a WARN; a
-  streak, or failures on every source at once (suggesting a host/network
-  problem), is INVESTIGATE.
-- `zero_record_runs` — runs that succeeded with 0 records. Legitimate
-  occasionally (404 = "no matches"); a streak on a busy feed is a problem.
-- `records_last` vs `records_median` — a collapse (e.g. median 2000, last 5)
-  suggests upstream trouble even when runs "succeed".
-- `notes` — per-source quirks already known to be normal. Read them before
-  flagging; they exist to prevent known false alarms.
-
-## Important context (updated as the pipeline evolves)
-
-- Consecutive-run comparisons are only meaningful when the runs are a real
-  interval apart. On the deployment day (2026-09-03) all sources fired within
-  seconds of each other at activation, making novelty/value numbers meaningless
-  for slow sources until their second natural run.
-- `sec_edgar` novelty tracks US market hours; near-zero on weekends is normal.
-- `onionoo` publishes exactly hourly; identical values across <1h are normal.
-- `rcsb_pdb` moves in weekly release batches; days of identical output then a
-  burst is its normal rhythm.
-- `nager_date` runs weekly (Mondays 08:00 UTC); `no_data_yet` before the first
-  Monday after deployment is expected.
-- `pubchem` is deliberately disabled (static lookup, not a change feed).
+- `status` — the triage verdict: `PROBLEM` (reliable failure signal) or
+  `WATCH` (soft signal that may be a false alarm).
+- `consecutive_failures` — failures trailing the last success. ≥3 means the
+  source is down right now. 0 with some `failed_runs` means flaky-but-recovered.
+- `failed_runs` / `last_error` — crashes in the window (after Airflow retries).
+- `stale` — last success older than 2× the expected gap.
+- `no_data_yet` — never produced a run. Expected for a source whose first
+  scheduled tick hasn't arrived (check `expected_gap_min`).
+- `id_novelty` — fraction of latest-run ids not in the previous run (feeds).
+- `value_change_fraction` — fraction of common ids whose tracked values changed
+  (status sources).
+- `value_keys_missing` — the drift check is misconfigured; always a real issue.
+- `notes` — known-normal behavior for this source. READ THIS before deciding;
+  most WATCH flags are dismissed by the note (weekend markets, hourly publish
+  cycles, weekly batches, small quiet projects).
 
 ## Your output
 
-Produce exactly this structure:
-
 ```
-VERDICT: OK | ATTENTION
-<one line per source that is NOT healthy, format:>
-<source>: <WARN|INVESTIGATE> — <one-sentence reason grounded in digest numbers>
-<if every source is healthy, write "all sources healthy" instead>
-SUMMARY: <2-3 sentences: overall pipeline health, any trends worth watching>
+VERDICT: <OK | WATCH | PROBLEM>   (the most severe disposition below)
+<one line per flagged source:>
+<source>: <DISMISS|WARN|INVESTIGATE> — <reason grounded in the numbers + note>
+SUMMARY: <2-3 sentences on overall pipeline health.>
 ```
 
-Rules: be specific and numeric ("id_novelty 0.0 across 6 runs over 3h, expected
-gap 15m"), never invent numbers not in the digest, and prefer WARN (watch next
-cycle) over INVESTIGATE (needs a human/operator now) unless the evidence is
-strong. A quiet upstream on a slow source is not an incident.
+- DISMISS: the flag is explained by the source's normal behavior (say which).
+- WARN: worth watching next cycle, not yet actionable.
+- INVESTIGATE: needs a human now (sustained outage, config error, data collapse).
+- Be specific and numeric; never invent numbers not present. Prefer DISMISS/WARN
+  over INVESTIGATE unless `consecutive_failures>=3`, `stale`, or
+  `value_keys_missing` — those are real.
 
-## Digest
+## Flagged sources
 
 {{DIGEST}}
