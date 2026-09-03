@@ -81,10 +81,10 @@
   "type": "status",
   "expected_gap_minutes": 60,
   "value_keys": [
-   "last_seen",
-   "observed_bandwidth"
+   "published",
+   "running"
   ],
-  "notes": "publishes hourly; identical values across <1h gaps are normal"
+  "notes": "per-record 'published' is the hourly consensus timestamp: ~1.0 value change across publishes is HEALTHY, 0.0 across >1h means a stale bulletin"
  },
  "gh_archive": {
   "type": "feed",
@@ -93,11 +93,17 @@
  },
  "deezer": {
   "type": "snapshot",
-  "expected_gap_minutes": 60
+  "expected_gap_minutes": 60,
+  "value_keys": [
+   "rank",
+   "position"
+  ],
+  "notes": "chart snapshot; rank/position churn between runs is the signal"
  },
  "tatoeba": {
   "type": "feed",
-  "expected_gap_minutes": 60
+  "expected_gap_minutes": 60,
+  "notes": "small volunteer project; hours with zero new eng-fra sentence pairs are normal, a full day of zero novelty is not"
  },
  "musicbrainz": {
   "type": "feed",
@@ -107,11 +113,19 @@
  "launch_library": {
   "type": "snapshot",
   "expected_gap_minutes": 360,
-  "notes": "upcoming launches; ids persist while net/status fields revise"
+  "notes": "upcoming launches; ids persist while net/status fields revise",
+  "value_keys": [
+   "net",
+   "status"
+  ]
  },
  "software_heritage": {
   "type": "feed",
-  "expected_gap_minutes": 360
+  "expected_gap_minutes": 360,
+  "value_keys": [
+   "nb_visits",
+   "last_visit_date"
+  ]
  },
  "celestrak_socrates": {
   "type": "snapshot",
@@ -134,7 +148,10 @@
  },
  "itunes_charts": {
   "type": "snapshot",
-  "expected_gap_minutes": 1440
+  "expected_gap_minutes": 1440,
+  "value_keys": [
+   "rank"
+  ]
  },
  "gutendex": {
   "type": "snapshot",
@@ -144,7 +161,7 @@
  "nsidc_sea_ice": {
   "type": "feed",
   "expected_gap_minutes": 1440,
-  "notes": "one new row per day; novelty of 1 record is healthy"
+  "notes": "one new row per day; same-day reruns show 0 novelty and that is normal"
  },
  "nager_date": {
   "type": "snapshot",

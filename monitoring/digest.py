@@ -113,11 +113,18 @@ def check_source(name, cfg, window_start):
         common = prev_ids & cur_ids
         keys = meta.get("value_keys")
         if keys and common:
-            changed = sum(
-                1 for i in common
-                if any(prev_recs[i].get(k) != cur_recs[i].get(k) for k in keys)
-            )
-            out["value_change_fraction"] = round(changed / len(common), 3)
+            sample = cur_recs[next(iter(common))]
+            present = [k for k in keys if k in sample]
+            if not present:
+                # Guard against stale config: comparing keys the records don't
+                # carry reads as "never changes" and fakes a frozen source.
+                out["value_keys_missing"] = keys
+            else:
+                changed = sum(
+                    1 for i in common
+                    if any(prev_recs[i].get(k) != cur_recs[i].get(k) for k in present)
+                )
+                out["value_change_fraction"] = round(changed / len(common), 3)
     return out
 
 
