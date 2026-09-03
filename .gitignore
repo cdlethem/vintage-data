@@ -2,6 +2,10 @@
 # Vetted scripts are promoted by copying into pipelines/extract/scripts/.
 possible_sources/
 
+# Staging area for vetted fetch_*.py scripts awaiting promotion/scheduling —
+# not project code either; same promotion path as above.
+staged_scripts/
+
 # Airflow runtime state (config, logs, generated passwords)
 orchestration/airflow_home/
 orchestration/.venv/

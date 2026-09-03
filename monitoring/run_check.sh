@@ -24,10 +24,11 @@ if [[ "${1:-}" == "--dry-run" ]]; then
 fi
 
 # Don't queue blind behind a busy model server — a scheduled check that can't
-# get a slot should fail fast and let the next cycle try. This must point at
-# the server that serves omp's `local` model (the 9B on :8081 here), NOT the
-# 27B on :8080 — checking the wrong server makes the gate meaningless.
-SLOTS_URL="${SLOTS_URL:-http://127.0.0.1:8081/slots}"
+# get a slot should fail fast and let the next cycle try. The MODEL below is
+# omp's `local` provider, which (per ~/.omp/agent/models.yml, verified by
+# watching /slots during a call) is the Qwen3.8-27B on :8080 — so the gate
+# must poll :8080, the server that actually serves this model.
+SLOTS_URL="${SLOTS_URL:-http://127.0.0.1:8080/slots}"
 free=$(curl -sf -m 5 "$SLOTS_URL" | python3 -c \
     'import json,sys; print(sum(1 for s in json.load(sys.stdin) if not s.get("is_processing")))' \
     2>/dev/null || echo unknown)
@@ -38,6 +39,7 @@ fi
 
 mkdir -p reports
 out="reports/check_$(date -u +%Y%m%dT%H%M%SZ).md"
+# MODEL=local is the Qwen3.8-27B on :8080 (NOT the 9B `fast`/:8081 model).
 if ! omp -p --mode text --model "${MODEL:-local}" --thinking="${THINK:-low}" \
         --max-time "${MAXT:-10m}" --no-session --no-title "$PROMPT" < /dev/null > "$out" \
    || [[ ! -s "$out" ]]; then
