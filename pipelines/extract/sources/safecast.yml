@@ -1,0 +1,14 @@
+name: safecast
+script: fetch_safecast.py
+args: []
+schedule: "55 */6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "volunteer radiation measurements; a captured measurement never changes"
+rate_limit: "no published limit; self-impose 1 req/s"
+licence: "Safecast — public, CC0-ish"
+attribution_required: false

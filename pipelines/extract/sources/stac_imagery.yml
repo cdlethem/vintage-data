@@ -1,0 +1,14 @@
+name: stac_imagery
+script: fetch_stac_imagery.py
+args: ["search"]
+schedule: "25 */3 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "new satellite scene metadata (Sentinel-2/1, Landsat) as it's catalogued; metadata-only, no raster downloads"
+rate_limit: "no published limit; sentinel-1-grd is storage:requester_pays — metadata free, pixels are not"
+licence: "varies per collection (naip/landsat public domain; Sentinel proprietary notice)"
+attribution_required: true

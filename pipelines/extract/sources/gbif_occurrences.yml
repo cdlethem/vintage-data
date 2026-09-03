@@ -1,0 +1,14 @@
+name: gbif_occurrences
+script: fetch_gbif_occurrences.py
+args: ["US"]
+schedule: "40 5 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "ingestion-date watermark; tens of thousands of records ingested daily globally"
+rate_limit: "generous; paging caps at 100k per query"
+licence: "per-record, mostly CC-friendly"
+attribution_required: false

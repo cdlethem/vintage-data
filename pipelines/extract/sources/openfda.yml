@@ -1,0 +1,14 @@
+name: openfda
+script: fetch_openfda.py
+args: []
+schedule: "20 8 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "food_recall feed; data is NOT real-time, batch updates over days/weeks — poll daily not hourly"
+rate_limit: "keyless default cap; a free key raises it substantially"
+licence: "openFDA — public domain"
+attribution_required: false

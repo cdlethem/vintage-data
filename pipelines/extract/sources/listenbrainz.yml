@@ -1,0 +1,14 @@
+name: listenbrainz
+script: fetch_listenbrainz.py
+args: ["iliekcomputers"]
+schedule: "*/10 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "per-user listens (MetaBrainz staff/demo account) -- the docstring's '/1/listens' GLOBAL firehose was verified live to 404, it doesn't actually exist; this account's history is a fixed, low-volume demo, not an active current-listening feed. Swap in a real user for actual freshness."
+rate_limit: "see X-RateLimit-* headers; no key needed for reads"
+licence: "CC0 (MetaBrainz Foundation)"
+attribution_required: false

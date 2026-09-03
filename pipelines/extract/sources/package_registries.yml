@@ -1,0 +1,14 @@
+name: package_registries
+script: fetch_package_registries.py
+args: []
+schedule: "*/5 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "PyPI releases every few seconds; short RSS window so a slow cadence drops records"
+rate_limit: "crates.io ~1 req/sec, requires descriptive User-Agent; PyPI asks the same"
+licence: "PyPI / crates.io public feeds"
+attribution_required: false

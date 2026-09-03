@@ -1,0 +1,14 @@
+name: faa_nas_status
+script: fetch_faa_nas_status.py
+args: ["events"]
+schedule: "4-59/10 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "ground stops/delays are live but don't change second to second"
+rate_limit: "no published limit; safety-relevant live ops data, poll gently"
+licence: "US Government work, public domain"
+attribution_required: false

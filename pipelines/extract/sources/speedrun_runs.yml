@@ -1,0 +1,14 @@
+name: speedrun_runs
+script: fetch_speedrun_runs.py
+args: []
+schedule: "14,44 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "newly verified speedrun submissions"
+rate_limit: "no published limit; keyless, read-only"
+licence: "CC-BY-NC 4.0 — non-commercial use only"
+attribution_required: true

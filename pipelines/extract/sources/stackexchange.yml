@@ -1,0 +1,14 @@
+name: stackexchange
+script: fetch_stackexchange.py
+args: []
+schedule: "*/30 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "stackoverflow new-questions feed; anonymous daily quota is small and shared per-IP"
+rate_limit: "~300 requests/day anonymous quota, tracked via quota_remaining in every response"
+licence: "Stack Exchange API — CC-BY-SA content"
+attribution_required: true

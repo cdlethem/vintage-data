@@ -1,0 +1,14 @@
+name: radio_browser
+script: fetch_radio_browser.py
+args: []
+schedule: "40 9 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "clickcount/votes/lastchecktime move continuously; a daily slice is enough for a popularity series"
+rate_limit: "no published limit; discover mirror servers, don't hardcode one"
+licence: "Radio Browser — community project"
+attribution_required: false

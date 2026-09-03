@@ -1,0 +1,14 @@
+name: ietf_datatracker
+script: fetch_ietf_datatracker.py
+args: []
+schedule: "18-58/30 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "document events (state changes/revisions); volume is hundreds/day, not per-second"
+rate_limit: "no published limit; IETF production infra, poll gently"
+licence: "IETF Datatracker — public"
+attribution_required: false

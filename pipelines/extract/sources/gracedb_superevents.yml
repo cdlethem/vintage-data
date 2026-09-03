@@ -1,0 +1,14 @@
+name: gracedb_superevents
+script: fetch_gracedb_superevents.py
+args: []
+schedule: "25 */3 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "candidates appear within minutes during an observing run but are otherwise sparse"
+rate_limit: "no published limit; LIGO/Virgo/KAGRA public GraceDB"
+licence: "GraceDB public superevents"
+attribution_required: false

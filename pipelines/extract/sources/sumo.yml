@@ -1,0 +1,14 @@
+name: sumo
+script: fetch_sumo.py
+args: []
+schedule: "0 5 * * 1"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "roster/rank data changes on a tournament cadence (every two months), not continuously"
+rate_limit: "no published limit"
+licence: "sumo-api.com — public"
+attribution_required: false

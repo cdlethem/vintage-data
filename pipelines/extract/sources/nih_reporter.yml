@@ -1,0 +1,14 @@
+name: nih_reporter
+script: fetch_nih_reporter.py
+args: []
+schedule: "50 */6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "date_added watermark on FY grant records"
+rate_limit: "no published limit; self-impose 1 req/s"
+licence: "US Government work, public domain"
+attribution_required: false

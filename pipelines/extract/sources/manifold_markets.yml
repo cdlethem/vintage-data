@@ -1,0 +1,14 @@
+name: manifold_markets
+script: fetch_manifold_markets.py
+args: []
+schedule: "9-54/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "new-markets stream; question probabilities move continuously"
+rate_limit: "documented ~500 req/min per IP"
+licence: "Manifold Markets API — public"
+attribution_required: false

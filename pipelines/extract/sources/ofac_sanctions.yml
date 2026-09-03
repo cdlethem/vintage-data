@@ -1,0 +1,14 @@
+name: ofac_sanctions
+script: fetch_ofac_sanctions.py
+args: []
+schedule: "35 7 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "snapshot-and-diff design; the list changes at most a few times/month, poll daily"
+rate_limit: "no published limit"
+licence: "US Treasury public data"
+attribution_required: false

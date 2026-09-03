@@ -1,0 +1,14 @@
+name: smithsonian_volcanism
+script: fetch_smithsonian_volcanism.py
+args: []
+schedule: "10 6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "low-frequency eruption events; daily poll catches new activity promptly"
+rate_limit: "no published limit; small institutional service, avoid unfiltered full-table pulls"
+licence: "Smithsonian GVP — public"
+attribution_required: false

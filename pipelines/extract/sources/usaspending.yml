@@ -1,0 +1,14 @@
+name: usaspending
+script: fetch_usaspending.py
+args: []
+schedule: "20 5 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Last Modified Date watermark; federal award reporting lags ~1-2 days"
+rate_limit: "no published limit; self-impose 1 req/s"
+licence: "US Government work, public domain"
+attribution_required: false

@@ -1,0 +1,14 @@
+name: codeforces
+script: fetch_codeforces.py
+args: []
+schedule: "8 */1 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "global recent-submissions poll; client enforces the 1-req/2s cap itself"
+rate_limit: "hard: at most 1 request per 2 seconds (enforced in-script)"
+licence: "Codeforces API — keyless, public"
+attribution_required: false

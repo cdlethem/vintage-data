@@ -1,0 +1,14 @@
+name: chess_archives
+script: fetch_chess_archives.py
+args: []
+schedule: "30 5 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "past months immutable, only current month changes; poll daily, one archive at a time"
+rate_limit: "per-IP throttling on parallel bursts; serial requests tolerated"
+licence: "chess.com public API"
+attribution_required: false

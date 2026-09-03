@@ -1,0 +1,14 @@
+name: opensky
+script: fetch_opensky.py
+args: []
+schedule: "*/30 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "bounded Switzerland bbox by default to keep payload small"
+rate_limit: "anonymous ~100 requests / rolling 24h — 48 runs/day at this cadence stays well under"
+licence: "OpenSky Network — public ADS-B aggregation"
+attribution_required: false

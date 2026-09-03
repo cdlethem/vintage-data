@@ -1,0 +1,14 @@
+name: ted_procurement
+script: fetch_ted_procurement.py
+args: []
+schedule: "40 6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "notices publish on business days in batches; poll daily on publication-date"
+rate_limit: "no published limit"
+licence: "EU Official Journal — open reuse with source acknowledgement"
+attribution_required: true

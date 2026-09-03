@@ -1,0 +1,14 @@
+name: arxiv_new
+script: fetch_arxiv_new.py
+args: []
+schedule: "12 3,9,15,21 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "new submissions announced in daily batches (Sun-Thu ~20:00 ET); a few polls/day is plenty"
+rate_limit: "hard 3 req/sec; recommended <=1 req/3s with pagination sleeps"
+licence: "arXiv API — free reuse, attribution requested"
+attribution_required: true

@@ -1,0 +1,14 @@
+name: swpc_space_weather
+script: fetch_swpc_space_weather.py
+args: []
+schedule: "5 */3 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "kp_index feed updates every 3 hours; other FEEDS entries update faster, prune as needed"
+rate_limit: "no published limit; plain JSON files"
+licence: "NOAA SWPC — public domain"
+attribution_required: false

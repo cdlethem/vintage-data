@@ -1,0 +1,14 @@
+name: clinicaltrials
+script: fetch_clinicaltrials.py
+args: []
+schedule: "25 */4 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "registrations trickle in; status transitions are the interesting series"
+rate_limit: "no published hard limit; ~50 req/min commonly cited safe ceiling"
+licence: "NLM public domain (US Gov work)"
+attribution_required: false

@@ -1,0 +1,14 @@
+name: museum_collections
+script: fetch_museum_collections.py
+args: []
+schedule: "30 5 1 * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "reference dimension, not a firehose; new acquisitions/digitizations trickle in — poll monthly"
+rate_limit: "AIC documents a rate limit; Met's list-all-IDs design means hydrate one at a time"
+licence: "varies per object; check is_public_domain/isPublicDomain before reuse"
+attribution_required: false

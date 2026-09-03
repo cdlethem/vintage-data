@@ -1,0 +1,14 @@
+name: wspr_live
+script: fetch_wspr_live.py
+args: ["spots"]
+schedule: "4-59/10 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "recent propagation spots (5-minute window); volunteer-run ClickHouse endpoint, always bound queries"
+rate_limit: "no published limit; be gentle, never SELECT * unbounded"
+licence: "WSPR.live — volunteer amateur-radio community data"
+attribution_required: false

@@ -1,0 +1,14 @@
+name: crossref_new_dois
+script: fetch_crossref_new_dois.py
+args: ["1"]
+schedule: "45 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "hourly-resolution from-created-date watermark; thousands of new DOIs/hour"
+rate_limit: "polite pool via mailto in User-Agent; otherwise throttled (429 observed anonymously)"
+licence: "CrossRef metadata — free reuse"
+attribution_required: false

@@ -1,0 +1,14 @@
+name: wayback_cdx
+script: fetch_wayback_cdx.py
+args: []
+schedule: "15 7 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "CDX capture-history query; example.org is a real, lightly-archived demo domain"
+rate_limit: "no published limit for CDX; shared Internet Archive infra, use collapse= and narrow date ranges"
+licence: "Internet Archive — public"
+attribution_required: false

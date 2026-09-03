@@ -1,0 +1,14 @@
+name: jpl_ssd
+script: fetch_jpl_ssd.py
+args: []
+schedule: "50 */6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "fireball detections are sparse — a handful of new events per month"
+rate_limit: "fair-use: ONE request at a time, no concurrency"
+licence: "NASA/JPL — public domain"
+attribution_required: false

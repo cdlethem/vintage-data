@@ -1,0 +1,14 @@
+name: queue_times
+script: fetch_queue_times.py
+args: []
+schedule: "*/5 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "source refreshes every ~5 minutes; polling faster is pure waste"
+rate_limit: "no published limit; must display 'Powered by Queue-Times.com' attribution"
+licence: "Queue-Times.com — free, attribution required"
+attribution_required: true

@@ -1,0 +1,14 @@
+name: federal_register
+script: fetch_federal_register.py
+args: []
+schedule: "10 */6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "new regulatory documents published on/after today"
+rate_limit: "no published limit; be polite via User-Agent"
+licence: "US Government work, public domain"
+attribution_required: false

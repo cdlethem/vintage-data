@@ -1,0 +1,14 @@
+name: nhtsa
+script: fetch_nhtsa.py
+args: []
+schedule: "45 4 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "single-vehicle example (honda/accord/2023); recalls for a specific vehicle arrive sporadically"
+rate_limit: "no published limit; self-impose 1 req/s"
+licence: "US Government work, public domain"
+attribution_required: false
