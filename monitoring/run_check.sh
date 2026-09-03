@@ -23,9 +23,20 @@ if [[ "${1:-}" == "--dry-run" ]]; then
     exit 0
 fi
 
+# Don't queue blind behind a busy model server — a scheduled check that can't
+# get a slot should fail fast and let the next cycle try.
+SLOTS_URL="${SLOTS_URL:-http://127.0.0.1:8080/slots}"
+free=$(curl -sf -m 5 "$SLOTS_URL" | python3 -c \
+    'import json,sys; print(sum(1 for s in json.load(sys.stdin) if not s.get("is_processing")))' \
+    2>/dev/null || echo unknown)
+if [[ "$free" == "0" ]]; then
+    echo "model server has no free slots; skipping this check" >&2
+    exit 3
+fi
+
 mkdir -p reports
 out="reports/check_$(date -u +%Y%m%dT%H%M%SZ).md"
 omp -p --mode text --model "${MODEL:-local}" --thinking="${THINK:-low}" \
-    --max-time "${MAXT:-5m}" --no-session --no-title "$PROMPT" < /dev/null > "$out"
+    --max-time "${MAXT:-10m}" --no-session --no-title "$PROMPT" < /dev/null > "$out"
 echo "report: $out"
 tail -n +1 "$out"
