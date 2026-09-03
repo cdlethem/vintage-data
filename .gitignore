@@ -1,0 +1,13 @@
+# Source-discovery working directory (LLM vetting harness) — not project code.
+# Vetted scripts are promoted by copying into pipelines/extract/scripts/.
+possible_sources/
+
+# Airflow runtime state (config, logs, generated passwords)
+orchestration/airflow_home/
+orchestration/.venv/
+
+# Secrets — airflow.secrets.env.example is the checked-in template
+orchestration/airflow.secrets.env
+
+__pycache__/
+*.pyc
