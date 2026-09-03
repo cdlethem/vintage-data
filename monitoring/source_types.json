@@ -1,39 +1,151 @@
 {
-  "_doc": [
-    "Per-source expectations for sanity checks. type drives which check matters:",
-    "  feed     - new ids should appear across a real polling interval; novelty ~0 over",
-    "             several intervals means the extract window is stuck or the source stalled",
-    "  status   - same ids every run, VALUES drift; value_keys are the fields expected to",
-    "             change across a real interval (freeze = upstream or extract problem)",
-    "  snapshot - periodic full snapshot (charts, catalogs); content changes slowly, only",
-    "             staleness and record-count stability are meaningful",
-    "expected_gap_minutes mirrors the yml cron; stale = last run age > 2x gap + 10min."
+ "_doc": [
+  "Per-source expectations for sanity checks. type drives which check matters:",
+  "  feed     - new ids should appear across a real polling interval; novelty ~0 over",
+  "             several intervals means the extract window is stuck or the source stalled",
+  "  status   - same ids every run, VALUES drift; value_keys are the fields expected to",
+  "             change across a real interval (freeze = upstream or extract problem)",
+  "  snapshot - periodic full snapshot (charts, catalogs); content changes slowly, only",
+  "             staleness and record-count stability are meaningful",
+  "expected_gap_minutes mirrors the yml cron; stale = last run age > 2x gap + 10min."
+ ],
+ "gbfs_divvy": {
+  "type": "status",
+  "expected_gap_minutes": 5,
+  "value_keys": [
+   "num_bikes_available",
+   "last_reported"
+  ]
+ },
+ "gbfs_citibike": {
+  "type": "status",
+  "expected_gap_minutes": 5,
+  "value_keys": [
+   "num_bikes_available",
+   "last_reported"
+  ]
+ },
+ "sec_edgar": {
+  "type": "feed",
+  "expected_gap_minutes": 10,
+  "notes": "novelty drops to ~0 outside US market hours and on weekends; that is normal"
+ },
+ "steam_players": {
+  "type": "status",
+  "expected_gap_minutes": 10,
+  "value_keys": [
+   "player_count"
+  ]
+ },
+ "certificate_transparency": {
+  "type": "snapshot",
+  "expected_gap_minutes": 1440,
+  "notes": "crt.sh search over wikipedia.org's cert history; new certs appear ~monthly, identical output day to day is normal"
+ },
+ "ripe_ris_live": {
+  "type": "feed",
+  "expected_gap_minutes": 15,
+  "notes": "streaming sample; every run should be ~100% novel"
+ },
+ "open_library": {
+  "type": "feed",
+  "expected_gap_minutes": 15
+ },
+ "lichess": {
+  "type": "feed",
+  "expected_gap_minutes": 15
+ },
+ "huggingface": {
+  "type": "feed",
+  "expected_gap_minutes": 15
+ },
+ "discourse_meta": {
+  "type": "status",
+  "expected_gap_minutes": 15,
+  "value_keys": [
+   "views",
+   "bumped_at",
+   "reply_count"
   ],
-  "gbfs_divvy":               {"type": "status",   "expected_gap_minutes": 5,    "value_keys": ["num_bikes_available", "last_reported"]},
-  "gbfs_citibike":            {"type": "status",   "expected_gap_minutes": 5,    "value_keys": ["num_bikes_available", "last_reported"]},
-  "sec_edgar":                {"type": "feed",     "expected_gap_minutes": 10,   "notes": "novelty drops to ~0 outside US market hours and on weekends; that is normal"},
-  "steam_players":            {"type": "status",   "expected_gap_minutes": 10,   "value_keys": ["player_count"]},
-  "certificate_transparency": {"type": "feed",     "expected_gap_minutes": 15},
-  "ripe_ris_live":            {"type": "feed",     "expected_gap_minutes": 15,   "notes": "streaming sample; every run should be ~100% novel"},
-  "open_library":             {"type": "feed",     "expected_gap_minutes": 15},
-  "lichess":                  {"type": "feed",     "expected_gap_minutes": 15},
-  "huggingface":              {"type": "feed",     "expected_gap_minutes": 15},
-  "discourse_meta":           {"type": "feed",     "expected_gap_minutes": 15,   "notes": "one forum's latest topics; quiet hours with low novelty are normal"},
-  "internet_archive":         {"type": "feed",     "expected_gap_minutes": 15},
-  "zenodo":                   {"type": "feed",     "expected_gap_minutes": 30},
-  "onionoo":                  {"type": "status",   "expected_gap_minutes": 60,   "value_keys": ["last_seen", "observed_bandwidth"], "notes": "publishes hourly; identical values across <1h gaps are normal"},
-  "gh_archive":               {"type": "feed",     "expected_gap_minutes": 60,   "notes": "live tail; every run should be ~100% novel"},
-  "deezer":                   {"type": "snapshot", "expected_gap_minutes": 60},
-  "tatoeba":                  {"type": "feed",     "expected_gap_minutes": 60},
-  "musicbrainz":              {"type": "feed",     "expected_gap_minutes": 60},
-  "launch_library":           {"type": "snapshot", "expected_gap_minutes": 360,  "notes": "upcoming launches; ids persist while net/status fields revise"},
-  "software_heritage":        {"type": "feed",     "expected_gap_minutes": 360},
-  "celestrak_socrates":       {"type": "snapshot", "expected_gap_minutes": 480},
-  "oeis":                     {"type": "feed",     "expected_gap_minutes": 480},
-  "rcsb_pdb":                 {"type": "feed",     "expected_gap_minutes": 1440, "notes": "weekly release batches; several identical daily runs then a burst is normal"},
-  "pubchem":                  {"type": "snapshot", "expected_gap_minutes": 1440, "notes": "DISABLED 2026-09-03: static lookup, not a change feed"},
-  "itunes_charts":            {"type": "snapshot", "expected_gap_minutes": 1440},
-  "gutendex":                 {"type": "snapshot", "expected_gap_minutes": 1440, "notes": "download_count drifts daily on a stable book set"},
-  "nsidc_sea_ice":            {"type": "feed",     "expected_gap_minutes": 1440, "notes": "one new row per day; novelty of 1 record is healthy"},
-  "nager_date":               {"type": "snapshot", "expected_gap_minutes": 10080}
+  "notes": "latest-topics window: ids persist while views/bumps drift, new topics enter as created; novelty ~0 on quiet hours is normal"
+ },
+ "internet_archive": {
+  "type": "feed",
+  "expected_gap_minutes": 15
+ },
+ "zenodo": {
+  "type": "feed",
+  "expected_gap_minutes": 30
+ },
+ "onionoo": {
+  "type": "status",
+  "expected_gap_minutes": 60,
+  "value_keys": [
+   "last_seen",
+   "observed_bandwidth"
+  ],
+  "notes": "publishes hourly; identical values across <1h gaps are normal"
+ },
+ "gh_archive": {
+  "type": "feed",
+  "expected_gap_minutes": 60,
+  "notes": "live tail; every run should be ~100% novel"
+ },
+ "deezer": {
+  "type": "snapshot",
+  "expected_gap_minutes": 60
+ },
+ "tatoeba": {
+  "type": "feed",
+  "expected_gap_minutes": 60
+ },
+ "musicbrainz": {
+  "type": "feed",
+  "expected_gap_minutes": 60
+ },
+ "launch_library": {
+  "type": "snapshot",
+  "expected_gap_minutes": 360,
+  "notes": "upcoming launches; ids persist while net/status fields revise"
+ },
+ "software_heritage": {
+  "type": "feed",
+  "expected_gap_minutes": 360
+ },
+ "celestrak_socrates": {
+  "type": "snapshot",
+  "expected_gap_minutes": 480
+ },
+ "oeis": {
+  "type": "feed",
+  "expected_gap_minutes": 480
+ },
+ "rcsb_pdb": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "weekly release batches; several identical daily runs then a burst is normal"
+ },
+ "pubchem": {
+  "type": "snapshot",
+  "expected_gap_minutes": 1440,
+  "notes": "DISABLED 2026-09-03: static lookup, not a change feed"
+ },
+ "itunes_charts": {
+  "type": "snapshot",
+  "expected_gap_minutes": 1440
+ },
+ "gutendex": {
+  "type": "snapshot",
+  "expected_gap_minutes": 1440,
+  "notes": "download_count drifts daily on a stable book set"
+ },
+ "nsidc_sea_ice": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "one new row per day; novelty of 1 record is healthy"
+ },
+ "nager_date": {
+  "type": "snapshot",
+  "expected_gap_minutes": 10080
+ }
 }
