@@ -1,0 +1,14 @@
+name: onionoo
+script: fetch_onionoo.py
+args: []
+schedule: "10 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "hourly publish cycle (relays_published lands on the hour)"
+rate_limit: "unpublished; publication is hourly, polling faster returns identical data"
+licence: "unstated; run by the Tor Project itself"
+attribution_required: false

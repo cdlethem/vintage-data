@@ -1,0 +1,14 @@
+name: nager_date
+script: fetch_nager_date.py
+args: []
+schedule: "0 8 * * 1"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "slow-moving; calendars are occasionally revised with lead time, not daily"
+rate_limit: "unpublished; self-impose 1 req/s and cache per (year, country) since past years never change"
+licence: "unstated"
+attribution_required: false

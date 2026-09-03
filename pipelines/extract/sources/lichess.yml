@@ -1,0 +1,14 @@
+name: lichess
+script: fetch_lichess.py
+args: []
+schedule: "8-53/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "tv/channels changes as games finish (seconds-minutes); tournament schedule refreshes hourly"
+rate_limit: "roughly 1 req/s sustained is Lichess's general API guideline; self-impose that"
+licence: "unstated"
+attribution_required: false

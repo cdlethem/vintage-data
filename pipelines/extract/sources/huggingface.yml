@@ -1,0 +1,14 @@
+name: huggingface
+script: fetch_huggingface.py
+args: []
+schedule: "9-54/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "genuinely continuous; new repos observed created 23-47 seconds before the probe that fetched them"
+rate_limit: "unpublished for this endpoint; self-impose a few requests per minute"
+licence: "unstated"
+attribution_required: false

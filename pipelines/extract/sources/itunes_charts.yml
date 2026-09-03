@@ -1,0 +1,14 @@
+name: itunes_charts
+script: fetch_itunes_charts.py
+args: []
+schedule: "45 7 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily chart refresh"
+rate_limit: "unpublished; charts update at most daily, poll no more often"
+licence: "unstated"
+attribution_required: false

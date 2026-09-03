@@ -1,0 +1,14 @@
+name: sec_edgar
+script: fetch_sec_edgar.py
+args: []
+schedule: "1-51/10 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "filings land every few minutes during market hours; feed's own updated timestamp lagged real filings by under a minute"
+rate_limit: "no documented hard limit for this feed; self-impose well under SEC's general 10 req/s guideline"
+licence: "US Government work, public domain"
+attribution_required: false

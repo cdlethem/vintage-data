@@ -1,0 +1,14 @@
+name: discourse_meta
+script: fetch_discourse.py
+args: []
+schedule: "11-56/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "genuinely continuous; new topics observed created under a minute before the fetch on two different forums"
+rate_limit: "unpublished; self-impose a few requests per minute per forum"
+licence: "unstated; varies per forum"
+attribution_required: false

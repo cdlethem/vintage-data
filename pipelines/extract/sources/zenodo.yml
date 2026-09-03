@@ -1,0 +1,14 @@
+name: zenodo
+script: fetch_zenodo.py
+args: []
+schedule: "17,47 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "genuinely continuous; a record was observed created 6 seconds before the fetch"
+rate_limit: "60 req/min documented; self-impose well under that"
+licence: "per-record (cc-by-4.0 observed); varies"
+attribution_required: true

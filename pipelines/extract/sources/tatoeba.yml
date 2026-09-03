@@ -1,0 +1,14 @@
+name: tatoeba
+script: fetch_tatoeba.py
+args: []
+schedule: "35 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "slow, continuous growth -- new sentences and translations added by volunteers daily"
+rate_limit: "unpublished; small nonprofit project, self-impose gentle polling (hourly is plenty)"
+licence: "per-sentence (CC BY 2.0 FR observed) -- check each record, not the dataset as a whole"
+attribution_required: true

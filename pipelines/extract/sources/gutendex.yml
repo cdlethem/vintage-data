@@ -1,0 +1,14 @@
+name: gutendex
+script: fetch_gutendex.py
+args: []
+schedule: "55 7 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "download_count drifts continuously as Gutenberg logs are ingested; daily polling is plenty"
+rate_limit: "unpublished; self-impose gentle polling, one search timed out under this session's sandbox network conditions"
+licence: "the catalog metadata is Gutendex's own; the underlying texts are Project Gutenberg public domain"
+attribution_required: false

@@ -29,7 +29,7 @@ orchestration/include/sinks.py         Sink interface (LocalSink today; S3/GCS l
 ~/dev/data/extract/raw/source=<name>/dt=YYYY-MM-DD/<name>_<ts>.ndjson  (+ .meta.json)
 ```
 
-Airflow 3.3 runs natively under systemd: api-server (UI on :8081), scheduler,
+Airflow 3.3 runs natively under systemd: api-server (UI on :8082), scheduler,
 dag-processor, and two Celery workers backed by Postgres (metadata) and Redis (broker).
 The UI is reachable only via localhost and `tailscale serve`.
 
@@ -96,7 +96,7 @@ orchestration/setup/setup.sh      # or run the numbered steps individually
 
 | unit | role |
 |---|---|
-| `airflow-api-server` | UI + REST + Execution API on 127.0.0.1:8081 |
+| `airflow-api-server` | UI + REST + Execution API on 127.0.0.1:8082 |
 | `airflow-scheduler` | schedules task instances |
 | `airflow-dag-processor` | parses DAG files (separate process in Airflow 3) |
 | `airflow-worker@1`, `@2` | Celery workers (concurrency 4 each) |

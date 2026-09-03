@@ -1,0 +1,14 @@
+name: nsidc_sea_ice
+script: fetch_nsidc_sea_ice.py
+args: []
+schedule: "0 18 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily, one new row per day"
+rate_limit: "unpublished; it's a static file refreshed roughly daily, fetch once a day and diff"
+licence: "unstated (US federal/NOAA-affiliated data)"
+attribution_required: true

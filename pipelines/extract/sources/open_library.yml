@@ -1,0 +1,14 @@
+name: open_library
+script: fetch_open_library.py
+args: []
+schedule: "6-51/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "genuinely continuous, sub-minute event rate observed live"
+rate_limit: "unpublished; poll every few minutes, not sub-second"
+licence: "unstated (Internet Archive project)"
+attribution_required: false

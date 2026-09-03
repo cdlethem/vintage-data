@@ -1,0 +1,14 @@
+name: musicbrainz
+script: fetch_musicbrainz.py
+args: []
+schedule: "40 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "editors add releases continuously; daily-to-hourly polling of a date query is reasonable"
+rate_limit: "strict 1 request/second, self-enforced in code (see fetch_codeforces.py for the same pattern)"
+licence: "CC0 for MusicBrainz's own database content per their standard terms (not independently re-verified here)"
+attribution_required: false

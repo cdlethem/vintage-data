@@ -1,0 +1,17 @@
+[Unit]
+Description=Airflow API server (UI + REST + Execution API)
+After=network.target postgresql.service redis-server.service
+Wants=postgresql.service redis-server.service
+
+[Service]
+User=colin
+Group=colin
+EnvironmentFile=/home/colin/dev/extract/orchestration/airflow.env
+EnvironmentFile=/home/colin/dev/extract/orchestration/airflow.secrets.env
+WorkingDirectory=/home/colin/dev/extract/orchestration
+ExecStart=/home/colin/dev/extract/orchestration/.venv/bin/airflow api-server
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

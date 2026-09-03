@@ -1,0 +1,14 @@
+name: oeis
+script: fetch_oeis.py
+args: []
+schedule: "50 2,10,18 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "new sequences accepted continuously; a few times a day is plenty to catch new ones"
+rate_limit: "unpublished; OEIS is a small nonprofit, self-impose gentle polling (a few requests a day)"
+licence: "unstated (OEIS content is generally freely reusable with attribution per its own site, not independently verified here)"
+attribution_required: true

@@ -1,0 +1,14 @@
+name: gbfs_citibike
+script: fetch_gbfs.py
+args: ["citibike"]
+schedule: "2-57/5 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "station_status refreshes roughly every 30-60s per the spec"
+rate_limit: "spec suggests polling at the feed's own ttl (60s observed for station_status); self-impose that"
+licence: "unstated; varies per operator"
+attribution_required: false

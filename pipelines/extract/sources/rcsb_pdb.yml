@@ -1,0 +1,14 @@
+name: rcsb_pdb
+script: fetch_rcsb_pdb.py
+args: []
+schedule: "5 6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "weekly release batches, verified live with a structure released the day before the probe"
+rate_limit: "unpublished; releases are weekly, poll at most a few times a day and avoid looping per-id fetches over large result sets"
+licence: "unstated (public structural database)"
+attribution_required: false

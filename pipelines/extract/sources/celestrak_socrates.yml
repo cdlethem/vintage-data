@@ -1,0 +1,14 @@
+name: celestrak_socrates
+script: fetch_celestrak_socrates.py
+args: []
+schedule: "30 1,9,17 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 20
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "recomputed roughly 3x/day (a run took 12h32m per the page's own timing note, suggesting overlapping/staggered runs); poll a few times a day"
+rate_limit: "unpublished; the file is large (16+MB) and recomputed a few times daily -- self-impose at most a few fetches per day"
+licence: "unstated"
+attribution_required: true

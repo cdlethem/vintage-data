@@ -1,0 +1,14 @@
+name: launch_library
+script: fetch_launch_library.py
+args: []
+schedule: "15 */6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "net (scheduled time) revises frequently in the run-up to a launch; a few polls a day is plenty given the rate limit"
+rate_limit: "15 req/hour documented; self-impose well under it and cache aggressively"
+licence: "unstated"
+attribution_required: false

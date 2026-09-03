@@ -1,0 +1,14 @@
+name: steam_players
+script: fetch_steam_players.py
+args: []
+schedule: "3-53/10 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "genuinely continuous; strong daily/weekly rhythm plus release-day spikes"
+rate_limit: "unpublished; poll a handful of games every few minutes, not in a tight loop"
+licence: "unstated"
+attribution_required: false

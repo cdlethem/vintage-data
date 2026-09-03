@@ -1,0 +1,14 @@
+name: ripe_ris_live
+script: fetch_ripe_ris_live.py
+args: ["500"]
+schedule: "4-49/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "genuinely continuous -- tens of thousands of BGP messages observed in one connection"
+rate_limit: "n/a -- streaming connection, not request-based; set a real client= identifier and use host=/peer= filters server-side rather than pulling everything"
+licence: "unstated (RIPE NCC public service)"
+attribution_required: false
