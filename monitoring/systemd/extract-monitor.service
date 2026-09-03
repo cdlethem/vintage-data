@@ -1,0 +1,16 @@
+[Unit]
+Description=Extract pipeline sanity check (triage + local-model assessment)
+After=network.target
+
+[Service]
+Type=oneshot
+User=colin
+Group=colin
+# omp lives in ~/.local/bin, which systemd's minimal PATH omits.
+Environment=PATH=/home/colin/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=EXTRACT_DATA_ROOT=/home/colin/dev/data/extract
+WorkingDirectory=/home/colin/dev/extract/monitoring
+ExecStart=/home/colin/dev/extract/monitoring/run_check.sh
+# Exit 3 (model server busy) and 4 (model call failed) are transient skips,
+# not failures worth alerting on; the next timer tick retries.
+SuccessExitStatus=3 4
