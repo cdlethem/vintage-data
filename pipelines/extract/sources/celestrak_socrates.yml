@@ -3,7 +3,7 @@ script: fetch_celestrak_socrates.py
 args: []
 schedule: "30 1,9,17 * * *"  # UTC
 enabled: true
-retries: 1
+retries: 2
 timeout_minutes: 20
 sink: local
 

@@ -22,6 +22,10 @@ One JSON object per source. Key fields:
   how repeated *failures* show up here.
 - `no_data_yet` — the source has never landed a run. Fine for a long-cadence
   source that hasn't reached its first tick; a problem for a short-cadence one.
+- `failed_runs` / `last_error` — runs whose script crashed (after Airflow's own
+  retries). One isolated failure on a flaky upstream is worth only a WARN; a
+  streak, or failures on every source at once (suggesting a host/network
+  problem), is INVESTIGATE.
 - `zero_record_runs` — runs that succeeded with 0 records. Legitimate
   occasionally (404 = "no matches"); a streak on a busy feed is a problem.
 - `records_last` vs `records_median` — a collapse (e.g. median 2000, last 5)

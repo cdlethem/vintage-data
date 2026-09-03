@@ -101,7 +101,8 @@
  },
  "musicbrainz": {
   "type": "feed",
-  "expected_gap_minutes": 60
+  "expected_gap_minutes": 60,
+  "notes": "returns 503 under load as designed rate-limiting; an isolated failed hourly run is normal, a streak is not"
  },
  "launch_library": {
   "type": "snapshot",
@@ -114,7 +115,8 @@
  },
  "celestrak_socrates": {
   "type": "snapshot",
-  "expected_gap_minutes": 480
+  "expected_gap_minutes": 480,
+  "notes": "celestrak.org is slow serving the 16MB file; occasional connect timeouts observed (2026-09-03), retries=2 in yml; a single missed run of 3/day is tolerable"
  },
  "oeis": {
   "type": "feed",

@@ -65,10 +65,19 @@ def check_source(name, cfg, window_start):
     }
     if meta.get("notes"):
         out["notes"] = meta["notes"]
+    failures = sorted(src_dir.glob("dt=*/*.fail.json"))
+    out["failed_runs"] = 0
+    for m in failures:
+        info = json.loads(m.read_text())
+        if datetime.fromisoformat(info["started_at"]) >= window_start:
+            out["failed_runs"] += 1
+            err = (info.get("error") or "").strip().splitlines()
+            out["last_error"] = err[-1][:160] if err else f"exit {info.get('exit_code')}"
+
     if not manifests:
-        # Never produced anything — either it hasn't reached its first cron
-        # tick yet (fine) or it has been failing since creation. The manifest
-        # only proves success, so distinguish via judgment, not staleness math.
+        # Never succeeded — either it hasn't reached its first cron tick yet
+        # (fine, failed_runs 0) or it has been failing since creation (visible
+        # in failed_runs). Staleness math needs a last success, so leave null.
         out["no_data_yet"] = True
         out["stale"] = None
         return out

@@ -49,6 +49,14 @@ class LocalSink:
         if self._staged is not None:
             self._staged.unlink(missing_ok=True)
 
+    def fail(self, meta: dict) -> str:
+        """Record a failed run as a manifest so monitoring can see failures
+        directly instead of inferring them from staleness."""
+        self.discard()
+        marker = self._final.with_name(self._final.name + ".fail.json")
+        marker.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+        return str(marker)
+
 
 def get_sink(name: str = "local"):
     if name == "local":

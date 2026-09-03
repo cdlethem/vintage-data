@@ -67,7 +67,15 @@ def run(cfg: dict) -> dict:
         log.info("stderr from %s:\n%s", cfg["script"], stderr)
 
     if returncode != 0:
-        sink.discard()
+        sink.fail({
+            "source": name,
+            "script": cfg["script"],
+            "args": args,
+            "started_at": started.isoformat(),
+            "exit_code": returncode,
+            "records": records,
+            "error": stderr[-500:] if stderr else None,
+        })
         raise RuntimeError(f"{cfg['script']} exited {returncode} after {records} records")
 
     manifest = {
