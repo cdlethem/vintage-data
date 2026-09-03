@@ -1,6 +1,10 @@
 name: steam_players
 script: fetch_steam_players.py
-args: []
+# The script's built-in basket is only 3 games; a wider basket makes a much
+# richer concurrent-players time series. Positional args are Steam appids.
+# CS2, Dota 2, PUBG, TF2, GTA V, Rust, Apex, Destiny 2, Helldivers 2,
+# War Thunder, Baldur's Gate 3, Elden Ring.
+args: ["730", "570", "578080", "440", "271590", "252490", "1172470", "1085660", "553850", "236390", "1086940", "1245620"]
 schedule: "3-53/10 * * * *"  # UTC
 enabled: true
 retries: 1

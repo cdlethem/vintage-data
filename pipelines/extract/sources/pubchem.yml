@@ -2,11 +2,14 @@ name: pubchem
 script: fetch_pubchem.py
 args: []
 schedule: "15 6 * * *"  # UTC
-enabled: true
+enabled: false
 retries: 1
 timeout_minutes: 10
 sink: local
 
+# Disabled 2026-09-03: this endpoint is a static per-compound lookup, not a
+# change feed -- every run returns identical records for the same compounds,
+# which makes no time series. Kept as a working example of the contract.
 # Vetting metadata (documentation only, not read by the DAG factory)
 cadence_note: "per-compound lookup; new substances are deposited continuously but this endpoint is lookup, not a change feed"
 rate_limit: "5 req/s documented, self-enforced in code well under that"
