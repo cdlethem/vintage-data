@@ -9,6 +9,7 @@ staged_scripts/
 # Airflow runtime state (config, logs, generated passwords)
 orchestration/airflow_home/
 orchestration/.venv/
+pipelines/load/.venv/
 
 # Secrets — airflow.secrets.env.example is the checked-in template
 orchestration/airflow.secrets.env

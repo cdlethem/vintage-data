@@ -1,0 +1,20 @@
+[Unit]
+Description=Extract load layer: single-writer warehouse loader
+After=network.target
+
+[Service]
+User=colin
+Group=colin
+# EXTRACT_DATA_ROOT / EXTRACT_WAREHOUSE / EXTRACT_LOAD_QUEUE live here so the
+# loader and Airflow can never disagree about where the sink and queue are.
+EnvironmentFile=/home/colin/dev/extract/orchestration/airflow.env
+WorkingDirectory=/home/colin/dev/extract/pipelines/load
+ExecStart=/home/colin/dev/extract/pipelines/load/.venv/bin/python -m loader service
+Restart=on-failure
+RestartSec=5
+# SIGTERM asks the service to stop after the job in flight; a backfill job can
+# legitimately run for minutes, so give it room before SIGKILL.
+TimeoutStopSec=600
+
+[Install]
+WantedBy=multi-user.target

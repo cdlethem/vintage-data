@@ -1,0 +1,5 @@
+# The load layer's only dependencies. Deliberately separate from Airflow's
+# venv: warehouse drivers belong to the writer service, not to the scheduler.
+duckdb==1.5.5
+pytz==2026.3.post1   # duckdb needs it to hand TIMESTAMPTZ values back to Python
+PyYAML==6.0.3

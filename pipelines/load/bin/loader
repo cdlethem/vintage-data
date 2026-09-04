@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# The load layer CLI, runnable from anywhere:
+#
+#     pipelines/load/bin/loader status -v
+#
+# It does two things `python -m loader` can't do on its own: put the package on
+# PYTHONPATH regardless of the caller's directory, and source the same
+# airflow.env the service reads — so the CLI can never end up pointed at a
+# different warehouse or queue than the writer it is reporting on.
+set -euo pipefail
+
+LOAD_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENV_FILE="$LOAD_ROOT/../../orchestration/airflow.env"
+
+if [[ -f "$ENV_FILE" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +a
+fi
+
+export PYTHONPATH="$LOAD_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+exec "$LOAD_ROOT/.venv/bin/python" -m loader "$@"

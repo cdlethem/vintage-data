@@ -3,8 +3,8 @@
 A local, production-shaped data pipeline monorepo. It polls public APIs on schedules,
 lands raw newline-delimited JSON, and is built to grow into a full ELT stack:
 
-- **extract** (this stage, live): source → raw NDJSON files, orchestrated by Airflow
-- **load** (planned): raw files → data warehouse
+- **extract** (live): source → raw NDJSON files, orchestrated by Airflow
+- **load** (live): raw files → a warehouse RAW schema, through a single-writer service
 - **transform** (planned): dbt models over the warehouse
 
 The point of the project is pedagogical: aspiring data engineers rarely have access to
@@ -27,6 +27,15 @@ orchestration/include/sinks.py         Sink interface (LocalSink today; S3/GCS l
         │
         ▼
 ~/dev/data/extract/raw/source=<name>/dt=YYYY-MM-DD/<name>_<ts>.ndjson  (+ .meta.json)
+        │
+        ▼  scanned by
+orchestration/dags/load_dag.py         one DAG, submits a job and waits
+        │
+        ▼  through a filesystem queue, claimed serially by
+extract-loader.service                 the single writer (pipelines/load/loader/)
+        │                              schema inferred, never user-supplied
+        ▼
+~/dev/data/warehouse/extract.duckdb    raw.<source> (insert-only) + _load.* ledger
 ```
 
 Airflow 3.3 runs natively under systemd: api-server (UI on :8082), scheduler,
@@ -86,6 +95,35 @@ the raw material for tuning polling frequency algorithmically with "did I pick u
 data?" as the objective. Answering that properly needs `(source, id)` dedupe, which
 belongs to the load stage.
 
+## The load stage
+
+One DAG (`load__raw`) scans the sink every 15 minutes and hands the new files to a
+single dedicated writer process — the DAG itself never opens the warehouse. Work
+crosses between them as job files in `$EXTRACT_LOAD_QUEUE`, so Airflow needs no
+warehouse driver and concurrent runs cannot race on DDL.
+
+The writer infers each source's schema from a sample of its records (no schema is ever
+user-supplied), evolves the table additively when a source's shape changes, and inserts
+— never updates. Every row carries lineage columns (`_batch_id`, `_source_file`,
+`_file_row_num`, `_load_id`, `_loaded_at`, `_content_hash`, `_payload`) so any value
+traces back to the extract run that produced it and the load job that landed it.
+
+Because "what to load" is answered by a ledger inside the warehouse itself
+(`_load.files`), backfill is not a special mode: a job always loads every sink file the
+ledger hasn't seen. Swapping DuckDB for BigQuery or Snowflake is one `Destination`
+subclass and one line of yml.
+
+```bash
+pipelines/load/bin/loader status -v            # service, queue, sink, per-table rows
+pipelines/load/bin/loader inspect <source>     # inferred schema, writes nothing
+pipelines/load/bin/loader sql --utc "SELECT ..."   # read-only query
+```
+
+[`pipelines/load/README.md`](pipelines/load/README.md) has the full design, a
+step-by-step of what one job does, and a troubleshooting section — start there when a
+`load__raw` run goes red, and note that its first failure mode ("heartbeat missing") is
+about the service being down, not about data.
+
 ## Operations
 
 Bring-up from a clean box (idempotent, rerunnable):
@@ -100,10 +138,14 @@ orchestration/setup/setup.sh      # or run the numbered steps individually
 | `airflow-scheduler` | schedules task instances |
 | `airflow-dag-processor` | parses DAG files (separate process in Airflow 3) |
 | `airflow-worker@1`, `@2` | Celery workers (concurrency 4 each) |
+| `extract-loader` | the load layer's single writer; owns the warehouse connection |
 
 All units restart on failure (`Restart=on-failure`) and start on boot, ordered after
 Postgres and Redis. Logs: `journalctl -u airflow-scheduler -f` etc.; task logs are in
-the UI. The admin login is `admin`; the password is generated at first api-server start
+the UI. The loader is the one component whose own log is the primary record —
+`journalctl -u extract-loader -f` shows every file it inserts and every schema change it
+makes, and `pipelines/load/bin/loader status -v` summarises the warehouse without
+needing Airflow at all. The admin login is `admin`; the password is generated at first api-server start
 into `orchestration/airflow_home/simple_auth_manager_passwords.json.generated`.
 
 Web UI over the tailnet: `https://<host>.<tailnet>.ts.net` (via `tailscale serve`;
@@ -116,10 +158,13 @@ orchestration/    Airflow deployment: DAG factory, runner, sinks, env config,
                   systemd units, clean-box setup scripts
 pipelines/
   extract/        scripts/ (the fetchers) + sources/ (per-instance yml configs)
-  load/           placeholder — raw files → warehouse
+  load/           loader/ (destination-agnostic load layer) + config/load.yml
   transform/      placeholder — dbt project
 ```
 
 Raw data lands **outside the repo** at `$EXTRACT_DATA_ROOT`
 (default `~/dev/data/extract`), hive-partitioned (`source=<name>/dt=<date>`) so
-DuckDB/dbt/Spark can discover it directly.
+DuckDB/dbt/Spark can discover it directly. Three sibling trees live there and never
+touch each other: `raw/` (the sink, and the only one the load layer reads), `state/`
+(per-source watermarks) and `_load_queue/` (load jobs). The warehouse itself is outside
+both, at `$EXTRACT_WAREHOUSE` (default `~/dev/data/warehouse/extract.duckdb`).

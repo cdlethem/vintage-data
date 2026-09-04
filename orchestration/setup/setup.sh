@@ -9,6 +9,7 @@ cd "$(dirname "$0")"
 ./03_airflow_venv.sh
 ./04_systemd.sh
 ./05_tailscale.sh
+./06_loader.sh
 
 echo
 echo "Done. Admin password: see orchestration/airflow_home/simple_auth_manager_passwords.json.generated"
