@@ -30,6 +30,7 @@ anywhere beyond a prototype.
 
 Stdlib only.
 """
+import argparse
 import json
 import sys
 import urllib.request
@@ -60,6 +61,11 @@ def fetch_recent(hours_back: int = 24):
     lo = _iso(now - timedelta(hours=hours_back))
     hi = _iso(now)
     yield from _rows(_get(f"/intensity/{lo}/{hi}"), "national")
+ 
+def fetch_range(start: str, end: str):
+    """Fetch one bounded historical range (the API returns half-hour periods)."""
+    yield from _rows(_get(f"/intensity/{start}/{end}"), "national")
+
 
 
 def fetch_forward_48h():
@@ -92,15 +98,20 @@ def _rows(data: dict, kind: str):
             "forecast": it.get("forecast"),
             "actual": it.get("actual"),   # None until the period settles
             "index": it.get("index"),     # very low / low / moderate / high...
-            "error": (it["actual"] - it["forecast"])
-                     if it.get("actual") is not None
-                     and it.get("forecast") is not None else None,
         }
-
-
 if __name__ == "__main__":
-    mode = sys.argv[1] if len(sys.argv) > 1 else "current"
-    gen = {"current": fetch_current, "recent": fetch_recent,
-           "forward": fetch_forward_48h, "mix": fetch_generation_mix}[mode]()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("mode", nargs="?", default="current",
+                        choices=("current", "recent", "forward", "mix", "range"))
+    parser.add_argument("start", nargs="?")
+    parser.add_argument("end", nargs="?")
+    args = parser.parse_args()
+    if args.mode == "range":
+        if not args.start or not args.end:
+            parser.error("range requires START and END in API ISO format")
+        gen = fetch_range(args.start, args.end)
+    else:
+        gen = {"current": fetch_current, "recent": fetch_recent,
+               "forward": fetch_forward_48h, "mix": fetch_generation_mix}[args.mode]()
     for rec in gen:
         print(json.dumps(rec, ensure_ascii=False))

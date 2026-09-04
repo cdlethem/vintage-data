@@ -166,5 +166,105 @@
  "nager_date": {
   "type": "snapshot",
   "expected_gap_minutes": 10080
+ },
+ "gdelt_doc": {
+  "type": "feed",
+  "expected_gap_minutes": 60,
+  "notes": "backed off from 15min to hourly cadence 2026-09-04 after sustained 429s; a handful of scattered 429s is expected etiquette-friction, but consecutive_failures climbing again means the block is back"
+ },
+ "job_boards_greenhouse": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "named-company ATS boards; postings churn slowly, so low id_novelty between daily runs is normal. Isolated board failures are expected catalog drift (companies migrate ATS); the task only fails when a provider-wide outage takes out ~all boards"
+ },
+ "job_boards_lever": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "see job_boards_greenhouse; slow posting churn, isolated board failures tolerated"
+ },
+ "job_boards_ashby": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "see job_boards_greenhouse; also carries structured compensation where companies publish it"
+ },
+ "job_boards_smartrecruiters": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "large global non-tech employers; a few board failures per run are normal at this catalog size"
+ },
+ "job_boards_workable": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "DISABLED 2026-09-04: upstream returns Cloudflare 1015 to this host after catalog discovery. Expect no runs until it is re-verified and re-enabled"
+ },
+ "job_boards_recruitee": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "Benelux/Nordic SMEs; 429s appear if the source is run repeatedly by hand, not at the daily cadence"
+ },
+ "job_boards_personio": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "German-speaking SMEs over XML; deliberately throttled to 2 concurrent requests with a 600ms gap because Personio 429s easily"
+ },
+ "job_boards_breezy": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "smallest provider in the catalog (single verified board); a low record count is expected, not a fault"
+ },
+ "job_boards_rippling": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "see job_boards_greenhouse; small catalog, slow churn"
+ },
+ "job_boards_workday": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "largest provider: ~875 tenants, ~220k postings, ~45min per run. A handful of tenant failures per run is normal drift; postedOn is relative text from upstream, not a timestamp"
+ },
+ "job_feed_themuse": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "newest 99 pages of a much larger index; page 100 is rejected by the API, which is why the cap is 99"
+ },
+ "job_feed_arbeitnow": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "capped at 8 pages; the API 429s around the tenth rapid page, so a 429 here means the cap needs lowering rather than a retry"
+ },
+ "job_feed_getonboard": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "Latin America and remote roles; feed currently fits in ~3 pages, so record counts near 200 are normal"
+ },
+ "job_feed_remotive": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "single full response; record count tracks the size of the live remote board"
+ },
+ "job_feed_remoteok": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "single full response; the API's first row is terms metadata and is intentionally skipped"
+ },
+ "job_feed_himalayas": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "cursor-paginated; capped at 100 cursors (~2000 newest of ~102k indexed roles)"
+ },
+ "job_feed_jobicy": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "newest 50 remote roles per run; steady ~50 record count is expected"
+ },
+ "job_feed_workingnomads": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "single full response of currently listed remote roles"
+ },
+ "job_feed_weworkremotely": {
+  "type": "feed",
+  "expected_gap_minutes": 1440,
+  "notes": "RSS feed; titles arrive as 'Company: Role' and are split on extract"
  }
 }

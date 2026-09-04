@@ -7,8 +7,15 @@ retries: 1
 timeout_minutes: 10
 sink: local
 
+backfill:
+  unit: month
+  start: "2018-01"
+  args: ["range", "{date}T00:00Z", "{month_end}T23:30Z"]
+  pace_seconds: 3
+  timeout_minutes: 10
+
 # Vetting metadata (documentation only, not read by the DAG factory)
-cadence_note: "half-hourly settlement periods; forecast+actual pair per period"
+cadence_note: "half-hourly settlement periods; forecast+actual pair per period. Historical API available from 2018-01; configured for a paced monthly backfill."
 rate_limit: "no published limit"
 licence: "CC BY 4.0 + formal Terms of Use"
 attribution_required: true

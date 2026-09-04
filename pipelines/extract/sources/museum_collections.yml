@@ -4,11 +4,11 @@ args: []
 schedule: "30 5 1 * *"  # UTC
 enabled: true
 retries: 1
-timeout_minutes: 10
+timeout_minutes: 90
 sink: local
 
 # Vetting metadata (documentation only, not read by the DAG factory)
-cadence_note: "reference dimension, not a firehose; new acquisitions/digitizations trickle in — poll monthly"
-rate_limit: "AIC documents a rate limit; Met's list-all-IDs design means hydrate one at a time"
-licence: "varies per object; check is_public_domain/isPublicDomain before reuse"
+cadence_note: "Rebuilt 2026-09-04: the prior config only pulled 20 AIC objects/run. Verified live 2026-09-04 that AIC's own pagination totals 132,733 objects and Cleveland's 68,771 (both real, from the APIs' own totals). args=[] now runs fetch_all(): a full sweep of both catalogs (~1,328 AIC pages at 0.2s delay ~13min, ~138 Cleveland pages of 500 at that API's own ~12s/page latency ~25-30min) -- hundreds of thousands of tracked artworks with real updated_at revision timestamps, not one small page. Met stays excluded from the default sweep (its list-all-IDs-then-hydrate-one-at-a-time design makes a full crawl ~500k requests even at scale-friendly budgets); use 'met <object_id>' for targeted lookups. Reference dimension / slow-revision dataset -- monthly cadence matches how often museum metadata actually changes."
+rate_limit: "AIC documents a rate limit (kept to a 0.2s/page delay); Cleveland has no published limit but its own API latency (~12s/500-row page) is the practical throttle"
+licence: "AIC/Cleveland — open access (CC0/public domain varies per object, respect is_public_domain)"
 attribution_required: false

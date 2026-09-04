@@ -1,0 +1,14 @@
+name: niord_warnings
+script: fetch_niord_warnings.py
+args: []
+schedule: "40 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "complete active navigational warning/notice set (237 at verification); recovers lifetime and publish-to-cancel transitions"
+rate_limit: "API ignores status/limit filters so the whole collection comes in one request; hourly is gentle"
+licence: "Danish Maritime Authority terms"
+attribution_required: true

@@ -26,6 +26,14 @@ I did not fetch them this session (sandbox host restrictions). Confirm field
 names on first run — the three museums use quite different vocabularies, and
 the normalizer below papers over that.
 
+**Rebuilt 2026-09-04**: the prior config only pulled 20 AIC objects/run.
+Verified live 2026-09-04: AIC's own pagination total is **132,733 objects**
+and Cleveland's is **68,771** (both keyless, both real totals from the APIs'
+own `pagination`/`info` fields). Default mode now sweeps the **full AIC
+catalog** (~1,328 pages, ~0.4s/page) and **full Cleveland catalog** (~138
+pages of 500, slower per page, ~25min) every run -- hundreds of thousands of
+tracked artworks with real revision timestamps, not one small page.
+
 Endpoints:
   AIC:       https://api.artic.edu/api/v1/artworks?page=&limit=&fields=
              (supports ?query= search via /artworks/search)
@@ -39,8 +47,8 @@ Notes:
     an Elasticsearch-backed search endpoint, and a documented rate limit.
     Start here.
   * The Met's design (list-all-IDs, then hydrate individually) means a full
-    crawl is ~500k requests. Don't. Use it for targeted lookups or take their
-    published CSV dump instead.
+    crawl is ~500k requests even at scale-friendly budgets. Still excluded
+    from the default sweep; use `met <object_id>` for targeted lookups.
   * Licensing varies per object, not per museum. Respect `is_public_domain`
     (AIC) / `isPublicDomain` (Met) before reusing any image.
 
@@ -48,6 +56,8 @@ Stdlib only.
 """
 import json
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -58,6 +68,9 @@ AIC = "https://api.artic.edu/api/v1/artworks"
 MET = "https://collectionapi.metmuseum.org/public/collection/v1"
 CMA = "https://openaccess-api.clevelandart.org/api/artworks/"
 
+AIC_PAGE_DELAY_S = 0.2
+CMA_PAGE_SIZE = 500
+
 AIC_FIELDS = ",".join([
     "id", "title", "artist_display", "artist_title", "place_of_origin",
     "date_display", "date_start", "date_end", "medium_display",
@@ -66,16 +79,20 @@ AIC_FIELDS = ",".join([
 ])
 
 
-def _get(url: str):
+def _get(url: str, timeout: int = 45):
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=45) as resp:
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.load(resp)
 
 
-def fetch_aic(page: int = 1, limit: int = 100, pages: int = 1):
-    """Art Institute of Chicago. The best-designed of the three."""
+def fetch_aic(page: int = 1, limit: int = 100, pages: int | None = 1):
+    """Art Institute of Chicago. The best-designed of the three.
+    `pages=None` walks the entire catalog (verified live 2026-09-04: 132,733
+    objects, ~1,328 pages of 100) until the API stops returning a next page."""
     now = datetime.now(timezone.utc).isoformat()
-    for p in range(page, page + pages):
+    p = page
+    walked = 0
+    while pages is None or walked < pages:
         url = AIC + "?" + urllib.parse.urlencode(
             {"page": p, "limit": min(limit, 100), "fields": AIC_FIELDS})
         data = _get(url)
@@ -98,34 +115,47 @@ def fetch_aic(page: int = 1, limit: int = 100, pages: int = 1):
                 "gallery": a.get("gallery_title"),
                 "updated_at": a.get("updated_at"),   # your re-poll watermark
             }
+        walked += 1
         if not data.get("pagination", {}).get("next_url"):
             break
+        p += 1
+        time.sleep(AIC_PAGE_DELAY_S)
 
 
-def fetch_cleveland(limit: int = 100, skip: int = 0):
-    """Cleveland Museum of Art open access."""
+def fetch_cleveland(limit: int = 100, skip: int = 0, pages: int | None = 1):
+    """Cleveland Museum of Art open access. `pages=None` walks the entire
+    catalog (verified live 2026-09-04: 68,771 objects) at `limit`/page."""
     now = datetime.now(timezone.utc).isoformat()
-    url = CMA + "?" + urllib.parse.urlencode({"limit": limit, "skip": skip})
-    for a in _get(url).get("data", []):
-        creators = a.get("creators") or []
-        yield {
-            "source": "museum_cleveland",
-            "fetched_at": now,
-            "id": f"cma:{a.get('id')}",
-            "title": a.get("title"),
-            "artist": (creators[0].get("description") if creators else None),
-            "origin": a.get("culture")[0] if a.get("culture") else None,
-            "date_display": a.get("creation_date"),
-            "date_start": a.get("creation_date_earliest"),
-            "date_end": a.get("creation_date_latest"),
-            "medium": a.get("technique") or a.get("medium"),
-            "classification": a.get("type"),
-            "department": a.get("department"),
-            "public_domain": (a.get("share_license_status") == "CC0"),
-            "on_view": bool(a.get("current_location")),
-            "gallery": a.get("current_location"),
-            "updated_at": a.get("updated_at"),
-        }
+    walked = 0
+    while pages is None or walked < pages:
+        url = CMA + "?" + urllib.parse.urlencode({"limit": limit, "skip": skip})
+        rows = _get(url, timeout=60).get("data", [])
+        if not rows:
+            break
+        for a in rows:
+            creators = a.get("creators") or []
+            yield {
+                "source": "museum_cleveland",
+                "fetched_at": now,
+                "id": f"cma:{a.get('id')}",
+                "title": a.get("title"),
+                "artist": (creators[0].get("description") if creators else None),
+                "origin": a.get("culture")[0] if a.get("culture") else None,
+                "date_display": a.get("creation_date"),
+                "date_start": a.get("creation_date_earliest"),
+                "date_end": a.get("creation_date_latest"),
+                "medium": a.get("technique") or a.get("medium"),
+                "classification": a.get("type"),
+                "department": a.get("department"),
+                "public_domain": (a.get("share_license_status") == "CC0"),
+                "on_view": bool(a.get("current_location")),
+                "gallery": a.get("current_location"),
+                "updated_at": a.get("updated_at"),
+            }
+        skip += len(rows)
+        walked += 1
+        if len(rows) < limit:
+            break
 
 
 def fetch_met_object(object_id: int):
@@ -153,14 +183,29 @@ def fetch_met_object(object_id: int):
     }
 
 
+def fetch_all():
+    """Full sweep of both bulk-friendly collections. One collection's failure
+    is logged and skipped rather than losing the other's data."""
+    try:
+        yield from fetch_aic(limit=100, pages=None)
+    except Exception as exc:  # noqa: BLE001 - keep the sweep going
+        print(f"museum_collections: AIC sweep failed partway: {exc!r}", file=sys.stderr)
+    try:
+        yield from fetch_cleveland(limit=CMA_PAGE_SIZE, pages=None)
+    except Exception as exc:  # noqa: BLE001 - keep the sweep going
+        print(f"museum_collections: Cleveland sweep failed partway: {exc!r}", file=sys.stderr)
+
+
 if __name__ == "__main__":
-    which = sys.argv[1] if len(sys.argv) > 1 else "aic"
+    which = sys.argv[1] if len(sys.argv) > 1 else "all"
     if which == "cleveland":
-        gen = fetch_cleveland(limit=20)
+        gen = fetch_cleveland(limit=CMA_PAGE_SIZE, pages=None)
+    elif which == "aic":
+        gen = fetch_aic(limit=100, pages=None)
     elif which == "met":
         print(json.dumps(fetch_met_object(int(sys.argv[2])), ensure_ascii=False))
         raise SystemExit
     else:
-        gen = fetch_aic(limit=20)
+        gen = fetch_all()
     for rec in gen:
         print(json.dumps(rec, ensure_ascii=False))

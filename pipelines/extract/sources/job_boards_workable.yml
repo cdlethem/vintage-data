@@ -1,0 +1,16 @@
+name: job_boards_workable
+dag_factory: job_boards
+provider: workable
+script: fetch_job_boards.py
+args: ["--providers", "workable", "--max-per-board", "10000", "--workers", "1"]
+schedule: "15 6 * * *"  # UTC
+enabled: false
+retries: 1
+timeout_minutes: 60
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Named-company Workable boards, strongest in UK and southern Europe. DISABLED 2026-09-04: the adapter and all catalog tokens were live-verified earlier that day (e.g. zego returned 33 postings), but Workable then began returning Cloudflare error 1015 to every request from this host, including at one paced request per 3 seconds. That is an IP-level rate-limit block earned during catalog discovery, not a defect. Re-enable by running `fetch_job_boards.py --providers workable --workers 1` and confirming a non-empty result; scheduling it before then would only produce a failing task each day."
+rate_limit: "public paginated endpoint; strictly one in-flight request with a 3s global gap plus transient-429 backoff; currently blocked upstream (CF 1015)"
+licence: "public ATS board endpoints"
+attribution_required: false

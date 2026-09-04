@@ -1,0 +1,14 @@
+name: hk_library_computers
+script: fetch_hk_library_computers.py
+args: []
+schedule: "6-59/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "public-library computer-session availability; ten-minute snapshots"
+rate_limit: "DATA.GOV.HK; no faster than every ten minutes"
+licence: "DATA.GOV.HK reuse terms"
+attribution_required: true

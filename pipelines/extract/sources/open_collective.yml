@@ -1,0 +1,14 @@
+name: open_collective
+script: fetch_open_collective.py
+args: ["--top", "5000"]
+schedule: "15 3 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 60
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Rebuilt 2026-09-04: the prior config tracked one hardcoded collective (webpack). Verified live 2026-09-04 that Open Collective's GraphQL v2 `accounts` query exposes 40,456 real collectives (totalCount), paginated 100/page by their own RANK ordering -- rewrote the script to bulk-fetch balance/backers/budget for the top 5000 in ~40-50 paginated GraphQL requests instead of one REST call per hand-picked slug. This is the 'thousands of entities, aggregate trend' shape: daily balance/backer snapshots across 5000 real organizations, not one example account. Live test 2026-09-04 processed 4000/5000 in 5min under real rate limiting (some pages back off and retry on 429, handled internally, non-fatal); generous timeout budget below covers worst case. Daily cadence -- collective finances don't move meaningfully faster."
+rate_limit: "no published limit; GraphQL bulk pagination keeps request count low (~50 requests for 5000 collectives vs 5000 REST calls), 1s inter-page delay plus exponential backoff on 429 built into the script"
+licence: "Open Collective — public"
+attribution_required: false

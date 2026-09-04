@@ -1,0 +1,14 @@
+name: imdb_ratings
+script: fetch_imdb_ratings.py
+args: []
+schedule: "35 13 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 30
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "IMDb publishes a complete daily dump with no changes endpoint. Sends stored Last-Modified as If-Modified-Since (unchanged dump = 304, zero records, no download) and otherwise diffs against the previous dump, emitting only titles whose averageRating/numVotes moved, each carrying its previous values. Verified: 1,713,237 records cold baseline, 0 on re-run, 8 on a perturbed baseline."
+rate_limit: "one conditional request per run; the full file is still streamed when it changes (dump-only publisher) but is no longer re-emitted verbatim"
+licence: "IMDb non-commercial-use terms"
+attribution_required: true

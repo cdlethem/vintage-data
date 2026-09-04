@@ -1,0 +1,14 @@
+name: job_feed_themuse
+script: fetch_job_feeds.py
+args: ["themuse", "--max-pages", "99"]
+schedule: "30 6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 30
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Official public API; pull the newest 1,980 of roughly 410,000 indexed jobs daily. Broad US employer and industry coverage complements the named ATS catalog without attempting an abusive full 20,000-page sweep. Live-verified 2026-09-04."
+rate_limit: "no published limit; capped at 99 sequential pages once daily (the API rejects page 100)"
+licence: "public The Muse jobs API"
+attribution_required: true

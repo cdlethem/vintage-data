@@ -1,0 +1,14 @@
+name: uk_petitions
+script: fetch_uk_petitions.py
+args: []
+schedule: "25 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "open e-petition counters + lifecycle state; poll hourly"
+rate_limit: "Parliament paginated JSON; follow reuse terms"
+licence: "Parliament reuse terms"
+attribution_required: true

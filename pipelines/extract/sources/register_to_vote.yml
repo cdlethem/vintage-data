@@ -1,0 +1,14 @@
+name: register_to_vote
+script: fetch_register_to_vote.py
+args: []
+schedule: "15-59/30 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "rolling five-minute application counts (288 bins / 24h); poll every 30 minutes"
+rate_limit: "HTML dashboard parse; avoid re-downloading the full dashboard more often than 30 min"
+licence: "UK government public data"
+attribution_required: true

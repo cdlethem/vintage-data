@@ -1,0 +1,14 @@
+name: w3c_specifications
+script: fetch_w3c_specifications.py
+args: []
+schedule: "40 5 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "specification metadata (page 1); daily or weekly use"
+rate_limit: "published 6,000 requests/IP/10min; this client makes one request"
+licence: "W3C document and data terms"
+attribution_required: true

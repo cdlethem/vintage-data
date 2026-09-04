@@ -1,0 +1,14 @@
+name: bordeaux_bridge
+script: fetch_bordeaux_bridge.py
+args: []
+schedule: "4-59/5 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "one-record Chaban-Delmas bridge state; publisher refreshes about every 2.5 minutes"
+rate_limit: "OpenDataSoft; one request per run; five minutes is the repo polling floor"
+licence: "Bordeaux Metropole open-data terms"
+attribution_required: true

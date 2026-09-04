@@ -1,0 +1,14 @@
+name: catalonia_beaches
+script: fetch_catalonia_beaches.py
+args: []
+schedule: "15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "beach flags/conditions update hourly in summer"
+rate_limit: "Socrata open-data; no hard limit"
+licence: "Catalonia open-data terms"
+attribution_required: true

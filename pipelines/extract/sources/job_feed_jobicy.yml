@@ -1,0 +1,14 @@
+name: job_feed_jobicy
+script: fetch_job_feeds.py
+args: ["jobicy"]
+schedule: "48 6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Official public API; newest 50 remote jobs with geography, industry, level and structured salary. Live-verified 2026-09-04."
+rate_limit: "one request daily"
+licence: "Jobicy public API terms"
+attribution_required: true

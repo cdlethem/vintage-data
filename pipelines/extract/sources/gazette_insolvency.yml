@@ -1,0 +1,14 @@
+name: gazette_insolvency
+script: fetch_gazette_insolvency.py
+args: []
+schedule: "28 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "newest UK insolvency notices; poll at most every 15-60 minutes"
+rate_limit: "public notice feed; an explicit Accept header currently returns HTTP 500 (client omits it)"
+licence: "notice-specific reuse rights"
+attribution_required: true

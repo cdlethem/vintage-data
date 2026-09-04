@@ -1,0 +1,14 @@
+name: geojson_status
+script: fetch_geojson_status.py
+args: []
+schedule: "5-59/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "FEMA open shelters feed; sibling feeds nsw_beachwatch and nddot_alerts each get their own schedule via --feed"
+rate_limit: "keyless GeoJSON endpoints; one request per run"
+licence: "varies per feed (US federal / NSW / ND DOT)"
+attribution_required: true

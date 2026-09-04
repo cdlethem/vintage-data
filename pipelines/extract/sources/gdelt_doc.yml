@@ -1,14 +1,14 @@
 name: gdelt_doc
 script: fetch_gdelt_doc.py
 args: []
-schedule: "9-54/15 * * * *"  # UTC
+schedule: "24 * * * *"  # UTC
 enabled: true
 retries: 1
 timeout_minutes: 10
 sink: local
 
 # Vetting metadata (documentation only, not read by the DAG factory)
-cadence_note: "GDELT itself refreshes every 15 minutes"
-rate_limit: "no published limit; keyless public endpoint"
+cadence_note: "GDELT itself refreshes every 15 minutes, but live operation (2026-09-03 21:54 UTC onward) showed sustained HTTP 429s at a 15-min/4x-hourly cadence lasting several hours straight; backed off to hourly to reduce load on what is evidently a real, undocumented limit."
+rate_limit: "no published limit, but observed live: keyless traffic gets 429'd under sustained polling despite the docs claiming otherwise -- treat as rate-limited in practice"
 licence: "GDELT — free for research/non-commercial use"
 attribution_required: true

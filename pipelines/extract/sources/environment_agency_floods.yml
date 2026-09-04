@@ -1,0 +1,14 @@
+name: environment_agency_floods
+script: fetch_environment_agency_floods.py
+args: []
+schedule: "4-59/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "active flood warnings for England; empty output is a valid no-warning state"
+rate_limit: "OGL 3.0; poll every 15 minutes during flood events"
+licence: "OGL 3.0"
+attribution_required: true

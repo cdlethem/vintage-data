@@ -24,6 +24,8 @@ log = logging.getLogger(__name__)
 for path in sorted(SOURCES_DIR.glob("*.yml")):
     try:
         cfg = yaml.safe_load(path.read_text())
+        if cfg.get("dag_factory") not in (None, "extract"):
+            continue
         missing = [k for k in REQUIRED_KEYS if not cfg.get(k)]
         if missing:
             raise ValueError(f"missing required keys {missing}")

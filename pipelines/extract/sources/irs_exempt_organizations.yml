@@ -1,0 +1,14 @@
+name: irs_exempt_organizations
+script: fetch_irs_exempt_organizations.py
+args: []
+schedule: "5 5 1 * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 30
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "EO business master file, regional partition 1 (complete); siblings 2-4 via --region"
+rate_limit: "US federal public data; fetch monthly; large CSV"
+licence: "US federal public data"
+attribution_required: false

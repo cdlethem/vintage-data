@@ -1,14 +1,14 @@
 name: wayback_cdx
 script: fetch_wayback_cdx.py
 args: []
-schedule: "15 7 * * *"  # UTC
+schedule: "20 4 * * *"  # UTC -- daily
 enabled: true
 retries: 1
-timeout_minutes: 10
+timeout_minutes: 90
 sink: local
 
 # Vetting metadata (documentation only, not read by the DAG factory)
-cadence_note: "CDX capture-history query; example.org is a real, lightly-archived demo domain"
-rate_limit: "no published limit for CDX; shared Internet Archive infra, use collapse= and narrow date ranges"
+cadence_note: "Fixed 2026-09-04: was pinned to example.org (own vetting note called it 'a real, lightly-archived demo domain'). Swapped to a curated 572-URL watchlist of high-interest homepages/status pages (major news, governments, tech, markets, sports) hardcoded in the script as CURATED_WATCHLIST, matchType=exact per URL (matchType=domain/host timed out on any popular site -- verified live 2026-09-04). One run queries all 572 sites (~3-45min depending on upstream latency, each site's failure is caught and skipped independently); daily cadence with a 10-day trailing capture window means missing/slow days still get backfilled by the rolling window."
+rate_limit: "no published limit for CDX; shared Internet Archive infra -- kept to matchType=exact (fast, ~1-4s/site) and a 12s per-request timeout with per-URL error handling so one slow site can't stall the whole 572-site run"
 licence: "Internet Archive — public"
 attribution_required: false

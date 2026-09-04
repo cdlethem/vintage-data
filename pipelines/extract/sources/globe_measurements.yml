@@ -1,0 +1,21 @@
+name: globe_measurements
+script: fetch_globe_measurements.py
+args: ["--limit", "100"]
+schedule: "50 7 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+backfill:
+  unit: day
+  start: "1995-01-01"
+  args: ["--protocol", "sky_conditions", "--start-date", "{date}", "--end-date", "{date}"]
+  pace_seconds: 3
+  timeout_minutes: 20
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "GLOBE citizen-science measurements (sky_conditions) for the current UTC date; daily historical backfill by day from 1995-01"
+rate_limit: "GLOBE data-use policy; poll daily unless tracking an active campaign; an explicit Accept: application/json returns HTTP 406"
+licence: "GLOBE data-use policy"
+attribution_required: true

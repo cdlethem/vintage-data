@@ -8,7 +8,7 @@ timeout_minutes: 10
 sink: local
 
 # Vetting metadata (documentation only, not read by the DAG factory)
-cadence_note: "hourly-resolution from-created-date watermark; thousands of new DOIs/hour"
-rate_limit: "polite pool via mailto in User-Agent; otherwise throttled (429 observed anonymously)"
+cadence_note: "thousands of new DOIs/hour. from-created-date resolves only to the hour, so the hourly cron re-fetched the whole current hour (measured 247 of 1905 records, 13% of a run); the exact created timestamp is now checkpointed and applied client-side, with the DOIs tied at that second carried over (up to 162 share one timestamp). Verified: 1905 records cold, 0 on re-run with zero overlap. args = cold-start window only."
+rate_limit: "polite pool via mailto in User-Agent; otherwise throttled (429 observed anonymously). Cursor-paged at 1000 rows, walked only to the end of the watermark window"
 licence: "CrossRef metadata — free reuse"
 attribution_required: false

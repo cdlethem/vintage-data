@@ -8,7 +8,7 @@ timeout_minutes: 10
 sink: local
 
 # Vetting metadata (documentation only, not read by the DAG factory)
-cadence_note: "registrations trickle in; status transitions are the interesting series"
-rate_limit: "no published hard limit; ~50 req/min commonly cited safe ceiling"
+cadence_note: "registrations trickle in; status transitions are the interesting series. v2 has no server-side date filter (v1's filter=LastUpdatePostDate: now 400s), so the newest lastUpdatePostDate is checkpointed and the newest-first walk stops at it, with the boundary day's NCT set making the day-granular watermark exact. ~1,100 studies update per day = 1-2 pages per run. Verified: 2000 records cold, 0 on re-run with zero overlap, and exactly the 512 withheld boundary ids on a partial-state re-run."
+rate_limit: "no published hard limit; ~50 req/min commonly cited safe ceiling. 1-2 requests per run, 0.2s apart"
 licence: "NLM public domain (US Gov work)"
 attribution_required: false

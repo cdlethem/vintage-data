@@ -1,0 +1,14 @@
+name: drivebc_events
+script: fetch_drivebc_events.py
+args: ["--limit", "500"]
+schedule: "3-59/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Open511 active road events; poll every 10-15 minutes; --limit 500 because this upstream returns HTTP 500 at limit=1000"
+rate_limit: "Open Government Licence-Canada; rapid polling returns HTTP 429; one request per run at a 15-min cadence is fine"
+licence: "Open Government Licence-Canada"
+attribution_required: true

@@ -1,0 +1,14 @@
+name: malaysia_blood_donations
+script: fetch_malaysia_blood_donations.py
+args: []
+schedule: "45 2 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily blood donations by state/group; publisher updates 10:00 Asia/Kuala_Lumpur (02:00 UTC)"
+rate_limit: "CC BY 4.0; fetch once after the daily update"
+licence: "CC BY 4.0"
+attribution_required: true

@@ -1,0 +1,14 @@
+name: food_hygiene_ratings
+script: fetch_food_hygiene_ratings.py
+args: []
+schedule: "35 9 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 180
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Rebuilt 2026-09-04: the prior config only ever queried authority 1 (Cambridge). Verified live 2026-09-04 that FSA's own /Authorities endpoint lists all 363 UK local authorities with a documented EstablishmentCount, summing to 612,607 real establishments nationwide -- rewrote the script to discover the full authority list at runtime (no hardcoded list to go stale) and walk every authority's complete establishment set. This is the 'hundreds of thousands of tracked entities' shape rather than one city; full national sweep is ~6,100 paginated requests at a 0.15s polite per-page delay (~45-70min typical). One authority erroring is logged and skipped, not fatal to the other 362."
+rate_limit: "FSA requires a local-authority filter per call, no documented global rate limit; kept to a 0.15s per-page delay across the full national sweep to stay a good citizen of shared government infrastructure"
+licence: "Open Government Licence (FSA)"
+attribution_required: true

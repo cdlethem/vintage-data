@@ -1,0 +1,14 @@
+name: seed_lab_queue
+script: fetch_seed_lab_queue.py
+args: []
+schedule: "55 14 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "seed-lab sample-processing queue; business-day page, daily snapshots show queue age and throughput"
+rate_limit: "single page parse; no published limit"
+licence: "Oregon State University website terms"
+attribution_required: true

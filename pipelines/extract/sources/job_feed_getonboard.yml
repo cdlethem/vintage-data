@@ -1,0 +1,14 @@
+name: job_feed_getonboard
+script: fetch_job_feeds.py
+args: ["getonboard", "--max-pages", "10"]
+schedule: "36 6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Public Get on Board API adds Latin American and remote roles with structured seniority, modality and salary fields. Current feed fits in three 100-row pages; ten-page safety cap. Live-verified 2026-09-04."
+rate_limit: "at most 10 sequential pages once daily"
+licence: "public Get on Board API"
+attribution_required: true

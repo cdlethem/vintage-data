@@ -1,0 +1,16 @@
+name: job_boards_personio
+dag_factory: job_boards
+provider: personio
+script: fetch_job_boards.py
+args: ["--providers", "personio", "--max-per-board", "10000", "--workers", "2"]
+schedule: "15 6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 60
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Named-company Personio XML boards add German, Austrian and Swiss SMEs; live-verified 2026-09-04; independent provider task; poll daily."
+rate_limit: "public XML endpoint; two concurrent requests maximum with a 600ms global request gap; daily polling"
+licence: "public ATS board endpoints"
+attribution_required: false

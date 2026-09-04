@@ -47,6 +47,7 @@ Quirks that will bite you:
 
 Stdlib only.
 """
+import argparse
 import json
 import sys
 import urllib.error
@@ -127,11 +128,25 @@ def fetch_stops(lat: float, lng: float, month: str | None = None):
         }
 
 
-if __name__ == "__main__":
-    months = available_months()
-    print(json.dumps({"available_months": months[:3], "count": len(months)}))
-    lat = float(sys.argv[1]) if len(sys.argv) > 2 else 52.629729   # Leicester
-    lng = float(sys.argv[2]) if len(sys.argv) > 2 else -1.131592
-    latest = months[0] if months else None
-    for rec in fetch_crimes(lat, lng, latest):
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--lat", type=float, default=52.629729)   # Leicester
+    parser.add_argument("--lng", type=float, default=-1.131592)
+    parser.add_argument("--month", help="YYYY-MM; omit for the newest published month")
+    parser.add_argument("--stops", action="store_true",
+                        help="stop-and-search instead of street crime")
+    args = parser.parse_args()
+
+    month = args.month
+    if not month:
+        months = available_months()
+        print(json.dumps({"available_months": months[:3], "count": len(months)}),
+              file=sys.stderr)
+        month = months[0] if months else None
+    fetch = fetch_stops if args.stops else fetch_crimes
+    for rec in fetch(args.lat, args.lng, month):
         print(json.dumps(rec, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()

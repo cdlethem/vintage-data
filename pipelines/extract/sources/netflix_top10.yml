@@ -1,0 +1,14 @@
+name: netflix_top10
+script: fetch_netflix_top10.py
+args: []
+schedule: "5 12 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "latest official weekly Top 10 (global); streams only the newest week; sibling countries via --scope"
+rate_limit: "Netflix data-use terms; TSV files contain full history"
+licence: "Netflix data-use terms"
+attribution_required: true

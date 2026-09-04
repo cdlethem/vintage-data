@@ -1,0 +1,14 @@
+name: job_feed_remotive
+script: fetch_job_feeds.py
+args: ["remotive"]
+schedule: "39 6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Official public remote-jobs API; one full response daily with company, category, location eligibility and salary text. Live-verified 2026-09-04."
+rate_limit: "one request daily"
+licence: "public Remotive API"
+attribution_required: true

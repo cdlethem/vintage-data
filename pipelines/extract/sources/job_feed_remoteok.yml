@@ -1,0 +1,14 @@
+name: job_feed_remoteok
+script: fetch_job_feeds.py
+args: ["remoteok"]
+schedule: "42 6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Official public Remote OK API; one full response daily with tags, location and numeric salary bounds. Live-verified 2026-09-04."
+rate_limit: "one request daily"
+licence: "Remote OK public API terms"
+attribution_required: true

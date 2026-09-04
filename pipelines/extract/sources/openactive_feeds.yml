@@ -1,0 +1,14 @@
+name: openactive_feeds
+script: fetch_openactive_feeds.py
+args: []
+schedule: "10 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 55
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "RPDE change feed: bookable slots churn continuously as sessions are booked and cancelled, so poll hourly. Cursors are checkpointed per feed, so a steady-state run emits only what changed since the previous run; the initial backfill of all 149 Slot feeds spreads across runs via a round-robin resume."
+rate_limit: "one dashboard request plus resumed RPDE pages; bounded by a 45-minute wall-clock walking budget rather than page/item caps, so nothing is truncated"
+licence: "CC BY 4.0 from the respective providers"
+attribution_required: true

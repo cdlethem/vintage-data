@@ -1,0 +1,16 @@
+name: job_boards_rippling
+dag_factory: job_boards
+provider: rippling
+script: fetch_job_boards.py
+args: ["--providers", "rippling", "--max-per-board", "10000"]
+schedule: "15 6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 60
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Named-company Rippling ATS boards, live-verified 2026-09-04; independent provider task; poll daily."
+rate_limit: "public board endpoint; bounded concurrency; daily polling"
+licence: "public ATS board endpoints"
+attribution_required: false

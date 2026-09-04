@@ -1,0 +1,14 @@
+name: ireland_bathing_alerts
+script: fetch_ireland_bathing_alerts.py
+args: []
+schedule: "8-59/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "active bathing-water alerts; poll every 15-60 minutes during bathing season"
+rate_limit: "keyless EPA API"
+licence: "Ireland EPA open-data terms"
+attribution_required: true

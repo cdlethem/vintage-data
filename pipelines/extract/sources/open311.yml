@@ -1,0 +1,14 @@
+name: open311
+script: fetch_open311.py
+args: []
+schedule: "10-59/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Austin Open311 service-request lifecycle; read-only, one request per page"
+rate_limit: "anonymous reads limited to 10 requests/minute"
+licence: "open311 public data"
+attribution_required: true

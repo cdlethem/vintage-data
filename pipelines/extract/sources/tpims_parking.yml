@@ -1,0 +1,14 @@
+name: tpims_parking
+script: fetch_tpims_parking.py
+args: []
+schedule: "14-59/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "truck-parking availability across the live Illinois and Minnesota TPIMS feeds"
+rate_limit: "state DOTs publish the dynamic shape at least every five minutes; one request per region"
+licence: "State DOT terms"
+attribution_required: true

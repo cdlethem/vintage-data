@@ -1,0 +1,14 @@
+name: public_art_arcgis
+script: fetch_public_art_arcgis.py
+args: []
+schedule: "20 7 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Calgary + Tempe public-art inventories (both layers, 1s pause between hosts); per-city via --collection"
+rate_limit: "municipal ArcGIS FeatureServer; one request per layer"
+licence: "municipal open-data terms"
+attribution_required: true

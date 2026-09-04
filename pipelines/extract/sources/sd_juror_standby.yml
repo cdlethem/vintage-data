@@ -1,0 +1,14 @@
+name: sd_juror_standby
+script: fetch_sd_juror_standby.py
+args: []
+schedule: "35 */6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "telephone-standby reporting instructions per courthouse and service date; aggregate group ranges only"
+rate_limit: "single page parse; instructions change per service date"
+licence: "San Diego Superior Court website terms"
+attribution_required: true

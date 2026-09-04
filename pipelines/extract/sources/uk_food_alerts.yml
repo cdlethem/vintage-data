@@ -1,0 +1,14 @@
+name: uk_food_alerts
+script: fetch_uk_food_alerts.py
+args: []
+schedule: "45 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "FSA product recalls/food alerts (modified desc); poll hourly or daily"
+rate_limit: "OGL 3.0; Socrata id.json"
+licence: "OGL 3.0"
+attribution_required: true

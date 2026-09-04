@@ -1,0 +1,14 @@
+name: job_feed_weworkremotely
+script: fetch_job_feeds.py
+args: ["weworkremotely"]
+schedule: "54 6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Official public RSS feed; one full response daily with category, employment type, geography and descriptions. Live-verified 2026-09-04."
+rate_limit: "one RSS request daily"
+licence: "public We Work Remotely RSS feed"
+attribution_required: true

@@ -1,0 +1,14 @@
+name: hk_cremation_sessions
+script: fetch_hk_cremation_sessions.py
+args: []
+schedule: "5 */6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "15-day cremation-session availability per crematorium; captures release-to-book depletion"
+rate_limit: "FEHD limits repeated sessions and the docstring asks for only a few polls a day; host needs TLS legacy renegotiation"
+licence: "FEHD terms"
+attribution_required: true

@@ -6,6 +6,11 @@ possible_sources/
 # not project code either; same promotion path as above.
 staged_scripts/
 
+# Raw output of the discovery harness (candidate/vetting JSON) — working data,
+# not project code; anything worth keeping is promoted into
+# pipelines/extract/catalogs/.
+discovery/
+
 # Airflow runtime state (config, logs, generated passwords)
 orchestration/airflow_home/
 orchestration/.venv/

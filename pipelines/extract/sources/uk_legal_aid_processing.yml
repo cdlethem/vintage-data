@@ -1,0 +1,14 @@
+name: uk_legal_aid_processing
+script: fetch_uk_legal_aid_processing.py
+args: []
+schedule: "50 10 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "civil work processing frontiers; weekly GOV.UK tables, discover daily"
+rate_limit: "HTML table parse; Open Government Licence"
+licence: "Open Government Licence"
+attribution_required: true

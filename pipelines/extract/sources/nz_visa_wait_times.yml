@@ -1,0 +1,14 @@
+name: nz_visa_wait_times
+script: fetch_nz_visa_wait_times.py
+args: []
+schedule: "25 11 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "weekly work-visa processing wait times (median + 80th percentile)"
+rate_limit: "HTML table parse; no published limit"
+licence: "Immigration NZ public data"
+attribution_required: true

@@ -1,0 +1,14 @@
+name: uk_prison_estate
+script: fetch_uk_prison_estate.py
+args: []
+schedule: "35 6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "weekly prison population + estate capacity (ODS attachment); updates Monday, discover daily"
+rate_limit: "GOV.UK Content API + ODS attachment; Open Government Licence"
+licence: "Open Government Licence"
+attribution_required: true

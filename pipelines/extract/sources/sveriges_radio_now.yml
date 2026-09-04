@@ -1,0 +1,14 @@
+name: sveriges_radio_now
+script: fetch_sveriges_radio_now.py
+args: []
+schedule: "12-59/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "P1 (channel 132) previous/current/next scheduled episodes; five-minute snapshots"
+rate_limit: "Sveriges Radio API; a channel ID is required to receive episode detail"
+licence: "Sveriges Radio API terms"
+attribution_required: true

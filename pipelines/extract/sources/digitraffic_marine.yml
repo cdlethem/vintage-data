@@ -1,0 +1,14 @@
+name: digitraffic_marine
+script: fetch_digitraffic_marine.py
+args: []
+schedule: "1-59/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "aids-to-navigation fault collection refreshes every ten minutes"
+rate_limit: "CC BY 4.0; do not poll faster than the 10-minute refresh"
+licence: "CC BY 4.0"
+attribution_required: true

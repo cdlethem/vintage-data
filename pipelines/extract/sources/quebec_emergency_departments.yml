@@ -1,0 +1,14 @@
+name: quebec_emergency_departments
+script: fetch_quebec_emergency_departments.py
+args: []
+schedule: "10 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "hourly emergency-department operational census (rolling 7 days, cp1252)"
+rate_limit: "small CSV (~26 KB) updates hourly"
+licence: "Quebec open-government reuse terms"
+attribution_required: true

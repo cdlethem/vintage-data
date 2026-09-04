@@ -1,0 +1,14 @@
+name: thames_discharge
+script: fetch_thames_discharge.py
+args: []
+schedule: "13-59/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "storm-overflow discharge status (~573 locations); five-minute status snapshots"
+rate_limit: "Thames Water open-data v2"
+licence: "Thames Water open-data terms"
+attribution_required: true

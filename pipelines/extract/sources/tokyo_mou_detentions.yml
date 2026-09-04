@@ -1,0 +1,14 @@
+name: tokyo_mou_detentions
+script: fetch_tokyo_mou_detentions.py
+args: []
+schedule: "15 */4 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "current-month port-state-control detentions including release date and deficiencies; list updates in real time"
+rate_limit: "one public APCIS form submission per run"
+licence: "Tokyo MOU terms"
+attribution_required: true

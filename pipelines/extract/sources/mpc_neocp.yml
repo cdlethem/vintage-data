@@ -1,0 +1,14 @@
+name: mpc_neocp
+script: fetch_mpc_neocp.py
+args: []
+schedule: "9-59/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "current NEO confirmation-page candidates; appear, accumulate obs, then confirm or disappear"
+rate_limit: "MPC asks <=5 req/sec; this client makes one request per run"
+licence: "MPC (Minor Planet Center)"
+attribution_required: true

@@ -1,0 +1,21 @@
+name: malaysia_pricecatcher
+script: fetch_malaysia_pricecatcher.py
+args: ["--limit", "100"]
+schedule: "55 2 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 20
+sink: local
+
+backfill:
+  unit: month
+  start: "2022-01"
+  args: ["--month", "{yyyy}-{mm}"]
+  pace_seconds: 5
+  timeout_minutes: 30
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily retail shelf prices for the current Malaysia month; scans full month CSV to retain newest rows; configured for a paced historical monthly backfill from 2022-01"
+rate_limit: "CC BY 4.0; object can hold millions of rows; fetch once daily"
+licence: "CC BY 4.0"
+attribution_required: true

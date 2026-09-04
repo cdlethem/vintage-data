@@ -4,11 +4,11 @@ args: []
 schedule: "30 5 * * *"  # UTC
 enabled: true
 retries: 1
-timeout_minutes: 10
+timeout_minutes: 60
 sink: local
 
 # Vetting metadata (documentation only, not read by the DAG factory)
-cadence_note: "past months immutable, only current month changes; poll daily, one archive at a time"
-rate_limit: "per-IP throttling on parallel bursts; serial requests tolerated"
+cadence_note: "Fixed 2026-09-04: the prior config (args=[]) fell through to the script's placeholder default user 'erik', an arbitrary near-inactive account (~1 game/day) -- not deliberately chosen. args=[] now drives the script's own CURATED_WATCHLIST: 751 real titled players pulled live from chess.com's own /pub/titled/GM directory (1,739 real Grandmasters, verified live 2026-09-04) plus IM 'gothamchess' (Levy Rozman, the most-watched chess streamer). One run walks all 751 players' current-month archive (~2 requests/player at the script's existing 0.5s polite delay, ~15-25min typical, longer if chess.com is slow -- one player's failure is caught and skipped, not fatal to the run). Daily cadence is plenty; game history for a titled player doesn't need sub-daily granularity, and this keeps total daily request volume to shared chess.com infrastructure bounded and predictable."
+rate_limit: "per-IP throttling on parallel bursts; serial requests tolerated -- kept strictly serial (POLITE_DELAY=0.5s/request) even across 751 players, with per-player error handling so one throttled/deactivated account doesn't cost the rest"
 licence: "chess.com public API"
 attribution_required: false

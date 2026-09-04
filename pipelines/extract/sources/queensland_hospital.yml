@@ -1,0 +1,14 @@
+name: queensland_hospital
+script: fetch_queensland_hospital.py
+args: []
+schedule: "21-59/30 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "live emergency-department pressure for all 40 sitemap facilities; publisher refreshes every 15-30 minutes"
+rate_limit: "one request per facility page (40 to one host); every 30 minutes matches the publisher refresh"
+licence: "Queensland Health terms"
+attribution_required: true

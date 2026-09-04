@@ -1,0 +1,14 @@
+name: texas_scratch_prizes
+script: fetch_texas_scratch_prizes.py
+args: []
+schedule: "25 16 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "prize-level inventory for every current scratch game plus its as-of date; daily depletion and game closure"
+rate_limit: "one official CSV download per run"
+licence: "Texas Lottery terms"
+attribution_required: true

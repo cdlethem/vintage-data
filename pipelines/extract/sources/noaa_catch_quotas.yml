@@ -1,0 +1,14 @@
+name: noaa_catch_quotas
+script: fetch_noaa_catch_quotas.py
+args: []
+schedule: "45 13 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "quota and landings per share category across every published fishery year; open-year landings update as they load"
+rate_limit: "US federal public data; one report request per run"
+licence: "US federal public data"
+attribution_required: false

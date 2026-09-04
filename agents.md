@@ -495,3 +495,53 @@ collisions get `_2`.
   same bulk file every run (`openactive_feeds` re-lands ~550MB), `keep_payload:
   false` or `schema_detection: payload_only` is the fix — and DuckDB never
   returns freed space to the filesystem, so the existing file won't shrink.
+
+## Historical backfill operations (2026-09-04)
+
+`tools/backfill.py` is the operator runner. It reads optional `backfill:` blocks
+in source ymls, walks units oldest-first, and writes ordinary sink files plus
+manifests under the true historical `dt=YYYY-MM-DD` partition. It skips any
+unit whose manifest already exists, so it is safe to interrupt and restart:
+
+```bash
+python3 tools/backfill.py --plan
+python3 tools/backfill.py --concurrency 4
+pipelines/load/bin/loader submit --wait
+```
+
+Units within a source are sequential and paced; `--concurrency` only runs
+different sources in parallel. Failed units retry with quadratic backoff and
+stop that source after five consecutive failures. The loader service discovers
+backfill `.ndjson` files exactly like scheduled output and `_load.files` makes
+each committed path idempotent. Keep `extract-loader` active; never use
+`run-once` while it is running.
+
+The current configured scope is 11,766 units before smoke-test units are
+excluded on resume:
+
+| source | verified history | projected raw |
+|---|---|---:|
+| `malaysia_pricecatcher` | 2022-01 to 2026-09, monthly | 35.9 GB |
+| `infodengue` | 2010 onward, one national sweep | 4.1 GB |
+| `globe_measurements` | 1995-01-01 onward, daily | 220 MB |
+| `carbon_intensity` | 2018-01 onward, monthly | ~30 MB |
+| `uk_police` | 2023-08 to 2026-07, Leicester monthly | ~22 MB |
+
+Expected added raw volume is approximately **40.2 GB** and warehouse growth
+approximately another **40 GB** because `_payload` and RAW rows are retained.
+This is well below the current local free space (~1.7 TB), but loader throughput
+is the operational bottleneck: 400 files per scheduled load pass. Let the
+service drain continuously rather than manually loading the same files.
+
+The two probes already committed (one unit each for carbon, GLOBE and Malaysia)
+are intentionally treated as completed by the resume logic. If a probe is not
+representative, remove its sink file and ledger row before rerunning; RAW is
+insert-only and the loader does not deduplicate `(source, id)`.
+
+Sources already emitting their complete available history on every scheduled
+run do not need a separate backfill (for example `nsidc_sea_ice`,
+`smithsonian_volcanism`, `noaa_catch_quotas`, and `netflix_top10`). GOV.UK
+prison-estate historical slugs before 2026 returned 404 and were not guessed.
+TB-scale archives (`gh_archive`, `wspr_live`, full `stac_imagery`,
+`sensor_community`) remain intentionally unconfigured; estimate and get an
+object-store decision before attempting them.

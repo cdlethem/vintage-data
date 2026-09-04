@@ -1,0 +1,14 @@
+name: nc_lab_turnaround
+script: fetch_nc_lab_turnaround.py
+args: []
+schedule: "30 12 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "agronomic lab turnaround estimates; daily snapshots expose seasonal queue pressure"
+rate_limit: "single HTML page parse; no published limit"
+licence: "North Carolina public-information terms"
+attribution_required: true

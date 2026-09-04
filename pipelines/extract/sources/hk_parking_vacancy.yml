@@ -1,0 +1,14 @@
+name: hk_parking_vacancy
+script: fetch_hk_parking_vacancy.py
+args: []
+schedule: "7-59/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "city-wide real-time car-park vacancy across vehicle categories"
+rate_limit: "DATA.GOV.HK; no faster than every ten minutes"
+licence: "DATA.GOV.HK reuse terms"
+attribution_required: true

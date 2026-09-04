@@ -1,0 +1,21 @@
+name: infodengue
+script: fetch_infodengue.py
+args: []
+schedule: "20 14 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 120
+sink: local
+
+backfill:
+  unit: single
+  start: "2010"
+  args: ["--start-year", "2010", "--end-year", "2026", "--limit", "0"]
+  pace_seconds: 3
+  timeout_minutes: 180
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Rebuilt 2026-09-04: the prior config tracked one municipality (Rio de Janeiro). Verified live 2026-09-04 that IBGE's own public municipalities directory lists all 5,571 real Brazilian municipalities with official geocodes, and a random 10-municipality sample (all small, non-capital towns) all returned real InfoDengue weekly case/Rt data -- Brazil's SINAN arbovirus surveillance system covers essentially the whole country. The scheduled sweep discovers every municipality and emits its 10 most-recent weeks; the historical backfill uses one epidemiological-year-range request per municipality for complete 2010-2026 history. The sweep sleeps 0.3s between requests; one municipality erroring is logged and skipped, not fatal to the rest. Weekly series revised retrospectively; daily polling captures those revisions."
+rate_limit: "unpublished; kept to a 0.3s per-request delay across the full national sweep (~5,571 requests) to stay a good citizen of a small academic API"
+licence: "InfoDengue — attribution required"
+attribution_required: true
