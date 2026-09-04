@@ -247,3 +247,9 @@ behind a seam, and this is honestly what each swap costs:
 The rule the repo tries to hold: a deployment choice belongs in a config file
 with one implementation per choice behind a registry, and anything a *machine*
 decides (paths, accounts, ports, model, contact address) never enters git.
+
+## License
+
+MIT — see [LICENSE](LICENSE). The fetchers only read public, keyless APIs;
+each script's docstring records that source's own terms and attribution
+requirements, which this license does not override.
