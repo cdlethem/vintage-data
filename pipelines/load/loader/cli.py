@@ -110,11 +110,13 @@ def cmd_status(args) -> int:
     destination = _readonly_destination(config)
     try:
         destination.connect()
+        rows = destination.summary()
     except Exception as exc:
+        # Also covers a warehouse that exists but has no ledger yet.
         print(f"warehouse   unreadable right now ({exc})")
+        destination.close()
         return 0
     try:
-        rows = destination.summary()
         loaded = sum(r["files_loaded"] or 0 for r in rows)
         total = sum(r["rows_loaded"] or 0 for r in rows)
         print(f"warehouse   {len(rows)} tables, {loaded} files loaded, {total:,} rows")
@@ -158,7 +160,11 @@ def cmd_sql(args) -> int:
     config = load_config(args.config)
     query = sys.stdin.read() if args.query == "-" else args.query
     destination = _readonly_destination(config)
-    destination.connect()
+    try:
+        destination.connect()
+    except Exception as exc:
+        print(f"warehouse unreadable right now ({exc})", file=sys.stderr)
+        return 2
     try:
         if args.utc:
             destination.con.execute("SET timezone = 'UTC'")

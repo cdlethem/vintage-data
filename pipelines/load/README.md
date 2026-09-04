@@ -239,6 +239,25 @@ block each other and both say so plainly:
 This is also why `run-once` must not be used while the service is up: it will sit in
 `connect()` retrying the lock. Use `submit --wait`.
 
+### A file has a malformed line
+
+One unparseable line fails its whole file by default: that is a broken fetcher,
+and it should be loud rather than silently short a few rows. The file is retried
+until `max_attempts`, after which it is no longer picked up — and because those
+rows are simply missing from RAW, the job result now reports `files_abandoned`
+separately from `files_skipped`, and the service logs a warning naming the files.
+Watch for it:
+
+```sql
+SELECT path, attempts, error FROM _load.files
+WHERE status = 'failed' AND attempts >= 3;
+```
+
+If the source is upstream junk you cannot fix, set `on_malformed_lines: skip` for
+it. The file then loads, and each bad line still occupies its line number as a row
+with a NULL `_payload` — so `_file_row_num` keeps matching the file and
+`WHERE _payload IS NULL` finds exactly what was lost.
+
 ### A file failed
 
 ```sql

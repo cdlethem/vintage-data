@@ -68,6 +68,13 @@ defaults:
   keep_payload: true         # keep the verbatim record, so nothing is ever lost
   detect_temporal: true      # ISO-8601 strings become date / timestamp columns
   min_age_s: 60              # ignore files younger than this (may still be committing)
+  # What to do when a line in a sink file is not valid JSON. `fail` (default) is
+  # loud: the file fails, is retried, and after max_attempts stops being picked
+  # up — a malformed line means a broken fetcher and should be fixed there.
+  # `skip` loads the file anyway; the bad line still occupies its line number,
+  # as a row with a NULL _payload, so `WHERE _payload IS NULL` finds them and
+  # _file_row_num still matches the file.
+  on_malformed_lines: fail
   # Types pinned regardless of what inference sees. The extract envelope is
   # pinned so every RAW table joins and dedupes the same way, whatever a
   # particular source happens to put in `id`.

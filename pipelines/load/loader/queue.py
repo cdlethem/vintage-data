@@ -92,13 +92,18 @@ class JobQueue:
                 os.replace(path, target)
             except OSError:
                 continue  # someone else got it; shouldn't happen with one writer
+            # The filename carries the id the submitter waits on, so a job we
+            # cannot parse still gets its result published there rather than
+            # leaving load_runner blocked for the full wait_timeout_s.
+            job_id = path.stem.split("_", 1)[-1]
             try:
                 body = json.loads(target.read_text())
-            except json.JSONDecodeError:
-                self.complete(Job("malformed", {}, target),
-                              {"status": "failed", "error": f"malformed job {path.name}"})
+            except (json.JSONDecodeError, OSError) as exc:
+                self.complete(Job(job_id, {}, target),
+                              {"status": "failed",
+                               "errors": [f"unreadable job {path.name}: {exc}"]})
                 continue
-            return Job(body.get("job_id", target.stem), body, target)
+            return Job(body.get("job_id", job_id), body, target)
         return None
 
     def recover(self) -> list[str]:

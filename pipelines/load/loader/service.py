@@ -29,6 +29,11 @@ from .schema import infer_columns, sanitize, table_columns
 
 log = logging.getLogger(__name__)
 
+#: Ceiling on records held in memory for one source's inference in one job,
+#: and the floor each file still contributes so no file goes unsampled.
+MAX_SAMPLE_RECORDS = 20_000
+MIN_SAMPLE_PER_FILE = 5
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -120,6 +125,7 @@ class LoaderService:
             "submitted_at": job.body.get("submitted_at"),
             "started_at": started.isoformat(),
             "files_seen": 0, "files_loaded": 0, "files_failed": 0, "files_skipped": 0,
+            "files_abandoned": 0,
             "rows_loaded": 0, "by_source": {}, "errors": [],
         }
         try:
@@ -162,12 +168,17 @@ class LoaderService:
                          sources=body.get("sources"),
                          min_age_s=body.get("min_age_s", self.config.defaults.min_age_s))
         ledger = self.destination.ledger()
-        candidates, skipped = [], 0
+        candidates, skipped, abandoned = [], 0, []
         for file in found:
             if not self.config.for_source(file.source).enabled:
                 skipped += 1
                 continue
-            if self.destination.should_skip(file.key, ledger):
+            reason = self.destination.should_skip(file.key, ledger)
+            if reason:
+                # "Out of attempts" is not the same as "already loaded": those
+                # rows are missing from RAW and nothing else would ever say so.
+                if "max_attempts" in reason:
+                    abandoned.append(file.key)
                 skipped += 1
                 continue
             candidates.append(file)
@@ -178,13 +189,18 @@ class LoaderService:
         truncated = False
         if max_files and len(candidates) > max_files:
             candidates, truncated = candidates[:max_files], True
-        return found, candidates, skipped, truncated
+        return found, candidates, skipped, truncated, abandoned
 
     def _run_load(self, job: Job, load_id: str, result: dict) -> None:
-        found, candidates, skipped, truncated = self._candidates(job)
+        found, candidates, skipped, truncated, abandoned = self._candidates(job)
         result["files_seen"] = len(found)
         result["files_skipped"] = skipped
         result["files_pending_after"] = truncated
+        result["files_abandoned"] = len(abandoned)
+        if abandoned:
+            log.warning("%d file(s) have exhausted max_attempts and are no longer "
+                        "retried; their rows are NOT in the warehouse: %s",
+                        len(abandoned), ", ".join(a.rsplit("/", 1)[-1] for a in abandoned[:5]))
         log.info("job %s: %d files in sink, %d already loaded/skipped, %d to load%s",
                  job.job_id, len(found), skipped, len(candidates),
                  " (capped by max_files)" if truncated else "")
@@ -194,6 +210,14 @@ class LoaderService:
             by_source[file.source].append(file)
 
         for source, files in by_source.items():
+            if self._stop:
+                # Before _columns_for, not just before the file loop: sampling and
+                # DDL for a source we are about to abandon wastes shutdown budget
+                # and records schema changes for rows that never land.
+                log.warning("stopping; %d source(s) left for the next run",
+                            len(by_source) - len(result["by_source"]))
+                result["files_pending_after"] = True
+                break
             settings = self.config.for_source(source)
             table = settings.table or sanitize(source, fallback="source")
             stats = {"files": 0, "rows": 0, "failed": 0, "table": table}
@@ -217,7 +241,8 @@ class LoaderService:
                     outcome = self.destination.load_file(LoadRequest(
                         source=source, table=table, file=file, columns=columns,
                         load_id=load_id, loaded_at=_utcnow(),
-                        keep_payload=settings.keep_payload))
+                        keep_payload=settings.keep_payload,
+                        ignore_malformed_lines=settings.on_malformed_lines == "skip"))
                     stats["files"] += 1
                     stats["rows"] += outcome.rows
                     result["files_loaded"] += 1
@@ -236,11 +261,21 @@ class LoaderService:
             result["by_source"][source] = stats
 
     def _columns_for(self, source, table, files, settings, load_id):
-        """Infer the source's columns from a sample, then evolve the table."""
+        """Infer the source's columns from a sample, then evolve the table.
+
+        The per-file budget is divided so a large batch still sees every file
+        without holding the whole batch's records in memory: 400 files at
+        ``sample_lines`` each would be 200k parsed dicts resident at once, and
+        a first backfill is exactly the batch that hits that.
+        """
+        per_file = settings.sample_lines
+        if per_file and len(files) > 1:
+            per_file = max(MIN_SAMPLE_PER_FILE,
+                           min(per_file, MAX_SAMPLE_RECORDS // len(files)))
         sample: list[dict] = []
         malformed = 0
         for file in files:
-            records, bad = sample_records(file.path, settings.sample_lines)
+            records, bad = sample_records(file.path, per_file)
             sample.extend(records)
             malformed += bad
         if malformed:

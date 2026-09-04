@@ -44,6 +44,7 @@ import pathlib
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
@@ -51,9 +52,8 @@ from datetime import date, datetime, timedelta, timezone
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "orchestration" / "include"))
 
-import yaml  # noqa: E402  (after sys.path setup)
-
-from sinks import get_sink  # noqa: E402
+import yaml
+from sinks import get_sink
 
 SCRIPTS_DIR = REPO_ROOT / "pipelines" / "extract" / "scripts"
 SOURCES_DIR = REPO_ROOT / "pipelines" / "extract" / "sources"
@@ -163,6 +163,13 @@ def run_unit(cfg: dict, unit: dict, timeout_s: int) -> dict:
                                      errors="replace", delete=True) as err:
         proc = subprocess.Popen([sys.executable, str(script), *args], cwd=SCRIPTS_DIR,
                                 stdout=subprocess.PIPE, stderr=err, text=True)
+        # proc.wait(timeout=) below only bounds the wait *after* stdout hits EOF,
+        # so a script that hangs mid-stream would block the read loop forever and
+        # stall the whole (per-source sequential) walk. This watchdog is what
+        # actually enforces the documented per-unit timeout_minutes.
+        watchdog = threading.Timer(timeout_s, proc.kill)
+        watchdog.daemon = True
+        watchdog.start()
         try:
             with sink.writer(name, unit["dt"], filename) as out:
                 for line in proc.stdout:
@@ -179,6 +186,8 @@ def run_unit(cfg: dict, unit: dict, timeout_s: int) -> dict:
             proc.wait()
             sink.discard()
             raise
+        finally:
+            watchdog.cancel()
         err.seek(0)
         stderr = err.read().strip()
 
@@ -191,6 +200,7 @@ def run_unit(cfg: dict, unit: dict, timeout_s: int) -> dict:
         "duration_s": round((datetime.now(timezone.utc) - started).total_seconds(), 3),
         "exit_code": returncode,
         "records": records,
+        "bytes": bytes_written,
     }
     if returncode != 0:
         meta["error"] = stderr[-500:] if stderr else None
@@ -297,9 +307,11 @@ def main():
             root = get_sink(cfg.get("sink", "local")).root
             done = sum(1 for u in units if unit_paths(root, cfg["name"], u)[1].exists())
             grand += len(units) - done
+            span = (f"first={units[0]['id']} last={units[-1]['id']}" if units
+                    else "(no units in range)")
             print(f"{cfg['name']:32s} {cfg['backfill'].get('unit','single'):7s} "
                   f"units={len(units):6d} done={done:6d} todo={len(units)-done:6d} "
-                  f"first={units[0]['id']} last={units[-1]['id']}")
+                  f"{span}")
         print(f"\ntotal units to fetch: {grand}")
         return 0
 

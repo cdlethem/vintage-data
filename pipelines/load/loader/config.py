@@ -21,10 +21,17 @@ DEFAULT_CONFIG = REPO_ROOT / "pipelines" / "load" / "config" / "load.yml"
 _ENV_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
 
 
+def _env(match: re.Match) -> str:
+    """``${VAR:-default}`` with shell semantics: the default also wins when the
+    variable is set but empty. An ``EXTRACT_WAREHOUSE=`` line in airflow.env
+    should mean "unset", not "the current directory is the database"."""
+    return os.environ.get(match.group(1)) or match.group(2) or ""
+
+
 def _expand(value: Any) -> Any:
     """Interpolate ``${VAR}`` / ``${VAR:-default}`` through a parsed yml tree."""
     if isinstance(value, str):
-        return _ENV_RE.sub(lambda m: os.environ.get(m.group(1), m.group(2) or ""), value)
+        return _ENV_RE.sub(_env, value)
     if isinstance(value, dict):
         return {k: _expand(v) for k, v in value.items()}
     if isinstance(value, list):
@@ -48,6 +55,7 @@ class SourceSettings:
     keep_payload: bool = True           # retain the verbatim record as _payload
     detect_temporal: bool = True        # promote ISO-8601 strings to date/timestamp
     min_age_s: int = 60                 # ignore files younger than this
+    on_malformed_lines: str = "fail"    # fail | skip (see load.yml for what skip does)
     column_types: dict[str, str] = field(default_factory=dict)  # forced, pre-inference
     exclude_keys: list[str] = field(default_factory=list)       # keep in _payload only
 

@@ -143,7 +143,9 @@ def infer_columns(records, settings) -> list[Column]:
             if not isinstance(record, dict):
                 continue
             for key, value in record.items():
-                if key in excluded or key in forced:
+                if key in excluded:
+                    continue          # stays in _payload only, never a column
+                if key in forced:
                     observed.setdefault(key, None)
                     continue
                 if value is None:

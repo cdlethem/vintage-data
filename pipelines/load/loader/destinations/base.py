@@ -37,6 +37,8 @@ class LoadRequest:
     load_id: str
     loaded_at: datetime
     keep_payload: bool
+    #: drop unparseable NDJSON lines instead of failing the whole file
+    ignore_malformed_lines: bool = False
 
 
 @dataclass

@@ -208,15 +208,19 @@ class DuckDBDestination(Destination):
             return text
         return f"TRY_CAST({text} AS {self.native_type(column.type)})"
 
-    def _relation(self) -> str:
+    def _relation(self, ignore_malformed: bool = False) -> str:
         """One NDJSON file as ``(payload, _rn)``, in file order.
 
         ``preserve_insertion_order`` is on by default, so ``row_number()``
         matches the physical line number — that is what makes ``_row_id``
         (file + line) a stable identity for a record.
         """
+        # ignore_errors drops unparseable lines rather than failing the file --
+        # off by default, because a malformed line means a broken fetcher and
+        # should be loud, but reachable via a source's on_malformed_lines.
         return (f"(SELECT json AS payload, row_number() OVER () AS _rn "
-                f"FROM read_ndjson_objects(?, maximum_object_size={MAX_OBJECT_SIZE}))")
+                f"FROM read_ndjson_objects(?, maximum_object_size={MAX_OBJECT_SIZE}, "
+                f"ignore_errors={'true' if ignore_malformed else 'false'}))")
 
     # -- data -------------------------------------------------------------
     def load_file(self, request: LoadRequest) -> LoadResult:
@@ -260,7 +264,7 @@ class DuckDBDestination(Destination):
 
         columns_sql = ", ".join(self.quote(c.name) for c in request.columns)
         sql = (f"INSERT INTO {target} ({columns_sql}) SELECT {', '.join(select)} "
-               f"FROM {self._relation()}")
+               f"FROM {self._relation(request.ignore_malformed_lines)}")
         params.append(path)
 
         self.con.execute("BEGIN TRANSACTION")
