@@ -13,13 +13,13 @@ from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "pipelines" / "extract" / "scripts"))
+sys.path.insert(0, str(ROOT / "extract" / "scripts"))
 from job_boards_lib.adapters import FETCHERS  # noqa: E402
 from job_boards_lib.catalog import INDUSTRIES  # noqa: E402
 from job_boards_lib.common import ISO2  # noqa: E402
 
 DISCOVERY = ROOT / "discovery"
-OUTPUT = ROOT / "pipelines" / "extract" / "catalogs" / "job_boards.json"
+OUTPUT = ROOT / "extract" / "catalogs" / "job_boards.json"
 
 # provider/token -> canonical (company, HQ country, primary industry)
 OVERRIDES = {

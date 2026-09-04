@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from sinks import get_sink
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-SCRIPTS_DIR = REPO_ROOT / "pipelines" / "extract" / "scripts"
+SCRIPTS_DIR = REPO_ROOT / "extract" / "scripts"
 ENVELOPE = ("source", "fetched_at", "id")
 
 log = logging.getLogger(__name__)
@@ -30,7 +30,8 @@ def run(cfg: dict) -> dict:
     started = datetime.now(timezone.utc)
     filename = f"{name}_{started.strftime('%Y%m%dT%H%M%SZ')}.ndjson"
 
-    sink = get_sink(cfg.get("sink", "local"))
+    # A source may pin its sink; otherwise EXTRACT_SINK decides (config.env).
+    sink = get_sink(cfg.get("sink"))
     records = 0
     bytes_written = 0
 

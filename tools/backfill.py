@@ -55,8 +55,8 @@ sys.path.insert(0, str(REPO_ROOT / "orchestration" / "include"))
 import yaml
 from sinks import get_sink
 
-SCRIPTS_DIR = REPO_ROOT / "pipelines" / "extract" / "scripts"
-SOURCES_DIR = REPO_ROOT / "pipelines" / "extract" / "sources"
+SCRIPTS_DIR = REPO_ROOT / "extract" / "scripts"
+SOURCES_DIR = REPO_ROOT / "extract" / "sources"
 ENVELOPE = ("source", "fetched_at", "id")
 
 

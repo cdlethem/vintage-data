@@ -1,7 +1,7 @@
 """The load DAG: scan the sink, load what's new into the warehouse RAW schema.
 
 One task, one job, one writer. The DAG's own settings (schedule, per-run file
-cap, timeouts) come from ``pipelines/load/config/load.yml``, so the whole load
+cap, timeouts) come from ``load/config/load.yml``, so the whole load
 layer is configured in one place, the same way each extract source is.
 
 Backfill and incremental are the same operation here: the job loads every sink

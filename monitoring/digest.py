@@ -2,9 +2,9 @@
 """Build a compact health digest of the extract pipeline's landed data.
 
 Reads only the data directory, the source ymls, and source_types.json —
-no Airflow access needed, so it runs under any Python 3.10+ with stdlib.
-Output (stdout) is one JSON object per source plus a summary line, compact
-enough to paste into a small model's context.
+no Airflow access needed. Run it with the orchestration Python environment,
+which provides croniter. Output (stdout) is one JSON object per source plus
+a summary line, compact enough to paste into a small model's context.
 
 Usage: digest.py [--window-hours N] [--json]
 """
@@ -16,10 +16,22 @@ import statistics
 import sys
 from datetime import datetime, timedelta, timezone
 
+from croniter import CroniterError, croniter
+
 HERE = pathlib.Path(__file__).resolve().parent
 REPO = HERE.parent
-SOURCES_DIR = REPO / "pipelines" / "extract" / "sources"
-DATA_ROOT = pathlib.Path(os.environ.get("EXTRACT_DATA_ROOT", "~/dev/data/extract")).expanduser()
+SOURCES_DIR = REPO / "extract" / "sources"
+
+# The pipeline's data root is a deployment fact, not a guess: load the same
+# env file the systemd units load, so a hand-run digest and the scheduled one
+# read the same sink. Anything already exported wins.
+sys.path.insert(0, str(REPO / "orchestration" / "include"))
+import deployment  # noqa: E402
+
+deployment.load_env()
+DATA_ROOT = pathlib.Path(
+    os.environ.get("EXTRACT_DATA_ROOT", "~/.local/share/vintage-data/extract")
+).expanduser()
 TYPES = json.loads((HERE / "source_types.json").read_text())
 
 
@@ -34,6 +46,25 @@ def read_yml(path):
     return cfg
 
 
+def cron_gap_minutes(schedule: str, now: datetime) -> int:
+    """Return the largest interval around now for a five-field UTC cron."""
+    if not isinstance(schedule, str) or len(schedule.split()) != 5:
+        raise ValueError("schedule must be a five-field cron expression")
+
+    before = croniter(schedule, now + timedelta(microseconds=1))
+    after = croniter(schedule, now)
+    occurrences = sorted([
+        before.get_prev(datetime),
+        before.get_prev(datetime),
+        after.get_next(datetime),
+        after.get_next(datetime),
+    ])
+    return int(max(
+        (right - left).total_seconds() / 60
+        for left, right in zip(occurrences, occurrences[1:])
+    ))
+
+
 def load_ids(path, limit=20000):
     ids, recs = set(), {}
     with open(path, encoding="utf-8") as f:
@@ -46,7 +77,8 @@ def load_ids(path, limit=20000):
     return ids, recs
 
 
-def check_source(name, cfg, window_start):
+def check_source(name, cfg, window_start, *, now=None):
+    now = now or datetime.now(timezone.utc)
     meta = TYPES.get(name, {})
     src_dir = DATA_ROOT / "raw" / f"source={name}"
     manifests = sorted(src_dir.glob("dt=*/*.meta.json"))
@@ -57,12 +89,18 @@ def check_source(name, cfg, window_start):
         "runs_in_window": 0,
         "zero_record_runs": 0,
         "last_run_age_min": None,
-        "expected_gap_min": meta.get("expected_gap_minutes"),
+        "expected_gap_min": None,
         "stale": None,
         "records_last": None,
         "records_median": None,
         "bytes_last": None,
     }
+    try:
+        gap = cron_gap_minutes(cfg["schedule"], now)
+        out["expected_gap_min"] = gap
+    except (KeyError, TypeError, ValueError, CroniterError) as exc:
+        gap = None
+        out["schedule_error"] = f"invalid schedule {cfg.get('schedule')!r}: {exc}"
     if meta.get("notes"):
         out["notes"] = meta["notes"]
     # Merge success + failure events on a timeline so we can tell "flaky but
@@ -107,13 +145,12 @@ def check_source(name, cfg, window_start):
                 out["zero_record_runs"] += 1
     last = json.loads(manifests[-1].read_text())
     last_started = datetime.fromisoformat(last["started_at"])
-    age_min = (datetime.now(timezone.utc) - last_started).total_seconds() / 60
+    age_min = (now - last_started).total_seconds() / 60
     out["last_run_age_min"] = round(age_min, 1)
     out["records_last"] = last["records"]
     out["bytes_last"] = last["bytes"]
     if window_records:
         out["records_median"] = statistics.median(window_records)
-    gap = meta.get("expected_gap_minutes")
     if gap and out["enabled"]:
         out["stale"] = age_min > 2 * gap + 10
 
@@ -150,6 +187,8 @@ def classify(r):
     else is OK — so a healthy pipeline needs no model call at all."""
     if not r.get("enabled", True):
         return "OK"  # intentionally paused; not a health signal
+    if r.get("schedule_error"):
+        return "PROBLEM"  # monitoring config invalid — cadence is unknown
     if r.get("value_keys_missing"):
         return "PROBLEM"  # monitoring misconfig — the drift check is blind
     if r.get("stale"):
@@ -176,18 +215,19 @@ def main():
     ap.add_argument("--triage", action="store_true",
                     help="print STATUS: line + only WATCH/PROBLEM source objects")
     args = ap.parse_args()
-    window_start = datetime.now(timezone.utc) - timedelta(hours=args.window_hours)
+    now = datetime.now(timezone.utc)
+    window_start = now - timedelta(hours=args.window_hours)
 
     results = []
     for yml in sorted(SOURCES_DIR.glob("*.yml")):
         cfg = read_yml(yml)
-        r = check_source(cfg.get("name", yml.stem), cfg, window_start)
+        r = check_source(cfg.get("name", yml.stem), cfg, window_start, now=now)
         r["status"] = classify(r)
         results.append(r)
 
     problems = [r["source"] for r in results if r["status"] == "PROBLEM"]
     watches = [r["source"] for r in results if r["status"] == "WATCH"]
-    gen = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    gen = now.isoformat(timespec="seconds")
 
     if args.triage:
         # Compact: a verdict line plus only the sources needing a look. This is

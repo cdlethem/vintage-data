@@ -1,7 +1,7 @@
 # Extract pipeline: scheduling & operations notes
 
 Durable notes for agents doing four kinds of work here: (1) promoting fetchers
-from `staged_scripts/` into the scheduled pipeline, (2) debugging why a
+from `discovery/staged_scripts/` into the scheduled pipeline, (2) debugging why a
 scheduled source isn't producing data, (3) making a source fetch only new or
 changed data instead of re-downloading a near-identical payload, (4) operating
 the load layer. Last full pass: 2026-09-04 — all 133 staged scripts are
@@ -12,21 +12,23 @@ the backlog rather than trusting this file's counts.
 ## Pipeline at a glance
 
 ```
-pipelines/extract/sources/*.yml        one config per scheduled source instance
+extract/sources/*.yml                  one config per scheduled source instance
   -> parsed by orchestration/dags/extract_dags.py   (DAG factory, one DAG per yml)
   -> each DAG runs orchestration/include/extract_runner.py
-       subprocess: python pipelines/extract/scripts/fetch_X.py [args...]
+       subprocess: python extract/scripts/fetch_X.py [args...]
        stdout = NDJSON, each line carrying source/fetched_at/id
   -> orchestration/include/sinks.py (LocalSink) writes the raw file + manifest
 
   -> orchestration/dags/load_dag.py (load__raw, every 15 min) submits a job
   -> $EXTRACT_LOAD_QUEUE (filesystem queue), claimed serially by
-  -> extract-loader.service = pipelines/load/loader (the only warehouse writer)
-  -> ~/dev/data/warehouse/extract.duckdb : raw.<source> insert-only + _load.*
+  -> extract-loader.service = load/loader (the only warehouse writer)
+  -> $EXTRACT_WAREHOUSE (duckdb) : raw.<source> insert-only + _load.*
 ```
 
-Raw output: `$EXTRACT_DATA_ROOT/raw/source=<name>/dt=<date>/<name>_<ts>.ndjson`
-(default root `~/dev/data/extract`, currently `/home/colin/dev/data/extract`).
+Raw output: `$EXTRACT_DATA_ROOT/raw/source=<name>/dt=<date>/<name>_<ts>.ndjson`.
+`EXTRACT_DATA_ROOT` and `EXTRACT_WAREHOUSE` are set per machine in
+`orchestration/config.env` and rendered into `orchestration/airflow.env`; read
+them from the environment, never assume a path.
 Every run also writes `<file>.ndjson.meta.json` (success manifest, written
 even for a valid zero-record run — the empty staged file is just dropped) or
 `<file>.ndjson.fail.json` (failure marker, written instead of raising silently
@@ -59,9 +61,9 @@ with genuinely independent availability. Do not add per-source branching to
 ### Job-board catalog (data, not code)
 
 `fetch_job_boards.py` holds no company list. The watchlist is
-`pipelines/extract/catalogs/job_boards.json` (1,829 boards, 53 HQ countries,
+`extract/catalogs/job_boards.json` (1,829 boards, 53 HQ countries,
 35 industries), and provider endpoints/pagination/throttling live once in
-`pipelines/extract/scripts/job_boards_lib/`, shared with the tooling.
+`extract/scripts/job_boards_lib/`, shared with the tooling.
 
 - Adding companies is a data change; adding an ATS is one adapter in
   `job_boards_lib/adapters.py` plus one `job_boards_<provider>.yml`.
@@ -75,14 +77,14 @@ with genuinely independent availability. Do not add per-source branching to
   file order decide. Resolve it explicitly in that script's `OVERRIDES`.
 - A 429 means "unknown", not "dead" — retry later; do not delete the entry.
 
-## Task 1: schedule new fetchers from staged_scripts/
+## Task 1: schedule new fetchers from discovery/staged_scripts/
 
 ### Finding the real backlog
 
-Never infer "scheduled" from `pipelines/extract/scripts/` file existence.
-Parse every `pipelines/extract/sources/*.yml`, collect each config's `script`
+Never infer "scheduled" from `extract/scripts/` file existence.
+Parse every `extract/sources/*.yml`, collect each config's `script`
 value into a set, and subtract that set from the `fetch_*.py` filenames in
-`staged_scripts/`. (`len(yml files) != len(distinct scripts)` is normal — one
+`discovery/staged_scripts/`. (`len(yml files) != len(distinct scripts)` is normal — one
 script can back several instances, e.g. `gbfs_citibike.yml` /
 `gbfs_divvy.yml` both use `fetch_gbfs.py`.)
 
@@ -90,19 +92,19 @@ script can back several instances, e.g. `gbfs_citibike.yml` /
 import yaml
 from pathlib import Path
 root = Path(".")
-staged = sorted((root/"staged_scripts").glob("fetch_*.py"))
+staged = sorted((root/"discovery/staged_scripts").glob("fetch_*.py"))
 cfg_scripts = {yaml.safe_load(p.read_text())["script"]
-               for p in (root/"pipelines/extract/sources").glob("*.yml")}
+               for p in (root/"extract/sources").glob("*.yml")}
 unscheduled = [p.name for p in staged if p.name not in cfg_scripts]
 ```
 
 ### Promotion convention
 
-`staged_scripts/` is retained, not moved — every fetcher there keeps its
+`discovery/staged_scripts/` is retained, not moved — every fetcher there keeps its
 original copy permanently. Promoting means:
 
-1. Copy the fetcher **unchanged** into `pipelines/extract/scripts/`.
-2. Add `pipelines/extract/sources/<name>.yml`, key order:
+1. Copy the fetcher **unchanged** into `extract/scripts/`.
+2. Add `extract/sources/<name>.yml`, key order:
    `name`, `script`, `args`, `schedule` (with trailing `# UTC` comment),
    `enabled`, `retries`, `timeout_minutes`, `sink`, blank line, then the
    vetting-metadata comment, `cadence_note`, `rate_limit`, `licence`,
@@ -126,7 +128,7 @@ original copy permanently. Promoting means:
    case where this mattered.
 8. DAG factory required keys are only `name`, `script`, `schedule`
    (`orchestration/dags/extract_dags.py`, `REQUIRED_KEYS`). It also verifies
-   the referenced script file exists under `pipelines/extract/scripts/`.
+   the referenced script file exists under `extract/scripts/`.
    Everything else has defaults (`retries` default 1, `timeout_minutes`
    default 10, `max_active_runs=1` always).
 
@@ -160,18 +162,21 @@ attributable to one source and upstreams aren't hammered:
 
 ### Environment / topology
 
-- Airflow env vars: `orchestration/airflow.env` (checked in) +
+- Machine-local config: `orchestration/config.env` (gitignored) is the source
+  of truth; `orchestration/setup/render_config.sh` renders
+  `orchestration/airflow.env` and every systemd unit from it. Never edit
+  `airflow.env` or a unit file by hand — the next render overwrites it. Secrets
+  (DB password, JWT secret, model API keys) live in
   `orchestration/airflow.secrets.env` (gitignored, source it too).
 - Python: `orchestration/.venv/bin/python` / `.../bin/airflow` (uv-managed
   venv, see `orchestration/setup/03_airflow_venv.sh`). `PYTHONPATH` must
   include `orchestration/include` for `extract_runner`/`sinks` imports —
   `airflow.env` sets this.
-- Five systemd services should all report `active`:
-  `airflow-api-server`, `airflow-scheduler`, `airflow-dag-processor`,
-  `airflow-worker@1`, `airflow-worker@2`.
+- Systemd services (worker count is `AIRFLOW_WORKERS` in `config.env`; two
+  here) should all report `active`:
   ```
   systemctl is-active airflow-api-server airflow-scheduler \
-    airflow-dag-processor airflow-worker@1 airflow-worker@2
+    airflow-dag-processor airflow-worker@1 airflow-worker@2 extract-loader
   ```
 - To list what Airflow has actually discovered:
   ```
@@ -279,7 +284,7 @@ keyset, as imdb does). A stateful script MUST:
    state). Neither flag belongs in the yml `args` — the defaults are correct
    for the scheduled instance.
 2. Resolve the default path from `$EXTRACT_DATA_ROOT` with the same
-   `~/dev/data/extract` fallback the sink uses, so a script run by hand and
+   `~/.local/share/vintage-data/extract` fallback the sink uses, so a script run by hand and
    the same script run by a worker share one watermark. Verified: the worker
    writes `state/crossref.json`, and the next hand-run honours it.
 3. Write state **only after every record has been printed**, and write it
@@ -385,14 +390,14 @@ Ranked by waste removed. Each still re-fetches a mostly-identical payload:
 
 ## Task 4: the load layer (raw files -> warehouse)
 
-Full design notes: `pipelines/load/README.md`, which has a step-by-step of what
+Full design notes: `load/README.md`, which has a step-by-step of what
 one job does plus a troubleshooting section. What an agent needs on hand:
 
 ```
 sink files -> orchestration/dags/load_dag.py (submits a job, waits)
            -> $EXTRACT_LOAD_QUEUE/{pending,running,done}/*.json
-           -> extract-loader.service = pipelines/load/loader (the only writer)
-           -> ~/dev/data/warehouse/extract.duckdb : raw.<source> + _load.*
+           -> extract-loader.service = load/loader (the only writer)
+           -> ~/.local/share/vintage-data/warehouse/extract.duckdb : raw.<source> + _load.*
 ```
 
 ### Rules that explain most surprising behaviour
@@ -400,14 +405,14 @@ sink files -> orchestration/dags/load_dag.py (submits a job, waits)
 - **One writer, always.** DuckDB's file lock is exclusive: while the service
   holds a connection nothing else can open the file, not even read-only. The
   service closes it after `service.idle_release_s` of quiet, so read-only access
-  (`pipelines/load/bin/loader sql`, or `duckdb -readonly` if you install the
+  (`load/bin/loader sql`, or `duckdb -readonly` if you install the
   standalone CLI — it is not on this box) works between loads, and
   `loader status` degrades to "warehouse unreadable right now" rather than
   hanging. Never add a second
   process that writes; submit a job instead.
 - **Never run `run-once` while the service is up** — it will sit in `connect()`
   retrying the lock until `lock_timeout_s`. Use
-  `pipelines/load/bin/loader submit --wait`.
+  `load/bin/loader submit --wait`.
 - **Backfill is not a mode.** A job loads every sink file absent from the
   `_load.files` ledger, so the first run and the 15-minute run are one code path.
 - **Insert-only, no dedupe.** To re-load a file you must delete *both* its
@@ -424,9 +429,9 @@ sink files -> orchestration/dags/load_dag.py (submits a job, waits)
 - **A failed file is not a stuck pipeline.** `_load.files.status='failed'` with
   `attempts`; retried until `max_attempts` (3), then skipped so one poison file
   can't make every run red.
-- The loader has its own venv (`pipelines/load/.venv`, driver + yaml only).
+- The loader has its own venv (`load/.venv`, driver + yaml only).
   Airflow's venv deliberately has no warehouse driver; don't add one there.
-- Use the `pipelines/load/bin/loader` wrapper, not `python -m loader` — it puts
+- Use the `load/bin/loader` wrapper, not `python -m loader` — it puts
   the package on PYTHONPATH (so it works from any cwd) and sources `airflow.env`,
   so the CLI can't end up pointed at a different warehouse than the service.
 
@@ -455,7 +460,7 @@ JSON), `$EXTRACT_LOAD_QUEUE/done/<job_id>.json` (kept 7 days), and `_load.jobs`
 
 ### Debugging a schema question
 
-`pipelines/load/bin/loader inspect <source>` shows what inference would produce
+`load/bin/loader inspect <source>` shows what inference would produce
 without writing anything — that is the first command for any "why is this column
 a VARCHAR" question. `_load.schema_changes` then says when the live table last
 moved and why:
@@ -506,7 +511,7 @@ unit whose manifest already exists, so it is safe to interrupt and restart:
 ```bash
 python3 tools/backfill.py --plan
 python3 tools/backfill.py --concurrency 4
-pipelines/load/bin/loader submit --wait
+load/bin/loader submit --wait
 ```
 
 Units within a source are sequential and paced; `--concurrency` only runs

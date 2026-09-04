@@ -1,0 +1,95 @@
+# Load layer configuration. One file describes where raw data comes from,
+# which warehouse it goes to, and how much is decided automatically.
+#
+# ${VAR} and ${VAR:-default} are interpolated from the environment, so the same
+# file works under systemd, in Airflow, and from a shell.
+
+# Which entry of `destinations` is live. Swapping warehouses is this one line
+# plus a destination class — nothing above the destination layer changes.
+destination: duckdb_local
+
+destinations:
+  duckdb_local:
+    type: duckdb
+    database: ${EXTRACT_WAREHOUSE:-~/.local/share/vintage-data/warehouse/extract.duckdb}
+    # Machine-dependent: set in orchestration/config.env, not here.
+    threads: ${EXTRACT_WAREHOUSE_THREADS:-4}
+    memory_limit: ${EXTRACT_WAREHOUSE_MEMORY_LIMIT:-4GB}
+    # How long connect() waits out an ad-hoc reader holding the file lock.
+    lock_timeout_s: 120
+    # A file that has failed this many times stops being retried every run.
+    max_attempts: 3
+
+  # Sketches of what the same layer looks like elsewhere; both need their
+  # Destination subclass before they can be selected.
+  #
+  # bigquery_dev:
+  #   type: bigquery
+  #   project: my-project
+  #   location: US
+  #   staging_bucket: gs://my-bucket/extract-load
+  #
+  # snowflake_dev:
+  #   type: snowflake
+  #   account: abc12345
+  #   warehouse: LOADING_WH
+  #   database: EXTRACT
+  #   stage: "@EXTRACT.RAW.SINK_STAGE"
+
+paths:
+  # The extract sink: source=<name>/dt=<date>/<name>_<ts>.ndjson
+  source_root: ${EXTRACT_DATA_ROOT:-~/.local/share/vintage-data/extract}/raw
+  # Job queue between Airflow and the writer service.
+  queue_dir: ${EXTRACT_LOAD_QUEUE:-~/.local/share/vintage-data/extract/_load_queue}
+
+schemas:
+  raw: raw       # one insert-only table per source
+  meta: _load    # ledger: files, jobs, schema_changes
+
+service:
+  poll_interval_s: 5
+  # Close the warehouse after this long with no work, so `duckdb` on the
+  # command line can attach. DuckDB allows one writer *or* readers, never both.
+  idle_release_s: 15
+  done_retention_days: 7
+
+dag:
+  dag_id: load__raw
+  schedule: "*/15 * * * *"   # UTC
+  max_files_per_run: 400     # keeps one scheduled run bounded
+  timeout_minutes: 45
+  wait_timeout_s: 2400
+
+# Applied to every source unless its block below overrides them.
+defaults:
+  enabled: true
+  table: null                # default: the source name
+  schema_detection: auto     # auto = infer typed columns | payload_only = _payload only
+  sample_lines: 500          # records per file fed to inference; 0 = every line
+  keep_payload: true         # keep the verbatim record, so nothing is ever lost
+  detect_temporal: true      # ISO-8601 strings become date / timestamp columns
+  min_age_s: 60              # ignore files younger than this (may still be committing)
+  # What to do when a line in a sink file is not valid JSON. `fail` (default) is
+  # loud: the file fails, is retried, and after max_attempts stops being picked
+  # up — a malformed line means a broken fetcher and should be fixed there.
+  # `skip` loads the file anyway; the bad line still occupies its line number,
+  # as a row with a NULL _payload, so `WHERE _payload IS NULL` finds them and
+  # _file_row_num still matches the file.
+  on_malformed_lines: fail
+  # Types pinned regardless of what inference sees. The extract envelope is
+  # pinned so every RAW table joins and dedupes the same way, whatever a
+  # particular source happens to put in `id`.
+  column_types:
+    source: string
+    id: string
+    fetched_at: timestamp
+  exclude_keys: []           # keys to leave in _payload only
+
+# Per-source overrides, keyed by sink source name. Absent = pure defaults.
+sources: {}
+  # imdb_ratings:
+  #   sample_lines: 2000       # very wide records, worth a deeper sample
+  # openactive_feeds:
+  #   schema_detection: payload_only   # shape varies per publisher
+  # noisy_source:
+  #   enabled: false

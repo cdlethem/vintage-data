@@ -1,35 +1,38 @@
 # monitoring
 
-Recurring sanity checks on the extract pipeline's output, designed to be run
-by a **small local model** on a schedule. The expensive judgment is kept small
-by doing all the objective work deterministically first.
+Deterministic health analysis of the extract pipeline's output. The expensive
+judgment — *is this flag real?* — belongs to the `pipeline_check` bot
+(`bots/pipeline_check/`); everything objective happens here, in ordinary code,
+first.
 
 ## Two stages
 
-1. **`digest.py` — deterministic triage.** Reads the landed data
-   (`$EXTRACT_DATA_ROOT`), the source ymls, and `source_types.json`, and for
-   every source computes staleness, run/failure counts, id-novelty (feeds),
-   value-drift (status sources), and record-count trends — then classifies each
-   as `OK` / `WATCH` / `PROBLEM`. No model involved. `--triage` prints just the
-   verdict line plus the flagged sources.
+1. **`digest.py` — deterministic triage (this directory).** Reads the landed
+   data (`$EXTRACT_DATA_ROOT`), the source ymls, and `source_types.json`. For
+   every source it derives the expected gap from the yml's five-field UTC cron
+   schedule, computes staleness, run/failure counts, id-novelty (feeds),
+   value-drift (status sources), and record-count trends, then classifies the
+   source as `OK` / `WATCH` / `PROBLEM`. No model involved. `--triage` prints
+   just the verdict line plus the flagged sources.
 
-2. **`run_check.sh` — model only on the flags.** If triage says everything is
-   `OK`, it writes an OK report with **no model call**. Otherwise it hands the
-   model *only* the flagged sources and a focused prompt (`PROMPT.md`), asking
-   it to judge each against its known-normal `notes` and label it
-   DISMISS / WARN / INVESTIGATE. Small input, small output — a local model
-   finishes in a couple of minutes.
+2. **`bot__pipeline_check` — model only on the flags.** The bot takes the
+   triage output as its context. If triage says `OK` it writes an OK report and
+   **calls no model at all**. Otherwise it sends only the flagged sources and a
+   focused prompt (`bots/pipeline_check/prompt.md`) to whichever model alias
+   this machine configures, asking for DISMISS / WARN / INVESTIGATE per source.
 
 ```
-python3 digest.py                 # full per-source digest (all 27)
-python3 digest.py --triage        # verdict + flagged sources only
-./run_check.sh --dry-run          # what the model would receive
-./run_check.sh                    # triage + model assessment -> reports/
+../orchestration/.venv/bin/python digest.py           # full per-source digest
+../orchestration/.venv/bin/python digest.py --triage  # verdict + flags only
+../orchestration/.venv/bin/python ../bots/bin/run_bot pipeline_check --dry-run
+../orchestration/.venv/bin/python ../bots/bin/run_bot pipeline_check
 ```
+
 
 ## What "healthy" means per source
 
-`source_types.json` encodes each source's `type` and known quirks:
+`source_types.json` encodes each source's behavioral `type` and known quirks;
+the source yml `schedule` is the sole cadence authority:
 
 - **feed** — new ids should appear across a real interval; `id_novelty` ~0 on a
   fast feed is the warning (but quiet hours/weekends are normal — see `notes`).
@@ -46,9 +49,10 @@ correctly.
 
 ## Triage rules (why a flag fires)
 
-- `PROBLEM`: `stale`, or `consecutive_failures >= 3` (down now), or
-  `value_keys_missing` (the drift check is misconfigured), or a fast source
-  that has never produced (`no_data_yet` with a sub-daily gap).
+- `PROBLEM`: invalid or missing cron schedule (`schedule_error`), `stale`,
+  `consecutive_failures >= 3` (down now), `value_keys_missing` (the drift
+  check is misconfigured), or a fast source that has never produced
+  (`no_data_yet` with a sub-daily cron-derived gap).
 - `WATCH`: isolated failures that already recovered (`failed_runs >= 1` but
   `consecutive_failures = 0`), or a fast feed/status source showing no
   novelty/drift this cycle.
@@ -59,12 +63,14 @@ correctly.
 
 ## Scheduling
 
-`systemd/install.sh` installs a timer that runs the check every 30 minutes
-(`extract-monitor.timer`). It's cheap when healthy (triage only). The model
-call happens solely when a source is flagged, and pre-flights the llama-server
-so a saturated model makes the check skip rather than queue.
+The check runs as an Airflow DAG (`bot__pipeline_check`, every 30 minutes) like
+every other recurring job in this repo — no separate timer. It is cheap when
+healthy: the model is invoked only on a flag, and a busy local model server
+makes the run skip rather than queue.
 
-The model is omp's `local` provider — the **Qwen3.8-27B on :8080**
-(`~/.omp/agent/models.yml`). Override with `MODEL=`, `MAXT=`, `SLOTS_URL=`.
+Which model answers is not this directory's business: the bot names a *model
+alias* and `bots/models.yml` (gitignored, per-machine) maps that alias to
+OpenRouter, an Anthropic key, a local llama-server, or a CLI agent. See
+[`bots/README.md`](../bots/README.md).
 
-Reports land in `reports/` (gitignored).
+Reports land in `bots/runs/pipeline_check/` (gitignored).

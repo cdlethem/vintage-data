@@ -1,4 +1,4 @@
-"""DAG factory: one Airflow DAG per pipelines/extract/sources/*.yml.
+"""DAG factory: one Airflow DAG per extract/sources/*.yml.
 
 Adding a source means adding a yml, never a DAG file. Each yml is parsed
 inside its own try/except so a malformed config skips only itself — the
@@ -16,7 +16,7 @@ from airflow.providers.standard.operators.python import PythonOperator
 import extract_runner
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SOURCES_DIR = REPO_ROOT / "pipelines" / "extract" / "sources"
+SOURCES_DIR = REPO_ROOT / "extract" / "sources"
 REQUIRED_KEYS = ("name", "script", "schedule")
 
 log = logging.getLogger(__name__)

@@ -1,23 +1,31 @@
-# Source-discovery working directory (LLM vetting harness) — not project code.
-# Vetted scripts are promoted by copying into pipelines/extract/scripts/.
-possible_sources/
+# Machine-local configuration. Everything path-, host- or account-specific
+# lives in these two files; every other tracked file is portable.
+# (copy them from config.example.env / bots/models.example.yml)
+orchestration/config.env
+bots/models.yml
 
-# Staging area for vetted fetch_*.py scripts awaiting promotion/scheduling —
-# not project code either; same promotion path as above.
-staged_scripts/
-
-# Raw output of the discovery harness (candidate/vetting JSON) — working data,
-# not project code; anything worth keeping is promoted into
-# pipelines/extract/catalogs/.
-discovery/
-
-# Airflow runtime state (config, logs, generated passwords)
-orchestration/airflow_home/
-orchestration/.venv/
-pipelines/load/.venv/
+# Generated from the files above by orchestration/setup/render_config.sh
+orchestration/airflow.env
+orchestration/generated/
 
 # Secrets — airflow.secrets.env.example is the checked-in template
 orchestration/airflow.secrets.env
 
+# Airflow runtime state (config, logs, generated passwords) and virtualenvs
+orchestration/airflow_home/
+orchestration/.venv/
+load/.venv/
+
+# Bot run output
+bots/runs/
+
+# Source-discovery workbench: the vetting harness, its evidence trail, and the
+# raw candidate JSON it emits. discovery/staged_scripts/ IS tracked: those are
+# vetted fetchers awaiting promotion into extract/.
+discovery/possible_sources/
+discovery/*.json
+discovery/*.ndjson
+
 __pycache__/
 *.pyc
+.ruff_cache/

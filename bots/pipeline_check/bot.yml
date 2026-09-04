@@ -1,0 +1,32 @@
+# Pipeline health check. Two-stage by design, so it is cheap enough to run on
+# a schedule: deterministic triage classifies every source, and the model is
+# asked only about the ones triage flagged. A healthy pipeline costs 0 tokens.
+name: pipeline_check
+description: assess sources that deterministic triage flagged
+schedule: "*/30 * * * *"     # UTC
+enabled: true
+
+# Model alias from bots/models.yml. Commented out on purpose: this bot takes
+# whatever that file calls `default`, so the machine decides. Name an alias
+# here (e.g. `model: openrouter`) to pin this bot to one model.
+# model: openrouter
+
+prompt: prompt.md
+timeout_minutes: 15
+keep_report_days: 30
+
+# Deterministic evidence, gathered before the model is involved. monitoring/
+# owns this logic; the bot only decides what to do with the result. Program and
+# cwd paths are repo-root-relative.
+context:
+  DIGEST:
+    command: ["orchestration/.venv/bin/python", "digest.py", "--triage",
+              "--window-hours", "24"]
+    cwd: monitoring
+    timeout_s: 300
+
+# Everything healthy: finish without a model call at all.
+gate:
+  context: DIGEST
+  skip_if_matches: "(?m)^STATUS: OK"
+  skip_report: "VERDICT: OK — triage clean, no model call."

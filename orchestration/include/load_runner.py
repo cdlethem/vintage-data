@@ -3,7 +3,7 @@
 The DAG never opens the warehouse. It submits a job to the loader queue and
 waits for the single writer service to publish the result — so Airflow needs
 no warehouse driver, no credentials, and can't collide with another writer.
-Everything that touches the destination lives in ``pipelines/load/loader``.
+Everything that touches the destination lives in ``load/loader``.
 """
 import json
 import logging
@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime, timezone
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-LOAD_ROOT = REPO_ROOT / "pipelines" / "load"
+LOAD_ROOT = REPO_ROOT / "load"
 if str(LOAD_ROOT) not in sys.path:
     sys.path.insert(0, str(LOAD_ROOT))
 

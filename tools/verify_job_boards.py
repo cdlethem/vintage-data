@@ -27,7 +27,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "pipelines" / "extract" / "scripts"))
+sys.path.insert(0, str(ROOT / "extract" / "scripts"))
 
 from job_boards_lib.adapters import count, is_permanent_miss  # noqa: E402
 

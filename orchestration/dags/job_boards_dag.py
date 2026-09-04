@@ -18,7 +18,7 @@ from airflow.sdk import DAG, TaskGroup
 log = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SOURCES_DIR = REPO_ROOT / "pipelines" / "extract" / "sources"
+SOURCES_DIR = REPO_ROOT / "extract" / "sources"
 REQUIRED = ("name", "provider", "script", "schedule")
 
 # Each config is validated in its own try/except, like extract_dags.py: a bad
