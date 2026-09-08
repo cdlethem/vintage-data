@@ -77,6 +77,23 @@ def _models(tmp: str, aliases=("fake",), *, capabilities=None) -> pathlib.Path:
     return path
 
 
+class ReportContractTest(unittest.TestCase):
+    def test_prompt_includes_actual_report_contract(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = _cfg(tmp, _context_values={"CTX": {}})
+            budget = bot_runner.RunBudget(dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=1), 0)
+            prompt, _, _ = bot_runner.build_prompt(cfg, budget)
+            schema = json.loads(prompt.split("exact output schema:\n", 1)[1])
+            self.assertEqual("SourceDiscoveryV2", schema["title"])
+            self.assertIn("proposals", schema["properties"])
+
+    def test_schema_failure_reports_fields_without_model_values(self):
+        with self.assertRaises(bot_runner.BotError) as caught:
+            bot_runner._json_report('{"private_value":"sensitive-example"}', {"output": {"schema": "source_discovery_v2"}})
+        self.assertIn("missing", str(caught.exception))
+        self.assertNotIn("sensitive-example", str(caught.exception))
+
+
 class RunnerDeadlineTest(unittest.TestCase):
     def test_one_wall_clock_budget_exhaustion_skips_context_model_and_persistence(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -6,7 +6,7 @@ from typing import Any, Literal
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from .report_schemas import ExecutorAdmissionV2, ReviewerAdmissionV2, RunEnvelopeV1
+from .report_schemas import ExecutorAdmissionV2, ReviewerAdmissionV2, RunEnvelopeV1, UsageV1
 
 CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
@@ -262,6 +262,7 @@ class UsageSummaryResponse(StrictBody):
 
 
 class RunReportItem(StrictBody):
+    usage_total: UsageV1 | None = None
     report_id: str
     bot: str
     dag_id: str
@@ -279,7 +280,7 @@ class RunReportItem(StrictBody):
     duration_ms: int
     context: dict[str, Any]
     attempts: list[dict[str, Any]]
-    requests: int = Field(ge=0)
+    requests: int | None = Field(default=None, ge=0)
     input_tokens: int | None = Field(default=None, ge=0)
     output_tokens: int | None = Field(default=None, ge=0)
     cached_input_tokens: int | None = Field(default=None, ge=0)

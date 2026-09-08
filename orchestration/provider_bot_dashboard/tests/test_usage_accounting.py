@@ -18,6 +18,19 @@ from airflow.providers.vintage.bot_dashboard.service import SpendCapReached, cla
 
 
 class UsageAccountingTest(unittest.TestCase):
+    def test_serialized_reports_match_internal_query_response(self):
+        from airflow.providers.vintage.bot_dashboard.api_models import RunQueryResponse
+        from airflow.providers.vintage.bot_dashboard.service import run_report_dict
+        with Session(self.engine) as session:
+            for name, usage in [("unknown", None), ("measured", self._usage(2, 3, 4, 5))]:
+                persist_run_envelope(session, self._envelope(name, usage_total=usage))
+            session.commit()
+            items = [run_report_dict(row, include_payload=True) for row in session.scalars(select(RunReport))]
+            result = RunQueryResponse.model_validate({"items": items})
+            self.assertEqual(2, len(result.items))
+            self.assertIsNone(result.items[0].usage_total)
+            self.assertEqual(5, result.items[1].usage_total.total_tokens)
+
     def setUp(self):
         self.engine = create_engine("sqlite:///:memory:")
         metadata.create_all(self.engine)

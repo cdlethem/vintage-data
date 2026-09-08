@@ -410,6 +410,13 @@ def build_prompt(cfg: dict, budget: RunBudget) -> tuple[str, dict[str, Any], dic
     unresolved = sorted(set(re.findall(r"\{\{([A-Z0-9_]+)\}\}", prompt)))
     if unresolved:
         raise BotError(f"prompt has unresolved context placeholders: {unresolved}")
+    from airflow.providers.vintage.bot_dashboard.report_schemas import SCHEMAS
+    report_model = SCHEMAS.get(cfg["output"]["schema"])
+    if report_model is None:
+        raise BotError("unknown output schema")
+    prompt += "\n\nReturn one JSON object conforming to this exact output schema:\n" + json.dumps(
+        report_model.model_json_schema(), separators=(",", ":"), ensure_ascii=False
+    )
     digest = {
         "sha256": hashlib.sha256(canonical_context).hexdigest(),
         "byte_count": len(canonical_context),
@@ -497,7 +504,15 @@ def _json_report(text: str, cfg: dict) -> dict:
     try:
         return validate_named_report(cfg["output"]["schema"], parsed)
     except (ValueError, TypeError) as exc:
-        raise BotError("model report failed its named schema") from exc
+        # Report field locations/types, never model-provided values or URLs.
+        from pydantic import ValidationError
+        details = ""
+        if isinstance(exc, ValidationError):
+            details = ": " + "; ".join(
+                f"{'.'.join(map(str, error['loc']))}: {error['type']}"
+                for error in exc.errors(include_input=False, include_context=False)[:8]
+            )
+        raise BotError("model report failed its named schema" + details) from exc
 
 
 def _failure_detail(exc: Exception) -> str:
