@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_noaa_catch_quotas_observed_at_day
+          yRef:
+            field: fct_noaa_catch_quotas_average_quota_remaining_value
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed quota remaining value
+    layout:
+      stack: true
+      xField: fct_noaa_catch_quotas_observed_at_day
+      yField:
+      - fct_noaa_catch_quotas_average_quota_remaining_value
+  type: cartesian
+description: Observation-weighted mean typed quota remaining stacked by the eight observed `share_category`
+  values on each collection day. The source has four populated days, and categories are not additive balances.
+metricQuery:
+  dimensions:
+  - fct_noaa_catch_quotas_observed_at_day
+  - fct_noaa_catch_quotas_share_category
+  exploreName: fct_noaa_catch_quotas
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_noaa_catch_quotas_average_quota_remaining_value
+  sorts:
+  - descending: true
+    fieldId: fct_noaa_catch_quotas_average_quota_remaining_value
+  - descending: false
+    fieldId: fct_noaa_catch_quotas_observed_at_day
+  tableCalculations: []
+name: Mean quota remaining by share category
+pivotConfig:
+  columns:
+  - fct_noaa_catch_quotas_share_category
+slug: fct-noaa-catch-quotas-remaining-by-share
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_noaa_catch_quotas_observed_at_day
+  - fct_noaa_catch_quotas_share_category
+  - fct_noaa_catch_quotas_average_quota_remaining_value
+tableName: fct_noaa_catch_quotas
+version: 1

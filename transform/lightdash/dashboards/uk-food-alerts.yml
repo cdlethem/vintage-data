@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Week
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 603e81d4-503c-591f-8a94-d423a3d05413
+    label: 'Uk food alert observation: Status label'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_food_alert_observation_status_label
+      tableName: fct_uk_food_alert_observation
+    values: []
+  - disabled: true
+    id: bfc9eec5-56ce-5bd9-898d-ae0b6d87c3df
+    label: 'Uk food alert observation: Reporting business'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_food_alert_observation_reporting_business
+      tableName: fct_uk_food_alert_observation
+    values: []
+  - disabled: true
+    id: 9592b7c2-72fe-5a05-995a-bb8897153174
+    label: 'Uk food alert observation: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_food_alert_observation_source
+      tableName: fct_uk_food_alert_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Uk Food Alerts
+slug: uk-food-alerts
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of food safety alerts published by the UK Food Standards Agency.
+      Each row is one alert at one extractor fetch timestamp, identified by the publisher source, alert
+      identifier, and fetched_at. Repeated copies from later insert-only raw loads are reduced to the
+      latest loaded record while the nested alert payload and load lineage remain available for audit
+      and replay.
+
+
+      **Grain:** source, alert_id, fetched_at
+
+
+      **What changes here:** alerts created over time and the businesses most often named in food safety
+      notices.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `uk_food_alerts` — licence: OGL 3.0; attribution required: True. Source configuration: `extract/sources/uk_food_alerts.yml`.'
+    hideFrame: false
+    title: Uk food alert observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Uk food alert observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct food alerts created each week
+    chartSlug: fct-uk-food-alert-observation-alerts-created-weekly
+    hideTitle: false
+    title: Distinct food alerts created each week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Reporting businesses named each week
+    chartSlug: fct-uk-food-alert-observation-businesses-named-weekly
+    hideTitle: false
+    title: Reporting businesses named each week
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct alerts by reporting business each week
+    chartSlug: fct-uk-food-alert-observation-alerts-by-business
+    hideTitle: false
+    title: Distinct alerts by reporting business each week
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Alerts modified by reporting business each week
+    chartSlug: fct-uk-food-alert-observation-modified-alerts-by-business
+    hideTitle: false
+    title: Alerts modified by reporting business each week
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Uk food alert observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct alert by status label
+    chartSlug: fct-uk-food-alert-observation
+    hideTitle: false
+    title: Distinct alert by status label
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Uk food alert observation — observations
+    chartSlug: fct-uk-food-alert-observation-details
+    hideTitle: false
+    title: Uk food alert observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

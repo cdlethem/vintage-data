@@ -1,0 +1,318 @@
+version: 2
+models:
+- name: fct_malaysia_blood_donations
+  description: Daily physical history of Malaysia blood-donation observations. Each row records one source
+    observation identifier and fetch timestamp, with its reported date, state, blood type, and donation
+    count. Insert-only reloads of the same observation are reduced to the latest loaded copy while extractor
+    and load lineage are kept for audit and replay. The publisher timestamp is retained as source text
+    because the feed emits an RFC-style GMT string that is not consistently parseable as a warehouse timestamp.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, observation_id, fetched_at
+      label: Malaysia blood donations
+      group_label: Malaysia blood donations
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: malaysia_blood_donation_obs_e084d5
+      vintage:
+        visualization:
+          dimension: state
+          metric: average_donation_count
+          time: fetched_at
+          window_days: 30
+          title: Mean observed donation count by state
+          description: Mean observed donation count by `state` in the selected observation window. Number
+            of donations reported for the state, blood type, and donation date. Each retained observation
+            has equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+            a latest-value measure or an additive total.
+          detail_fields:
+          - fetched_at
+          - observation_id
+          - state
+          - donation_count
+          - source_loaded_at
+          sources:
+          - '`malaysia_blood_donations` — licence: CC BY 4.0; attribution required: True. Source configuration:
+            `extract/sources/malaysia_blood_donations.yml`.'
+          analysis:
+            headline: how reported blood-donation volume changes by donation date across the published feed.
+            event_time: donation_date
+            grain: DAY
+            controls:
+            - state
+            - blood_type
+            trends:
+            - slug: donation-observations
+              kind: total
+              metric: distinct_observations
+              time: donation_date
+              grain: DAY
+              title: Distinct donation observations per day
+              description: Distinct `observation_id` values by reported `donation_date`. This is one
+                state and blood-type feed's daily observation level, not a sum of donations across repeated
+                snapshots — dates with no publisher record are absent rather than zero.
+              width: half
+            - slug: donation-level
+              kind: total
+              metric: average_donation_count
+              time: donation_date
+              grain: DAY
+              title: Mean reported donations per day
+              description: Mean `donation_count` among retained observations for each reported `donation_date`.
+                Repeated snapshots and irregular polling receive equal row weight, so this is a reported
+                level rather than an additive flow; dates absent from the source are absent rather than zero.
+              width: half
+            - slug: observations-by-state
+              kind: breakdown
+              metric: distinct_observations
+              breakdown: state
+              top_n: 2
+              time: donation_date
+              grain: DAY
+              title: Donation observations by state
+              description: Distinct donation observations per reported day, split by `state`. The feed currently
+                contains one observed state, so the chart intentionally shows that single series rather than
+                implying nationwide coverage; missing source dates are absent rather than zero.
+              width: full
+            - slug: observations-by-blood-type
+              kind: composition
+              metric: distinct_observations
+              breakdown: blood_type
+              top_n: 2
+              time: donation_date
+              grain: DAY
+              title: Donation observations by blood type
+              description: Distinct donation observations per reported day, stacked by `blood_type`. Only the
+                observed blood type is present in this extract and no remainder is fabricated; absent dates
+                are absent rather than zero.
+              width: full
+  columns:
+  - name: malaysia_blood_donation_observation_key
+    description: Stable hash of the source, source observation identifier, and fetch timestamp defining
+      the row grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Malaysia blood donation observation key
+          hidden: true
+          name: malaysia_blood_donation_obs_e084d5
+  - name: source
+    description: Source-system label supplied by the Malaysia blood-donation feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: observation_id
+    description: Source-provided identifier for the date, state, and blood-type observation.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_observations:
+            type: count_distinct
+            label: Distinct donation observations
+            description: Distinct source `observation_id` values among matching donation records. Repeated
+              snapshots count once within each filter group, so this tracks published observation coverage.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Observation id
+          hidden: false
+  - name: fetched_at
+    description: Timestamp when the extractor fetched the publisher response containing this observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: donation_date
+    description: Calendar date for which the blood-donation count is reported.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Donation date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: state
+    description: Malaysian state or federal territory reporting the donations.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: State
+          hidden: false
+  - name: blood_type
+    description: Blood type category for the reported donation count.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Blood type
+          hidden: false
+  - name: donation_count
+    description: Number of donations reported for the state, blood type, and donation date.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_donation_count:
+            type: average
+            label: Mean observed donation count
+            description: Mean observed donation count by `state` in the selected observation window. Number
+              of donations reported for the state, blood type, and donation date. Each retained observation
+              has equal weight; polling frequency and repeated snapshots can affect the mean. This is
+              not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Donation count
+          hidden: false
+          format: '#,##0'
+  - name: publisher_updated_at
+    description: Publisher-provided last-update timestamp retained as source text from the RFC-style GMT
+      field.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publisher updated at
+          hidden: false
+  - name: _row_id
+    description: Load-layer row identifier of the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: _dt
+    description: Load-layer partition date associated with the retained raw observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: Timestamp when the extract job that produced the retained observation started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _load_id
+    description: Identifier of the load operation that inserted the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted the retained raw observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer content hash of the retained raw observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

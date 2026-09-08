@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ri_shelter_stats_species
+          yRef:
+            field: fct_ri_shelter_stats_average_intake_count
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_ri_shelter_stats_species
+      yField:
+      - fct_ri_shelter_stats_average_intake_count
+  type: cartesian
+description: Mean observed intake count by `species` in the selected observation window. Total animals
+  reported in the publisher's intake category. Each retained observation has equal weight; polling frequency
+  and repeated snapshots can affect the mean. This is not a latest-value measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_ri_shelter_stats_species
+  exploreName: fct_ri_shelter_stats
+  filters:
+    dimensions:
+      and:
+      - id: d9b86e73-5ee0-5fa9-b36e-f2061353621e
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_ri_shelter_stats_observed_at
+        values:
+        - 30
+      id: 98c605c7-3989-5e28-82e3-c041db2b2e2b
+  limit: 20
+  metrics:
+  - fct_ri_shelter_stats_average_intake_count
+  sorts:
+  - descending: true
+    fieldId: fct_ri_shelter_stats_average_intake_count
+  tableCalculations: []
+name: Mean observed intake count by species
+slug: fct-ri-shelter-stats
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ri_shelter_stats_species
+  - fct_ri_shelter_stats_average_intake_count
+tableName: fct_ri_shelter_stats
+version: 1

@@ -16,6 +16,7 @@ import statistics
 import sys
 from datetime import datetime, timedelta, timezone
 
+import yaml
 from croniter import CroniterError, croniter
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -26,7 +27,8 @@ SOURCES_DIR = REPO / "extract" / "sources"
 # env file the systemd units load, so a hand-run digest and the scheduled one
 # read the same sink. Anything already exported wins.
 sys.path.insert(0, str(REPO / "orchestration" / "include"))
-import deployment  # noqa: E402
+import cadence_plan
+import deployment
 
 deployment.load_env()
 DATA_ROOT = pathlib.Path(
@@ -36,14 +38,13 @@ TYPES = json.loads((HERE / "source_types.json").read_text())
 
 
 def read_yml(path):
-    """Minimal flat 'key: value' parser — the source ymls use nothing deeper."""
-    cfg = {}
-    for line in path.read_text().splitlines():
-        line = line.split("#", 1)[0].rstrip() if not line.lstrip().startswith("#") else ""
-        if ":" in line:
-            k, v = line.split(":", 1)
-            cfg[k.strip()] = v.strip().strip('"')
-    return cfg
+    """Parse a source config.
+
+    Real YAML, not a flat key/value scan: the configs now carry nested blocks
+    (``cadence``, ``backfill``) and the cadence block decides which schedule
+    this source is actually judged against.
+    """
+    return yaml.safe_load(path.read_text()) or {}
 
 
 def cron_gap_minutes(schedule: str, now: datetime) -> int:
@@ -77,26 +78,43 @@ def load_ids(path, limit=20000):
     return ids, recs
 
 
-def check_source(name, cfg, window_start, *, now=None):
+def is_held_manifest(meta_path):
+    artifact = pathlib.Path(str(meta_path)[:-len(".meta.json")])
+    active = artifact.with_name(artifact.name + ".hold.json")
+    released = artifact.with_name(artifact.name + ".hold.released.json")
+    return active.exists() and not released.exists()
+
+def check_source(name, cfg, window_start, *, now=None, cadence=None):
+    """One source's health. ``cadence`` is the published cadence plan, if any:
+    a source whose schedule the load layer has slowed must be judged stale
+    against its *effective* cadence, not the cron its yml declares."""
     now = now or datetime.now(timezone.utc)
     meta = TYPES.get(name, {})
     src_dir = DATA_ROOT / "raw" / f"source={name}"
     manifests = sorted(src_dir.glob("dt=*/*.meta.json"))
+    held = [m for m in manifests if is_held_manifest(m)]
+    manifests = [m for m in manifests if m not in held]
     out = {
         "source": name,
         "type": meta.get("type", "unknown"),
-        "enabled": cfg.get("enabled", "true") != "false",
+        "enabled": bool(cfg.get("enabled", True)),
+        "held_runs": len(held),
         "runs_in_window": 0,
         "zero_record_runs": 0,
         "last_run_age_min": None,
         "expected_gap_min": None,
         "stale": None,
         "records_last": None,
-        "records_median": None,
         "bytes_last": None,
+        "extract_health": None,
+        "extract_completeness": None,
     }
     try:
-        gap = cron_gap_minutes(cfg["schedule"], now)
+        schedule, cadence_note = cadence_plan.effective_schedule(cfg, cadence or {})
+        out["schedule"] = schedule
+        if schedule != cfg.get("schedule"):
+            out["cadence"] = cadence_note
+        gap = cron_gap_minutes(schedule, now)
         out["expected_gap_min"] = gap
     except (KeyError, TypeError, ValueError, CroniterError) as exc:
         gap = None
@@ -149,6 +167,8 @@ def check_source(name, cfg, window_start, *, now=None):
     out["last_run_age_min"] = round(age_min, 1)
     out["records_last"] = last["records"]
     out["bytes_last"] = last["bytes"]
+    out["extract_health"] = last.get("health", "unknown")
+    out["extract_completeness"] = last.get("completeness", "unknown")
     if window_records:
         out["records_median"] = statistics.median(window_records)
     if gap and out["enabled"]:
@@ -180,13 +200,13 @@ def check_source(name, cfg, window_start, *, now=None):
 
 
 def classify(r):
-    """Deterministic health status. Reliable failure signals (staleness,
-    repeated crashes, config drift) are PROBLEM; softer signals (isolated
-    failures, frozen novelty/values) are WATCH because several sources have
-    legitimate quiet periods that only the notes/model can dismiss. Everything
-    else is OK — so a healthy pipeline needs no model call at all."""
+    """Classify staleness, failed/partial extracts, and source-specific drift."""
     if not r.get("enabled", True):
         return "OK"  # intentionally paused; not a health signal
+    if r.get("extract_health") == "failed" or r.get("extract_completeness") == "failed":
+        return "PROBLEM"
+    if r.get("extract_health") in {"degraded", "open_circuit"} or r.get("extract_completeness") == "partial":
+        return "WATCH"
     if r.get("schedule_error"):
         return "PROBLEM"  # monitoring config invalid — cadence is unknown
     if r.get("value_keys_missing"):
@@ -218,10 +238,14 @@ def main():
     now = datetime.now(timezone.utc)
     window_start = now - timedelta(hours=args.window_hours)
 
+    # One plan read for the whole digest; sources the load layer has re-timed
+    # are then measured against the cadence they actually run at.
+    cadence = cadence_plan.plan_sources()
     results = []
     for yml in sorted(SOURCES_DIR.glob("*.yml")):
         cfg = read_yml(yml)
-        r = check_source(cfg.get("name", yml.stem), cfg, window_start, now=now)
+        r = check_source(cfg.get("name", yml.stem), cfg, window_start, now=now,
+                         cadence=cadence)
         r["status"] = classify(r)
         results.append(r)
 

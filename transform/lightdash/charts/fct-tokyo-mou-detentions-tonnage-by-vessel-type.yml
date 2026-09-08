@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_tokyo_mou_detentions_detention_date_day
+          yRef:
+            field: fct_tokyo_mou_detentions_average_gross_tonnage
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Detention date (Day)
+      yAxis:
+      - name: Mean gross tonnage
+    layout:
+      stack: true
+      xField: fct_tokyo_mou_detentions_detention_date_day
+      yField:
+      - fct_tokyo_mou_detentions_average_gross_tonnage
+  type: cartesian
+description: Average `gross_tonnage` per detention day stacked by `ship_type`. All four vessel-type categories
+  are shown; stacked heights describe composition of the observed average, not a sum of tonnage across
+  ships.
+metricQuery:
+  dimensions:
+  - fct_tokyo_mou_detentions_detention_date_day
+  - fct_tokyo_mou_detentions_ship_type
+  exploreName: fct_tokyo_mou_detentions
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_tokyo_mou_detentions_average_gross_tonnage
+  sorts:
+  - descending: true
+    fieldId: fct_tokyo_mou_detentions_average_gross_tonnage
+  - descending: false
+    fieldId: fct_tokyo_mou_detentions_detention_date_day
+  tableCalculations: []
+name: Mean vessel tonnage by ship type
+pivotConfig:
+  columns:
+  - fct_tokyo_mou_detentions_ship_type
+slug: fct-tokyo-mou-detentions-tonnage-by-vessel-type
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_tokyo_mou_detentions_detention_date_day
+  - fct_tokyo_mou_detentions_ship_type
+  - fct_tokyo_mou_detentions_average_gross_tonnage
+tableName: fct_tokyo_mou_detentions
+version: 1

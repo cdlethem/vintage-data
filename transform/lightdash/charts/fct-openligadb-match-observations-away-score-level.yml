@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_openligadb_match_observations_match_updated_at_week
+          yRef:
+            field: fct_openligadb_match_observations_average_away_score
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Match updated at (Week)
+      yAxis:
+      - name: Mean away score
+    layout:
+      xField: fct_openligadb_match_observations_match_updated_at_week
+      yField:
+      - fct_openligadb_match_observations_average_away_score
+  type: cartesian
+description: Observation-weighted mean `away_score` by `match_updated_at` week. Only rows with a reported
+  score contribute, and repeated snapshots can weight frequently updated matches more heavily; unfinished
+  or scoreless rows are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_openligadb_match_observations_match_updated_at_week
+  exploreName: fct_openligadb_match_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_openligadb_match_observations_average_away_score
+  sorts:
+  - descending: false
+    fieldId: fct_openligadb_match_observations_match_updated_at_week
+  tableCalculations: []
+name: Mean reported away score by update week
+slug: fct-openligadb-match-observations-away-score-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openligadb_match_observations_match_updated_at_week
+  - fct_openligadb_match_observations_average_away_score
+tableName: fct_openligadb_match_observations
+version: 1

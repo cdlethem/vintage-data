@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_imdb_rating_observation_observed_at_day
+          yRef:
+            field: fct_imdb_rating_observation_average_vote_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed vote count
+    layout:
+      xField: fct_imdb_rating_observation_observed_at_day
+      yField:
+      - fct_imdb_rating_observation_average_vote_count
+  type: cartesian
+description: Mean reported `vote_count` across retained title observations on each observation day. This
+  is a snapshot measure with equal row weight, not a sum of votes across titles; absent observation days
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_imdb_rating_observation_observed_at_day
+  exploreName: fct_imdb_rating_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_imdb_rating_observation_average_vote_count
+  sorts:
+  - descending: false
+    fieldId: fct_imdb_rating_observation_observed_at_day
+  tableCalculations: []
+name: Mean votes per observation day
+slug: fct-imdb-rating-observation-vote-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_imdb_rating_observation_observed_at_day
+  - fct_imdb_rating_observation_average_vote_count
+tableName: fct_imdb_rating_observation
+version: 1

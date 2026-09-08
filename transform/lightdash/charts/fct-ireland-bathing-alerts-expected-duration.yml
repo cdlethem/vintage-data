@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ireland_bathing_alerts_incident_start_date_day
+          yRef:
+            field: fct_ireland_bathing_alerts_average_duration
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Incident start date (Day)
+      yAxis:
+      - name: Average expected duration
+    layout:
+      xField: fct_ireland_bathing_alerts_incident_start_date_day
+      yField:
+      - fct_ireland_bathing_alerts_average_duration
+  type: cartesian
+description: Average `incident_expected_duration_days` for alerts by source-reported incident start day.
+  This is a reported-duration average, not elapsed time; dates without alerts are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_ireland_bathing_alerts_incident_start_date_day
+  exploreName: fct_ireland_bathing_alerts
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ireland_bathing_alerts_average_duration
+  sorts:
+  - descending: false
+    fieldId: fct_ireland_bathing_alerts_incident_start_date_day
+  tableCalculations: []
+name: Expected duration by incident start day
+slug: fct-ireland-bathing-alerts-expected-duration
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ireland_bathing_alerts_incident_start_date_day
+  - fct_ireland_bathing_alerts_average_duration
+tableName: fct_ireland_bathing_alerts
+version: 1

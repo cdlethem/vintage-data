@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_job_boards_recruitee_posted_at_month
+          yRef:
+            field: fct_job_boards_recruitee_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Month)
+      yAxis:
+      - name: Distinct job
+    layout:
+      xField: fct_job_boards_recruitee_posted_at_month
+      yField:
+      - fct_job_boards_recruitee_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values by Recruitee `posted_at` month, pivoted by `company_country`. The
+  eight largest countries by metric are retained and smaller countries are excluded rather than aggregated.
+  This is a flow and not a count of currently open jobs.
+metricQuery:
+  dimensions:
+  - fct_job_boards_recruitee_posted_at_month
+  - fct_job_boards_recruitee_company_country
+  exploreName: fct_job_boards_recruitee
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_boards_recruitee_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_boards_recruitee_distinct_entities
+  - descending: false
+    fieldId: fct_job_boards_recruitee_posted_at_month
+  tableCalculations: []
+name: Jobs posted per month by company country
+pivotConfig:
+  columns:
+  - fct_job_boards_recruitee_company_country
+slug: fct-job-boards-recruitee-postings-by-country
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_boards_recruitee_posted_at_month
+  - fct_job_boards_recruitee_company_country
+  - fct_job_boards_recruitee_distinct_entities
+tableName: fct_job_boards_recruitee
+version: 1

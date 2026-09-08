@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_bluesky_appview_post_observation_observed_at_day
+          yRef:
+            field: fct_bluesky_appview_post_observation_average_like_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed like count
+    layout:
+      xField: fct_bluesky_appview_post_observation_observed_at_day
+      yField:
+      - fct_bluesky_appview_post_observation_average_like_count
+  type: cartesian
+description: Mean reported `like_count` across retained post snapshots for each observation day. Each
+  snapshot has equal weight, so polling frequency and repeated snapshots can bias the level; days without
+  observations are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_bluesky_appview_post_observation_observed_at_day
+  exploreName: fct_bluesky_appview_post_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_bluesky_appview_post_observation_average_like_count
+  sorts:
+  - descending: false
+    fieldId: fct_bluesky_appview_post_observation_observed_at_day
+  tableCalculations: []
+name: Mean observed likes per polling day
+slug: fct-bluesky-appview-post-observation-observed-engagement
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_bluesky_appview_post_observation_observed_at_day
+  - fct_bluesky_appview_post_observation_average_like_count
+tableName: fct_bluesky_appview_post_observation
+version: 1

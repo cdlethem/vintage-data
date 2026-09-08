@@ -1,0 +1,64 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_pubchem_compound_snapshot_fetched_at_day
+          yRef:
+            field: fct_pubchem_compound_snapshot_average_molecular_weight
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Mean observed molecular weight
+    layout:
+      xField: fct_pubchem_compound_snapshot_fetched_at_day
+      yField:
+      - fct_pubchem_compound_snapshot_average_molecular_weight
+  type: cartesian
+description: Mean `molecular_weight` per fetch day for the three largest requested `query` values in this
+  tiny snapshot. The remainder is excluded rather than aggregated; only one fetch day is present, so this
+  compares lookup values rather than a long-term trend.
+metricQuery:
+  dimensions:
+  - fct_pubchem_compound_snapshot_fetched_at_day
+  - fct_pubchem_compound_snapshot_query
+  exploreName: fct_pubchem_compound_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: 611b9835-4c40-5aa6-ac55-63d11e64723f
+        operator: equals
+        target:
+          fieldId: fct_pubchem_compound_snapshot_found
+        values:
+        - true
+      id: 0185b265-6b25-5df0-8d1e-55115aa83802
+  limit: 5000
+  metrics:
+  - fct_pubchem_compound_snapshot_average_molecular_weight
+  sorts:
+  - descending: true
+    fieldId: fct_pubchem_compound_snapshot_average_molecular_weight
+  - descending: false
+    fieldId: fct_pubchem_compound_snapshot_fetched_at_day
+  tableCalculations: []
+name: Molecular weight by requested query
+pivotConfig:
+  columns:
+  - fct_pubchem_compound_snapshot_query
+slug: fct-pubchem-compound-snapshot-weight-by-query
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_pubchem_compound_snapshot_fetched_at_day
+  - fct_pubchem_compound_snapshot_query
+  - fct_pubchem_compound_snapshot_average_molecular_weight
+tableName: fct_pubchem_compound_snapshot
+version: 1

@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_queensland_hospital_observation_observed_at_day
+          yRef:
+            field: fct_queensland_hospital_observation_m_3993bc09
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed wait time all patients minutes
+    layout:
+      xField: fct_queensland_hospital_observation_observed_at_day
+      yField:
+      - fct_queensland_hospital_observation_m_3993bc09
+  type: cartesian
+description: Mean non-null `wait_time_all_patients_minutes` across retained hospital rows on each observation
+  day. Each snapshot has equal weight, so polling frequency can influence this level; the four observed
+  days are a gauge window, not a long historical flow.
+metricQuery:
+  dimensions:
+  - fct_queensland_hospital_observation_observed_at_day
+  exploreName: fct_queensland_hospital_observation
+  filters:
+    dimensions:
+      and:
+      - id: 07add984-311c-546b-a151-d5101416a5be
+        operator: equals
+        target:
+          fieldId: fct_queensland_hospital_observation_live_data_available
+        values:
+        - true
+      id: b227ccce-7dc4-5cfe-91c7-e1966748d99b
+  limit: 5000
+  metrics:
+  - fct_queensland_hospital_observation_m_3993bc09
+  sorts:
+  - descending: false
+    fieldId: fct_queensland_hospital_observation_observed_at_day
+  tableCalculations: []
+name: Mean all-patient wait per day
+slug: fct-queensland-hospital-observation-all-patient-wait
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_queensland_hospital_observation_observed_at_day
+  - fct_queensland_hospital_observation_m_3993bc09
+tableName: fct_queensland_hospital_observation
+version: 1

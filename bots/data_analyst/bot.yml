@@ -1,0 +1,30 @@
+name: data_analyst
+description: explore one mart family's real data and plan the time-series analysis its dashboard is missing
+schedule: "13 */3 * * *"
+runtime_estimate_minutes: 45
+enabled: true
+model: analyst_cli
+prompt: prompt.md
+timeout_minutes: 45
+context_budget_minutes: 10
+model_budget_minutes: 30
+cleanup_margin_seconds: 180
+capacity_policy: skip
+retry_on: [transient]
+freshness_sla_minutes: 1440
+requires_capabilities: [repository_execute]
+context:
+  ANALYST_CONTEXT:
+    command: ["orchestration/.venv/bin/python", "bots/agent_context.py", "analyst", "--compact"]
+    cwd: .
+    timeout_s: 600
+triggers: []
+gate:
+  context: ANALYST_CONTEXT
+  path: gap_backlog_count
+  operator: equals
+  value: 0
+  reason_code: no_analysis_gaps
+output:
+  format: json
+  schema: data_analyst_v1

@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_museum_collection_items_classification
+          yRef:
+            field: fct_museum_collection_items_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_museum_collection_items_classification
+      yField:
+      - fct_museum_collection_items_distinct_entities
+  type: cartesian
+description: Distinct `id` values by `classification` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_museum_collection_items_classification
+  exploreName: fct_museum_collection_items
+  filters:
+    dimensions:
+      and:
+      - id: db5db25f-5283-5972-a543-0a8f6a69f5b4
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_museum_collection_items_fetched_at
+        values:
+        - 30
+      id: ba6f0279-84cd-5b11-97df-a2ca67e9f166
+  limit: 20
+  metrics:
+  - fct_museum_collection_items_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_museum_collection_items_distinct_entities
+  tableCalculations: []
+name: Distinct id by classification
+slug: fct-museum-collection-items
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_museum_collection_items_classification
+  - fct_museum_collection_items_distinct_entities
+tableName: fct_museum_collection_items
+version: 1

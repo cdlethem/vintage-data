@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical gravitational-event observation fact from the LIGO/Virgo/KAGRA GraceDB superevent
+  feed. Each row is one superevent observation at one extractor fetch timestamp, retaining event timing,
+  false-alarm and classification fields, retraction state, source links, and raw-load lineage. Duplicate
+  copies of the same source, superevent, and observation timestamp are reduced to the latest loaded record.
+metricQuery:
+  dimensions: &id001
+  - fct_gracedb_superevents_observed_at
+  - fct_gracedb_superevents_superevent_id
+  - fct_gracedb_superevents_category
+  - fct_gracedb_superevents_source_loaded_at
+  exploreName: fct_gracedb_superevents
+  filters:
+    dimensions:
+      and:
+      - id: 3ce8a68e-722a-5d3f-8931-208a10189a1e
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_gracedb_superevents_observed_at
+        values:
+        - 30
+      id: d5ee54e7-fc49-5f7e-9279-98520257ab35
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_gracedb_superevents_observed_at
+  tableCalculations: []
+name: Gracedb superevents — observations
+slug: fct-gracedb-superevents-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_gracedb_superevents
+version: 1

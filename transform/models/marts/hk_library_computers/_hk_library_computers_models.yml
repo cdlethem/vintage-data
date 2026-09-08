@@ -1,0 +1,379 @@
+version: 2
+models:
+- name: fct_hk_library_computers
+  description: Twice-hourly physical observation fact for the Hong Kong Public Libraries computer-availability
+    feed. Each row records one library or availability entry identified by the source record id at one
+    extractor observation timestamp, retaining published availability fields and raw-load lineage. Repeated
+    copies of the same source, record id, and observation timestamp retain the latest loaded row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, computer_id, observed_at
+      label: Hk library computers
+      group_label: Hk library computers
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: computer_observation_key
+      vintage:
+        visualization:
+          dimension: library_name
+          metric: average_available_workstations
+          time: observed_at
+          window_days: 30
+          title: Mean observed available workstations by library name
+          description: Mean observed available workstations by `library_name` in the selected observation
+            window. Number of workstations reported as available for the computer group, when supplied.
+            Each retained observation has equal weight; polling frequency and repeated snapshots can affect
+            the mean. This is not a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - computer_id
+          - library_name
+          - available_workstations
+          - source_loaded_at
+          sources:
+          - '`hk_library_computers` — licence: DATA.GOV.HK reuse terms; attribution required: True. Source
+            configuration: `extract/sources/hk_library_computers.yml`.'
+          analysis:
+            headline: how reported workstation capacity varies by library and how the publisher refreshes
+              availability.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - library_name
+            - record_type
+            - group_name
+            - is_open
+            trends:
+            - slug: daily-computers
+              kind: total
+              metric: distinct_computers
+              time: observed_at
+              grain: DAY
+              title: Distinct computer entries observed each day
+              description: Distinct `computer_id` values present in the feed on each observation day. This
+                is a catalogue level rather than a flow because the publisher republishes availability
+                entries; a moving line reflects entries appearing or disappearing. Days without a
+                successful extract are absent rather than zero.
+              width: half
+            - slug: daily-capacity
+              kind: total
+              metric: average_available_workstations
+              time: observed_at
+              grain: DAY
+              title: Mean available workstations observed each day
+              description: Mean non-null `available_workstations` reported across retained entries on each
+                observation day. Each observation has equal weight, so polling frequency and repeated
+                snapshots can affect the level; this is not an additive capacity total. Days without a
+                successful extract are absent rather than zero.
+              width: half
+            - slug: library-mix
+              kind: composition
+              metric: distinct_computers
+              breakdown: library_name
+              top_n: 6
+              time: observed_at
+              grain: DAY
+              title: Observed computer entries by leading libraries
+              description: Distinct `computer_id` values per observation day stacked by the six libraries
+                with the largest recent totals. The remaining libraries are excluded rather than
+                aggregated; this is a published-catalogue level, not a count of newly added computers.
+              width: full
+            - slug: publisher-refreshes
+              kind: breakdown
+              metric: distinct_computers
+              breakdown: library_name
+              top_n: 6
+              time: publisher_updated_at
+              grain: DAY
+              title: Computer entries by publisher update day
+              description: Distinct `computer_id` values grouped by the publisher-supplied
+                `publisher_updated_at` day and shown for the six largest libraries. The source timestamp
+                covers only five observed days in this extract, with older days absent rather than zero;
+                the remainder of libraries is excluded rather than aggregated.
+              width: full
+  columns:
+  - name: computer_observation_key
+    description: Stable hash of the source record source, id, and extractor observation timestamp defining
+      the row grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Computer observation key
+          hidden: true
+  - name: source
+    description: Source-system identifier supplied by the Hong Kong Public Libraries extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: computer_id
+    description: Source identifier for the library or library computer-availability entry.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_computers:
+            type: count_distinct
+            label: Distinct computers
+            description: Distinct `computer_id` values observed on each time point. This avoids counting
+              repeated snapshots as additional computers and describes catalogue coverage rather than
+              newly added computers.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Computer id
+          hidden: false
+  - name: observed_at
+    description: Timestamp when the extractor fetched the library computer feed.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: record_type
+    description: Feed record category, such as library metadata or computer availability.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Record type
+          hidden: false
+  - name: library_code
+    description: Hong Kong Public Libraries code for the library associated with the record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Library code
+          hidden: false
+  - name: library_name
+    description: Published name of the library associated with the record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Library name
+          hidden: false
+  - name: district
+    description: Published Hong Kong district for a library metadata record; null for availability entries.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: District
+          hidden: false
+  - name: is_open
+    description: Whether the publisher reports the associated library as open at observation time.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is open
+          hidden: false
+  - name: publisher_updated_at
+    description: Timestamp supplied by the publisher for the latest update to the record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Publisher updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: session_start
+    description: Start timestamp of the computer availability session, when supplied.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Session start
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: session_end
+    description: End timestamp of the computer availability session, when supplied.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Session end
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: group_id
+    description: Publisher identifier for the computer group or area, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Group id
+          hidden: false
+  - name: group_name
+    description: Published name of the computer group or area, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Group name
+          hidden: false
+  - name: available_workstations
+    description: Number of workstations reported as available for the computer group, when supplied.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_available_workstations:
+            type: average
+            label: Mean observed available workstations
+            description: Mean observed available workstations by `library_name` in the selected observation
+              window. Number of workstations reported as available for the computer group, when supplied.
+              Each retained observation has equal weight; polling frequency and repeated snapshots can
+              affect the mean. This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Available workstations
+          hidden: false
+          format: '#,##0'
+  - name: source_date
+    description: Raw partition date assigned to the retained observation by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: Timestamp when extraction of the retained source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw record content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

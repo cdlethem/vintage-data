@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical observation fact for NHL schedule records. Each row is one deduplicated game snapshot
+  at the schedule feed fetch timestamp, retaining the scheduled game, participating teams, venue, state,
+  and raw-load lineage. The source currently reports future game schedules; this fact does not infer scores
+  or player-level statistics.
+metricQuery:
+  dimensions: &id001
+  - fct_nhl_game_observations_observed_at
+  - fct_nhl_game_observations_game_id
+  - fct_nhl_game_observations_game_state
+  - fct_nhl_game_observations_source_loaded_at
+  exploreName: fct_nhl_game_observations
+  filters:
+    dimensions:
+      and:
+      - id: 3389367c-09cf-54b8-8718-d62927586508
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nhl_game_observations_observed_at
+        values:
+        - 30
+      id: 1ead7370-b435-5b2d-848f-3a030b2abc7f
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_nhl_game_observations_observed_at
+  tableCalculations: []
+name: Nhl game observations — observations
+slug: fct-nhl-game-observations-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_nhl_game_observations
+version: 1

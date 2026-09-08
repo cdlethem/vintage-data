@@ -1,0 +1,304 @@
+version: 2
+models:
+- name: fct_onionoo_relay_status
+  description: Twice-hourly incremental physical history of Tor relays reported by the Onionoo feed. Each
+    row represents one relay from one upstream source at one fetched observation timestamp. Re-ingested
+    copies of an observation are reduced to the latest raw-load record while source lineage is retained
+    for audit and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, relay_id, observed_at
+      label: Onionoo relay status
+      group_label: Onionoo
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: onionoo_relay_status_key
+      vintage:
+        visualization:
+          dimension: running
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct relay by running
+          description: Distinct `relay_id` values by `running` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - relay_id
+          - running
+          - source_loaded_at
+          sources:
+          - '`onionoo` — licence: unstated; run by the Tor Project itself; attribution required: False.
+            Source configuration: `extract/sources/onionoo.yml`.'
+          analysis:
+            headline: The five-day relay-status level shows a nearly fixed running population while published batches expose short-term coverage changes.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - source
+            - running
+            - nickname
+            trends:
+            - slug: relays-by-observation-day
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct relays present each observation day
+              description: Distinct `relay_id` values in each Onionoo observation day. This is a five-day catalogue level rather than a long-run relay flow, and missing observation days are absent rather than zero.
+              width: half
+            - slug: nicknames-by-observation-day
+              kind: total
+              metric: distinct_nicknames
+              time: observed_at
+              grain: DAY
+              title: Distinct relay nicknames each observation day
+              description: Distinct non-null `nickname` values in each fetched snapshot day. This is a level of the published relay catalogue and not a count of new relays; polling cadence can affect observations.
+              width: half
+            - slug: relays-by-publication-day
+              kind: total
+              metric: distinct_entities
+              time: published_at
+              grain: DAY
+              title: Distinct relays by Onionoo publication day
+              description: Distinct `relay_id` values by the publisher's `published_at` day. The event-time span is only six days, so this is a short publication-batch view rather than historical relay activity; absent days are absent rather than zero.
+              width: half
+            - slug: running-relay-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: running
+              top_n: 2
+              time: observed_at
+              grain: DAY
+              title: Running status mix by observation day
+              description: Distinct `relay_id` values stacked by the reported `running` state for each observation day. Only states present in the feed appear, and the two-value limit keeps the status mix readable rather than inventing absent states.
+              width: full
+            - slug: published-running-relays
+              kind: breakdown
+              metric: distinct_nicknames
+              breakdown: running
+              top_n: 2
+              time: published_at
+              grain: DAY
+              title: Distinct nicknames by published running status
+              description: Distinct `nickname` values by publisher publication day and `running` state. The feed currently reports one state, so this is a level check rather than evidence of a balanced running versus stopped population.
+              width: full
+  columns:
+  - name: onionoo_relay_status_key
+    description: Stable hash of the upstream source, relay identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Onionoo relay status key
+          hidden: true
+  - name: source
+    description: Upstream Onionoo source label that supplied the relay record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: relay_id
+    description: Stable relay fingerprint or identifier reported by Onionoo.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct relay
+            description: Distinct `relay_id` values by `running` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Relay id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when Onionoo fetched the relay status observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: nickname
+    description: Relay nickname reported by Onionoo.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_nicknames:
+            type: count_distinct
+            label: Distinct relay nickname
+            description: Distinct non-null `nickname` values in each Onionoo snapshot group. Repeated observations count once, so this follows catalogue breadth rather than new relay arrivals.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Nickname
+          hidden: false
+  - name: addresses
+    description: JSON array of IPv4 and IPv6 addresses reported for the relay.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Addresses
+          hidden: true
+          sql: CAST(${TABLE}.addresses AS VARCHAR)
+  - name: running
+    description: Whether Onionoo reported the relay as currently running.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Running
+          hidden: false
+  - name: published_at
+    description: UTC timestamp when the relay status document was published by Onionoo.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Published at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_row_id
+    description: Load-layer row identifier for the retained Onionoo observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that supplied the retained Onionoo observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained Onionoo observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date for the retained Onionoo observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the Onionoo source file started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Load operation identifier that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation into raw storage.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained raw Onionoo record for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

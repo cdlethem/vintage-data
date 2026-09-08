@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 7
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_lichess_game_observation_observed_at_hour
+          yRef:
+            field: fct_lichess_game_observation_distinct_games
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct games observed
+    layout:
+      stack: true
+      xField: fct_lichess_game_observation_observed_at_hour
+      yField:
+      - fct_lichess_game_observation_distinct_games
+  type: cartesian
+description: Distinct `game_id` values per observed hour stacked by player `title`. The seven non-null
+  title values are retained; untitled observations are excluded rather than grouped into a synthetic category,
+  and hours without a poll are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_lichess_game_observation_observed_at_hour
+  - fct_lichess_game_observation_title
+  exploreName: fct_lichess_game_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_lichess_game_observation_distinct_games
+  sorts:
+  - descending: true
+    fieldId: fct_lichess_game_observation_distinct_games
+  - descending: false
+    fieldId: fct_lichess_game_observation_observed_at_hour
+  tableCalculations: []
+name: Observed games by player title
+pivotConfig:
+  columns:
+  - fct_lichess_game_observation_title
+slug: fct-lichess-game-observation-games-by-title
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_lichess_game_observation_observed_at_hour
+  - fct_lichess_game_observation_title
+  - fct_lichess_game_observation_distinct_games
+tableName: fct_lichess_game_observation
+version: 1

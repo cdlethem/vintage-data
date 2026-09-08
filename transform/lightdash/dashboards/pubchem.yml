@@ -1,0 +1,142 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: d2757cba-59ce-548e-97bd-f32a1c8c03ea
+    label: 'Pubchem compound snapshot: Query'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_pubchem_compound_snapshot_query
+      tableName: fct_pubchem_compound_snapshot
+    values: []
+  - disabled: true
+    id: cb6faf01-4865-5ace-b1dc-a53dbe8fb356
+    label: 'Pubchem compound snapshot: Found'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_pubchem_compound_snapshot_found
+      tableName: fct_pubchem_compound_snapshot
+    values: []
+  - disabled: true
+    id: fd3afa3c-b2d8-5594-acea-764c867564f5
+    label: 'Pubchem compound snapshot: Molecular formula'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_pubchem_compound_snapshot_molecular_formula
+      tableName: fct_pubchem_compound_snapshot
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Pubchem
+slug: pubchem
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Historical snapshots of PubChem PUG-REST compound lookups. Each row represents one source,
+      requested query, returned compound identifier, and API observation timestamp; repeated raw ingestion
+      of the same lookup is reduced to the latest loaded copy while not-found lookup rows remain observable.
+
+
+      **Grain:** source, compound_id, fetched_at, query
+
+
+      **What changes here:** how the small requested compound set and its molecular-weight level change
+      between fetches.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `pubchem` — licence: unstated (US federal, NIH/NLM); attribution required: False. Source configuration:
+      `extract/sources/pubchem.yml`.'
+    hideFrame: false
+    title: Pubchem compound snapshot
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Pubchem compound snapshot — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct compounds fetched per day
+    chartSlug: fct-pubchem-compound-snapshot-compounds-fetched
+    hideTitle: false
+    title: Distinct compounds fetched per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean molecular weight per fetch day
+    chartSlug: fct-pubchem-compound-snapshot-molecular-weight-level
+    hideTitle: false
+    title: Mean molecular weight per fetch day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Molecular weight by requested query
+    chartSlug: fct-pubchem-compound-snapshot-weight-by-query
+    hideTitle: false
+    title: Molecular weight by requested query
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 1
+  properties:
+    showDivider: true
+    text: Pubchem compound snapshot — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Mean observed molecular weight by query
+    chartSlug: fct-pubchem-compound-snapshot
+    hideTitle: false
+    title: Mean observed molecular weight by query
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 28
+- h: 10
+  properties:
+    chartName: Pubchem compound snapshot — observations
+    chartSlug: fct-pubchem-compound-snapshot-details
+    hideTitle: false
+    title: Pubchem compound snapshot — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 28
+version: 1

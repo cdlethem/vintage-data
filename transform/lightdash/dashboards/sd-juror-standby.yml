@@ -1,0 +1,152 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: d352494b-4f28-51c3-8731-a2c4ca781621
+    label: 'Sd juror standby: Courthouse'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sd_juror_standby_courthouse
+      tableName: fct_sd_juror_standby
+    values: []
+  - disabled: true
+    id: 00c93012-8969-572a-b5f1-1b5306a82743
+    label: 'Sd juror standby: Service start date'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sd_juror_standby_service_start_date
+      tableName: fct_sd_juror_standby
+    values: []
+  - disabled: true
+    id: f4d08076-7f67-5ab8-8328-86f7ec01e8f1
+    label: 'Sd juror standby: Instruction length'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sd_juror_standby_instruction_length
+      tableName: fct_sd_juror_standby
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Sd Juror Standby
+slug: sd-juror-standby
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of San Diego Superior Court telephone-standby instructions by courthouse
+      and service date. Each row preserves one fetched publisher state and its raw lineage for replay
+      and audit.
+
+
+      **Grain:** standby_id, observed_at
+
+
+      **What changes here:** how courthouse standby coverage and instruction complexity change across
+      daily observations.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `sd_juror_standby` — licence: San Diego Superior Court website terms; attribution required: True.
+      Source configuration: `extract/sources/sd_juror_standby.yml`.'
+    hideFrame: false
+    title: Sd juror standby
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Sd juror standby — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct standby services observed each day
+    chartSlug: fct-sd-juror-standby-observed-standbys
+    hideTitle: false
+    title: Distinct standby services observed each day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean instruction length by observation day
+    chartSlug: fct-sd-juror-standby-instruction-length
+    hideTitle: false
+    title: Mean instruction length by observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean group ranges by courthouse and day
+    chartSlug: fct-sd-juror-standby-courthouse-range-mix
+    hideTitle: false
+    title: Mean group ranges by courthouse and day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Standby services by publisher service date
+    chartSlug: fct-sd-juror-standby-service-date-by-courthouse
+    hideTitle: false
+    title: Standby services by publisher service date
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Sd juror standby — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed group range count by courthouse
+    chartSlug: fct-sd-juror-standby
+    hideTitle: false
+    title: Mean observed group range count by courthouse
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Sd juror standby — observations
+    chartSlug: fct-sd-juror-standby-details
+    hideTitle: false
+    title: Sd juror standby — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

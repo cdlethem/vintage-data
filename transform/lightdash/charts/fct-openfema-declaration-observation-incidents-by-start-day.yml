@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_openfema_declaration_observation_incident_begin_at_day
+          yRef:
+            field: fct_openfema_declaration_observation_distinct_incidents
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Incident begin at (Day)
+      yAxis:
+      - name: Distinct incident
+    layout:
+      xField: fct_openfema_declaration_observation_incident_begin_at_day
+      yField:
+      - fct_openfema_declaration_observation_distinct_incidents
+  type: cartesian
+description: Distinct `incident_id` values whose FEMA incident begins on each day. This is a source-event
+  flow over the four-month extract, not a count of extractor observations; dates with no declarations
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_openfema_declaration_observation_incident_begin_at_day
+  exploreName: fct_openfema_declaration_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_openfema_declaration_observation_distinct_incidents
+  sorts:
+  - descending: false
+    fieldId: fct_openfema_declaration_observation_incident_begin_at_day
+  tableCalculations: []
+name: Incidents beginning on each day
+slug: fct-openfema-declaration-observation-incidents-by-start-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openfema_declaration_observation_incident_begin_at_day
+  - fct_openfema_declaration_observation_distinct_incidents
+tableName: fct_openfema_declaration_observation
+version: 1

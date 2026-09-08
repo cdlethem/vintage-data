@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_safecast_radiation_measurement_observed_at_day
+          yRef:
+            field: fct_safecast_radiation_measurement_distinct_measurements
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct radiation measurements
+    layout:
+      xField: fct_safecast_radiation_measurement_observed_at_day
+      yField:
+      - fct_safecast_radiation_measurement_distinct_measurements
+  type: cartesian
+description: Distinct non-null `measurement_id` values present in each extractor observation day. This
+  is a five-day catalogue level rather than a flow; repeated immutable readings are not new measurements,
+  and days without a successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_safecast_radiation_measurement_observed_at_day
+  exploreName: fct_safecast_radiation_measurement
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_safecast_radiation_measurement_distinct_measurements
+  sorts:
+  - descending: false
+    fieldId: fct_safecast_radiation_measurement_observed_at_day
+  tableCalculations: []
+name: Radiation measurements represented per collection day
+slug: fct-safecast-radiation-measurement-readings-collected
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_safecast_radiation_measurement_observed_at_day
+  - fct_safecast_radiation_measurement_distinct_measurements
+tableName: fct_safecast_radiation_measurement
+version: 1

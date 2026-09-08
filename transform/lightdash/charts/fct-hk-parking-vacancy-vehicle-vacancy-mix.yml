@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_hk_parking_vacancy_observed_at_day
+          yRef:
+            field: fct_hk_parking_vacancy_average_vacancy_count
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed vacancy count
+    layout:
+      stack: true
+      xField: fct_hk_parking_vacancy_observed_at_day
+      yField:
+      - fct_hk_parking_vacancy_average_vacancy_count
+  type: cartesian
+description: Mean reported `vacancy_count` per observation day stacked by vehicle type. All six vehicle
+  types are shown because this dimension has six values; segments compare reported levels and must not
+  be summed across repeated snapshots.
+metricQuery:
+  dimensions:
+  - fct_hk_parking_vacancy_observed_at_day
+  - fct_hk_parking_vacancy_vehicle_type
+  exploreName: fct_hk_parking_vacancy
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_hk_parking_vacancy_average_vacancy_count
+  sorts:
+  - descending: true
+    fieldId: fct_hk_parking_vacancy_average_vacancy_count
+  - descending: false
+    fieldId: fct_hk_parking_vacancy_observed_at_day
+  tableCalculations: []
+name: Vacancy level by vehicle type
+pivotConfig:
+  columns:
+  - fct_hk_parking_vacancy_vehicle_type
+slug: fct-hk-parking-vacancy-vehicle-vacancy-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hk_parking_vacancy_observed_at_day
+  - fct_hk_parking_vacancy_vehicle_type
+  - fct_hk_parking_vacancy_average_vacancy_count
+tableName: fct_hk_parking_vacancy
+version: 1

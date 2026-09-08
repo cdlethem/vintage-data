@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of stations returned by the Radio Browser directory. Each row is one
+  station observed in one source snapshot, keyed by the source, station identifier, and observation timestamp.
+  Raw re-ingestion of the same snapshot is reduced to the latest loaded copy while load lineage is retained.
+metricQuery:
+  dimensions: &id001
+  - fct_radio_browser_station_snapshot_observed_at
+  - fct_radio_browser_station_snapshot_station_id
+  - fct_radio_browser_station_snapshot_country_code
+  - fct_radio_browser_station_snapshot_source_loaded_at
+  exploreName: fct_radio_browser_station_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: 36dd10aa-6f40-5bd9-adcb-cc3d86416b01
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_radio_browser_station_snapshot_observed_at
+        values:
+        - 30
+      id: 01f0cc66-18f6-5849-9163-e0bf836fb6c2
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_radio_browser_station_snapshot_observed_at
+  tableCalculations: []
+name: Radio browser station snapshot — observations
+slug: fct-radio-browser-station-snapshot-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_radio_browser_station_snapshot
+version: 1

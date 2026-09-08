@@ -1,0 +1,145 @@
+config:
+  dateZoomGranularities:
+  - Hour
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Hour
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: cd9287cf-f161-5922-8fbf-3d9ec2da8f24
+    label: 'Arxiv new paper observation: Primary category'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_arxiv_new_paper_observation_primary_category
+      tableName: fct_arxiv_new_paper_observation
+    values: []
+  - disabled: true
+    id: 0ee862c5-98ec-5384-afd5-4d6ba9c6207b
+    label: 'Arxiv new paper observation: Source name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_arxiv_new_paper_observation_source_name
+      tableName: fct_arxiv_new_paper_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Arxiv New
+slug: arxiv-new
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical observation fact for papers returned by the arXiv feed. Each row records one paper
+      identifier at one feed observation timestamp, preserving the publication metadata and raw-load lineage
+      needed to reproduce the insert-only source history. Repeated copies of the same source, paper, and
+      observation timestamp retain the latest loaded row.
+
+
+      **Grain:** source_name, paper_id, observed_at
+
+
+      **What changes here:** how the newly observed arXiv feed and its subject mix change across publication
+      hours.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `arxiv_new` — licence: arXiv API — free reuse, attribution requested; attribution required: True.
+      Source configuration: `extract/sources/arxiv_new.yml`.'
+    hideFrame: false
+    title: Arxiv new paper observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Arxiv new paper observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct papers per feed observation hour
+    chartSlug: fct-arxiv-new-paper-observation-feed-observations
+    hideTitle: false
+    title: Distinct papers per feed observation hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct papers by publication hour
+    chartSlug: fct-arxiv-new-paper-observation-published-papers
+    hideTitle: false
+    title: Distinct papers by publication hour
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Subject categories represented by publication hour
+    chartSlug: fct-arxiv-new-paper-observation-category-count
+    hideTitle: false
+    title: Subject categories represented by publication hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Leading arXiv categories by publication hour
+    chartSlug: fct-arxiv-new-paper-observation-category-mix
+    hideTitle: false
+    title: Leading arXiv categories by publication hour
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Arxiv new paper observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct paper by primary category
+    chartSlug: fct-arxiv-new-paper-observation
+    hideTitle: false
+    title: Distinct paper by primary category
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Arxiv new paper observation — observations
+    chartSlug: fct-arxiv-new-paper-observation-details
+    hideTitle: false
+    title: Arxiv new paper observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

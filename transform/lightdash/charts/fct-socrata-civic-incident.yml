@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_socrata_civic_incident_incident_type
+          yRef:
+            field: fct_socrata_civic_incident_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_socrata_civic_incident_incident_type
+      yField:
+      - fct_socrata_civic_incident_distinct_entities
+  type: cartesian
+description: Distinct `record_id` values by `incident_type` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_socrata_civic_incident_incident_type
+  exploreName: fct_socrata_civic_incident
+  filters:
+    dimensions:
+      and:
+      - id: ce00197e-7ad8-5b60-ad66-b35fbd581a50
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_socrata_civic_incident_observed_at
+        values:
+        - 30
+      id: 1d767590-253f-516c-80d2-d5284583b4ae
+  limit: 20
+  metrics:
+  - fct_socrata_civic_incident_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_socrata_civic_incident_distinct_entities
+  tableCalculations: []
+name: Distinct record by incident type
+slug: fct-socrata-civic-incident
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_socrata_civic_incident_incident_type
+  - fct_socrata_civic_incident_distinct_entities
+tableName: fct_socrata_civic_incident
+version: 1

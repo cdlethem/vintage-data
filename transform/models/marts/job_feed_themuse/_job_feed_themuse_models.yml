@@ -1,0 +1,324 @@
+version: 2
+models:
+- name: fct_job_feed_themuse
+  description: Daily physical history of The Muse job observations. Each row represents one The Muse job
+    identifier from one extractor response at an observed timestamp; repeated raw ingestion of the same
+    observation is reduced to the latest loaded copy while load-layer lineage remains available for audit
+    and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, job_id, observed_at
+      label: Job feed themuse
+      group_label: Job feed themuse
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: job_feed_themuse_key
+      vintage:
+        visualization:
+          dimension: company
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct job by company
+          description: Distinct `job_id` values by `company` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - job_id
+          - company
+          - source_loaded_at
+          sources:
+          - '`job_feed_themuse` — licence: public The Muse jobs API; attribution required: True. Source
+            configuration: `extract/sources/job_feed_themuse.yml`.'
+          analysis:
+            headline: how The Muse's published job volume and hiring mix shift month by month across departments and experience levels.
+            event_time: posted_at
+            grain: MONTH
+            controls:
+            - company
+            - department
+            - experience_level
+            - location_country
+            trends:
+            - slug: monthly-postings
+              kind: total
+              metric: distinct_entities
+              time: posted_at
+              grain: MONTH
+              title: Jobs by publisher posted month
+              description: Distinct `job_id` values grouped by the publisher's posted month across retained
+                observations. This is not a new-posting count because a listing can recur in later snapshots;
+                months with no matching posted records are absent rather than zero.
+              width: half
+            - slug: catalogue-level
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Jobs present in the catalogue each day
+              description: Distinct `job_id` values present in the feed on each observation day. This is a
+                catalogue level rather than a count of new postings because the feed republishes listings
+                and repeated observations are deduplicated within each day. Days without a successful extract
+                are absent rather than zero.
+              width: half
+            - slug: department-volume
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: department
+              top_n: 8
+              time: posted_at
+              grain: MONTH
+              title: Published jobs by leading department
+              description: Distinct `job_id` values per publisher posted month for the eight departments with
+                the largest retained volume. The remainder is excluded rather than aggregated; repeated
+                listings can recur, so this is observed publication history rather than a unique-job census.
+                Months without matching records are absent rather than zero.
+              width: full
+            - slug: experience-mix
+              kind: composition
+              metric: distinct_companies
+              breakdown: experience_level
+              top_n: 5
+              time: posted_at
+              grain: MONTH
+              title: Hiring-company mix by posted month and experience level
+              description: Distinct non-null `company` values per publisher posted month, stacked by the five
+                experience levels. The remainder is excluded rather than aggregated; repeated listings can
+                recur, so this shows observed hiring mix rather than unique organizations over the full
+                history. Months without matching records are absent rather than zero.
+              width: full
+  columns:
+  - name: job_feed_themuse_key
+    description: Stable hash of the upstream source, The Muse job identifier, and extractor observation
+      timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job feed themuse key
+          hidden: true
+  - name: source
+    description: Upstream source label carried by the The Muse response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: job_id
+    description: The Muse identifier assigned to the advertised job.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct job
+            description: Distinct `job_id` values by `company` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Job id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this job observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: provider
+    description: Provider or feed label reported by The Muse for the job listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider
+          hidden: false
+  - name: company
+    description: Company or organization advertising the job.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_companies:
+            type: count_distinct
+            label: Distinct hiring company
+            description: Distinct non-null `company` values represented in the selected observations. This
+              counts organizations rather than postings and can repeat an organization across snapshots.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Company
+          hidden: false
+  - name: title
+    description: Public title of the advertised job.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: department
+    description: Department or discipline reported for the job listing when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Department
+          hidden: false
+  - name: experience_level
+    description: Experience or seniority level reported by The Muse when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Experience level
+          hidden: false
+  - name: location
+    description: Location text reported for the job listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location
+          hidden: false
+  - name: location_country
+    description: Country associated with the reported job location when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location country
+          hidden: false
+  - name: posted_at
+    description: UTC publication timestamp supplied by The Muse for the job posting.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Posted at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: job_url
+    description: Canonical public URL for the The Muse job listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job url
+          hidden: false
+  - name: description
+    description: Full job description text supplied by The Muse.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Description
+          hidden: true
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the retained raw record content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

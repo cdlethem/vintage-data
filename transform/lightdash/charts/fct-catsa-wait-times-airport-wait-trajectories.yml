@@ -1,0 +1,64 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_catsa_wait_times_observed_at_hour
+          yRef:
+            field: fct_catsa_wait_times_average_wait_time_max_minutes
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Mean observed wait time max minutes
+    layout:
+      xField: fct_catsa_wait_times_observed_at_hour
+      yField:
+      - fct_catsa_wait_times_average_wait_time_max_minutes
+  type: cartesian
+description: Mean non-null `wait_time_max_minutes` per `observed_at` hour, pivoted to the eight airports
+  with the largest observed metric over the window. The remaining nine airports are excluded rather than
+  aggregated; unavailable values and missing poll hours are absent.
+metricQuery:
+  dimensions:
+  - fct_catsa_wait_times_observed_at_hour
+  - fct_catsa_wait_times_airport_slug
+  exploreName: fct_catsa_wait_times
+  filters:
+    dimensions:
+      and:
+      - id: 237a0f51-b722-57cd-aa7c-2b60addb9456
+        operator: equals
+        target:
+          fieldId: fct_catsa_wait_times_wait_time_available
+        values:
+        - true
+      id: f15f27e9-c65b-5df0-a2b7-8b2232ced610
+  limit: 5000
+  metrics:
+  - fct_catsa_wait_times_average_wait_time_max_minutes
+  sorts:
+  - descending: true
+    fieldId: fct_catsa_wait_times_average_wait_time_max_minutes
+  - descending: false
+    fieldId: fct_catsa_wait_times_observed_at_hour
+  tableCalculations: []
+name: Upper wait bound by airport
+pivotConfig:
+  columns:
+  - fct_catsa_wait_times_airport_slug
+slug: fct-catsa-wait-times-airport-wait-trajectories
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_catsa_wait_times_observed_at_hour
+  - fct_catsa_wait_times_airport_slug
+  - fct_catsa_wait_times_average_wait_time_max_minutes
+tableName: fct_catsa_wait_times
+version: 1

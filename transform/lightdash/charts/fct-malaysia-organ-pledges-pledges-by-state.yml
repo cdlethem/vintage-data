@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_malaysia_organ_pledges_pledge_date_day
+          yRef:
+            field: fct_malaysia_organ_pledges_distinct_pledges
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Pledge date (Day)
+      yAxis:
+      - name: Distinct pledge observations
+    layout:
+      xField: fct_malaysia_organ_pledges_pledge_date_day
+      yField:
+      - fct_malaysia_organ_pledges_distinct_pledges
+  type: cartesian
+description: Distinct pledge observations per reported day, split by `state`. The feed currently contains
+  one observed state, so the chart intentionally shows that single series rather than implying nationwide
+  coverage; missing source dates are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_malaysia_organ_pledges_pledge_date_day
+  - fct_malaysia_organ_pledges_state
+  exploreName: fct_malaysia_organ_pledges
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_malaysia_organ_pledges_distinct_pledges
+  sorts:
+  - descending: true
+    fieldId: fct_malaysia_organ_pledges_distinct_pledges
+  - descending: false
+    fieldId: fct_malaysia_organ_pledges_pledge_date_day
+  tableCalculations: []
+name: Pledge observations by state
+pivotConfig:
+  columns:
+  - fct_malaysia_organ_pledges_state
+slug: fct-malaysia-organ-pledges-pledges-by-state
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_malaysia_organ_pledges_pledge_date_day
+  - fct_malaysia_organ_pledges_state
+  - fct_malaysia_organ_pledges_distinct_pledges
+tableName: fct_malaysia_organ_pledges
+version: 1

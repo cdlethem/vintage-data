@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_irs_exempt_organizations_state
+          yRef:
+            field: fct_irs_exempt_organizations_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_irs_exempt_organizations_state
+      yField:
+      - fct_irs_exempt_organizations_distinct_entities
+  type: cartesian
+description: Distinct `organization_id` values by `state` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_irs_exempt_organizations_state
+  exploreName: fct_irs_exempt_organizations
+  filters:
+    dimensions:
+      and:
+      - id: b392c74e-189e-5e0a-b791-89e2efd091d2
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_irs_exempt_organizations_fetched_at
+        values:
+        - 30
+      id: fd1cc97b-7db3-5c21-b642-469cae58c075
+  limit: 20
+  metrics:
+  - fct_irs_exempt_organizations_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_irs_exempt_organizations_distinct_entities
+  tableCalculations: []
+name: Distinct organization by state
+slug: fct-irs-exempt-organizations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_irs_exempt_organizations_state
+  - fct_irs_exempt_organizations_distinct_entities
+tableName: fct_irs_exempt_organizations
+version: 1

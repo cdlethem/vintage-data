@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sec_edgar_filing_observation_form_type
+          yRef:
+            field: fct_sec_edgar_filing_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_sec_edgar_filing_observation_form_type
+      yField:
+      - fct_sec_edgar_filing_observation_distinct_entities
+  type: cartesian
+description: Distinct `filing_party_id` values by `form_type` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_sec_edgar_filing_observation_form_type
+  exploreName: fct_sec_edgar_filing_observation
+  filters:
+    dimensions:
+      and:
+      - id: e27f7316-49c2-5c58-8667-3a79802c84dd
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sec_edgar_filing_observation_observed_at
+        values:
+        - 30
+      id: e2171c33-eb27-51ae-90ee-40679e512454
+  limit: 20
+  metrics:
+  - fct_sec_edgar_filing_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_sec_edgar_filing_observation_distinct_entities
+  tableCalculations: []
+name: Distinct filing party by form type
+slug: fct-sec-edgar-filing-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sec_edgar_filing_observation_form_type
+  - fct_sec_edgar_filing_observation_distinct_entities
+tableName: fct_sec_edgar_filing_observation
+version: 1

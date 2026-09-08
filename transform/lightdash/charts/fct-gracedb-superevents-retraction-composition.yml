@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_gracedb_superevents_event_time_utc_day
+          yRef:
+            field: fct_gracedb_superevents_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Event time utc (Day)
+      yAxis:
+      - name: Distinct superevent
+    layout:
+      stack: true
+      xField: fct_gracedb_superevents_event_time_utc_day
+      yField:
+      - fct_gracedb_superevents_distinct_entities
+  type: cartesian
+description: Distinct superevents per event day stacked by `retracted`. The current extract is entirely
+  False, so the single visible segment describes the observed feed rather than a balanced retracted-versus-active
+  population.
+metricQuery:
+  dimensions:
+  - fct_gracedb_superevents_event_time_utc_day
+  - fct_gracedb_superevents_retracted
+  exploreName: fct_gracedb_superevents
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gracedb_superevents_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_gracedb_superevents_distinct_entities
+  - descending: false
+    fieldId: fct_gracedb_superevents_event_time_utc_day
+  tableCalculations: []
+name: Superevent retraction mix by event day
+pivotConfig:
+  columns:
+  - fct_gracedb_superevents_retracted
+slug: fct-gracedb-superevents-retraction-composition
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gracedb_superevents_event_time_utc_day
+  - fct_gracedb_superevents_retracted
+  - fct_gracedb_superevents_distinct_entities
+tableName: fct_gracedb_superevents
+version: 1

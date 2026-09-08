@@ -1,0 +1,302 @@
+version: 2
+models:
+- name: fct_musicbrainz_release_observation
+  description: Hourly physical history of MusicBrainz release-search observations. Each row represents
+    one source release identifier at one extractor observation timestamp, retaining release metadata and
+    loader lineage. The source has a small observed hourly payload (25 rows per load), so a table rebuild
+    is preferred over incremental state while preserving the complete history. Repeated copies of the
+    same source, release, and observation timestamp retain the latest loaded row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, release_id, observed_at
+      label: Musicbrainz release observation
+      group_label: Musicbrainz
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: release_observation_key
+      vintage:
+        visualization:
+          dimension: release_group_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct release by release group type
+          description: Distinct `release_id` values by `release_group_type` among observations in the
+            selected window. Repeated observations of an entity count once within each group. An entity
+            that changed category can appear in multiple groups; these groups are not additive and do
+            not represent a current-state census.
+          detail_fields:
+          - observed_at
+          - release_id
+          - release_group_type
+          - source_loaded_at
+          sources:
+          - '`musicbrainz` — licence: CC0 for MusicBrainz''s own database content per their standard terms
+            (not independently re-verified here); attribution required: False. Source configuration: `extract/sources/musicbrainz.yml`.'
+          analysis:
+            headline: how the small observed release catalogue and its track depth shift across daily MusicBrainz polls.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - release_group_type
+            - country_code
+            - release_status
+            - release_date_text
+            trends:
+            - slug: observed-releases
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct releases observed per day
+              description: Distinct `release_id` values present in each daily MusicBrainz search observation.
+                This is a polled catalogue level rather than a flow of newly released records; days without
+                a successful poll are absent rather than zero.
+              width: half
+            - slug: track-depth
+              kind: total
+              metric: average_track_count
+              time: observed_at
+              grain: DAY
+              title: Average tracks per observed release
+              description: Mean `track_count` across release observations on each observation day. Each
+                retained row has equal weight, so irregular polling can weight releases unevenly; this
+                describes the observed payload rather than all MusicBrainz releases.
+              width: half
+            - slug: release-group-mix
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: release_group_type
+              top_n: 3
+              time: observed_at
+              grain: DAY
+              title: Release groups observed by type
+              description: Distinct `release_id` values per observation day compared across
+                `release_group_type`. The three observed types are retained; any type outside the selected
+                top three is excluded rather than aggregated.
+              width: full
+            - slug: country-release-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: country_code
+              top_n: 6
+              time: observed_at
+              grain: DAY
+              title: Observed releases by country
+              description: Distinct `release_id` values per observation day stacked by `country_code`. Bars
+                show the country composition of the observed payload; only the six largest country series
+                are shown and the remainder is excluded rather than aggregated.
+              width: full
+  columns:
+  - name: release_observation_key
+    description: Stable hash of the source name, release identifier, and observation timestamp defining
+      the row grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Release observation key
+          hidden: true
+  - name: source_name
+    description: MusicBrainz source label supplied by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: release_id
+    description: MusicBrainz release identifier returned by the search response.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct release
+            description: Distinct `release_id` values by `release_group_type` among observations in the
+              selected window. Repeated observations of an entity count once within each group. An entity
+              that changed category can appear in multiple groups; these groups are not additive and do
+              not represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Release id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the MusicBrainz search results.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: release_title
+    description: Release title reported by MusicBrainz.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Release title
+          hidden: false
+  - name: artists
+    description: JSON array of artist names associated with the release result.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Artists
+          hidden: true
+          sql: CAST(${TABLE}.artists AS VARCHAR)
+  - name: release_date_text
+    description: Release date text reported by MusicBrainz, retained because source precision varies from
+      year to full date.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Release date text
+          hidden: false
+  - name: country_code
+    description: Country code associated with the release according to MusicBrainz.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Country code
+          hidden: false
+  - name: release_status
+    description: Release status classification reported by MusicBrainz.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Release status
+          hidden: false
+  - name: release_group_type
+    description: Release group type classification reported by MusicBrainz, such as Album, EP, or Single.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Release group type
+          hidden: false
+  - name: track_count
+    description: Number of tracks reported for the release.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_track_count:
+            type: average
+            label: Average track count
+            description: Mean `track_count` across retained MusicBrainz release observations. Each observation
+              has equal weight, so irregular polling can weight releases unevenly.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Track count
+          hidden: false
+          format: '#,##0'
+  - name: search_score
+    description: MusicBrainz relevance score assigned to the release search result.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Search score
+          hidden: false
+          format: '#,##0'
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained release observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_load_id
+    description: Load operation identifier that inserted the retained release observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source load id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained release observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained release observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained release observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer content hash of the retained raw release observation for lineage and replay.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: d49b352c-ca4c-50c8-ab69-4fd1c2b70986
+    label: 'Gutendex book snapshot: Copyright'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gutendex_book_snapshot_copyright
+      tableName: fct_gutendex_book_snapshot
+    values: []
+  - disabled: true
+    id: f4b961c5-c084-5771-a173-79377f95720e
+    label: 'Gutendex book snapshot: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gutendex_book_snapshot_source
+      tableName: fct_gutendex_book_snapshot
+    values: []
+  - disabled: true
+    id: f63a4646-7d84-5358-87a3-260d31a635f3
+    label: 'Gutendex book snapshot: Title'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gutendex_book_snapshot_title
+      tableName: fct_gutendex_book_snapshot
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Gutendex
+slug: gutendex
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of Project Gutenberg book records returned by the Gutendex feed.
+      Each row represents one book identifier observed at one fetched_at timestamp, retaining catalog
+      metadata and raw-load lineage; repeated ingestion of the same source, book, and observation timestamp
+      is reduced to the latest loaded copy.
+
+
+      **Grain:** source, book_id, fetched_at
+
+
+      **What changes here:** how the size and reported download level of the Gutendex catalog change across
+      fetch days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `gutendex` — licence: the catalog metadata is Gutendex''s own; the underlying texts are Project
+      Gutenberg public domain; attribution required: False. Source configuration: `extract/sources/gutendex.yml`.'
+    hideFrame: false
+    title: Gutendex book snapshot
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Gutendex book snapshot — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct books in each daily snapshot
+    chartSlug: fct-gutendex-book-snapshot-books-by-fetch-day
+    hideTitle: false
+    title: Distinct books in each daily snapshot
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported downloads per fetched book
+    chartSlug: fct-gutendex-book-snapshot-downloads-by-fetch-day
+    hideTitle: false
+    title: Mean reported downloads per fetched book
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Snapshot books by copyright flag
+    chartSlug: fct-gutendex-book-snapshot-books-by-copyright
+    hideTitle: false
+    title: Snapshot books by copyright flag
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean downloads by copyright mix
+    chartSlug: fct-gutendex-book-snapshot-download-composition
+    hideTitle: false
+    title: Mean downloads by copyright mix
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Gutendex book snapshot — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct book by copyright
+    chartSlug: fct-gutendex-book-snapshot
+    hideTitle: false
+    title: Distinct book by copyright
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Gutendex book snapshot — observations
+    chartSlug: fct-gutendex-book-snapshot-details
+    hideTitle: false
+    title: Gutendex book snapshot — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

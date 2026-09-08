@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_niord_warning_observation_created_at_month
+          yRef:
+            field: fct_niord_warning_observation_distinct_main_types
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Month)
+      yAxis:
+      - name: Distinct main classifications
+    layout:
+      xField: fct_niord_warning_observation_created_at_month
+      yField:
+      - fct_niord_warning_observation_distinct_main_types
+  type: cartesian
+description: Distinct non-null `main_type` values among warnings by their reported creation month. This
+  measures classification breadth rather than warning volume, and absent months have no source rows rather
+  than zero breadth.
+metricQuery:
+  dimensions:
+  - fct_niord_warning_observation_created_at_month
+  exploreName: fct_niord_warning_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_niord_warning_observation_distinct_main_types
+  sorts:
+  - descending: false
+    fieldId: fct_niord_warning_observation_created_at_month
+  tableCalculations: []
+name: Main warning classifications represented each month
+slug: fct-niord-warning-observation-classification-breadth
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_niord_warning_observation_created_at_month
+  - fct_niord_warning_observation_distinct_main_types
+tableName: fct_niord_warning_observation
+version: 1

@@ -1,0 +1,260 @@
+version: 2
+models:
+- name: fct_w3c_specification_observation
+  description: Daily physical history of W3C specifications returned by the W3C specifications feed. Each
+    row represents one specification identifier from one extractor observation timestamp, retaining the
+    canonical URL, title, and raw-load lineage. Repeated ingestion of the same source, specification,
+    and observation timestamp is reduced to the latest loaded record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, specification_id, observed_at
+      label: W3c specification observation
+      group_label: W3c specifications
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: specification_observation_key
+      vintage:
+        visualization:
+          dimension: specification_title
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct specification by specification title
+          description: Distinct `specification_id` values by `specification_title` among observations
+            in the selected window. Repeated observations of an entity count once within each group. An
+            entity that changed category can appear in multiple groups; these groups are not additive
+            and do not represent a current-state census.
+          detail_fields:
+          - observed_at
+          - specification_id
+          - specification_title
+          - source_loaded_at
+          sources:
+          - '`w3c_specifications` — licence: W3C document and data terms; attribution required: True.
+            Source configuration: `extract/sources/w3c_specifications.yml`.'
+          analysis:
+            headline: how the published W3C specification catalogue changes in size and title mix across
+              extractor observation days.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - specification_title
+            - source
+            trends:
+            - slug: specifications-per-day
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Specifications present per observation day
+              description: Distinct `specification_id` values present in the feed on each observation day.
+                This is a catalogue level rather than a publication flow — repeated feed snapshots count
+                each specification once per day, and absent days are absent rather than zero.
+              width: half
+            - slug: canonical-urls-per-day
+              kind: total
+              metric: distinct_urls
+              time: observed_at
+              grain: DAY
+              title: Canonical specification URLs per day
+              description: Distinct `specification_url` values present on each extractor observation day.
+                This level moves when canonical links are added or removed, not when a specification is
+                published; days without a successful extract are absent rather than zero.
+              width: half
+            - slug: title-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: specification_title
+              top_n: 8
+              time: observed_at
+              grain: DAY
+              title: Specification catalogue mix by title
+              description: Distinct `specification_id` values per observation day stacked by the eight
+                largest `specification_title` series. The remainder is excluded rather than aggregated,
+                and stacks describe the current feed level rather than additive publication volume.
+              width: full
+  columns:
+  - name: specification_observation_key
+    description: Stable hash of the source, specification identifier, and observation timestamp defining
+      the row grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Specification observation key
+          hidden: true
+  - name: source
+    description: Upstream source label supplied by the W3C specifications extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: specification_id
+    description: W3C identifier or API URL identifying the specification.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct specification
+            description: Distinct `specification_id` values by `specification_title` among observations
+              in the selected window. Repeated observations of an entity count once within each group.
+              An entity that changed category can appear in multiple groups; these groups are not additive
+              and do not represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Specification id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed this specification record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: specification_url
+    description: Canonical URL for the W3C specification returned by the feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Specification url
+          hidden: false
+        metrics:
+          distinct_urls:
+            type: count_distinct
+            label: Distinct specification URLs
+            description: Distinct canonical `specification_url` values present in the feed on each
+              observation day. Repeated snapshots count a URL once within each chart grouping.
+            format: '#,##0'
+  - name: specification_title
+    description: Human-readable title of the W3C specification returned by the feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Specification title
+          hidden: false
+  - name: source_date
+    description: Raw partition date assigned to the retained specification observation by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the retained source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained specification observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained specification observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained specification observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained specification observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw specification record for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

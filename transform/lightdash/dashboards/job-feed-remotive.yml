@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 5afc3678-85fa-561f-bb3e-ed5ceccd4274
+    label: 'Job feed remotive: Company'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_remotive_company
+      tableName: fct_job_feed_remotive
+    values: []
+  - disabled: true
+    id: d4a9c5b3-41bb-5c73-9ee9-f5b58198d903
+    label: 'Job feed remotive: Department'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_remotive_department
+      tableName: fct_job_feed_remotive
+    values: []
+  - disabled: true
+    id: 29f40d39-cc9b-513e-84c7-0136431830fc
+    label: 'Job feed remotive: Employment type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_remotive_employment_type
+      tableName: fct_job_feed_remotive
+    values: []
+  - disabled: true
+    id: b2a019ef-5a0a-5e84-a918-99e984d5b0fc
+    label: 'Job feed remotive: Location country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_remotive_location_country
+      tableName: fct_job_feed_remotive
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Feed Remotive
+slug: job-feed-remotive
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily historical observations of jobs returned by the Remotive remote-jobs feed. Each row
+      represents one job identifier observed at one extractor timestamp; repeated raw ingestion of an
+      identical observation is reduced to the latest loaded copy while prior observations remain available
+      for history.
+
+
+      **Grain:** source_name, job_id, observed_at
+
+
+      **What changes here:** how the four-day Remotive catalogue level and sparse publication mix change
+      across companies and departments.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_feed_remotive` — licence: public Remotive API; attribution required: True. Source configuration:
+      `extract/sources/job_feed_remotive.yml`.'
+    hideFrame: false
+    title: Job feed remotive
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed remotive — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Jobs present in the catalogue each day
+    chartSlug: fct-job-feed-remotive-catalogue-level
+    hideTitle: false
+    title: Jobs present in the catalogue each day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Jobs by publisher posted day
+    chartSlug: fct-job-feed-remotive-posted-day-history
+    hideTitle: false
+    title: Jobs by publisher posted day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Catalogue jobs by leading company
+    chartSlug: fct-job-feed-remotive-company-levels
+    hideTitle: false
+    title: Catalogue jobs by leading company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Hiring-company mix by posting day and department
+    chartSlug: fct-job-feed-remotive-department-mix
+    hideTitle: false
+    title: Hiring-company mix by posting day and department
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed remotive — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-feed-remotive
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Job feed remotive — observations
+    chartSlug: fct-job-feed-remotive-details
+    hideTitle: false
+    title: Job feed remotive — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

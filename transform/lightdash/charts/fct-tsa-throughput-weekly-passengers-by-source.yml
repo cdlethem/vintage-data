@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_tsa_throughput_throughput_date_week
+          yRef:
+            field: fct_tsa_throughput_average_passengers
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Throughput date (Week)
+      yAxis:
+      - name: Mean observed passengers
+    layout:
+      xField: fct_tsa_throughput_throughput_date_week
+      yField:
+      - fct_tsa_throughput_average_passengers
+  type: cartesian
+description: Mean reported passengers per throughput week, split by source. Only the observed TSA source
+  is present in this mart, so the chart has one populated series rather than an inter-source comparison;
+  this remains a level and is not additive.
+metricQuery:
+  dimensions:
+  - fct_tsa_throughput_throughput_date_week
+  - fct_tsa_throughput_source
+  exploreName: fct_tsa_throughput
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_tsa_throughput_average_passengers
+  sorts:
+  - descending: true
+    fieldId: fct_tsa_throughput_average_passengers
+  - descending: false
+    fieldId: fct_tsa_throughput_throughput_date_week
+  tableCalculations: []
+name: Mean passengers by source each throughput week
+pivotConfig:
+  columns:
+  - fct_tsa_throughput_source
+slug: fct-tsa-throughput-weekly-passengers-by-source
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_tsa_throughput_throughput_date_week
+  - fct_tsa_throughput_source
+  - fct_tsa_throughput_average_passengers
+tableName: fct_tsa_throughput
+version: 1

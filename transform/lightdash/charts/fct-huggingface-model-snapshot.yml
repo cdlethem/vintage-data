@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_huggingface_model_snapshot_author
+          yRef:
+            field: fct_huggingface_model_snapshot_average_like_count
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_huggingface_model_snapshot_author
+      yField:
+      - fct_huggingface_model_snapshot_average_like_count
+  type: cartesian
+description: Mean observed like count by `author` in the selected observation window. Number of likes
+  reported by the Hugging Face catalog at observation time. Each retained observation has equal weight;
+  polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure or
+  an additive total.
+metricQuery:
+  dimensions:
+  - fct_huggingface_model_snapshot_author
+  exploreName: fct_huggingface_model_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: 032eb7cf-1c5b-53da-bec3-67b33aba75ba
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_huggingface_model_snapshot_observed_at
+        values:
+        - 30
+      id: 615463f2-3933-5916-90f0-1ce5e1becab7
+  limit: 20
+  metrics:
+  - fct_huggingface_model_snapshot_average_like_count
+  sorts:
+  - descending: true
+    fieldId: fct_huggingface_model_snapshot_average_like_count
+  tableCalculations: []
+name: Mean observed like count by author
+slug: fct-huggingface-model-snapshot
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_huggingface_model_snapshot_author
+  - fct_huggingface_model_snapshot_average_like_count
+tableName: fct_huggingface_model_snapshot
+version: 1

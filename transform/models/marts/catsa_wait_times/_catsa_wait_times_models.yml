@@ -1,0 +1,280 @@
+version: 2
+models:
+- name: fct_catsa_wait_times
+  description: Twice-hourly physical history of Canadian Air Transport Security Authority checkpoint wait-time
+    observations by airport and checkpoint. Each row preserves the published wait-time text, parsed minute
+    bounds where present, and raw load lineage for replay and audit.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: airport_slug, checkpoint, observed_at
+      label: Airport screening waits
+      group_label: Catsa wait times
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: wait_time_observation_key
+      vintage:
+        visualization:
+          dimension: airport_slug
+          metric: average_wait_time_max_minutes
+          time: observed_at
+          window_days: 30
+          title: Mean observed wait time max minutes by airport slug
+          description: Mean observed wait time max minutes by `airport_slug` in the selected observation
+            window. Upper bound in minutes parsed from a numeric wait-time range; null when unavailable
+            or unparseable. Each retained observation has equal weight; polling frequency and repeated
+            snapshots can affect the mean. This is not a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - checkpoint_id
+          - airport_slug
+          - wait_time_max_minutes
+          - source_loaded_at
+          sources:
+          - '`catsa_wait_times` — licence: CATSA website terms; attribution required: True. Source configuration:
+            `extract/sources/catsa_wait_times.yml`.'
+          filters:
+          - field: wait_time_available
+            values:
+            - true
+          analysis:
+            headline: how checkpoint wait bounds and reporting availability move through the four-day polling window.
+            event_time: observed_at
+            grain: HOUR
+            controls:
+            - airport_slug
+            - checkpoint
+            - wait_time_available
+            trends:
+            - slug: hourly-maximum-wait
+              kind: total
+              metric: average_wait_time_max_minutes
+              time: observed_at
+              grain: HOUR
+              title: Mean upper wait bound per hour
+              description: Mean non-null `wait_time_max_minutes` across retained checkpoint observations in
+                each extractor `observed_at` hour. This is an observation-weighted level, not a sum of
+                passenger waits; unavailable values are omitted and hours with no poll are absent.
+              width: half
+            - slug: hourly-minimum-wait
+              kind: total
+              metric: average_wait_time_min_minutes
+              time: observed_at
+              grain: HOUR
+              title: Mean lower wait bound per hour
+              description: Mean non-null `wait_time_min_minutes` across retained checkpoint observations in
+                each extractor `observed_at` hour. Each row has equal weight, so this describes the
+                published lower-bound level rather than a queue total; hours without observations are
+                absent rather than zero.
+              width: half
+            - slug: airport-wait-trajectories
+              kind: breakdown
+              metric: average_wait_time_max_minutes
+              breakdown: airport_slug
+              top_n: 8
+              time: observed_at
+              grain: HOUR
+              title: Upper wait bound by airport
+              description: Mean non-null `wait_time_max_minutes` per `observed_at` hour, pivoted to the
+                eight airports with the largest observed metric over the window. The remaining nine
+                airports are excluded rather than aggregated; unavailable values and missing poll hours
+                are absent.
+              width: full
+            - slug: availability-mix
+              kind: composition
+              metric: observations
+              breakdown: wait_time_available
+              top_n: 2
+              time: observed_at
+              grain: HOUR
+              title: Available and unavailable reports by hour
+              description: Distinct retained observation keys per `observed_at` hour stacked by
+                `wait_time_available`. Bar height is the number of checkpoint reports and segment height
+                shows availability, not minutes waited; hours with no poll are absent.
+              width: full
+  columns:
+  - name: wait_time_observation_key
+    description: Stable hash of airport slug, checkpoint, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Wait time observation key
+          hidden: true
+        metrics:
+          observations:
+            type: count_distinct
+            label: Checkpoint observations
+            description: Distinct retained wait-time observation keys in each extractor time and
+              dimension group. This counts checkpoint reports, not passengers or total minutes waited.
+            format: '#,##0'
+
+  - name: source
+    description: Source identifier reported by the airport wait-time feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: checkpoint_id
+    description: Upstream identifier for the airport checkpoint observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Checkpoint id
+          hidden: false
+  - name: airport_slug
+    description: Canonical slug identifying the airport reporting the checkpoint wait time.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Airport slug
+          hidden: false
+  - name: checkpoint
+    description: Security or border checkpoint name reported by the airport feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Checkpoint
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the airport wait time was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: wait_time_text
+    description: Verbatim wait-time value published by the airport feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Wait time text
+          hidden: false
+  - name: wait_time_available
+    description: Whether the published wait-time value is available rather than Not available.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Wait time available
+          hidden: false
+  - name: wait_time_min_minutes
+    description: Lower bound in minutes parsed from a numeric wait-time range; null when unavailable or
+      unparseable.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Wait time min minutes
+          hidden: false
+          format: '#,##0'
+        metrics:
+          average_wait_time_min_minutes:
+            type: average
+            label: Mean observed wait time min minutes
+            description: Mean observed wait time min minutes by `airport_slug` in the selected observation
+              window. Lower bound in minutes parsed from a numeric wait-time range; null when unavailable
+              or unparseable. Each retained observation has equal weight and this is not an additive total.
+            format: '#,##0'
+  - name: wait_time_max_minutes
+    description: Upper bound in minutes parsed from a numeric wait-time range; null when unavailable or
+      unparseable.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_wait_time_max_minutes:
+            type: average
+            label: Mean observed wait time max minutes
+            description: Mean observed wait time max minutes by `airport_slug` in the selected observation
+              window. Upper bound in minutes parsed from a numeric wait-time range; null when unavailable
+              or unparseable. Each retained observation has equal weight; polling frequency and repeated
+              snapshots can affect the mean. This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Wait time max minutes
+          hidden: false
+          format: '#,##0'
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position in the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the raw observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

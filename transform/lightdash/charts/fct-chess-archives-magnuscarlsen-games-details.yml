@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical fact of Magnus Carlsen's Chess.com archive games. Each row is one game at
+  the archive-source and game identifier grain; repeated append-only copies are reduced to the latest
+  loaded row while game attributes and raw-load lineage remain available for audit.
+metricQuery:
+  dimensions: &id001
+  - fct_chess_archives_magnuscarlsen_games_fetched_at
+  - fct_chess_archives_magnuscarlsen_games_game_id
+  - fct_chess_archives_magnuscarlsen_games_player_result
+  - fct_chess_archives_magnuscarlsen_games_source_loaded_at
+  exploreName: fct_chess_archives_magnuscarlsen_games
+  filters:
+    dimensions:
+      and:
+      - id: 267e73ef-9c49-5258-ab3c-7a762e422cfb
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_chess_archives_magnuscarlsen_games_fetched_at
+        values:
+        - 30
+      id: 37764ef1-69c8-5c9c-8a50-03ba2f036ffd
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_chess_archives_magnuscarlsen_games_fetched_at
+  tableCalculations: []
+name: Chess archives magnuscarlsen games — observations
+slug: fct-chess-archives-magnuscarlsen-games-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_chess_archives_magnuscarlsen_games
+version: 1

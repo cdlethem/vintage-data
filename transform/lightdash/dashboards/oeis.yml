@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 1e0564a9-39af-50a0-a538-83e6e60f6359
+    label: 'Oeis sequence snapshot: Source name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_oeis_sequence_snapshot_source_name
+      tableName: fct_oeis_sequence_snapshot
+    values: []
+  - disabled: true
+    id: 8fb184be-abf7-558a-82dc-7f499fc383f0
+    label: 'Oeis sequence snapshot: Author'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_oeis_sequence_snapshot_author
+      tableName: fct_oeis_sequence_snapshot
+    values: []
+  - disabled: true
+    id: 2053ae5a-d049-561e-883f-780862aeba58
+    label: 'Oeis sequence snapshot: Sequence offset'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_oeis_sequence_snapshot_sequence_offset
+      tableName: fct_oeis_sequence_snapshot
+    values: []
+  - disabled: true
+    id: b16643bc-f832-509a-973d-3419baa3471b
+    label: 'Oeis sequence snapshot: Sequence name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_oeis_sequence_snapshot_sequence_name
+      tableName: fct_oeis_sequence_snapshot
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Oeis
+slug: oeis
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of OEIS sequence records. Each row is one sequence identifier observed
+      in one OEIS fetch, retaining sequence metadata and raw load lineage; repeated ingestion of the same
+      observation is reduced to the latest loaded copy.
+
+
+      **Grain:** source_name, sequence_id, observed_at
+
+
+      **What changes here:** how the OEIS feed''s observed sequence catalogue changes by day and how far
+      its accession coverage reaches.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `oeis` — licence: unstated (OEIS content is generally freely reusable with attribution per its
+      own site, not independently verified here); attribution required: True. Source configuration: `extract/sources/oeis.yml`.'
+    hideFrame: false
+    title: Oeis sequence snapshot
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Oeis sequence snapshot — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct sequences observed per day
+    chartSlug: fct-oeis-sequence-snapshot-observed-sequences
+    hideTitle: false
+    title: Distinct sequences observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Highest sequence accession observed per day
+    chartSlug: fct-oeis-sequence-snapshot-accession-coverage
+    hideTitle: false
+    title: Highest sequence accession observed per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct sequences by author
+    chartSlug: fct-oeis-sequence-snapshot-sequences-by-author
+    hideTitle: false
+    title: Distinct sequences by author
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Sequences by reported creation day
+    chartSlug: fct-oeis-sequence-snapshot-sequences-by-creation-day
+    hideTitle: false
+    title: Sequences by reported creation day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Oeis sequence snapshot — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct sequence by keywords
+    chartSlug: fct-oeis-sequence-snapshot
+    hideTitle: false
+    title: Distinct sequence by keywords
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Oeis sequence snapshot — observations
+    chartSlug: fct-oeis-sequence-snapshot-details
+    hideTitle: false
+    title: Oeis sequence snapshot — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_job_boards_greenhouse_posted_at_month
+          yRef:
+            field: fct_job_boards_greenhouse_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Month)
+      yAxis:
+      - name: Distinct job
+    layout:
+      xField: fct_job_boards_greenhouse_posted_at_month
+      yField:
+      - fct_job_boards_greenhouse_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values by `company_industry` and Greenhouse posting month. The six largest
+  industries by the selected metric are shown; smaller industries are excluded rather than aggregated,
+  and missing months indicate no source rows.
+metricQuery:
+  dimensions:
+  - fct_job_boards_greenhouse_posted_at_month
+  - fct_job_boards_greenhouse_company_industry
+  exploreName: fct_job_boards_greenhouse
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_boards_greenhouse_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_boards_greenhouse_distinct_entities
+  - descending: false
+    fieldId: fct_job_boards_greenhouse_posted_at_month
+  tableCalculations: []
+name: Jobs posted per month by industry
+pivotConfig:
+  columns:
+  - fct_job_boards_greenhouse_company_industry
+slug: fct-job-boards-greenhouse-jobs-by-industry
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_boards_greenhouse_posted_at_month
+  - fct_job_boards_greenhouse_company_industry
+  - fct_job_boards_greenhouse_distinct_entities
+tableName: fct_job_boards_greenhouse
+version: 1

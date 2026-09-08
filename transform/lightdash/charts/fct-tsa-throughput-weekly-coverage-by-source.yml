@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_tsa_throughput_throughput_date_week
+          yRef:
+            field: fct_tsa_throughput_distinct_throughput
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Throughput date (Week)
+      yAxis:
+      - name: Distinct throughput dates
+    layout:
+      stack: true
+      xField: fct_tsa_throughput_throughput_date_week
+      yField:
+      - fct_tsa_throughput_distinct_throughput
+  type: cartesian
+description: Distinct throughput identifiers per week stacked by source. The single source currently accounts
+  for all reported dates; missing weeks indicate no source rows and are not zero-valued observations.
+metricQuery:
+  dimensions:
+  - fct_tsa_throughput_throughput_date_week
+  - fct_tsa_throughput_source
+  exploreName: fct_tsa_throughput
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_tsa_throughput_distinct_throughput
+  sorts:
+  - descending: true
+    fieldId: fct_tsa_throughput_distinct_throughput
+  - descending: false
+    fieldId: fct_tsa_throughput_throughput_date_week
+  tableCalculations: []
+name: Reported throughput dates by source each week
+pivotConfig:
+  columns:
+  - fct_tsa_throughput_source
+slug: fct-tsa-throughput-weekly-coverage-by-source
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_tsa_throughput_throughput_date_week
+  - fct_tsa_throughput_source
+  - fct_tsa_throughput_distinct_throughput
+tableName: fct_tsa_throughput
+version: 1

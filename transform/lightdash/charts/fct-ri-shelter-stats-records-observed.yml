@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ri_shelter_stats_observed_at_day
+          yRef:
+            field: fct_ri_shelter_stats_distinct_records
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct shelter records
+    layout:
+      xField: fct_ri_shelter_stats_observed_at_day
+      yField:
+      - fct_ri_shelter_stats_distinct_records
+  type: cartesian
+description: Distinct non-null `record_id` values present in each publisher observation day. This is a
+  four-day snapshot level rather than a flow; repeated records are not new shelter activity, and days
+  without a successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_ri_shelter_stats_observed_at_day
+  exploreName: fct_ri_shelter_stats
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ri_shelter_stats_distinct_records
+  sorts:
+  - descending: false
+    fieldId: fct_ri_shelter_stats_observed_at_day
+  tableCalculations: []
+name: Shelter records represented per observation day
+slug: fct-ri-shelter-stats-records-observed
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ri_shelter_stats_observed_at_day
+  - fct_ri_shelter_stats_distinct_records
+tableName: fct_ri_shelter_stats
+version: 1

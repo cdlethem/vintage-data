@@ -1,0 +1,592 @@
+version: 2
+models:
+- name: fct_bike_station_status
+  description: Deduplicated GBFS station availability observations across supported networks, with source
+    lineage retained for audit and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: network, station_id, observed_at
+      label: Bike station availability
+      group_label: Gbfs
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: station_status_key
+      vintage:
+        visualization:
+          dimension: network
+          metric: average_num_bikes_available
+          time: observed_at
+          window_days: 30
+          title: Mean observed num bikes available by network
+          description: Mean observed num bikes available by `network` in the selected observation window.
+            Bikes reported available at the station. Each retained observation has equal weight; polling
+            frequency and repeated snapshots can affect the mean. This is not a latest-value measure or
+            an additive total.
+          detail_fields:
+          - observed_at
+          - station_id
+          - network
+          - num_bikes_available
+          - source_loaded_at
+          sources:
+          - '`gbfs_citibike` — licence: unstated; varies per operator; attribution required: False. Source
+            configuration: `extract/sources/gbfs_citibike.yml`.'
+          - '`gbfs_divvy` — licence: unstated; varies per operator; attribution required: False. Source
+            configuration: `extract/sources/gbfs_divvy.yml`.'
+          analysis:
+            headline: how station coverage and reported bike availability change through each network's polling stream.
+            event_time: observed_at
+            grain: HOUR
+            controls:
+            - network
+            - is_installed
+            - is_renting
+            - is_returning
+            trends:
+            - slug: station-coverage
+              kind: total
+              metric: distinct_stations
+              time: observed_at
+              grain: HOUR
+              title: Stations reporting by observation hour
+              description: Distinct `station_id` values represented in each extractor observation hour.
+                This is a published station-roster level rather than a trip flow — polling gaps are absent
+                rather than zero, and station counts can change when an operator changes its feed.
+              width: half
+            - slug: bikes-by-network
+              kind: breakdown
+              metric: average_num_bikes_available
+              breakdown: network
+              top_n: 2
+              time: observed_at
+              grain: HOUR
+              title: Mean available bikes by network and hour
+              description: Observation-weighted mean `num_bikes_available` for each network in each
+                extractor observation hour. The two supported networks are shown; this is a station-state
+                level, not a count of bike trips, and hours without a successful extract are absent.
+              width: full
+            - slug: docks-by-network
+              kind: composition
+              metric: average_num_docks_available
+              breakdown: network
+              top_n: 2
+              time: observed_at
+              grain: DAY
+              title: Mean available docks by network and day
+              description: Daily observation-weighted mean `num_docks_available` stacked by network. Segment
+                heights compare the two networks' reported dock levels; the stack is not a system-wide
+                total because stations are observed repeatedly.
+              width: full
+            - slug: station-report-times
+              kind: total
+              metric: average_num_bikes_available
+              time: station_reported_at
+              grain: DAY
+              title: Available bikes by station-reported day
+              description: Observation-weighted mean available bikes by the station-reported timestamp day,
+                using the recent 14-day window. The feed contains epoch-junk timestamps around 1970 outside
+                this window; valid recent timestamps describe source reporting cadence, not extractor
+                collection volume, and days without valid reports are absent.
+              width: half
+              window_days: 14
+  columns:
+  - name: station_status_key
+    description: Stable hash of network, station, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Station status key
+          hidden: true
+  - name: network
+    description: GBFS network identifier from the raw source name.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Network
+          hidden: false
+  - name: station_id
+    description: Station identifier assigned by the GBFS operator.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_stations:
+            type: count_distinct
+            label: Distinct stations
+            description: Distinct non-null `station_id` values represented in each observation time bucket.
+              Repeated station polls count once, so this measures the reporting roster rather than poll
+              volume.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Station id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the station state.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: station_reported_at
+    description: UTC station-reported timestamp when the source supplied a positive epoch.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Station reported at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: num_bikes_available
+    description: Bikes reported available at the station.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_num_bikes_available:
+            type: average
+            label: Mean observed num bikes available
+            description: Mean observed num bikes available by `network` in the selected observation window.
+              Bikes reported available at the station. Each retained observation has equal weight; polling
+              frequency and repeated snapshots can affect the mean. This is not a latest-value measure
+              or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Num bikes available
+          hidden: false
+          format: '#,##0'
+  - name: num_docks_available
+    description: Docks reported available at the station.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_num_docks_available:
+            type: average
+            label: Mean observed num docks available
+            description: Mean observed num docks available by `network` in the selected observation window.
+              Each retained station observation has equal weight; polling frequency and repeated snapshots
+              can affect the mean. This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Num docks available
+          hidden: false
+          format: '#,##0'
+  - name: num_ebikes_available
+    description: Electric bikes reported available at the station.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Num ebikes available
+          hidden: false
+          format: '#,##0'
+  - name: num_bikes_disabled
+    description: Bikes reported disabled at the station.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Num bikes disabled
+          hidden: false
+          format: '#,##0'
+  - name: num_docks_disabled
+    description: Docks reported disabled at the station.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Num docks disabled
+          hidden: false
+          format: '#,##0'
+  - name: is_installed
+    description: Whether the station is installed according to GBFS.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is installed
+          hidden: false
+  - name: is_renting
+    description: Whether the station is currently renting bikes.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is renting
+          hidden: false
+  - name: is_returning
+    description: Whether the station is currently accepting returns.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is returning
+          hidden: false
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position in the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the raw observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true
+- name: fct_bike_station_status_daily
+  description: Daily station-level GBFS availability aggregates rebuilt for the latest two observed UTC
+    dates so late observations repair recent history.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: network, station_id, observation_date
+      label: Bike station availability
+      group_label: Gbfs
+      default_time_dimension:
+        field: observation_date
+        interval: DAY
+      primary_key: station_status_daily_key
+      vintage:
+        visualization:
+          dimension: network
+          metric: average_avg_bikes_available
+          time: observation_date
+          window_days: 30
+          title: Mean observed avg bikes available by network
+          description: Mean observed avg bikes available by `network` in the selected observation window.
+            Average reported available-bike count on the date. Each retained observation has equal weight;
+            polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure
+            or an additive total.
+          detail_fields:
+          - observation_date
+          - station_id
+          - network
+          - avg_bikes_available
+          - source_loaded_at
+          sources:
+          - '`gbfs_citibike` — licence: unstated; varies per operator; attribution required: False. Source
+            configuration: `extract/sources/gbfs_citibike.yml`.'
+          - '`gbfs_divvy` — licence: unstated; varies per operator; attribution required: False. Source
+            configuration: `extract/sources/gbfs_divvy.yml`.'
+          analysis:
+            headline: how daily station coverage and average capacity move across the two GBFS networks.
+            event_time: observation_date
+            grain: DAY
+            controls:
+            - network
+            - observation_count
+            trends:
+            - slug: daily-bike-level
+              kind: total
+              metric: average_avg_bikes_available
+              time: observation_date
+              grain: DAY
+              title: Mean daily available bikes
+              description: Mean of station-level `avg_bikes_available` values on each observation date.
+                Each station-day contributes one value, so this is a daily availability level rather than
+                trips or an additive bike count; dates without station aggregates are absent.
+              width: half
+            - slug: daily-dock-level
+              kind: total
+              metric: average_avg_docks_available
+              time: observation_date
+              grain: DAY
+              title: Mean daily available docks
+              description: Mean of station-level `avg_docks_available` values on each observation date.
+                This reported capacity level is not summed across stations, and a missing date is absent
+                rather than zero.
+              width: half
+            - slug: stations-by-network
+              kind: breakdown
+              metric: distinct_stations
+              breakdown: network
+              top_n: 2
+              time: observation_date
+              grain: DAY
+              title: Reporting stations by network and day
+              description: Distinct `station_id` values represented in each daily aggregate, pivoted by the
+                two GBFS networks. This is roster coverage rather than trip volume; a network with no
+                daily rows is absent rather than zero.
+              width: full
+            - slug: first-observation-day
+              kind: total
+              metric: average_avg_bikes_available
+              time: first_observed_at
+              grain: DAY
+              title: Daily levels by first source observation day
+              description: Mean station-day average bike availability grouped by the earliest source
+                observation timestamp retained for each station and date. This source-time view describes
+                when source observations began, not a second additive count; missing source days are absent.
+              width: half
+  columns:
+  - name: station_status_daily_key
+    description: Stable hash of network, station, and UTC observation date.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: observation_date >= current_date - interval '2 days'
+    - unique:
+        config:
+          where: observation_date >= current_date - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Station status daily key
+          hidden: true
+  - name: network
+    description: GBFS network identifier.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Network
+          hidden: false
+  - name: station_id
+    description: Station identifier assigned by the GBFS operator.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_stations:
+            type: count_distinct
+            label: Distinct stations
+            description: Distinct non-null `station_id` values represented in each daily aggregate.
+              This measures the reporting roster and does not count repeated station observations.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Station id
+          hidden: false
+  - name: observation_date
+    description: UTC calendar date of the observations.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Observation date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: observation_count
+    description: Number of retained station observations on the date.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Observation count
+          hidden: false
+          format: '#,##0'
+  - name: first_observed_at
+    description: Earliest retained observation timestamp on the date.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: First observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: last_observed_at
+    description: Latest retained observation timestamp on the date.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Last observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: min_bikes_available
+    description: Minimum reported available-bike count on the date.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Min bikes available
+          hidden: false
+          format: '#,##0'
+  - name: max_bikes_available
+    description: Maximum reported available-bike count on the date.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Max bikes available
+          hidden: false
+          format: '#,##0'
+  - name: avg_bikes_available
+    description: Average reported available-bike count on the date.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_avg_bikes_available:
+            type: average
+            label: Mean observed avg bikes available
+            description: Mean observed avg bikes available by `network` in the selected observation window.
+              Average reported available-bike count on the date. Each retained observation has equal weight;
+              polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+              measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Avg bikes available
+          hidden: false
+          format: '#,##0.00'
+  - name: min_docks_available
+    description: Minimum reported available-dock count on the date.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Min docks available
+          hidden: false
+          format: '#,##0'
+  - name: max_docks_available
+    description: Maximum reported available-dock count on the date.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Max docks available
+          hidden: false
+          format: '#,##0'
+  - name: avg_docks_available
+    description: Average reported available-dock count on the date.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_avg_docks_available:
+            type: average
+            label: Mean observed avg docks available
+            description: Mean observed avg docks available by `network` in the selected observation window.
+              Each station-day contributes one value; polling frequency is already summarized by the daily
+              aggregate, so this is not a sum or latest-value measure.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Avg docks available
+          hidden: false
+          format: '#,##0.00'
+  - name: source_loaded_at
+    description: Latest raw load timestamp contributing to the daily aggregate.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.

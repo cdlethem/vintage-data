@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_socrata_civic_incident_event_at_hour
+          yRef:
+            field: fct_socrata_civic_incident_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Event at (Hour)
+      yAxis:
+      - name: Distinct record
+    layout:
+      stack: true
+      xField: fct_socrata_civic_incident_event_at_hour
+      yField:
+      - fct_socrata_civic_incident_distinct_entities
+  type: cartesian
+description: Distinct `record_id` values per source event hour, stacked by `incident_type`. The eight
+  largest types by metric are shown; the remainder is excluded rather than aggregated. This is a five-day
+  level view, not a historical incident-rate series, and empty hours are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_socrata_civic_incident_event_at_hour
+  - fct_socrata_civic_incident_incident_type
+  exploreName: fct_socrata_civic_incident
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_socrata_civic_incident_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_socrata_civic_incident_distinct_entities
+  - descending: false
+    fieldId: fct_socrata_civic_incident_event_at_hour
+  tableCalculations: []
+name: Incident level by type
+pivotConfig:
+  columns:
+  - fct_socrata_civic_incident_incident_type
+slug: fct-socrata-civic-incident-incident-type-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_socrata_civic_incident_event_at_hour
+  - fct_socrata_civic_incident_incident_type
+  - fct_socrata_civic_incident_distinct_entities
+tableName: fct_socrata_civic_incident
+version: 1

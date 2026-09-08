@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_openactive_feed_state
+          yRef:
+            field: fct_openactive_feed_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_openactive_feed_state
+      yField:
+      - fct_openactive_feed_distinct_entities
+  type: cartesian
+description: Distinct `record_id` values by `state` among observations in the selected window. The window
+  is two days because the feed republishes its whole catalogue on every poll, so a longer window re-counts
+  the same records without adding information. Repeated observations of an entity count once within each
+  group. An entity that changed category can appear in multiple groups; these groups are not additive
+  and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_openactive_feed_state
+  exploreName: fct_openactive_feed
+  filters:
+    dimensions:
+      and:
+      - id: 03bd50e0-661d-5be0-b10e-2d283f1babb9
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_openactive_feed_observed_at
+        values:
+        - 2
+      id: 6df43338-aeb3-55c1-941a-dfcb734500dd
+  limit: 20
+  metrics:
+  - fct_openactive_feed_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_openactive_feed_distinct_entities
+  tableCalculations: []
+name: Distinct record by state
+slug: fct-openactive-feed
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openactive_feed_state
+  - fct_openactive_feed_distinct_entities
+tableName: fct_openactive_feed
+version: 1

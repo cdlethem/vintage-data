@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_mpc_neocp_candidate_observation_temporary_designation
+          yRef:
+            field: fct_mpc_neocp_candidate_observation_average_visual_magnitude
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_mpc_neocp_candidate_observation_temporary_designation
+      yField:
+      - fct_mpc_neocp_candidate_observation_average_visual_magnitude
+  type: cartesian
+description: Mean observed visual magnitude by `temporary_designation` in the selected observation window.
+  Approximate visual magnitude reported for the candidate. Each retained observation has equal weight;
+  polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure or
+  an additive total.
+metricQuery:
+  dimensions:
+  - fct_mpc_neocp_candidate_observation_temporary_designation
+  exploreName: fct_mpc_neocp_candidate_observation
+  filters:
+    dimensions:
+      and:
+      - id: 7e8147bf-d5b8-54b0-9e2c-848f3e5af5cc
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_mpc_neocp_candidate_observation_observed_at
+        values:
+        - 30
+      id: 34cf7027-ab86-5029-ae67-2c8b7bce3abc
+  limit: 20
+  metrics:
+  - fct_mpc_neocp_candidate_observation_average_visual_magnitude
+  sorts:
+  - descending: true
+    fieldId: fct_mpc_neocp_candidate_observation_average_visual_magnitude
+  tableCalculations: []
+name: Mean observed visual magnitude by temporary designation
+slug: fct-mpc-neocp-candidate-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_mpc_neocp_candidate_observation_temporary_designation
+  - fct_mpc_neocp_candidate_observation_average_visual_magnitude
+tableName: fct_mpc_neocp_candidate_observation
+version: 1

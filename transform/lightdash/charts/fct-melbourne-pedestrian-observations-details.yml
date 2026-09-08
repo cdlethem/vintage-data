@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical history of Melbourne pedestrian counter observations. Each row is one
+  source feed, counter location, sensing timestamp, and feed fetch timestamp, with directional counts
+  and complete raw-load lineage. Duplicate records for that observation grain are retained by the latest
+  loader file position so replayed source files cannot multiply the fact.
+metricQuery:
+  dimensions: &id001
+  - fct_melbourne_pedestrian_observations_observed_at
+  - fct_melbourne_pedestrian_observations_pedestrian_id
+  - fct_melbourne_pedestrian_observations_location_id
+  - fct_melbourne_pedestrian_observations_total_of_directions
+  - fct_melbourne_pedestrian_observations_source_loaded_at
+  exploreName: fct_melbourne_pedestrian_observations
+  filters:
+    dimensions:
+      and:
+      - id: b3d13519-ca1e-5b67-95c8-86f050da67ad
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_melbourne_pedestrian_observations_observed_at
+        values:
+        - 30
+      id: 21cb1c3a-3d3f-57bd-9a99-a6c9bc1a9a16
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_melbourne_pedestrian_observations_observed_at
+  tableCalculations: []
+name: Melbourne pedestrian observations — observations
+slug: fct-melbourne-pedestrian-observations-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_melbourne_pedestrian_observations
+version: 1

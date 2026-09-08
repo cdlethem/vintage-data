@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_onionoo_relay_status_observed_at_day
+          yRef:
+            field: fct_onionoo_relay_status_distinct_nicknames
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct relay nickname
+    layout:
+      xField: fct_onionoo_relay_status_observed_at_day
+      yField:
+      - fct_onionoo_relay_status_distinct_nicknames
+  type: cartesian
+description: Distinct non-null `nickname` values in each fetched snapshot day. This is a level of the
+  published relay catalogue and not a count of new relays; polling cadence can affect observations.
+metricQuery:
+  dimensions:
+  - fct_onionoo_relay_status_observed_at_day
+  exploreName: fct_onionoo_relay_status
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_onionoo_relay_status_distinct_nicknames
+  sorts:
+  - descending: false
+    fieldId: fct_onionoo_relay_status_observed_at_day
+  tableCalculations: []
+name: Distinct relay nicknames each observation day
+slug: fct-onionoo-relay-status-nicknames-by-observation-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_onionoo_relay_status_observed_at_day
+  - fct_onionoo_relay_status_distinct_nicknames
+tableName: fct_onionoo_relay_status
+version: 1

@@ -1,0 +1,144 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 5eb659fb-3eae-5374-a7a1-248ee4a38bbd
+    label: 'Smithsonian volcanism snapshot: Volcano name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_smithsonian_volcanism_snapshot_volcano_name
+      tableName: fct_smithsonian_volcanism_snapshot
+    values: []
+  - disabled: true
+    id: d6ec5ba1-23ae-50e8-b870-934f885063a6
+    label: 'Smithsonian volcanism snapshot: Continuing'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_smithsonian_volcanism_snapshot_continuing
+      tableName: fct_smithsonian_volcanism_snapshot
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Smithsonian Volcanism
+slug: smithsonian-volcanism
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical snapshots of Smithsonian Global Volcanism Program eruption events. Each row
+      represents one source event identifier observed at one API fetch timestamp, with volcano identity,
+      event dates, eruption attributes, and raw-load lineage retained. Repeated ingestion of the same
+      source, event, and observation timestamp is reduced to the latest loaded record.
+
+
+      **Grain:** source, event_id, observed_at
+
+
+      **What changes here:** how eruption events start, how reported explosivity changes, and which eruptions
+      remain marked as continuing.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `smithsonian_volcanism` — licence: Smithsonian GVP — public; attribution required: False. Source
+      configuration: `extract/sources/smithsonian_volcanism.yml`.'
+    hideFrame: false
+    title: Smithsonian volcanism snapshot
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Smithsonian volcanism snapshot — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Eruption events by reported start date
+    chartSlug: fct-smithsonian-volcanism-snapshot-event-starts
+    hideTitle: false
+    title: Eruption events by reported start date
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Maximum explosivity by reported start date
+    chartSlug: fct-smithsonian-volcanism-snapshot-explosivity-by-start
+    hideTitle: false
+    title: Maximum explosivity by reported start date
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Eruption starts by volcano
+    chartSlug: fct-smithsonian-volcanism-snapshot-volcano-mix
+    hideTitle: false
+    title: Eruption starts by volcano
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Eruption end dates by continuing status
+    chartSlug: fct-smithsonian-volcanism-snapshot-event-end-status
+    hideTitle: false
+    title: Eruption end dates by continuing status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Smithsonian volcanism snapshot — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Maximum observed explosivity index max by volcano name
+    chartSlug: fct-smithsonian-volcanism-snapshot
+    hideTitle: false
+    title: Maximum observed explosivity index max by volcano name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Smithsonian volcanism snapshot — observations
+    chartSlug: fct-smithsonian-volcanism-snapshot-details
+    hideTitle: false
+    title: Smithsonian volcanism snapshot — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

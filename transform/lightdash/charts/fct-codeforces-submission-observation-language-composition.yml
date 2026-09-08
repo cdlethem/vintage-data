@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_codeforces_submission_observation_submitted_at_day
+          yRef:
+            field: fct_codeforces_submission_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Submitted at (Day)
+      yAxis:
+      - name: Distinct submission
+    layout:
+      stack: true
+      xField: fct_codeforces_submission_observation_submitted_at_day
+      yField:
+      - fct_codeforces_submission_observation_distinct_entities
+  type: cartesian
+description: Distinct `submission_id` values per `submitted_at` day, stacked by the eight most common
+  `language` values. Remaining languages are excluded rather than grouped, and a missing day means no
+  retained submissions were reported.
+metricQuery:
+  dimensions:
+  - fct_codeforces_submission_observation_submitted_at_day
+  - fct_codeforces_submission_observation_language
+  exploreName: fct_codeforces_submission_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_codeforces_submission_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_codeforces_submission_observation_distinct_entities
+  - descending: false
+    fieldId: fct_codeforces_submission_observation_submitted_at_day
+  tableCalculations: []
+name: Submission language mix
+pivotConfig:
+  columns:
+  - fct_codeforces_submission_observation_language
+slug: fct-codeforces-submission-observation-language-composition
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_codeforces_submission_observation_submitted_at_day
+  - fct_codeforces_submission_observation_language
+  - fct_codeforces_submission_observation_distinct_entities
+tableName: fct_codeforces_submission_observation
+version: 1

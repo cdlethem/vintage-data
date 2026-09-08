@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_environment_agency_floods_fetched_at_hour
+          yRef:
+            field: fct_environment_agency_floods_average_severity_level
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Hour)
+      yAxis:
+      - name: Mean severity level
+    layout:
+      xField: fct_environment_agency_floods_fetched_at_hour
+      yField:
+      - fct_environment_agency_floods_average_severity_level
+  type: cartesian
+description: Average numeric `severity_level` across retained flood rows at each extractor fetch hour.
+  This is a snapshot level rather than a flow, so movement reflects the published feed state; fetch hours
+  with no extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_environment_agency_floods_fetched_at_hour
+  exploreName: fct_environment_agency_floods
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_environment_agency_floods_average_severity_level
+  sorts:
+  - descending: false
+    fieldId: fct_environment_agency_floods_fetched_at_hour
+  tableCalculations: []
+name: Mean warning severity at each fetch hour
+slug: fct-environment-agency-floods-fetched-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_environment_agency_floods_fetched_at_hour
+  - fct_environment_agency_floods_average_severity_level
+tableName: fct_environment_agency_floods
+version: 1

@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Deduplicated laboratory turnaround observations from the North Carolina agronomic laboratory
+  feed. Each row records the observed turnaround estimate for one report identifier at one source fetch
+  timestamp, with typed duration measures and load lineage retained for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_nc_lab_turnaround_fetched_at
+  - fct_nc_lab_turnaround_turnaround_id
+  - fct_nc_lab_turnaround_lab
+  - fct_nc_lab_turnaround_processing_days
+  - fct_nc_lab_turnaround_source_loaded_at
+  exploreName: fct_nc_lab_turnaround
+  filters:
+    dimensions:
+      and:
+      - id: 177e6240-74e4-5dc1-b90f-950f91d5064a
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nc_lab_turnaround_fetched_at
+        values:
+        - 30
+      id: 4bf3ef80-e643-55dd-a549-3b5614fdb695
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_nc_lab_turnaround_fetched_at
+  tableCalculations: []
+name: Nc lab turnaround — observations
+slug: fct-nc-lab-turnaround-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_nc_lab_turnaround
+version: 1

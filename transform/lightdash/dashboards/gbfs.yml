@@ -1,0 +1,288 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 3f66e2f5-e982-53fd-b456-16f6c9f53819
+    label: 'Bike station availability: Network'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_bike_station_status_network
+      tableName: fct_bike_station_status
+    values: []
+  - disabled: true
+    id: 5a13f742-7d71-56fe-98b9-a89c84dcd73e
+    label: 'Bike station availability: Is installed'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_bike_station_status_is_installed
+      tableName: fct_bike_station_status
+    values: []
+  - disabled: true
+    id: f27bd4d6-17f1-50a4-819e-342ec1127adb
+    label: 'Bike station availability: Is renting'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_bike_station_status_is_renting
+      tableName: fct_bike_station_status
+    values: []
+  - disabled: true
+    id: 6a7cba95-3150-5566-b1bd-dc03278acb76
+    label: 'Bike station availability: Is returning'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_bike_station_status_is_returning
+      tableName: fct_bike_station_status
+    values: []
+  - disabled: true
+    id: 518e7305-1a54-53a7-b57f-aef74d206ed1
+    label: 'Bike station availability: Network'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_bike_station_status_daily_network
+      tableName: fct_bike_station_status_daily
+    values: []
+  - disabled: true
+    id: b75693dc-e225-5d25-a408-0883e493ceae
+    label: 'Bike station availability: Observation count'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_bike_station_status_daily_observation_count
+      tableName: fct_bike_station_status_daily
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Gbfs
+slug: gbfs
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Deduplicated GBFS station availability observations across supported networks, with source
+      lineage retained for audit and replay.
+
+
+      **Grain:** network, station_id, observed_at
+
+
+      **What changes here:** how station coverage and reported bike availability change through each network''s
+      polling stream.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `gbfs_citibike` — licence: unstated; varies per operator; attribution required: False. Source
+      configuration: `extract/sources/gbfs_citibike.yml`.
+
+      - `gbfs_divvy` — licence: unstated; varies per operator; attribution required: False. Source configuration:
+      `extract/sources/gbfs_divvy.yml`.'
+    hideFrame: false
+    title: Bike station availability
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Bike station availability — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Stations reporting by observation hour
+    chartSlug: fct-bike-station-status-station-coverage
+    hideTitle: false
+    title: Stations reporting by observation hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean available bikes by network and hour
+    chartSlug: fct-bike-station-status-bikes-by-network
+    hideTitle: false
+    title: Mean available bikes by network and hour
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean available docks by network and day
+    chartSlug: fct-bike-station-status-docks-by-network
+    hideTitle: false
+    title: Mean available docks by network and day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Available bikes by station-reported day
+    chartSlug: fct-bike-station-status-station-report-times
+    hideTitle: false
+    title: Available bikes by station-reported day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Bike station availability — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed num bikes available by network
+    chartSlug: fct-bike-station-status
+    hideTitle: false
+    title: Mean observed num bikes available by network
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Bike station availability — observations
+    chartSlug: fct-bike-station-status-details
+    hideTitle: false
+    title: Bike station availability — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+- h: 6
+  properties:
+    content: 'Daily station-level GBFS availability aggregates rebuilt for the latest two observed UTC
+      dates so late observations repair recent history.
+
+
+      **Grain:** network, station_id, observation_date
+
+
+      **What changes here:** how daily station coverage and average capacity move across the two GBFS
+      networks.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observation_date` (UTC); trend tiles
+      state their own axis and window. Empty charts mean no matching published observations; they do not
+      establish that no events occurred.
+
+
+      **Provenance**
+
+      - `gbfs_citibike` — licence: unstated; varies per operator; attribution required: False. Source
+      configuration: `extract/sources/gbfs_citibike.yml`.
+
+      - `gbfs_divvy` — licence: unstated; varies per operator; attribution required: False. Source configuration:
+      `extract/sources/gbfs_divvy.yml`.'
+    hideFrame: false
+    title: Bike station availability
+  type: markdown
+  w: 36
+  x: 0
+  y: 58
+- h: 1
+  properties:
+    showDivider: true
+    text: Bike station availability — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 64
+- h: 10
+  properties:
+    chartName: Mean daily available bikes
+    chartSlug: fct-bike-station-status-daily-daily-bike-level
+    hideTitle: false
+    title: Mean daily available bikes
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 65
+- h: 10
+  properties:
+    chartName: Mean daily available docks
+    chartSlug: fct-bike-station-status-daily-daily-dock-level
+    hideTitle: false
+    title: Mean daily available docks
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 65
+- h: 10
+  properties:
+    chartName: Reporting stations by network and day
+    chartSlug: fct-bike-station-status-daily-stations-by-network
+    hideTitle: false
+    title: Reporting stations by network and day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 75
+- h: 10
+  properties:
+    chartName: Daily levels by first source observation day
+    chartSlug: fct-bike-station-status-daily-first-observation-day
+    hideTitle: false
+    title: Daily levels by first source observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 85
+- h: 1
+  properties:
+    showDivider: true
+    text: Bike station availability — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 95
+- h: 10
+  properties:
+    chartName: Mean observed avg bikes available by network
+    chartSlug: fct-bike-station-status-daily
+    hideTitle: false
+    title: Mean observed avg bikes available by network
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 96
+- h: 10
+  properties:
+    chartName: Bike station availability — observations
+    chartSlug: fct-bike-station-status-daily-details
+    hideTitle: false
+    title: Bike station availability — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 96
+version: 1

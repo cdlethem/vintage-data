@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of Deezer chart observations. Each row represents one source, track,
+  observation timestamp, and chart position, retaining track metadata and raw-load lineage. Repeated raw
+  loads of the same chart slot are reduced to the latest loaded record.
+metricQuery:
+  dimensions: &id001
+  - fct_deezer_chart_observation_observed_at
+  - fct_deezer_chart_observation_track_id
+  - fct_deezer_chart_observation_artist_name
+  - fct_deezer_chart_observation_chart_position
+  - fct_deezer_chart_observation_source_loaded_at
+  exploreName: fct_deezer_chart_observation
+  filters:
+    dimensions:
+      and:
+      - id: 52709171-f88c-5b91-9e96-aaeed681c9b0
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_deezer_chart_observation_observed_at
+        values:
+        - 30
+      id: 489c5e91-8207-5160-9dc3-8a0c14cc7e2f
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_deezer_chart_observation_observed_at
+  tableCalculations: []
+name: Deezer chart observation — observations
+slug: fct-deezer-chart-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_deezer_chart_observation
+version: 1

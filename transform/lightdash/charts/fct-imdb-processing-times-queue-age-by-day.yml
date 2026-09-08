@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_imdb_processing_times_observed_at_day
+          yRef:
+            field: fct_imdb_processing_times_average_queue_age_days
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed queue age days
+    layout:
+      xField: fct_imdb_processing_times_observed_at_day
+      yField:
+      - fct_imdb_processing_times_average_queue_age_days
+  type: cartesian
+description: Mean `queue_age_days` across processing categories observed on each extractor day. This is
+  a snapshot level with equal weight per retained row, not an additive backlog; the four observed days
+  are sparse history and absent days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_imdb_processing_times_observed_at_day
+  exploreName: fct_imdb_processing_times
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_imdb_processing_times_average_queue_age_days
+  sorts:
+  - descending: false
+    fieldId: fct_imdb_processing_times_observed_at_day
+  tableCalculations: []
+name: Mean queue age by observation day
+slug: fct-imdb-processing-times-queue-age-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_imdb_processing_times_observed_at_day
+  - fct_imdb_processing_times_average_queue_age_days
+tableName: fct_imdb_processing_times
+version: 1

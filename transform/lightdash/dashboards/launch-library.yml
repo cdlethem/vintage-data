@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: e0729216-f989-55d9-8b5f-318e73dda355
+    label: 'Launch library: Status name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_launch_library_status_name
+      tableName: fct_launch_library
+    values: []
+  - disabled: true
+    id: a73031ad-e117-5519-874c-0149b51ca81b
+    label: 'Launch library: Status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_launch_library_status
+      tableName: fct_launch_library
+    values: []
+  - disabled: true
+    id: 02e9087f-8301-5487-8058-a6d4ae342aa5
+    label: 'Launch library: Net precision'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_launch_library_net_precision
+      tableName: fct_launch_library
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Launch Library
+slug: launch-library
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical daily snapshot fact for Launch Library launch records. Each row represents one
+      launch identifier from one upstream feed at one fetched_at observation timestamp. Repeated observations
+      preserve changing launch status, schedule, and source-update attributes, while duplicate raw rows
+      for the same source, launch, and observation timestamp are reduced to the latest loaded record and
+      load lineage is retained.
+
+
+      **Grain:** source, launch_id, fetched_at
+
+
+      **What changes here:** how the launch catalogue''s status mix and publisher revisions change over
+      time.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `launch_library` — licence: unstated; attribution required: False. Source configuration: `extract/sources/launch_library.yml`.'
+    hideFrame: false
+    title: Launch library
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Launch library — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct launches updated per day
+    chartSlug: fct-launch-library-launches-updated
+    hideTitle: false
+    title: Distinct launches updated per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct launch names updated per day
+    chartSlug: fct-launch-library-launch-names-updated
+    hideTitle: false
+    title: Distinct launch names updated per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Updated launches by status
+    chartSlug: fct-launch-library-status-updates
+    hideTitle: false
+    title: Updated launches by status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Updated launches by schedule precision
+    chartSlug: fct-launch-library-precision-mix
+    hideTitle: false
+    title: Updated launches by schedule precision
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Launch library — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct launch by status name
+    chartSlug: fct-launch-library
+    hideTitle: false
+    title: Distinct launch by status name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Launch library — observations
+    chartSlug: fct-launch-library-details
+    hideTitle: false
+    title: Launch library — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

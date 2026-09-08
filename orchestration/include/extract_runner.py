@@ -13,6 +13,12 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 
+from run_metadata import (
+    RunSummaryError,
+    build_manifest,
+    extract_summary_line,
+    validate_summary,
+)
 from sinks import get_sink
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -64,33 +70,69 @@ def run(cfg: dict) -> dict:
 
         err.seek(0)
         stderr = err.read().strip()
-    if stderr:
-        log.info("stderr from %s:\n%s", cfg["script"], stderr)
 
+    # Ordinary logs first: the reserved summary line is excluded from them.
+    summary_payload, ordinary = None, stderr
+    _rs = cfg.get("run_summary")
+    required = bool(_rs.get("required", False)) if isinstance(_rs, dict) else bool(_rs)
+    try:
+        summary_payload, ordinary = extract_summary_line(stderr)
+    except RunSummaryError as exc:
+        # A malformed, duplicate or oversize summary fails the run; the staged
+        # records must not be published.
+        failed = build_manifest(
+            source=name, script=cfg["script"], args=args,
+            started_at=started.isoformat(),
+            finished_at=datetime.now(timezone.utc).isoformat(),
+            duration_s=(datetime.now(timezone.utc) - started).total_seconds(),
+            exit_code=returncode, observed_records=records, observed_bytes=bytes_written,
+            summary=None, status="failed",
+            error=str(exc),
+        )
+        sink.fail(failed)
+        raise RuntimeError(f"{cfg['script']} run-summary rejected: {exc}") from exc
+    if required and summary_payload is None:
+        failed = build_manifest(
+            source=name, script=cfg["script"], args=args,
+            started_at=started.isoformat(),
+            finished_at=datetime.now(timezone.utc).isoformat(),
+            duration_s=(datetime.now(timezone.utc) - started).total_seconds(),
+            exit_code=returncode, observed_records=records, observed_bytes=bytes_written,
+            summary=None, status="failed",
+            error="run_summary required but the script emitted no summary line",
+        )
+        sink.fail(failed)
+        raise RuntimeError(f"{cfg['script']} required a run_summary but none was emitted")
+
+    if ordinary:
+        log.info("stderr from %s:\n%s", cfg["script"], ordinary)
+
+    finished = datetime.now(timezone.utc)
     if returncode != 0:
-        sink.fail({
-            "source": name,
-            "script": cfg["script"],
-            "args": args,
-            "started_at": started.isoformat(),
-            "exit_code": returncode,
-            "records": records,
-            "error": stderr[-500:] if stderr else None,
-        })
+        # Hard failure with no safe output: discard the staged records (the
+        # runner's existing contract) and record a failed manifest.
+        failed = build_manifest(
+            source=name, script=cfg["script"], args=args,
+            started_at=started.isoformat(), finished_at=finished.isoformat(),
+            duration_s=(finished - started).total_seconds(),
+            exit_code=returncode, observed_records=records,
+            observed_bytes=bytes_written, summary=None, status="failed",
+            error=ordinary[-500:] if ordinary else None,
+        )
+        sink.fail(failed)
         raise RuntimeError(f"{cfg['script']} exited {returncode} after {records} records")
 
-    manifest = {
-        "source": name,
-        "script": cfg["script"],
-        "args": args,
-        "started_at": started.isoformat(),
-        "duration_s": round((datetime.now(timezone.utc) - started).total_seconds(), 3),
-        "exit_code": returncode,
-        "records": records,
-        "bytes": bytes_written,
-    }
+    summary = validate_summary(json.loads(summary_payload)) if summary_payload else {}
+    manifest = build_manifest(
+        source=name, script=cfg["script"], args=args,
+        started_at=started.isoformat(), finished_at=finished.isoformat(),
+        duration_s=(finished - started).total_seconds(),
+        exit_code=returncode, observed_records=records,
+        observed_bytes=bytes_written, summary=summary, status="success",
+    )
     manifest_path = sink.commit(manifest)
-    log.info("%s: %d records, %d bytes -> %s", name, records, bytes_written,
+    log.info("%s: %d records, %d bytes, health=%s completeness=%s -> %s",
+             name, records, bytes_written, manifest["health"], manifest["completeness"],
              manifest["path"] or f"no data file (manifest: {manifest_path})")
     return manifest
 

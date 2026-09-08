@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_job_boards_observed_at_day
+          yRef:
+            field: fct_job_boards_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct job
+    layout:
+      stack: true
+      xField: fct_job_boards_observed_at_day
+      yField:
+      - fct_job_boards_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values present on each extractor observation day, stacked by upstream `source`.
+  This is a catalogue level rather than a posting flow — a change means the published feed changed, and
+  days with no successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_job_boards_observed_at_day
+  - fct_job_boards_source
+  exploreName: fct_job_boards
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_boards_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_boards_distinct_entities
+  - descending: false
+    fieldId: fct_job_boards_observed_at_day
+  tableCalculations: []
+name: Observed job catalogue by feed
+pivotConfig:
+  columns:
+  - fct_job_boards_source
+slug: fct-job-boards-catalogue-by-source
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_boards_observed_at_day
+  - fct_job_boards_source
+  - fct_job_boards_distinct_entities
+tableName: fct_job_boards
+version: 1

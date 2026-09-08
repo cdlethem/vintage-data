@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of maritime warnings published through the Danish Niord service.
+  Each row represents one warning identifier from one source at one extractor observation time, with nested
+  warning content and raw-load lineage retained for audit and replay. Repeated insert-only copies of the
+  same observation are reduced to the latest loaded copy.
+metricQuery:
+  dimensions: &id001
+  - fct_niord_warning_observation_observed_at
+  - fct_niord_warning_observation_warning_id
+  - fct_niord_warning_observation_warning_type
+  - fct_niord_warning_observation_source_loaded_at
+  exploreName: fct_niord_warning_observation
+  filters:
+    dimensions:
+      and:
+      - id: b6cebc2e-8b39-567c-bc48-7bd94ac6de13
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_niord_warning_observation_observed_at
+        values:
+        - 30
+      id: 5d1a829c-2e83-5165-88a3-1f967f4924a3
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_niord_warning_observation_observed_at
+  tableCalculations: []
+name: Niord warning observation — observations
+slug: fct-niord-warning-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_niord_warning_observation
+version: 1

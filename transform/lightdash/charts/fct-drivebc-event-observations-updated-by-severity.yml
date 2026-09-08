@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_drivebc_event_observations_event_updated_at_week
+          yRef:
+            field: fct_drivebc_event_observations_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event updated at (Week)
+      yAxis:
+      - name: Distinct event
+    layout:
+      xField: fct_drivebc_event_observations_event_updated_at_week
+      yField:
+      - fct_drivebc_event_observations_distinct_entities
+  type: cartesian
+description: Distinct `event_id` values by source update week, pivoted by the two observed severity values.
+  Both severities are retained; weeks without represented updates are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_drivebc_event_observations_event_updated_at_week
+  - fct_drivebc_event_observations_severity
+  exploreName: fct_drivebc_event_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_drivebc_event_observations_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_drivebc_event_observations_distinct_entities
+  - descending: false
+    fieldId: fct_drivebc_event_observations_event_updated_at_week
+  tableCalculations: []
+name: Updated events by severity each week
+pivotConfig:
+  columns:
+  - fct_drivebc_event_observations_severity
+slug: fct-drivebc-event-observations-updated-by-severity
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_drivebc_event_observations_event_updated_at_week
+  - fct_drivebc_event_observations_severity
+  - fct_drivebc_event_observations_distinct_entities
+tableName: fct_drivebc_event_observations
+version: 1

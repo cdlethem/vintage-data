@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_fcc_uls_license_observation_license_status
+          yRef:
+            field: fct_fcc_uls_license_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_fcc_uls_license_observation_license_status
+      yField:
+      - fct_fcc_uls_license_observation_distinct_entities
+  type: cartesian
+description: Distinct `license_id` values by `license_status` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_fcc_uls_license_observation_license_status
+  exploreName: fct_fcc_uls_license_observation
+  filters:
+    dimensions:
+      and:
+      - id: 4fd385ad-82f6-52f7-abfb-7bdc9713f68b
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_fcc_uls_license_observation_observed_at
+        values:
+        - 30
+      id: dcb40959-3ea7-583f-83c0-b36417a5965c
+  limit: 20
+  metrics:
+  - fct_fcc_uls_license_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_fcc_uls_license_observation_distinct_entities
+  tableCalculations: []
+name: Distinct license by license status
+slug: fct-fcc-uls-license-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_fcc_uls_license_observation_license_status
+  - fct_fcc_uls_license_observation_distinct_entities
+tableName: fct_fcc_uls_license_observation
+version: 1

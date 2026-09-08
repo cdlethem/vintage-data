@@ -1,0 +1,154 @@
+config:
+  dateZoomGranularities:
+  - Hour
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Hour
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: c92b98e4-5783-5f14-952a-8dfff27ceb96
+    label: 'Environment agency floods: Severity'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_environment_agency_floods_severity
+      tableName: fct_environment_agency_floods
+    values: []
+  - disabled: true
+    id: 86aebcb1-11c8-5520-81dc-85756ec7eb1b
+    label: 'Environment agency floods: Area name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_environment_agency_floods_area_name
+      tableName: fct_environment_agency_floods
+    values: []
+  - disabled: true
+    id: c197c986-c085-51d4-86c3-6d255ed10f91
+    label: 'Environment agency floods: Is tidal'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_environment_agency_floods_is_tidal
+      tableName: fct_environment_agency_floods
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Environment Agency Floods
+slug: environment-agency-floods
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical history of Environment Agency flood-warning snapshots. Each row represents
+      one source flood identifier at one extractor fetch time; repeated insert-only raw copies of that
+      observation are reduced to the latest loaded copy while source and load lineage remain available
+      for audit and replay.
+
+
+      **Grain:** source_name, flood_id, fetched_at
+
+
+      **What changes here:** how flood-warning levels and affected areas change through each source event
+      and fetch.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `environment_agency_floods` — licence: OGL 3.0; attribution required: True. Source configuration:
+      `extract/sources/environment_agency_floods.yml`.'
+    hideFrame: false
+    title: Environment agency floods
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Environment agency floods — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Flood warnings by severity-change hour
+    chartSlug: fct-environment-agency-floods-severity-events
+    hideTitle: false
+    title: Flood warnings by severity-change hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Flood warnings by severity over time
+    chartSlug: fct-environment-agency-floods-severity-by-hour
+    hideTitle: false
+    title: Flood warnings by severity over time
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Flood-warning area mix by severity-change hour
+    chartSlug: fct-environment-agency-floods-area-composition
+    hideTitle: false
+    title: Flood-warning area mix by severity-change hour
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean warning severity at each fetch hour
+    chartSlug: fct-environment-agency-floods-fetched-level
+    hideTitle: false
+    title: Mean warning severity at each fetch hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Environment agency floods — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct flood by severity
+    chartSlug: fct-environment-agency-floods
+    hideTitle: false
+    title: Distinct flood by severity
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Environment agency floods — observations
+    chartSlug: fct-environment-agency-floods-details
+    hideTitle: false
+    title: Environment agency floods — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

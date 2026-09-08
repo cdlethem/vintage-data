@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_zenodo_record_observation_observed_at_day
+          yRef:
+            field: fct_zenodo_record_observation_distinct_concepts
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct concepts
+    layout:
+      xField: fct_zenodo_record_observation_observed_at_day
+      yField:
+      - fct_zenodo_record_observation_distinct_concepts
+  type: cartesian
+description: Distinct non-null `concept_doi` values present in the feed on each UTC observation day. This
+  is a collection-level measure, not a count of newly created concepts; absent extract days are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_zenodo_record_observation_observed_at_day
+  exploreName: fct_zenodo_record_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_zenodo_record_observation_distinct_concepts
+  sorts:
+  - descending: false
+    fieldId: fct_zenodo_record_observation_observed_at_day
+  tableCalculations: []
+name: Observed concepts by day
+slug: fct-zenodo-record-observation-concepts-by-observation-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_zenodo_record_observation_observed_at_day
+  - fct_zenodo_record_observation_distinct_concepts
+tableName: fct_zenodo_record_observation
+version: 1

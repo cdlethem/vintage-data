@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_launch_library_last_updated_day
+          yRef:
+            field: fct_launch_library_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Last updated (Day)
+      yAxis:
+      - name: Distinct launch
+    layout:
+      xField: fct_launch_library_last_updated_day
+      yField:
+      - fct_launch_library_distinct_entities
+  type: cartesian
+description: Distinct `launch_id` values on the upstream `last_updated` day. This is a revision flow rather
+  than a catalogue census — days without a source update are absent rather than zero, and repeated records
+  for one launch count once per day.
+metricQuery:
+  dimensions:
+  - fct_launch_library_last_updated_day
+  exploreName: fct_launch_library
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_launch_library_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_launch_library_last_updated_day
+  tableCalculations: []
+name: Distinct launches updated per day
+slug: fct-launch-library-launches-updated
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_launch_library_last_updated_day
+  - fct_launch_library_distinct_entities
+tableName: fct_launch_library
+version: 1

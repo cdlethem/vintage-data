@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Deduplicated observations of published New Zealand visa processing waits. Each row records
+  one visa type from an endpoint observation timestamp and retains the source text alongside wait durations
+  normalized to days.
+metricQuery:
+  dimensions: &id001
+  - fct_nz_visa_wait_times_observed_at
+  - fct_nz_visa_wait_times_visa_wait_time_key
+  - fct_nz_visa_wait_times_visa_type
+  - fct_nz_visa_wait_times_average_wait_days
+  - fct_nz_visa_wait_times_source_loaded_at
+  exploreName: fct_nz_visa_wait_times
+  filters:
+    dimensions:
+      and:
+      - id: 51471943-1d20-5ea5-99db-d72119d12b03
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nz_visa_wait_times_observed_at
+        values:
+        - 30
+      id: 3a8ac20b-ab83-53f8-b07a-9bb9cc21128a
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_nz_visa_wait_times_observed_at
+  tableCalculations: []
+name: Nz visa wait times — observations
+slug: fct-nz-visa-wait-times-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_nz_visa_wait_times
+version: 1

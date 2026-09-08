@@ -1,0 +1,45 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_geojson_shelter_status_observed_at_day
+          yRef:
+            field: fct_geojson_shelter_status_average_population
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Average reported population
+    layout:
+      xField: fct_geojson_shelter_status_observed_at_day
+      yField:
+      - fct_geojson_shelter_status_average_population
+  type: cartesian
+description: Observation-weighted average of non-null `total_population` values among shelter rows on
+  each observation day. This is a reported snapshot level, not people arriving that day; irregular polling
+  and row retention can bias the average. Days without population observations are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_geojson_shelter_status_observed_at_day
+  exploreName: fct_geojson_shelter_status
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_geojson_shelter_status_average_population
+  sorts:
+  - descending: false
+    fieldId: fct_geojson_shelter_status_observed_at_day
+  tableCalculations: []
+name: Average reported population per observation day
+slug: fct-geojson-shelter-status-population-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_geojson_shelter_status_observed_at_day
+  - fct_geojson_shelter_status_average_population
+tableName: fct_geojson_shelter_status
+version: 1

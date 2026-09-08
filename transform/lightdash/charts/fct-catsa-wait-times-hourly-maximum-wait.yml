@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_catsa_wait_times_observed_at_hour
+          yRef:
+            field: fct_catsa_wait_times_average_wait_time_max_minutes
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Mean observed wait time max minutes
+    layout:
+      xField: fct_catsa_wait_times_observed_at_hour
+      yField:
+      - fct_catsa_wait_times_average_wait_time_max_minutes
+  type: cartesian
+description: Mean non-null `wait_time_max_minutes` across retained checkpoint observations in each extractor
+  `observed_at` hour. This is an observation-weighted level, not a sum of passenger waits; unavailable
+  values are omitted and hours with no poll are absent.
+metricQuery:
+  dimensions:
+  - fct_catsa_wait_times_observed_at_hour
+  exploreName: fct_catsa_wait_times
+  filters:
+    dimensions:
+      and:
+      - id: ea7aebf3-1b41-5e2d-9c72-6d8db1176e8f
+        operator: equals
+        target:
+          fieldId: fct_catsa_wait_times_wait_time_available
+        values:
+        - true
+      id: 5db027b0-1f50-5b6a-b052-8105f85f573e
+  limit: 5000
+  metrics:
+  - fct_catsa_wait_times_average_wait_time_max_minutes
+  sorts:
+  - descending: false
+    fieldId: fct_catsa_wait_times_observed_at_hour
+  tableCalculations: []
+name: Mean upper wait bound per hour
+slug: fct-catsa-wait-times-hourly-maximum-wait
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_catsa_wait_times_observed_at_hour
+  - fct_catsa_wait_times_average_wait_time_max_minutes
+tableName: fct_catsa_wait_times
+version: 1

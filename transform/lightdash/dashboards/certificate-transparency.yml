@@ -1,0 +1,154 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: ca8c5ef5-79d5-5a40-ad27-a692cf91641d
+    label: 'Certificate transparency certificate observation: Issuer'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_certificate_transparency_certificate_observation_issuer
+      tableName: fct_certificate_transparency_certificate_observation
+    values: []
+  - disabled: true
+    id: 86e26946-7779-5c9d-93b2-4510ecc4e564
+    label: 'Certificate transparency certificate observation: Common name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_certificate_transparency_certificate_observation_com_43912d
+      tableName: fct_certificate_transparency_certificate_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Certificate Transparency
+slug: certificate-transparency
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily certificate transparency observation fact for certificates returned by the watched-domain
+      search. Each row is one certificate identifier at one extractor observation timestamp, retaining
+      certificate validity, subject, issuer, SAN names, and raw-load lineage. Repeated copies of the same
+      source, certificate, and observation timestamp are reduced to the latest loaded record.
+
+
+      **Grain:** source, certificate_id, observed_at
+
+
+      **What changes here:** how certificate issuance and expiry patterns shift across watched-domain
+      history.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `certificate_transparency` — licence: unstated; attribution required: False. Source configuration:
+      `extract/sources/certificate_transparency.yml`.'
+    hideFrame: false
+    title: Certificate transparency certificate observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Certificate transparency certificate observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Certificates issued per month
+    chartSlug: fct-certificate-transparency-certificate-observation-certificate-issuance
+    hideTitle: false
+    title: Certificates issued per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Issuer serial numbers per issuance month
+    chartSlug: fct-certificate-transparency-certificate-observation-serial-diversity
+    hideTitle: false
+    title: Issuer serial numbers per issuance month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Certificates issued by leading issuer
+    chartSlug: fct-certificate-transparency-certificate-observation-issuer-composition
+    hideTitle: false
+    title: Certificates issued by leading issuer
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Certificates issued by common name
+    chartSlug: fct-certificate-transparency-certificate-observation-common-name-trajectories
+    hideTitle: false
+    title: Certificates issued by common name
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Certificates expiring per month
+    chartSlug: fct-certificate-transparency-certificate-observation-certificate-expiry
+    hideTitle: false
+    title: Certificates expiring per month
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Certificate transparency certificate observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct certificate by issuer
+    chartSlug: fct-certificate-transparency-certificate-observation
+    hideTitle: false
+    title: Distinct certificate by issuer
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Certificate transparency certificate observation — observations
+    chartSlug: fct-certificate-transparency-certificate-observation-details
+    hideTitle: false
+    title: Certificate transparency certificate observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

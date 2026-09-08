@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_globe_measurement_observation_measured_date_year
+          yRef:
+            field: fct_globe_measurement_observation_average_elevation
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Measured date (Year)
+      yAxis:
+      - name: Mean site elevation
+    layout:
+      xField: fct_globe_measurement_observation_measured_date_year
+      yField:
+      - fct_globe_measurement_observation_average_elevation
+  type: cartesian
+description: Average reported site elevation per measurement year for the eight countries with the largest
+  measurement totals. Remaining countries are excluded rather than aggregated; this is an observation-weighted
+  mean, not a country-wide terrain statistic.
+metricQuery:
+  dimensions:
+  - fct_globe_measurement_observation_measured_date_year
+  - fct_globe_measurement_observation_country_name
+  exploreName: fct_globe_measurement_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_globe_measurement_observation_average_elevation
+  sorts:
+  - descending: true
+    fieldId: fct_globe_measurement_observation_average_elevation
+  - descending: false
+    fieldId: fct_globe_measurement_observation_measured_date_year
+  tableCalculations: []
+name: Mean measurement-site elevation by leading country
+pivotConfig:
+  columns:
+  - fct_globe_measurement_observation_country_name
+slug: fct-globe-measurement-observation-country-elevation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_globe_measurement_observation_measured_date_year
+  - fct_globe_measurement_observation_country_name
+  - fct_globe_measurement_observation_average_elevation
+tableName: fct_globe_measurement_observation
+version: 1

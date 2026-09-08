@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_faa_nas_status_observation_source_timestamp_hour
+          yRef:
+            field: fct_faa_nas_status_observation_average_ground_delay_avg_min
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Source timestamp (Hour)
+      yAxis:
+      - name: Mean observed ground delay avg min
+    layout:
+      xField: fct_faa_nas_status_observation_source_timestamp_hour
+      yField:
+      - fct_faa_nas_status_observation_average_ground_delay_avg_min
+  type: cartesian
+description: Average non-null FAA ground delay minutes per source timestamp hour, split by the six airports
+  with the largest observed values. Remaining airports are excluded rather than aggregated, and null-delay
+  observations do not form a zero.
+metricQuery:
+  dimensions:
+  - fct_faa_nas_status_observation_source_timestamp_hour
+  - fct_faa_nas_status_observation_airport
+  exploreName: fct_faa_nas_status_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_faa_nas_status_observation_average_ground_delay_avg_min
+  sorts:
+  - descending: true
+    fieldId: fct_faa_nas_status_observation_average_ground_delay_avg_min
+  - descending: false
+    fieldId: fct_faa_nas_status_observation_source_timestamp_hour
+  tableCalculations: []
+name: Delay trajectories for the busiest airports
+pivotConfig:
+  columns:
+  - fct_faa_nas_status_observation_airport
+slug: fct-faa-nas-status-observation-airport-delay
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_faa_nas_status_observation_source_timestamp_hour
+  - fct_faa_nas_status_observation_airport
+  - fct_faa_nas_status_observation_average_ground_delay_avg_min
+tableName: fct_faa_nas_status_observation
+version: 1

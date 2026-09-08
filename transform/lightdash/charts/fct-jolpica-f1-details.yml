@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of Jolpica Formula 1 driver-standing observations. Each row is one
+  driver championship standing for a season and round at one extractor observation timestamp; duplicate
+  raw replays of that observation are reduced to the latest loaded row while raw-load lineage is retained.
+metricQuery:
+  dimensions: &id001
+  - fct_jolpica_f1_observed_at
+  - fct_jolpica_f1_driver_id
+  - fct_jolpica_f1_driver_name
+  - fct_jolpica_f1_championship_points
+  - fct_jolpica_f1_source_loaded_at
+  exploreName: fct_jolpica_f1
+  filters:
+    dimensions:
+      and:
+      - id: 9ad4b256-9e6d-5a19-a093-6aaf5a6b5407
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_jolpica_f1_observed_at
+        values:
+        - 30
+      id: 480047d9-19ff-5cbd-bb14-2f62868254b0
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_jolpica_f1_observed_at
+  tableCalculations: []
+name: Jolpica f1 — observations
+slug: fct-jolpica-f1-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_jolpica_f1
+version: 1

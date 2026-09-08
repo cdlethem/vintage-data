@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_digitraffic_marine_aton_fault_observation_entered_at_month
+          yRef:
+            field: fct_digitraffic_marine_aton_fault_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Entered at (Month)
+      yAxis:
+      - name: Distinct fault
+    layout:
+      xField: fct_digitraffic_marine_aton_fault_observation_entered_at_month
+      yField:
+      - fct_digitraffic_marine_aton_fault_observation_distinct_entities
+  type: cartesian
+description: Distinct `fault_id` values by publisher `entered_at` month. This is a fault-entry flow deduplicated
+  across repeated observations, and months with no entered faults are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_digitraffic_marine_aton_fault_observation_entered_at_month
+  exploreName: fct_digitraffic_marine_aton_fault_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_digitraffic_marine_aton_fault_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_digitraffic_marine_aton_fault_observation_entered_at_month
+  tableCalculations: []
+name: Faults entered per month
+slug: fct-digitraffic-marine-aton-fault-observation-monthly-fault-entries
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_digitraffic_marine_aton_fault_observation_entered_at_month
+  - fct_digitraffic_marine_aton_fault_observation_distinct_entities
+tableName: fct_digitraffic_marine_aton_fault_observation
+version: 1

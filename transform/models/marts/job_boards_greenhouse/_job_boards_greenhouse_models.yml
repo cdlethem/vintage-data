@@ -1,0 +1,331 @@
+version: 2
+models:
+- name: fct_job_boards_greenhouse
+  description: Daily physical history of job observations returned by Greenhouse applicant tracking system
+    boards. Each row represents one upstream source, job identifier, and extractor observation timestamp;
+    repeated raw copies of an observation are reduced to the latest loaded lineage record while listing
+    attributes and load metadata remain available for audit and replay. A table materialization preserves
+    the append-only observation history for the daily feed without rescanning raw records at query time.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, job_id, observed_at
+      label: Job boards greenhouse
+      group_label: Job boards greenhouse
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: job_boards_greenhouse_key
+      vintage:
+        visualization:
+          dimension: company
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct job by company
+          description: Distinct `job_id` values by `company` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - job_id
+          - company
+          - source_loaded_at
+          sources:
+          - '`job_boards_greenhouse` — licence: public ATS board endpoints; attribution required: False.
+            Source configuration: `extract/sources/job_boards_greenhouse.yml`.'
+          analysis:
+            headline: how Greenhouse hiring demand and employer mix change across the publication history.
+            event_time: posted_at
+            grain: MONTH
+            controls:
+            - company_country
+            - company_industry
+            - department
+            - location_country
+            trends:
+            - slug: jobs-posted
+              kind: total
+              metric: distinct_entities
+              time: posted_at
+              grain: MONTH
+              title: Distinct jobs posted per month
+              description: Distinct `job_id` values whose Greenhouse `posted_at` falls in each month. Repeated
+                observations of a listing count once within its posting month; months with no source rows are
+                absent rather than zero.
+              width: half
+            - slug: companies-posting
+              kind: total
+              metric: distinct_companies
+              time: posted_at
+              grain: MONTH
+              title: Hiring companies posting per month
+              description: Distinct non-null `company` values attached to jobs by their Greenhouse `posted_at`
+                month. This counts participating employers rather than job volume, so a large employer can
+                contribute one company but many jobs.
+              width: half
+            - slug: jobs-by-industry
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: company_industry
+              top_n: 6
+              time: posted_at
+              grain: MONTH
+              title: Jobs posted per month by industry
+              description: Distinct `job_id` values by `company_industry` and Greenhouse posting month. The
+                six largest industries by the selected metric are shown; smaller industries are excluded
+                rather than aggregated, and missing months indicate no source rows.
+              width: full
+            - slug: jobs-by-company-country
+              kind: composition
+              metric: distinct_entities
+              breakdown: company_country
+              top_n: 8
+              time: posted_at
+              grain: MONTH
+              title: Monthly job mix by employer country
+              description: Distinct jobs stacked by `company_country` and Greenhouse posting month. The eight
+                largest countries are shown; the remainder is excluded rather than aggregated. Stacked bars
+                show mix and volume, not a continuously active-job census.
+              width: full
+  columns:
+  - name: job_boards_greenhouse_key
+    description: Stable hash of the Greenhouse source, job identifier, and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job boards greenhouse key
+          hidden: true
+  - name: source
+    description: Upstream source label carried by the Greenhouse job-board response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: job_id
+    description: Greenhouse identifier assigned to the advertised job.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct job
+            description: Distinct `job_id` values by `company` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Job id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed this job listing.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: provider
+    description: Job-board provider label reported by the upstream response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider
+          hidden: false
+  - name: company
+    description: Hiring company name reported by the Greenhouse board.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_companies:
+            type: count_distinct
+            label: Distinct hiring companies
+            description: Distinct non-null `company` values attached to jobs by their Greenhouse `posted_at`
+              month. This counts participating employers rather than job volume, so a large employer can
+              contribute one company but many jobs.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Company
+          hidden: false
+  - name: company_country
+    description: Country associated with the hiring company when supplied by Greenhouse.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Company country
+          hidden: false
+  - name: company_industry
+    description: Industry label associated with the hiring company when supplied by Greenhouse.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Company industry
+          hidden: false
+  - name: title
+    description: Public title of the advertised job.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: department
+    description: Department or discipline reported for the job listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Department
+          hidden: false
+  - name: location
+    description: Free-text candidate location reported for the job listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location
+          hidden: false
+  - name: location_country
+    description: Country associated with the reported job location when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location country
+          hidden: false
+  - name: posted_at
+    description: UTC publication timestamp supplied by Greenhouse for the job posting.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Posted at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: job_url
+    description: Public Greenhouse URL for the job posting.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job url
+          hidden: false
+  - name: description
+    description: Job description text supplied by Greenhouse.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Description
+          hidden: true
+  - name: _batch_id
+    description: Extract batch identifier associated with the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Load job identifier associated with the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Content hash of the retained raw observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical daily observation fact for FCC Universal Licensing System amateur-radio license
+  records. Each row records one FCC license identifier at one extractor observation timestamp, retaining
+  the published license attributes and raw-load lineage. Repeated copies of the same source license and
+  observation timestamp retain the latest loaded row; personally identifying fields are redacted by the
+  extractor before loading.
+metricQuery:
+  dimensions: &id001
+  - fct_fcc_uls_license_observation_observed_at
+  - fct_fcc_uls_license_observation_license_id
+  - fct_fcc_uls_license_observation_license_status
+  - fct_fcc_uls_license_observation_source_loaded_at
+  exploreName: fct_fcc_uls_license_observation
+  filters:
+    dimensions:
+      and:
+      - id: 4fd385ad-82f6-52f7-abfb-7bdc9713f68b
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_fcc_uls_license_observation_observed_at
+        values:
+        - 30
+      id: dcb40959-3ea7-583f-83c0-b36417a5965c
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_fcc_uls_license_observation_observed_at
+  tableCalculations: []
+name: Fcc uls license observation — observations
+slug: fct-fcc-uls-license-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_fcc_uls_license_observation
+version: 1

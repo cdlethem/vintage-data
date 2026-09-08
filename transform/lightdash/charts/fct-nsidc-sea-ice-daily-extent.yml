@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nsidc_sea_ice_observation_date_day
+          yRef:
+            field: fct_nsidc_sea_ice_average_extent_million_km2
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observation date (Day)
+      yAxis:
+      - name: Mean observed extent million km2
+    layout:
+      xField: fct_nsidc_sea_ice_observation_date_day
+      yField:
+      - fct_nsidc_sea_ice_average_extent_million_km2
+  type: cartesian
+description: Mean `extent_million_km2` reported for each observation date. This is a physical measurement
+  rather than an additive total; dates with no source observation are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_nsidc_sea_ice_observation_date_day
+  exploreName: fct_nsidc_sea_ice
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nsidc_sea_ice_average_extent_million_km2
+  sorts:
+  - descending: false
+    fieldId: fct_nsidc_sea_ice_observation_date_day
+  tableCalculations: []
+name: Reported sea-ice extent per day
+slug: fct-nsidc-sea-ice-daily-extent
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nsidc_sea_ice_observation_date_day
+  - fct_nsidc_sea_ice_average_extent_million_km2
+tableName: fct_nsidc_sea_ice
+version: 1

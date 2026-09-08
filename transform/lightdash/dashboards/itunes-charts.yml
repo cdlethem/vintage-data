@@ -1,0 +1,171 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: d26ce5d2-b347-5af8-a031-b4654410b8c3
+    label: 'Itunes charts: Storefront'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_itunes_charts_storefront
+      tableName: fct_itunes_charts
+    values: []
+  - disabled: true
+    id: c3dbe7dc-66f8-5f39-a0ae-589d4b008a7a
+    label: 'Itunes charts: Chart'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_itunes_charts_chart
+      tableName: fct_itunes_charts
+    values: []
+  - disabled: true
+    id: 6c6c639c-99aa-586e-9e82-f321fdf5f0a2
+    label: 'Itunes charts: Genre'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_itunes_charts_genre
+      tableName: fct_itunes_charts
+    values: []
+  - disabled: true
+    id: f3c16727-6f61-572e-8403-395f535b7fb5
+    label: 'Itunes charts: Artist'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_itunes_charts_artist
+      tableName: fct_itunes_charts
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Itunes Charts
+slug: itunes-charts
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of Apple iTunes chart observations. Each row represents one storefront,
+      chart, observation timestamp, and chart rank, retaining the track attributes and raw-load lineage
+      for replay and audit. Repeated raw loads of the same chart rank are reduced to the latest loaded
+      record.
+
+
+      **Grain:** source, storefront, chart, fetched_at, rank
+
+
+      **What changes here:** how daily iTunes chart rank and genre mix change alongside the historical
+      release dates represented in the chart.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `itunes_charts` — licence: unstated; attribution required: False. Source configuration: `extract/sources/itunes_charts.yml`.'
+    hideFrame: false
+    title: Itunes charts
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Itunes charts — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Tracks in each daily chart snapshot
+    chartSlug: fct-itunes-charts-charted-tracks
+    hideTitle: false
+    title: Tracks in each daily chart snapshot
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean chart rank by day
+    chartSlug: fct-itunes-charts-mean-rank
+    hideTitle: false
+    title: Mean chart rank by day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Tracks by reported release month
+    chartSlug: fct-itunes-charts-releases-over-time
+    hideTitle: false
+    title: Tracks by reported release month
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean rank by genre and fetch day
+    chartSlug: fct-itunes-charts-genre-rank
+    hideTitle: false
+    title: Mean rank by genre and fetch day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Represented tracks by release month and genre
+    chartSlug: fct-itunes-charts-genre-release-mix
+    hideTitle: false
+    title: Represented tracks by release month and genre
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Itunes charts — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed rank by genre
+    chartSlug: fct-itunes-charts
+    hideTitle: false
+    title: Mean observed rank by genre
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Itunes charts — observations
+    chartSlug: fct-itunes-charts-details
+    hideTitle: false
+    title: Itunes charts — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

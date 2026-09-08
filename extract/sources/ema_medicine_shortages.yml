@@ -1,0 +1,14 @@
+name: ema_medicine_shortages
+script: fetch_ema_medicine_shortages.py
+args: []
+schedule: "22 5,17 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "EMA publishes this complete catalogue twice daily at 06:00 and 18:00 Europe/Amsterdam; poll 12-hourly, staggered to :22 after the expected publication"
+rate_limit: "no published quota; official JSON files are for automated users; 12-hour cadence is about 60 complete-file requests/month"
+licence: "EMA legal notice permits commercial and non-commercial reproduction and distribution when EMA is acknowledged; third-party material excluded"
+attribution_required: true

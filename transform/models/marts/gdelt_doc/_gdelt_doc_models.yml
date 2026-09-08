@@ -1,0 +1,330 @@
+version: 2
+models:
+- name: fct_gdelt_document_observation
+  description: Hourly incremental fact of GDELT DOC article observations. Each row represents one document
+    identifier observed at one extractor fetch timestamp, retaining the article metadata and the raw-load
+    lineage for replay and audit. Replayed copies of the same document observation are reduced to the
+    latest loaded record; this model does not infer article sentiment, topic, or canonical identity beyond
+    the supplied URL.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: document_id, observed_at
+      label: Gdelt document observation
+      group_label: Gdelt doc
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: gdelt_document_observation_key
+      vintage:
+        visualization:
+          dimension: language
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct document by language
+          description: Distinct `document_id` values by `language` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - document_id
+          - language
+          - source_loaded_at
+          sources:
+          - '`gdelt_doc` — licence: GDELT — free for research/non-commercial use; attribution required:
+            True. Source configuration: `extract/sources/gdelt_doc.yml`.'
+          analysis:
+            headline: how the two-day document feed changes in volume, language, and publisher domain
+              mix.
+            event_time: published_at
+            grain: DAY
+            controls:
+            - language
+            - source_country
+            - domain
+            trends:
+            - slug: documents-observed
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct documents observed per day
+              description: Distinct `document_id` values returned by the extractor on each observation
+                day. This is a two-day snapshot level rather than a long-run publication flow; changes
+                can reflect the feed result set and missing observation days are absent rather than zero.
+              width: half
+            - slug: domains-published
+              kind: total
+              metric: distinct_domains
+              time: published_at
+              grain: DAY
+              title: Distinct publisher domains per publication day
+              description: Distinct non-null `domain` values grouped by the source `published_at` day.
+                This uses the publisher's event timestamp, not extractor timing, and measures breadth of
+                the short available window rather than domains newly appearing. Days without published
+                documents are absent rather than zero.
+              width: half
+            - slug: documents-by-language
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: language
+              top_n: 6
+              time: published_at
+              grain: DAY
+              title: Documents published per day by language
+              description: Distinct `document_id` values per source `published_at` day pivoted by
+                reported language. This is publication activity in the two-day sample; the six largest
+                languages are shown and smaller languages are excluded, not aggregated. Days without
+                published documents are absent rather than zero.
+              width: full
+            - slug: documents-by-country
+              kind: composition
+              metric: distinct_entities
+              breakdown: source_country
+              top_n: 8
+              time: published_at
+              grain: DAY
+              title: Published document mix by source country
+              description: Distinct `document_id` values per source publication day stacked by
+                `source_country`. Bars reveal how the short-window geographic mix shifts, not a
+                cumulative count; the eight largest countries are shown and smaller countries are
+                excluded. Days without published documents are absent rather than zero.
+              width: full
+  columns:
+  - name: gdelt_document_observation_key
+    description: Stable hash of the document identifier and extractor observation timestamp defining the
+      row grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Gdelt document observation key
+          hidden: true
+  - name: source_system
+    description: Source label supplied by the GDELT DOC extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source system
+          hidden: false
+  - name: document_id
+    description: GDELT document identifier, populated from the article URL in the upstream response.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct document
+            description: Distinct `document_id` values by `language` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Document id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the GDELT DOC extractor fetched the document observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: published_at
+    description: Publisher timestamp parsed from GDELT's compact published value; null when the value
+      cannot be parsed.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Published at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: title
+    description: Article title reported by GDELT DOC.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: domain
+    description: Article host or domain reported by GDELT DOC.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_domains:
+            type: count_distinct
+            label: Distinct publisher domains
+            description: Distinct non-null `domain` values represented by the matching GDELT document
+              observations. This measures publisher breadth, not the number of articles or domains newly
+              appearing in the period.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Domain
+          hidden: false
+  - name: language
+    description: Article language reported by GDELT DOC.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Language
+          hidden: false
+  - name: source_country
+    description: Article source country reported by GDELT DOC.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source country
+          hidden: false
+  - name: document_url
+    description: Article URL reported by GDELT DOC.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Document url
+          hidden: false
+  - name: source_row_id
+    description: Loader-generated identifier for the retained raw row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained document observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained document observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the document observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load job that inserted the document observation into the raw warehouse.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the document observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw document content used for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

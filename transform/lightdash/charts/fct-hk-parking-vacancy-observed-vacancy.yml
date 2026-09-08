@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_hk_parking_vacancy_observed_at_day
+          yRef:
+            field: fct_hk_parking_vacancy_average_vacancy_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed vacancy count
+    layout:
+      xField: fct_hk_parking_vacancy_observed_at_day
+      yField:
+      - fct_hk_parking_vacancy_average_vacancy_count
+  type: cartesian
+description: Mean `vacancy_count` across retained snapshots on each extractor observation day. This is
+  a level of the republished parking feed, not an additive total; days without a successful extract are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_hk_parking_vacancy_observed_at_day
+  exploreName: fct_hk_parking_vacancy
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_hk_parking_vacancy_average_vacancy_count
+  sorts:
+  - descending: false
+    fieldId: fct_hk_parking_vacancy_observed_at_day
+  tableCalculations: []
+name: Mean vacancy observed each collection day
+slug: fct-hk-parking-vacancy-observed-vacancy
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hk_parking_vacancy_observed_at_day
+  - fct_hk_parking_vacancy_average_vacancy_count
+tableName: fct_hk_parking_vacancy
+version: 1

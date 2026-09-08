@@ -1,0 +1,286 @@
+version: 2
+models:
+- name: fct_nsidc_sea_ice
+  description: Daily physical history of National Snow and Ice Data Center sea-ice observations. Each
+    row is the latest loaded record for one source, source record identifier, and observation date; repeated
+    insert-only raw snapshots are reduced by load lineage while extractor and loader fields remain available
+    for audit and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, sea_ice_id, observation_date
+      label: Nsidc sea ice
+      group_label: Nsidc sea ice
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: nsidc_sea_ice_observation_key
+      vintage:
+        visualization:
+          dimension: observation_date
+          metric: average_extent_million_km2
+          time: fetched_at
+          window_days: 30
+          title: Mean observed extent million km2 by observation date
+          description: Mean observed extent million km2 by `observation_date` in the selected observation
+            window. Sea-ice extent reported by NSIDC, measured in million square kilometres. Each retained
+            observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+            This is not a latest-value measure or an additive total.
+          detail_fields:
+          - fetched_at
+          - sea_ice_id
+          - observation_date
+          - extent_million_km2
+          - source_loaded_at
+          sources:
+          - '`nsidc_sea_ice` — licence: unstated (US federal/NOAA-affiliated data); attribution required:
+            True. Source configuration: `extract/sources/nsidc_sea_ice.yml`.'
+          analysis:
+            headline: how the reported Arctic sea-ice extent changes each day and whether the feed's
+              catalogue remains complete.
+            event_time: observation_date
+            grain: DAY
+            controls:
+            - source_name
+            - observation_date
+            trends:
+            - slug: daily-extent
+              kind: total
+              metric: average_extent_million_km2
+              time: observation_date
+              grain: DAY
+              title: Reported sea-ice extent per day
+              description: Mean `extent_million_km2` reported for each observation date. This is a physical
+                measurement rather than an additive total; dates with no source observation are absent
+                rather than zero.
+              width: half
+            - slug: daily-observations
+              kind: total
+              metric: distinct_observations
+              time: observation_date
+              grain: DAY
+              title: Sea-ice observations per day
+              description: Distinct `sea_ice_id` values present for each NSIDC observation date. This is
+                a coverage level, not a flow; a missing date means no observation was published rather
+                than zero observations.
+              width: half
+            - slug: source-coverage
+              kind: composition
+              metric: distinct_observations
+              breakdown: source_name
+              top_n: 2
+              time: observation_date
+              grain: DAY
+              title: Observation coverage by source
+              description: Distinct `sea_ice_id` values per observation date stacked by `source_name`.
+                Only the largest source groups are shown and the remainder is excluded rather than
+                aggregated; the stack is coverage, not additive sea-ice extent.
+              width: full
+  columns:
+  - name: nsidc_sea_ice_observation_key
+    description: Stable hash of the NSIDC source name, source record identifier, and observation date.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Nsidc sea ice observation key
+          hidden: true
+  - name: source_name
+    description: NSIDC product source label identifying the sea-ice series.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: sea_ice_id
+    description: Source-provided identifier for the sea-ice observation record.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_observations:
+            type: count_distinct
+            label: Distinct observations
+            description: Distinct `sea_ice_id` values present on each observation date. This is a coverage
+              count for the published NSIDC series and is not sea-ice extent.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Sea ice id
+          hidden: false
+  - name: fetched_at
+    description: Timestamp when the extractor fetched the source response containing this observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: observation_date
+    description: Calendar date represented by the NSIDC sea-ice observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Observation date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extent_million_km2
+    description: Sea-ice extent reported by NSIDC, measured in million square kilometres.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_extent_million_km2:
+            type: average
+            label: Mean observed extent million km2
+            description: Mean observed extent million km2 by `observation_date` in the selected observation
+              window. Sea-ice extent reported by NSIDC, measured in million square kilometres. Each retained
+              observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+              This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Extent million km2
+          hidden: false
+          format: '#,##0.00'
+  - name: missing_million_km2
+    description: Sea-ice area missing from the source estimate, measured in million square kilometres.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Missing million km2
+          hidden: false
+          format: '#,##0.00'
+  - name: _row_id
+    description: Raw loader row identifier of the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained NSIDC observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: _dt
+    description: Load-layer partition date associated with the retained raw observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: Timestamp when the extraction job that produced the retained observation started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted the retained raw observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer content hash of the retained raw observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

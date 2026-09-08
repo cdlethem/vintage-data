@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_quebec_emergency_department_observation_observed_at_hour
+          yRef:
+            field: fct_quebec_emergency_department_observation_avg_occupied
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Mean occupied stretchers
+    layout:
+      xField: fct_quebec_emergency_department_observation_observed_at_hour
+      yField:
+      - fct_quebec_emergency_department_observation_avg_occupied
+  type: cartesian
+description: Mean non-null `occupied_stretcher_count` across retained status rows in each observed hour.
+  This is a snapshot level rather than an additive patient total; hours with no successful extract are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_quebec_emergency_department_observation_observed_at_hour
+  exploreName: fct_quebec_emergency_department_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_quebec_emergency_department_observation_avg_occupied
+  sorts:
+  - descending: false
+    fieldId: fct_quebec_emergency_department_observation_observed_at_hour
+  tableCalculations: []
+name: Mean occupied stretchers per hour
+slug: fct-quebec-emergency-department-observation-occupied-stretchers
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_quebec_emergency_department_observation_observed_at_hour
+  - fct_quebec_emergency_department_observation_avg_occupied
+tableName: fct_quebec_emergency_department_observation
+version: 1

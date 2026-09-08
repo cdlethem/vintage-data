@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_hk_cremation_sessions_session_date_day
+          yRef:
+            field: fct_hk_cremation_sessions_average_available_sessions
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Session date (Day)
+      yAxis:
+      - name: Mean observed available sessions
+    layout:
+      xField: fct_hk_cremation_sessions_session_date_day
+      yField:
+      - fct_hk_cremation_sessions_average_available_sessions
+  type: cartesian
+description: Average numeric `available_sessions` across observations for each published service date.
+  Null nonnumeric states are excluded and repeated snapshots are equally weighted; absent service dates
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_hk_cremation_sessions_session_date_day
+  exploreName: fct_hk_cremation_sessions
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_hk_cremation_sessions_average_available_sessions
+  sorts:
+  - descending: false
+    fieldId: fct_hk_cremation_sessions_session_date_day
+  tableCalculations: []
+name: Mean available sessions by service date
+slug: fct-hk-cremation-sessions-availability-by-service-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hk_cremation_sessions_session_date_day
+  - fct_hk_cremation_sessions_average_available_sessions
+tableName: fct_hk_cremation_sessions
+version: 1

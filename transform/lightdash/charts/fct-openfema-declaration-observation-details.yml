@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical observation fact for Federal Emergency Management Agency disaster declarations.
+  Each row is one FEMA declaration identifier at one extractor observation timestamp. Insert-only copies
+  are deduplicated by that observation grain using the latest load lineage, while declaration attributes
+  and source lineage remain available for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_openfema_declaration_observation_observed_at
+  - fct_openfema_declaration_observation_declaration_id
+  - fct_openfema_declaration_observation_incident_type
+  - fct_openfema_declaration_observation_source_loaded_at
+  exploreName: fct_openfema_declaration_observation
+  filters:
+    dimensions:
+      and:
+      - id: 7a994185-e6db-5401-aaf0-82a0b6344991
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_openfema_declaration_observation_observed_at
+        values:
+        - 30
+      id: 835c38f6-2b07-5fe9-b53c-da991b60104b
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_openfema_declaration_observation_observed_at
+  tableCalculations: []
+name: Openfema declaration observation — observations
+slug: fct-openfema-declaration-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_openfema_declaration_observation
+version: 1

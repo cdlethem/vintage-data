@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_digitraffic_rail_train_observation_observed_at_day
+          yRef:
+            field: fct_digitraffic_rail_train_observation_average_record_version
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean record version
+    layout:
+      xField: fct_digitraffic_rail_train_observation_observed_at_day
+      yField:
+      - fct_digitraffic_rail_train_observation_average_record_version
+  type: cartesian
+description: Average `record_version` reported across train observations on each observation day. Versions
+  are source revision numbers, not train counts; repeated polling gives each retained observation equal
+  weight and missing days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_digitraffic_rail_train_observation_observed_at_day
+  exploreName: fct_digitraffic_rail_train_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_digitraffic_rail_train_observation_average_record_version
+  sorts:
+  - descending: false
+    fieldId: fct_digitraffic_rail_train_observation_observed_at_day
+  tableCalculations: []
+name: Mean source record version per day
+slug: fct-digitraffic-rail-train-observation-record-version
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_digitraffic_rail_train_observation_observed_at_day
+  - fct_digitraffic_rail_train_observation_average_record_version
+tableName: fct_digitraffic_rail_train_observation
+version: 1

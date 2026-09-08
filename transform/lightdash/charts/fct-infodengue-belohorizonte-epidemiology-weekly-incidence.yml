@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+          yRef:
+            field: fct_infodengue_belohorizonte_epidemiology_m_13c38800
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Week start date (Week)
+      yAxis:
+      - name: Mean observed incidence per 100k
+    layout:
+      xField: fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+      yField:
+      - fct_infodengue_belohorizonte_epidemiology_m_13c38800
+  type: cartesian
+description: Mean `incidence_per_100k` for each epidemiological week. This rate is a reported population-normalized
+  level and must not be summed; the 34 observed weeks span January through August, and absent weeks are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+  exploreName: fct_infodengue_belohorizonte_epidemiology
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_infodengue_belohorizonte_epidemiology_m_13c38800
+  sorts:
+  - descending: false
+    fieldId: fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+  tableCalculations: []
+name: Mean incidence per 100k by epidemiological week
+slug: fct-infodengue-belohorizonte-epidemiology-weekly-incidence
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+  - fct_infodengue_belohorizonte_epidemiology_m_13c38800
+tableName: fct_infodengue_belohorizonte_epidemiology
+version: 1

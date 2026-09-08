@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of Codeforces recent-submission observations. Each row represents
+  one submission from the Codeforces feed at one extractor observation timestamp; repeated ingestion of
+  the same observation is reduced to the latest loaded row while status changes across observations remain
+  visible. Raw-load lineage is retained for replay and audit.
+metricQuery:
+  dimensions: &id001
+  - fct_codeforces_submission_observation_observed_at
+  - fct_codeforces_submission_observation_submission_id
+  - fct_codeforces_submission_observation_verdict
+  - fct_codeforces_submission_observation_source_loaded_at
+  exploreName: fct_codeforces_submission_observation
+  filters:
+    dimensions:
+      and:
+      - id: 99108694-c04e-5958-8fbf-d870de9f97d4
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_codeforces_submission_observation_observed_at
+        values:
+        - 30
+      id: 77581dfe-8f19-57ca-9694-7efa26bc9fc9
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_codeforces_submission_observation_observed_at
+  tableCalculations: []
+name: Codeforces submission observation — observations
+slug: fct-codeforces-submission-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_codeforces_submission_observation
+version: 1

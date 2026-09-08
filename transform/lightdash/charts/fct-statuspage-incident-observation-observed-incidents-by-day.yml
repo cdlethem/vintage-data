@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_statuspage_incident_observation_observed_at_day
+          yRef:
+            field: fct_statuspage_incident_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct incident
+    layout:
+      xField: fct_statuspage_incident_observation_observed_at_day
+      yField:
+      - fct_statuspage_incident_observation_distinct_entities
+  type: cartesian
+description: Distinct `incident_id` values present on each extractor observation day. This is a current
+  feed level rather than an incident flow because active incidents are republished; absent observation
+  days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_statuspage_incident_observation_observed_at_day
+  exploreName: fct_statuspage_incident_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_statuspage_incident_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_statuspage_incident_observation_observed_at_day
+  tableCalculations: []
+name: Distinct incidents in the observed feed
+slug: fct-statuspage-incident-observation-observed-incidents-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_statuspage_incident_observation_observed_at_day
+  - fct_statuspage_incident_observation_distinct_entities
+tableName: fct_statuspage_incident_observation
+version: 1

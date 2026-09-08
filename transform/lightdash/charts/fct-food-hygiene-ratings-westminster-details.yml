@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical snapshot of Food Hygiene Rating Scheme records for Westminster businesses.
+  Each row is one source business identifier at one source fetch timestamp; repeated copies of the same
+  observation grain are resolved to the latest loaded file row. Published rating and component scores
+  are exposed as typed values, with original nested scores and geocode JSON retained alongside source
+  lineage.
+metricQuery:
+  dimensions: &id001
+  - fct_food_hygiene_ratings_westminster_fetched_at
+  - fct_food_hygiene_ratings_westminster_business_id
+  - fct_food_hygiene_ratings_westminster_business_type
+  - fct_food_hygiene_ratings_westminster_source_loaded_at
+  exploreName: fct_food_hygiene_ratings_westminster
+  filters:
+    dimensions:
+      and:
+      - id: 2c914fb4-5f04-5b6e-8dbe-2ab6dd8b1eb5
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_food_hygiene_ratings_westminster_fetched_at
+        values:
+        - 30
+      id: 71cdd2b6-6476-5b50-b239-743b6bc58b68
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_food_hygiene_ratings_westminster_fetched_at
+  tableCalculations: []
+name: Food hygiene ratings westminster — observations
+slug: fct-food-hygiene-ratings-westminster-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_food_hygiene_ratings_westminster
+version: 1

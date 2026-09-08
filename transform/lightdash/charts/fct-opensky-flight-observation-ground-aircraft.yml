@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_opensky_flight_observation_observed_at_hour
+          yRef:
+            field: fct_opensky_flight_observation_distinct_aircraft
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct aircraft
+    layout:
+      stack: true
+      xField: fct_opensky_flight_observation_observed_at_hour
+      yField:
+      - fct_opensky_flight_observation_distinct_aircraft
+  type: cartesian
+description: Distinct `aircraft_id` values stacked by OpenSky `on_ground` status for each snapshot hour.
+  Both boolean statuses are retained so the stack shows the observed ground versus airborne mix; hours
+  without a snapshot are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_opensky_flight_observation_observed_at_hour
+  - fct_opensky_flight_observation_on_ground
+  exploreName: fct_opensky_flight_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_opensky_flight_observation_distinct_aircraft
+  sorts:
+  - descending: true
+    fieldId: fct_opensky_flight_observation_distinct_aircraft
+  - descending: false
+    fieldId: fct_opensky_flight_observation_observed_at_hour
+  tableCalculations: []
+name: Aircraft mix by ground status and hour
+pivotConfig:
+  columns:
+  - fct_opensky_flight_observation_on_ground
+slug: fct-opensky-flight-observation-ground-aircraft
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_opensky_flight_observation_observed_at_hour
+  - fct_opensky_flight_observation_on_ground
+  - fct_opensky_flight_observation_distinct_aircraft
+tableName: fct_opensky_flight_observation
+version: 1

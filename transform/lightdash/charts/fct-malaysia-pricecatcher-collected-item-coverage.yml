@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_malaysia_pricecatcher_observed_at_day
+          yRef:
+            field: fct_malaysia_pricecatcher_distinct_items
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct items
+    layout:
+      xField: fct_malaysia_pricecatcher_observed_at_day
+      yField:
+      - fct_malaysia_pricecatcher_distinct_items
+  type: cartesian
+description: Distinct non-null `item_code` values present on each extractor day in the recent 14-day window.
+  This measures feed coverage, not sales or item volume; absent collection days are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_malaysia_pricecatcher_observed_at_day
+  exploreName: fct_malaysia_pricecatcher
+  filters:
+    dimensions:
+      and:
+      - id: a5798a3b-68b8-5315-ac6f-581e496609dc
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_malaysia_pricecatcher_observed_at
+        values:
+        - 14
+      id: 7ed1a0e4-95af-5d55-983c-a6f6c5bfdfe8
+  limit: 5000
+  metrics:
+  - fct_malaysia_pricecatcher_distinct_items
+  sorts:
+  - descending: false
+    fieldId: fct_malaysia_pricecatcher_observed_at_day
+  tableCalculations: []
+name: Distinct items collected per extractor day
+slug: fct-malaysia-pricecatcher-collected-item-coverage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_malaysia_pricecatcher_observed_at_day
+  - fct_malaysia_pricecatcher_distinct_items
+tableName: fct_malaysia_pricecatcher
+version: 1

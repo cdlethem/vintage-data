@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ted_procurement_publication_date_day
+          yRef:
+            field: fct_ted_procurement_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Publication date (Day)
+      yAxis:
+      - name: Distinct notice
+    layout:
+      xField: fct_ted_procurement_publication_date_day
+      yField:
+      - fct_ted_procurement_distinct_entities
+  type: cartesian
+description: Distinct `notice_id` values by TED publication day. This is a short four-day extract window
+  rather than a long publication history; days with no extract or no notices are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_ted_procurement_publication_date_day
+  exploreName: fct_ted_procurement
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ted_procurement_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_ted_procurement_publication_date_day
+  tableCalculations: []
+name: Procurement notices published per day
+slug: fct-ted-procurement-published-notices
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ted_procurement_publication_date_day
+  - fct_ted_procurement_distinct_entities
+tableName: fct_ted_procurement
+version: 1

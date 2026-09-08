@@ -1,0 +1,392 @@
+version: 2
+models:
+- name: fct_thames_discharge
+  description: Twice-hourly incremental physical history of Thames Water discharge observations. Each
+    row represents one discharge location identifier at one extractor observation timestamp, with the
+    reported status, location and alert timing retained alongside raw-load lineage. Repeated insert-only
+    raw copies of the same observation are reduced to the latest loaded copy.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_system, discharge_id, observed_at
+      label: Thames discharge
+      group_label: Thames discharge
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: thames_discharge_key
+      vintage:
+        visualization:
+          dimension: alert_status
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct discharge by alert status
+          description: Distinct `discharge_id` values by `alert_status` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - discharge_id
+          - alert_status
+          - source_loaded_at
+          sources:
+          - '`thames_discharge` — licence: Thames Water open-data terms; attribution required: True. Source
+            configuration: `extract/sources/thames_discharge.yml`.'
+          analysis:
+            headline: how reported discharge-status changes and alert activity move across statuses and watercourses.
+            event_time: status_changed_at
+            grain: MONTH
+            controls:
+            - alert_status
+            - receiving_watercourse
+            - alert_past_48_hours
+            - location_name
+            trends:
+            - slug: status-changes
+              kind: total
+              metric: distinct_entities
+              time: status_changed_at
+              grain: MONTH
+              title: Discharge status changes per month
+              description: Distinct `discharge_id` values by source `status_changed_at` month across the
+                published history. This is an event-time flow of reported status changes, not the number
+                currently discharging; months with no reported changes are absent rather than zero.
+              width: half
+            - slug: alert-watercourses
+              kind: total
+              metric: distinct_watercourses
+              time: most_recent_discharge_alert_start
+              grain: MONTH
+              title: Watercourses with alert starts
+              description: Distinct non-null `receiving_watercourse` values by most recent alert-start month.
+                This event view counts each watercourse once per month and excludes rows without an alert
+                start; it is not a duration or a live-alert level.
+              width: half
+            - slug: status-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: alert_status
+              top_n: 3
+              time: status_changed_at
+              grain: MONTH
+              title: Status-change mix by alert status
+              description: Distinct `discharge_id` values by source `status_changed_at` month, stacked across
+                the three observed `alert_status` values. The stack shows event mix rather than simultaneous
+                active alerts, and months with no events are absent.
+              width: full
+            - slug: watercourse-breakdown
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: receiving_watercourse
+              top_n: 6
+              time: status_changed_at
+              grain: MONTH
+              title: Status changes by receiving watercourse
+              description: Distinct `discharge_id` values by source `status_changed_at` month for the six
+                largest receiving watercourses. Smaller watercourses are excluded rather than aggregated;
+                sparse event months should not be read as zero activity elsewhere.
+              width: full
+  columns:
+  - name: thames_discharge_key
+    description: Stable hash of the source system, discharge identifier, and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Thames discharge key
+          hidden: true
+  - name: source_system
+    description: Upstream source label that published the discharge observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source system
+          hidden: false
+  - name: discharge_id
+    description: Stable Thames Water identifier for the monitored discharge location.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct discharge
+            description: Distinct `discharge_id` values by `alert_status` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Discharge id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the discharge observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: location_name
+    description: Human-readable name of the monitored discharge location.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location name
+          hidden: false
+  - name: permit_number
+    description: Environmental permit or consent reference supplied for the location.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Permit number
+          hidden: false
+  - name: location_grid_reference
+    description: National grid reference supplied for the monitored discharge location.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location grid reference
+          hidden: false
+  - name: easting
+    description: Easting coordinate supplied by the upstream discharge feed.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Easting
+          hidden: false
+          format: '#,##0'
+  - name: northing
+    description: Northing coordinate supplied by the upstream discharge feed.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Northing
+          hidden: false
+          format: '#,##0'
+  - name: receiving_watercourse
+    description: River, brook, or other receiving watercourse named by the source.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_watercourses:
+            type: count_distinct
+            label: Distinct watercourses
+            description: Distinct non-null `receiving_watercourse` values by most recent alert-start month
+              in the selected history. This counts named waterways rather than alert durations or discharge
+              locations.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Receiving watercourse
+          hidden: false
+  - name: alert_status
+    description: Current discharge alert status reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Alert status
+          hidden: false
+  - name: status_changed_at
+    description: UTC timestamp when the source reports that the discharge status changed.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Status changed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: alert_past_48_hours
+    description: Whether the source reports a discharge alert during the preceding 48 hours.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Alert past 48 hours
+          hidden: false
+  - name: most_recent_discharge_alert_start
+    description: UTC start timestamp of the most recent discharge alert, when reported.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Most recent discharge alert start
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: most_recent_discharge_alert_stop
+    description: UTC stop timestamp of the most recent discharge alert, when reported.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Most recent discharge alert stop
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: unique_id
+    description: Upstream unique identifier for the discharge location, retained as supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Unique id
+          hidden: false
+  - name: source_row_id
+    description: Load-layer row identifier retained for the discharge observation lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained discharge observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained discharge observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date assigned to the retained discharge observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the retained source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained raw observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

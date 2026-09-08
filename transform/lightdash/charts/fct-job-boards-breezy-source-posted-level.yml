@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_job_boards_breezy_posted_at_month
+          yRef:
+            field: fct_job_boards_breezy_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Month)
+      yAxis:
+      - name: Distinct job
+    layout:
+      xField: fct_job_boards_breezy_posted_at_month
+      yField:
+      - fct_job_boards_breezy_distinct_entities
+  type: cartesian
+description: Distinct jobs grouped by the source `posted_at` month. All four rows share February 2025,
+  so this is one populated source-event point rather than a historical flow; other months are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_job_boards_breezy_posted_at_month
+  exploreName: fct_job_boards_breezy
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_boards_breezy_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_job_boards_breezy_posted_at_month
+  tableCalculations: []
+name: Breezy jobs by source posting month
+slug: fct-job-boards-breezy-source-posted-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_boards_breezy_posted_at_month
+  - fct_job_boards_breezy_distinct_entities
+tableName: fct_job_boards_breezy
+version: 1

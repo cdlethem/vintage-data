@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 5
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_museum_collection_items_updated_at_day
+          yRef:
+            field: fct_museum_collection_items_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Updated at (Day)
+      yAxis:
+      - name: Distinct id
+    layout:
+      stack: true
+      xField: fct_museum_collection_items_updated_at_day
+      yField:
+      - fct_museum_collection_items_distinct_entities
+  type: cartesian
+description: Distinct `id` values grouped by the source-reported `updated_at` day and stacked by `classification`.
+  This is an event-time view of catalog revisions, not a publication flow; the current extract has one
+  populated day and missing days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_museum_collection_items_updated_at_day
+  - fct_museum_collection_items_classification
+  exploreName: fct_museum_collection_items
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_museum_collection_items_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_museum_collection_items_distinct_entities
+  - descending: false
+    fieldId: fct_museum_collection_items_updated_at_day
+  tableCalculations: []
+name: Source-reported revisions by day
+pivotConfig:
+  columns:
+  - fct_museum_collection_items_classification
+slug: fct-museum-collection-items-source-revisions
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_museum_collection_items_updated_at_day
+  - fct_museum_collection_items_classification
+  - fct_museum_collection_items_distinct_entities
+tableName: fct_museum_collection_items
+version: 1

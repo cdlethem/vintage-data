@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Week
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: d2529a80-1e4f-51fd-ae90-c28940f13b67
+    label: 'Infodengue epidemiology: Municipality name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_epidemiology_municipality_name
+      tableName: fct_infodengue_epidemiology
+    values: []
+  - disabled: true
+    id: 10924681-74bd-5cb4-ad12-dceb2fcb71d5
+    label: 'Infodengue epidemiology: Disease'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_epidemiology_disease
+      tableName: fct_infodengue_epidemiology
+    values: []
+  - disabled: true
+    id: 64d8961e-f24d-5e80-b9c9-973548cdb98e
+    label: 'Infodengue epidemiology: Alert level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_epidemiology_alert_level
+      tableName: fct_infodengue_epidemiology
+    values: []
+  - disabled: true
+    id: d146f29d-00bb-5e03-bcd7-7181b48a5f7b
+    label: 'Infodengue epidemiology: Incidence level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_epidemiology_incidence_level
+      tableName: fct_infodengue_epidemiology
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Infodengue
+slug: infodengue
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly latest epidemiological surveillance observations from the Infodengue city-alerts
+      feed. The physical incremental fact retains one row at the source relation and provider record identifier
+      grain, choosing the latest loaded replay for each identifier while preserving raw-load lineage and
+      typed epidemiological measures.
+
+
+      **Grain:** source_relation, record_id
+
+
+      **What changes here:** how dengue incidence and case estimates move across epidemiological weeks
+      and risk levels.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `infodengue` — licence: InfoDengue — attribution required; attribution required: True. Source
+      configuration: `extract/sources/infodengue.yml`.'
+    hideFrame: false
+    title: Infodengue epidemiology
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Infodengue epidemiology — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean incidence per 100k by epidemiological week
+    chartSlug: fct-infodengue-epidemiology-weekly-incidence
+    hideTitle: false
+    title: Mean incidence per 100k by epidemiological week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Municipalities represented by epidemiological week
+    chartSlug: fct-infodengue-epidemiology-weekly-municipalities
+    hideTitle: false
+    title: Municipalities represented by epidemiological week
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Incidence mix by alert level
+    chartSlug: fct-infodengue-epidemiology-incidence-by-alert
+    hideTitle: false
+    title: Incidence mix by alert level
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean estimated cases by incidence level
+    chartSlug: fct-infodengue-epidemiology-cases-by-incidence-level
+    hideTitle: false
+    title: Mean estimated cases by incidence level
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Infodengue epidemiology — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed incidence per 100k by municipality name
+    chartSlug: fct-infodengue-epidemiology
+    hideTitle: false
+    title: Mean observed incidence per 100k by municipality name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Infodengue epidemiology — observations
+    chartSlug: fct-infodengue-epidemiology-details
+    hideTitle: false
+    title: Infodengue epidemiology — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

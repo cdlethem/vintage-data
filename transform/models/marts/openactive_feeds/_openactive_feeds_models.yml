@@ -1,0 +1,484 @@
+version: 2
+models:
+- name: fct_openactive_feed
+  description: Incremental physical history of OpenActive slot-feed observations, including and extractor-row
+    observation. The source row identifier preserves repeated observations as auditable append-only facts
+    alongside their original loader lineage. Slot attributes are parsed from the feed's JSON data when
+    a record is not a tombstone.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, record_id, observed_at, _row_id
+      label: Openactive feed
+      group_label: Openactive feeds
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: openactive_feed_key
+      vintage:
+        visualization:
+          dimension: state
+          metric: distinct_entities
+          time: observed_at
+          window_days: 2
+          title: Distinct record by state
+          description: Distinct `record_id` values by `state` among observations in the selected window.
+            The window is two days because the feed republishes its whole catalogue on every poll, so a
+            longer window re-counts the same records without adding information. Repeated observations of
+            an entity count once within each group. An entity that changed category can appear in multiple
+            groups; these groups are not additive and do not represent a current-state census.
+          detail_fields:
+          - observed_at
+          - record_id
+          - state
+          - source_loaded_at
+          sources:
+          - '`openactive_feeds` — licence: CC BY 4.0 from the respective providers; attribution required:
+            True. Source configuration: `extract/sources/openactive_feeds.yml`.'
+          analysis:
+            headline: how scheduled activity supply expands into future months and how remaining capacity
+              differs by provider.
+            event_time: starts_at
+            grain: MONTH
+            snapshot_days: 2
+            controls:
+            - provider
+            - kind
+            - state
+            - feed_type
+            trends:
+            - slug: scheduled-records
+              kind: total
+              metric: distinct_entities
+              time: starts_at
+              grain: MONTH
+              title: Scheduled records by start month
+              description: Distinct `record_id` values grouped by the scheduled slot start month. The axis
+                includes future activity through September 2027, so this is a planned-supply flow rather
+                than completed participation; months without source rows are absent rather than zero.
+              width: half
+            - slug: remaining-capacity
+              kind: total
+              metric: average_remaining_uses
+              time: starts_at
+              grain: MONTH
+              title: Mean remaining uses by scheduled month
+              description: Average `remaining_uses` for slots by scheduled start month. This is
+                observation-weighted and describes capacity offered by the feed, not bookings or attendance;
+                the future-dated months are retained and empty months are absent rather than zero.
+              width: half
+            - slug: provider-supply
+              kind: composition
+              metric: distinct_entities
+              breakdown: provider
+              top_n: 8
+              time: starts_at
+              grain: MONTH
+              title: Scheduled records by leading provider
+              description: Distinct `record_id` values per scheduled start month stacked by the eight
+                providers with the largest totals. Remaining providers are excluded rather than aggregated;
+                stacked bars make the sparse, bursty feed easier to read across past and future months.
+              width: full
+            - slug: state-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: state
+              top_n: 4
+              time: starts_at
+              grain: MONTH
+              title: Scheduled records by feed state
+              description: Distinct `record_id` values per scheduled start month stacked by feed state.
+                The state mix describes how records are represented in the feed, not whether activities
+                occurred; months with no source rows are absent rather than zero.
+              width: half
+            - slug: kind-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: kind
+              top_n: 4
+              time: starts_at
+              grain: MONTH
+              title: Scheduled records by OpenActive kind
+              description: Distinct `record_id` values per scheduled start month stacked by the leading
+                OpenActive kinds. Remaining kinds are excluded rather than aggregated, and future months
+                show scheduled supply rather than completed activity.
+              width: half
+  columns:
+  - name: openactive_feed_key
+    description: Stable hash of the feed source, record identifier, observation timestamp, and raw row
+      identifier.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Openactive feed key
+          hidden: true
+  - name: raw_source
+    description: Loader source relation label retained for raw lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Raw source
+          hidden: false
+  - name: source
+    description: OpenActive publisher or feed source reported by the record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: record_id
+    description: Stable record identifier supplied by the OpenActive feed.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct record
+            description: Distinct `record_id` values by `state` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Record id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the feed response.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: state
+    description: Feed state for the record, such as updated or deleted.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: State
+          hidden: false
+  - name: kind
+    description: OpenActive record kind reported by the feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Kind
+          hidden: false
+  - name: modified_sequence
+    description: Publisher modification sequence carried by the feed record.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Modified sequence
+          hidden: false
+          format: '#,##0'
+  - name: item_id
+    description: Feed item identifier associated with the OpenActive record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Item id
+          hidden: false
+  - name: provider
+    description: Provider name reported by the feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider
+          hidden: false
+  - name: feed_type
+    description: Feed type label reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Feed type
+          hidden: false
+  - name: feed_url
+    description: URL of the source feed that supplied the record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Feed url
+          hidden: false
+  - name: page_url
+    description: Public page URL associated with the feed record when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Page url
+          hidden: false
+  - name: next_url
+    description: Pagination URL supplied by the feed when present.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Next url
+          hidden: false
+  - name: slot_url
+    description: OpenActive slot URL parsed from the record JSON.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Slot url
+          hidden: false
+  - name: slot_type
+    description: JSON-LD type parsed from the record JSON.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Slot type
+          hidden: false
+  - name: slot_identifier
+    description: Human-readable slot identifier parsed from the record JSON.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Slot identifier
+          hidden: false
+  - name: facility_use_url
+    description: OpenActive facility-use URL associated with the slot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Facility use url
+          hidden: false
+  - name: duration
+    description: ISO 8601 duration of the slot as reported by the feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Duration
+          hidden: false
+  - name: starts_at
+    description: UTC start timestamp parsed from the slot JSON.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Starts at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: ends_at
+    description: UTC end timestamp parsed from the slot JSON.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Ends at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: maximum_uses
+    description: Maximum number of uses offered by the slot when reported.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Maximum uses
+          hidden: false
+          format: '#,##0'
+  - name: remaining_uses
+    description: Number of uses remaining for the slot when reported.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_remaining_uses:
+            type: average
+            label: Mean remaining uses
+            description: Average `remaining_uses` reported for slots in the selected scheduled-start window.
+              This is observation-weighted and reflects feed capacity, not bookings or attendance.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Remaining uses
+          hidden: false
+          format: '#,##0'
+  - name: offer_price
+    description: First offer price parsed from the slot JSON, in the reported currency.
+    data_type: decimal(18,2)
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Offer price
+          hidden: false
+          format: '#,##0.00'
+  - name: offer_currency
+    description: ISO currency code for the first offer price when reported.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Offer currency
+          hidden: false
+  - name: _row_id
+    description: Stable raw-row identifier retained for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Extract batch identifier associated with the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Load job identifier associated with the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _dt
+    description: Raw partition date for the retained observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: UTC timestamp when extraction of the source file began.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _source_file
+    description: Raw extract file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Content hash of the retained raw observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

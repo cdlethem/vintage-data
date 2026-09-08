@@ -1,0 +1,400 @@
+version: 2
+models:
+- name: fct_gazette_insolvency_notice_observation
+  description: Hourly physical observation fact for UK Gazette insolvency notices. Each row records one
+    notice identifier at one source fetch timestamp, retaining the notice publication fields, feed metadata,
+    and raw-load lineage. Repeated copies of the same source, notice, and observation timestamp retain
+    the latest loaded row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, notice_id, observed_at
+      label: Gazette insolvency notice observation
+      group_label: Gazette insolvency
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: gazette_insolv_fb0081
+      vintage:
+        visualization:
+          dimension: notice_code
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct notice by notice code
+          description: Distinct `notice_id` values by `notice_code` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - notice_id
+          - notice_code
+          - source_loaded_at
+          sources:
+          - '`gazette_insolvency` — licence: notice-specific reuse rights; attribution required: True.
+            Source configuration: `extract/sources/gazette_insolvency.yml`.'
+          analysis:
+            headline: how the published notice catalogue and reported feed size move across the latest
+              four observation days.
+            event_time: published_at
+            grain: DAY
+            controls:
+            - notice_code
+            - name
+            - family_name
+            trends:
+            - slug: notices-observed
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct notices observed per day
+              description: Distinct `notice_id` values present in the republished feed on each observation
+                day. This is a level rather than a flow because the extractor re-observes the catalogue;
+                a change means records were added, removed, or newly returned. Days without a successful
+                observation are absent rather than zero.
+              width: half
+            - slug: reported-feed-size
+              kind: total
+              metric: average_feed_total
+              time: observed_at
+              grain: DAY
+              title: Reported feed total per observation day
+              description: Observation-weighted average of the source-reported `feed_total` on each
+                observation day. This is a publisher-reported level, not notices added that day; repeated
+                polling can bias the average toward fetches with more retained rows. Days without an
+                observation are absent rather than zero.
+              width: half
+            - slug: notices-by-code
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: notice_code
+              top_n: 6
+              time: published_at
+              grain: DAY
+              title: Notices published per day by notice code
+              description: Distinct `notice_id` values grouped by source `published_at` day and notice
+                code. The line shows source publication activity rather than extractor volume; only the
+                six largest codes are shown and smaller codes are excluded, not combined. Days with no
+                published records are absent rather than zero.
+              width: full
+            - slug: notices-by-family
+              kind: composition
+              metric: distinct_entities
+              breakdown: family_name
+              top_n: 8
+              time: published_at
+              grain: DAY
+              title: Published notices by family name
+              description: Distinct `notice_id` values per source publication day stacked by `family_name`.
+                Bars show how the published notice mix shifts; this is not a cumulative total and the
+                eight largest families are shown while smaller families are excluded. Days without
+                published records are absent rather than zero.
+              width: full
+  columns:
+  - name: gazette_insolvency_notice_observation_key
+    description: Stable hash of the source name, notice identifier, and source observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Gazette insolvency notice observation key
+          hidden: true
+          name: gazette_insolv_fb0081
+  - name: source_name
+    description: Gazette source identifier that supplied the insolvency notice.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: notice_id
+    description: Canonical Gazette URL identifying the insolvency notice.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct notice
+            description: Distinct `notice_id` values by `notice_code` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Notice id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the notice observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: notice_status
+    description: Publication status reported by the Gazette source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Notice status
+          hidden: false
+  - name: notice_code
+    description: Gazette notice-code classification supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Notice code
+          hidden: false
+  - name: name
+    description: Name component supplied for the insolvency notice subject by the Gazette source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Name
+          hidden: false
+  - name: family_name
+    description: Family-name component supplied for the insolvency notice subject by the Gazette source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Family name
+          hidden: false
+  - name: title
+    description: Title of the insolvency notice.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: links
+    description: JSON array of related links supplied by the Gazette source.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Links
+          hidden: true
+          sql: CAST(${TABLE}.links AS VARCHAR)
+  - name: author
+    description: JSON author metadata supplied by the Gazette source.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Author
+          hidden: true
+          sql: CAST(${TABLE}.author AS VARCHAR)
+  - name: category
+    description: JSON category metadata supplied by the Gazette source.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Category
+          hidden: true
+          sql: CAST(${TABLE}.category AS VARCHAR)
+  - name: geo_point
+    description: JSON geographic point metadata supplied by the Gazette source, when available.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Geo point
+          hidden: true
+          sql: CAST(${TABLE}.geo_point AS VARCHAR)
+  - name: content
+    description: Full insolvency notice content supplied by the Gazette source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content
+          hidden: false
+  - name: updated_at
+    description: UTC timestamp when the Gazette source last updated the notice.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: published_at
+    description: UTC timestamp when the Gazette source published the notice.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Published at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: feed_updated_at
+    description: UTC timestamp when the source feed was last updated for this observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Feed updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: feed_u_61c3a9
+  - name: feed_total
+    description: Total record count reported by the source feed at observation time.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_feed_total:
+            type: average
+            label: Average reported feed total
+            description: Average source-reported `feed_total` among retained rows per observation day.
+              This is an observation-weighted publisher level, not a count of notices added during the day.
+              Irregular polling and row retention can bias the average.
+            format: '#,##0'
+        dimension:
+          type: number
+          label: Feed total
+          hidden: false
+          format: '#,##0'
+  - name: feed_total_errors
+    description: Error count reported by the source feed at observation time.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Feed total errors
+          hidden: false
+          format: '#,##0'
+  - name: _row_id
+    description: Raw loader row identifier retained for lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Identifier of the raw extract batch that produced the retained notice.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained notice.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained notice.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained notice in its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained notice.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: source_2059e1
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the retained raw notice for replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

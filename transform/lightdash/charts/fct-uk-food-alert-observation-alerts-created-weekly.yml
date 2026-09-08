@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_food_alert_observation_created_date_week
+          yRef:
+            field: fct_uk_food_alert_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created date (Week)
+      yAxis:
+      - name: Distinct alert
+    layout:
+      xField: fct_uk_food_alert_observation_created_date_week
+      yField:
+      - fct_uk_food_alert_observation_distinct_entities
+  type: cartesian
+description: Distinct `alert_id` values by publisher `created_date` week across the published history.
+  This is a flow of alerts created, not a current catalogue level; weeks with no created alerts are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_uk_food_alert_observation_created_date_week
+  exploreName: fct_uk_food_alert_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_uk_food_alert_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_uk_food_alert_observation_created_date_week
+  tableCalculations: []
+name: Distinct food alerts created each week
+slug: fct-uk-food-alert-observation-alerts-created-weekly
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_food_alert_observation_created_date_week
+  - fct_uk_food_alert_observation_distinct_entities
+tableName: fct_uk_food_alert_observation
+version: 1

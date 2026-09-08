@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of Himalayas job observations. Each row represents one job identifier
+  from one upstream observation timestamp; repeated ingestion of the same observation is reduced to the
+  latest loaded copy while published job attributes and load-layer lineage remain available for analysis,
+  audit, and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_job_feed_himalayas_observed_at
+  - fct_job_feed_himalayas_job_id
+  - fct_job_feed_himalayas_company
+  - fct_job_feed_himalayas_source_loaded_at
+  exploreName: fct_job_feed_himalayas
+  filters:
+    dimensions:
+      and:
+      - id: 0505d890-d3b0-50d5-aef5-daa06912cb20
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_feed_himalayas_observed_at
+        values:
+        - 30
+      id: b1a273a0-2c75-5b83-9519-e4ac7a1e360c
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_himalayas_observed_at
+  tableCalculations: []
+name: Job feed himalayas — observations
+slug: fct-job-feed-himalayas-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_job_feed_himalayas
+version: 1

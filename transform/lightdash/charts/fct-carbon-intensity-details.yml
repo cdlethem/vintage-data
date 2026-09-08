@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Incremental history of national carbon-intensity interval forecasts and actual values, retaining
+  one observation per source interval and extractor timestamp. Repeated raw rows for the same observation
+  are reduced to the latest loaded copy while raw-load lineage is preserved for replay and audit.
+metricQuery:
+  dimensions: &id001
+  - fct_carbon_intensity_observed_at
+  - fct_carbon_intensity_interval_id
+  - fct_carbon_intensity_intensity_index
+  - fct_carbon_intensity_actual_intensity
+  - fct_carbon_intensity_source_loaded_at
+  exploreName: fct_carbon_intensity
+  filters:
+    dimensions:
+      and:
+      - id: 1fa53d91-2d72-52ea-aaad-2a28dae92b61
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_carbon_intensity_observed_at
+        values:
+        - 30
+      id: 9befd7ed-6ad6-5173-b171-6f46a5f9084c
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_carbon_intensity_observed_at
+  tableCalculations: []
+name: Carbon intensity — observations
+slug: fct-carbon-intensity-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_carbon_intensity
+version: 1

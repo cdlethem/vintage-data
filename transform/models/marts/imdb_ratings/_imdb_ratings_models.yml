@@ -1,0 +1,342 @@
+version: 2
+models:
+- name: fct_imdb_rating_observation
+  description: Daily incremental history of IMDb title rating observations. Each row is one title at one
+    upstream fetch timestamp, preserving the reported rating, vote count, change metadata, and raw-load
+    lineage. Replayed copies of the same title and observation timestamp are reduced to the latest loaded
+    row; this model does not infer title metadata or fill omitted publisher values.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: title_id, observed_at
+      label: Imdb rating observation
+      group_label: Imdb ratings
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: imdb_rating_observation_key
+      vintage:
+        visualization:
+          dimension: change_status
+          metric: average_average_rating
+          time: observed_at
+          window_days: 30
+          title: Mean observed average rating by change status
+          description: Mean observed average rating by `change_status` in the selected observation window.
+            IMDb average title rating reported at observation time, on a zero-to-ten scale. Each retained
+            observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+            This is not a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - title_id
+          - change_status
+          - average_rating
+          - source_loaded_at
+          sources:
+          - '`imdb_ratings` — licence: IMDb non-commercial-use terms; attribution required: True. Source
+            configuration: `extract/sources/imdb_ratings.yml`.'
+          analysis:
+            headline: how IMDb title coverage, ratings, and voting activity change across the four observed
+              snapshot days.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - source_system
+            - change_status
+            - publisher_updated_at
+            trends:
+            - slug: title-coverage
+              kind: total
+              metric: distinct_titles
+              time: observed_at
+              grain: DAY
+              title: Distinct titles observed per day
+              description: Distinct `title_id` values present in each IMDb observation day. This is catalogue
+                coverage rather than new-title flow; repeated title snapshots count once per day, and absent
+                observation days are absent rather than zero.
+              width: half
+            - slug: rating-level
+              kind: total
+              metric: average_average_rating
+              time: observed_at
+              grain: DAY
+              title: Mean title rating per observation day
+              description: Mean `average_rating` across retained title observations on each observation day.
+                Each row has equal weight, so polling frequency and repeated snapshots can bias the mean; this
+                is a reported rating level rather than an additive total.
+              width: half
+            - slug: vote-level
+              kind: total
+              metric: average_vote_count
+              time: observed_at
+              grain: DAY
+              title: Mean votes per observation day
+              description: Mean reported `vote_count` across retained title observations on each observation
+                day. This is a snapshot measure with equal row weight, not a sum of votes across titles; absent
+                observation days are absent rather than zero.
+              width: half
+            - slug: rating-by-change-status
+              kind: breakdown
+              metric: average_average_rating
+              breakdown: change_status
+              top_n: 3
+              time: observed_at
+              grain: DAY
+              title: Mean rating by publisher change status
+              description: Mean title rating per observation day split among null, updated, and new change
+                statuses. Null status means the publisher supplied no classification and dominates this feed;
+                the segments are separate row-weighted means, not additive totals.
+              width: full
+            - slug: votes-by-change-status
+              kind: breakdown
+              metric: average_vote_count
+              breakdown: change_status
+              top_n: 3
+              time: observed_at
+              grain: DAY
+              title: Mean votes by publisher change status
+              description: Mean reported vote count per observation day for the three observed change-status
+                groups, including null. This compares snapshot levels and excludes no observed group; equal
+                row weighting means the values are not additive across statuses.
+              width: full
+  columns:
+  - name: imdb_rating_observation_key
+    description: Stable hash of the IMDb title identifier and observation timestamp defining the row grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Imdb rating observation key
+          hidden: true
+  - name: source_system
+    description: Upstream source label carried by the IMDb rating record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source system
+          hidden: false
+  - name: title_id
+    description: IMDb title identifier, using the tconst value supplied by the rating feed.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_titles:
+            type: count_distinct
+            label: Distinct title
+            description: Distinct non-null `title_id` values represented in each observation day and
+              dimension group. Repeated snapshots of a title count once within each group, avoiding
+              inflation from repeated title observations.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Title id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this IMDb rating observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: average_rating
+    description: IMDb average title rating reported at observation time, on a zero-to-ten scale.
+    data_type: decimal(4,1)
+    config:
+      meta:
+        metrics:
+          average_average_rating:
+            type: average
+            label: Mean observed average rating
+            description: Mean observed average rating by `change_status` in the selected observation window.
+              IMDb average title rating reported at observation time, on a zero-to-ten scale. Each retained
+              observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+              This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Average rating
+          hidden: false
+          format: '#,##0.00'
+  - name: vote_count
+    description: Number of IMDb votes reported for the title at observation time.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_vote_count:
+            type: average
+            label: Mean observed vote count
+            description: Mean reported `vote_count` across retained title observations in each time and
+              dimension group. Each row has equal weight, so polling frequency and repeated snapshots can
+              affect the mean; this is a snapshot level, not an additive vote total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Vote count
+          hidden: false
+          format: '#,##0'
+  - name: publisher_updated_at
+    description: Publisher-provided timestamp string identifying when IMDb last updated the rating.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publisher updated at
+          hidden: false
+  - name: change_status
+    description: Publisher change classification for this rating observation, such as new or updated.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Change status
+          hidden: false
+  - name: previous_average_rating
+    description: Prior IMDb average title rating when the publisher reported one; null for new or unchanged
+      records.
+    data_type: decimal(4,1)
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Previous average rating
+          hidden: false
+          format: '#,##0.00'
+  - name: previous_vote_count
+    description: Prior IMDb vote count when the publisher reported one; null for new or unchanged records.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Previous vote count
+          hidden: false
+          format: '#,##0'
+  - name: source_row_id
+    description: Load-layer row identifier for the retained raw IMDb rating observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained raw IMDb rating observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained IMDb rating observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained IMDb rating observation within its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the extraction and load layers.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch began.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained raw IMDb rating observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained raw IMDb rating observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the original raw IMDb rating record for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

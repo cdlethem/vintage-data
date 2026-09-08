@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ripe_ris_live_bgp_update_collector_host
+          yRef:
+            field: fct_ripe_ris_live_bgp_update_average_announcement_count
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_ripe_ris_live_bgp_update_collector_host
+      yField:
+      - fct_ripe_ris_live_bgp_update_average_announcement_count
+  type: cartesian
+description: Mean observed announcement count by `collector_host` in the selected observation window.
+  Number of prefixes in the preserved announcements array. Each retained observation has equal weight;
+  polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure or
+  an additive total.
+metricQuery:
+  dimensions:
+  - fct_ripe_ris_live_bgp_update_collector_host
+  exploreName: fct_ripe_ris_live_bgp_update
+  filters:
+    dimensions:
+      and:
+      - id: f489c342-a843-59d5-80ac-c4ebb27912c1
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_ripe_ris_live_bgp_update_observed_at
+        values:
+        - 30
+      id: 8c3b88fb-27cd-5929-8b0d-0db228ea90d2
+  limit: 20
+  metrics:
+  - fct_ripe_ris_live_bgp_update_average_announcement_count
+  sorts:
+  - descending: true
+    fieldId: fct_ripe_ris_live_bgp_update_average_announcement_count
+  tableCalculations: []
+name: Mean observed announcement count by collector host
+slug: fct-ripe-ris-live-bgp-update
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ripe_ris_live_bgp_update_collector_host
+  - fct_ripe_ris_live_bgp_update_average_announcement_count
+tableName: fct_ripe_ris_live_bgp_update
+version: 1

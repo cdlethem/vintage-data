@@ -1,0 +1,321 @@
+version: 2
+models:
+- name: fct_jpl_ssd_observation
+  description: Physical observation fact for the JPL SSD fireball feed. Each row is one source observation
+    identified by its source, reported identifier, and fetch timestamp. Source-load lineage is retained
+    so append-only arrivals can be audited and replayed without exposing the raw payload.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, observation_id, observed_at
+      label: Jpl ssd observation
+      group_label: Jpl ssd
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: observation_key
+      vintage:
+        visualization:
+          dimension: observation_id
+          metric: max_impact_energy_kt
+          time: observed_at
+          window_days: 30
+          title: Maximum observed impact energy kt by observation id
+          description: Maximum observed impact energy kt by `observation_id` in the selected observation
+            window. Estimated impact energy in kilotons as reported by the feed. Uses the largest retained
+            value within each group and window, not the latest value or a sum of snapshots.
+          detail_fields:
+          - observed_at
+          - observation_id
+          - impact_energy_kt
+          - source_loaded_at
+          sources:
+          - '`jpl_ssd` — licence: NASA/JPL — public domain; attribution required: False. Source configuration:
+            `extract/sources/jpl_ssd.yml`.'
+          analysis:
+            headline: how the five-day fireball snapshot changes in reported event coverage and impact-energy
+              levels.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - source_name
+            - latitude_deg
+            - longitude_deg
+            - altitude_km
+            trends:
+            - slug: observed-events
+              kind: total
+              metric: distinct_observations
+              time: observed_at
+              grain: DAY
+              title: Distinct fireball events by observation day
+              description: Distinct `observation_id` values represented in each daily feed snapshot. This is
+                a short collection-time level because the publisher supplies no source event timestamp; days
+                without a snapshot are absent rather than zero.
+              width: half
+            - slug: peak-impact-energy
+              kind: total
+              metric: max_impact_energy_kt
+              time: observed_at
+              grain: DAY
+              title: Peak reported impact energy by observation day
+              description: Maximum reported impact energy in kilotons in each daily snapshot. This is a
+                republished measure level rather than an additive energy total, and absent snapshot days are
+                absent rather than zero.
+              width: half
+            - slug: energy-by-source
+              kind: breakdown
+              metric: max_impact_energy_kt
+              breakdown: source_name
+              top_n: 2
+              time: observed_at
+              grain: DAY
+              title: Peak impact energy by feed source
+              description: Maximum reported impact energy per observation day for each available feed source.
+                The source dimension currently has one value, so this is a one-series diagnostic rather than
+                a comparison; absent snapshot days are absent rather than zero.
+              width: full
+            - slug: event-composition
+              kind: composition
+              metric: distinct_observations
+              breakdown: source_name
+              top_n: 2
+              time: observed_at
+              grain: DAY
+              title: Fireball event mix by source and observation day
+              description: Distinct `observation_id` values per observation day stacked by source name. The
+                source currently has one observed value, so the stack is a feed-coverage check; absent
+                snapshot days are absent rather than zero.
+              width: full
+  columns:
+  - name: observation_key
+    description: Stable hash of the source, reported observation identifier, and observed timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Observation key
+          hidden: true
+  - name: source_name
+    description: Source system identifier reported by the JPL SSD feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: observation_id
+    description: Source-reported identifier for the observed solar-system event.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_observations:
+            type: count_distinct
+            label: Distinct fireball event
+            description: Distinct non-null `observation_id` values represented in each daily feed snapshot.
+              Repeated observations across collection days count once within each observation-day slice.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Observation id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the JPL SSD feed reported the observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: energy_e10j
+    description: Estimated event energy in units of 10 joules as reported by the feed.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Energy e10j
+          hidden: false
+          format: '#,##0.00'
+  - name: impact_energy_kt
+    description: Estimated impact energy in kilotons as reported by the feed.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          max_impact_energy_kt:
+            type: max
+            label: Maximum observed impact energy kt
+            description: Maximum observed impact energy kt by `observation_id` in the selected observation
+              window. Estimated impact energy in kilotons as reported by the feed. Uses the largest retained
+              value within each group and window, not the latest value or a sum of snapshots.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Impact energy kt
+          hidden: false
+          format: '#,##0.00'
+  - name: latitude_deg
+    description: Reported event latitude in degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude deg
+          hidden: false
+          format: '#,##0.00'
+  - name: longitude_deg
+    description: Reported event longitude in degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude deg
+          hidden: false
+          format: '#,##0.00'
+  - name: altitude_km
+    description: Reported event altitude in kilometers.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Altitude km
+          hidden: false
+          format: '#,##0.00'
+  - name: velocity_km_s
+    description: Reported event velocity in kilometers per second.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Velocity km s
+          hidden: false
+          format: '#,##0.00'
+  - name: _row_id
+    description: Raw row identifier retained for lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Load batch identifier that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer source date associated with the retained observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when the extract job that produced the retained observation started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Load job identifier that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content for lineage and replay.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

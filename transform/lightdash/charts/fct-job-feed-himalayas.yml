@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_job_feed_himalayas_company
+          yRef:
+            field: fct_job_feed_himalayas_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_job_feed_himalayas_company
+      yField:
+      - fct_job_feed_himalayas_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values by `company` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_job_feed_himalayas_company
+  exploreName: fct_job_feed_himalayas
+  filters:
+    dimensions:
+      and:
+      - id: 0505d890-d3b0-50d5-aef5-daa06912cb20
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_feed_himalayas_observed_at
+        values:
+        - 30
+      id: b1a273a0-2c75-5b83-9519-e4ac7a1e360c
+  limit: 20
+  metrics:
+  - fct_job_feed_himalayas_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_himalayas_distinct_entities
+  tableCalculations: []
+name: Distinct job by company
+slug: fct-job-feed-himalayas
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_feed_himalayas_company
+  - fct_job_feed_himalayas_distinct_entities
+tableName: fct_job_feed_himalayas
+version: 1

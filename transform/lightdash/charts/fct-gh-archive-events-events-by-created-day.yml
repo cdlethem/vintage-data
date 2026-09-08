@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_gh_archive_events_created_at_day
+          yRef:
+            field: fct_gh_archive_events_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct event
+    layout:
+      xField: fct_gh_archive_events_created_at_day
+      yField:
+      - fct_gh_archive_events_distinct_entities
+  type: cartesian
+description: Distinct `event_id` values by the day GitHub reports they were created. This is a short six-day
+  event window rather than a long historical flow; days with no source events are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_gh_archive_events_created_at_day
+  exploreName: fct_gh_archive_events
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gh_archive_events_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_gh_archive_events_created_at_day
+  tableCalculations: []
+name: GitHub events created per day
+slug: fct-gh-archive-events-events-by-created-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gh_archive_events_created_at_day
+  - fct_gh_archive_events_distinct_entities
+tableName: fct_gh_archive_events
+version: 1

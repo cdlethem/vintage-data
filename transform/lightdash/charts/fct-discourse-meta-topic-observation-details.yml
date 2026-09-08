@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical observation fact for topics published on the Discourse Meta community.
+  Each row records one topic at one extractor observation timestamp, retaining the topic metadata, engagement
+  counters, tags, and raw load lineage. Repeated copies of the same source, topic identifier, and observation
+  timestamp retain the latest loaded row.
+metricQuery:
+  dimensions: &id001
+  - fct_discourse_meta_topic_observation_observed_at
+  - fct_discourse_meta_topic_observation_topic_id
+  - fct_discourse_meta_topic_observation_title
+  - fct_discourse_meta_topic_observation_views
+  - fct_discourse_meta_topic_observation_source_loaded_at
+  exploreName: fct_discourse_meta_topic_observation
+  filters:
+    dimensions:
+      and:
+      - id: 3331fb1a-f1a8-5e35-8908-ec70543ac47c
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_discourse_meta_topic_observation_observed_at
+        values:
+        - 30
+      id: 5e1e2a73-6086-5b65-b36e-edff9719312e
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_discourse_meta_topic_observation_observed_at
+  tableCalculations: []
+name: Discourse meta topic observation — observations
+slug: fct-discourse-meta-topic-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_discourse_meta_topic_observation
+version: 1

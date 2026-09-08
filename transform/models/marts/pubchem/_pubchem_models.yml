@@ -1,0 +1,265 @@
+version: 2
+models:
+- name: fct_pubchem_compound_snapshot
+  description: Historical snapshots of PubChem PUG-REST compound lookups. Each row represents one source,
+    requested query, returned compound identifier, and API observation timestamp; repeated raw ingestion
+    of the same lookup is reduced to the latest loaded copy while not-found lookup rows remain observable.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, compound_id, fetched_at, query
+      label: Pubchem compound snapshot
+      group_label: Pubchem
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: pubchem_compound_snapshot_key
+      vintage:
+        visualization:
+          dimension: query
+          metric: average_molecular_weight
+          time: fetched_at
+          window_days: 30
+          title: Mean observed molecular weight by query
+          description: Mean observed molecular weight by `query` in the selected observation window. Molecular
+            weight returned by PubChem, converted from the raw string to a decimal value. Each retained
+            observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+            This is not a latest-value measure or an additive total.
+          detail_fields:
+          - fetched_at
+          - compound_id
+          - query
+          - molecular_weight
+          - source_loaded_at
+          sources:
+          - '`pubchem` — licence: unstated (US federal, NIH/NLM); attribution required: False. Source
+            configuration: `extract/sources/pubchem.yml`.'
+          filters:
+          - field: found
+            values:
+            - true
+          analysis:
+            headline: how the small requested compound set and its molecular-weight level change between
+              fetches.
+            event_time: fetched_at
+            grain: DAY
+            controls:
+            - query
+            - found
+            - molecular_formula
+            trends:
+            - slug: compounds-fetched
+              kind: total
+              metric: distinct_compounds
+              time: fetched_at
+              grain: DAY
+              title: Distinct compounds fetched per day
+              description: Distinct non-null `compound_id` values returned by PubChem on each fetch day.
+                This is a catalogue level for requested lookups rather than a discovery flow; the current
+                extract covers one day and days without fetches are absent rather than zero.
+              width: half
+            - slug: molecular-weight-level
+              kind: total
+              metric: average_molecular_weight
+              time: fetched_at
+              grain: DAY
+              title: Mean molecular weight per fetch day
+              description: Mean non-null `molecular_weight` across retained PubChem lookup rows on each
+                fetch day. Each row has equal weight and repeated polling can influence the result; this
+                is a snapshot level rather than a sum. Missing fetch days are absent rather than zero.
+              width: half
+            - slug: weight-by-query
+              kind: breakdown
+              metric: average_molecular_weight
+              breakdown: query
+              top_n: 3
+              time: fetched_at
+              grain: DAY
+              title: Molecular weight by requested query
+              description: Mean `molecular_weight` per fetch day for the three largest requested `query`
+                values in this tiny snapshot. The remainder is excluded rather than aggregated; only one
+                fetch day is present, so this compares lookup values rather than a long-term trend.
+              width: full
+  columns:
+  - name: pubchem_compound_snapshot_key
+    description: Stable hash of the source, compound identifier, API observation timestamp, and requested
+      query.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Pubchem compound snapshot key
+          hidden: true
+  - name: source
+    description: PubChem source identifier carried by the extracted business record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: compound_id
+    description: PubChem Compound ID returned for a successful lookup; null when the API reports no match.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_compounds:
+            type: count_distinct
+            label: Distinct compounds
+            description: Distinct non-null `compound_id` values returned by PubChem for the matching
+              lookup rows. Repeated snapshots of one compound count once within each time and query group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Compound id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp when the PubChem API request produced this lookup result.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: query
+    description: User-supplied compound name or other lookup value sent to PubChem.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Query
+          hidden: false
+  - name: found
+    description: Whether PubChem returned a compound property record for the query.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Found
+          hidden: false
+  - name: molecular_formula
+    description: Molecular formula returned by PubChem for the compound.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Molecular formula
+          hidden: false
+  - name: molecular_weight
+    description: Molecular weight returned by PubChem, converted from the raw string to a decimal value.
+    data_type: decimal(18,6)
+    config:
+      meta:
+        metrics:
+          average_molecular_weight:
+            type: average
+            label: Mean observed molecular weight
+            description: Mean observed molecular weight by `query` in the selected observation window.
+              Molecular weight returned by PubChem, converted from the raw string to a decimal value.
+              Each retained observation has equal weight; polling frequency and repeated snapshots can
+              affect the mean. This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Molecular weight
+          hidden: false
+          format: '#,##0.00'
+  - name: iupac_name
+    description: IUPAC name returned by PubChem for the compound.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Iupac name
+          hidden: false
+  - name: smiles
+    description: Connectivity or canonical SMILES returned by PubChem for the compound.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Smiles
+          hidden: false
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained lookup result.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained lookup result in its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained raw lookup result.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Content hash of the retained raw lookup result for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

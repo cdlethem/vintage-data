@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_wayback_cdx_observation_captured_at_day
+          yRef:
+            field: fct_wayback_cdx_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Captured at (Day)
+      yAxis:
+      - name: Distinct capture
+    layout:
+      xField: fct_wayback_cdx_observation_captured_at_day
+      yField:
+      - fct_wayback_cdx_observation_distinct_entities
+  type: cartesian
+description: Distinct `capture_id` values by the CDX `captured_at` day. This is a source capture flow
+  over 14 observed days, and days without captures are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_wayback_cdx_observation_captured_at_day
+  exploreName: fct_wayback_cdx_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_wayback_cdx_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_wayback_cdx_observation_captured_at_day
+  tableCalculations: []
+name: Distinct captures by capture day
+slug: fct-wayback-cdx-observation-captures-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_wayback_cdx_observation_captured_at_day
+  - fct_wayback_cdx_observation_distinct_entities
+tableName: fct_wayback_cdx_observation
+version: 1

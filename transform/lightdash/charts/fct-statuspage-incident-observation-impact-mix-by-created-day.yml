@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_statuspage_incident_observation_created_at_day
+          yRef:
+            field: fct_statuspage_incident_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct incident
+    layout:
+      stack: true
+      xField: fct_statuspage_incident_observation_created_at_day
+      yField:
+      - fct_statuspage_incident_observation_distinct_entities
+  type: cartesian
+description: Distinct incidents by source creation day stacked by the four reported impact classes. These
+  classes cover the observed impact values, and the bars show composition of the creation flow rather
+  than repeated observation volume.
+metricQuery:
+  dimensions:
+  - fct_statuspage_incident_observation_created_at_day
+  - fct_statuspage_incident_observation_impact
+  exploreName: fct_statuspage_incident_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_statuspage_incident_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_statuspage_incident_observation_distinct_entities
+  - descending: false
+    fieldId: fct_statuspage_incident_observation_created_at_day
+  tableCalculations: []
+name: Incident intake mix by impact
+pivotConfig:
+  columns:
+  - fct_statuspage_incident_observation_impact
+slug: fct-statuspage-incident-observation-impact-mix-by-created-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_statuspage_incident_observation_created_at_day
+  - fct_statuspage_incident_observation_impact
+  - fct_statuspage_incident_observation_distinct_entities
+tableName: fct_statuspage_incident_observation
+version: 1

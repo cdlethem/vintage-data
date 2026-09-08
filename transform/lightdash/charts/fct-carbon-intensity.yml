@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_carbon_intensity_intensity_index
+          yRef:
+            field: fct_carbon_intensity_average_actual_intensity
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_carbon_intensity_intensity_index
+      yField:
+      - fct_carbon_intensity_average_actual_intensity
+  type: cartesian
+description: Mean observed actual intensity by `intensity_index` in the selected observation window. Actual
+  carbon intensity reported for the interval, in grams of CO2 per kilowatt-hour, when available. Each
+  retained observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+  This is not a latest-value measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_carbon_intensity_intensity_index
+  exploreName: fct_carbon_intensity
+  filters:
+    dimensions:
+      and:
+      - id: 1fa53d91-2d72-52ea-aaad-2a28dae92b61
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_carbon_intensity_observed_at
+        values:
+        - 30
+      id: 9befd7ed-6ad6-5173-b171-6f46a5f9084c
+  limit: 20
+  metrics:
+  - fct_carbon_intensity_average_actual_intensity
+  sorts:
+  - descending: true
+    fieldId: fct_carbon_intensity_average_actual_intensity
+  tableCalculations: []
+name: Mean observed actual intensity by intensity index
+slug: fct-carbon-intensity
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_carbon_intensity_intensity_index
+  - fct_carbon_intensity_average_actual_intensity
+tableName: fct_carbon_intensity
+version: 1

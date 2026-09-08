@@ -1,0 +1,154 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: a0cf647c-7a18-5e6d-a844-5bc4afc756f0
+    label: 'Uk prison estate: Metric'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_prison_estate_metric
+      tableName: fct_uk_prison_estate
+    values: []
+  - disabled: true
+    id: ac0dbf0f-3718-51bd-a9fd-2ed01e4d9c36
+    label: 'Uk prison estate: Population group'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_prison_estate_population_group
+      tableName: fct_uk_prison_estate
+    values: []
+  - disabled: true
+    id: 4f357b89-de7b-5c9b-8cc4-514bca4edc16
+    label: 'Uk prison estate: Period'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_prison_estate_period
+      tableName: fct_uk_prison_estate
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Uk Prison Estate
+slug: uk-prison-estate
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical fact of UK Ministry of Justice prison-estate observations. Each row records one
+      metric and population group for one source snapshot and reporting period. The source does not expose
+      an individual establishment identifier; observation_id is the extractor''s composite period, metric,
+      and group key. Numeric source values are available in measure_value and the original source text
+      is retained in measure_value_text for nonnumeric source markers.
+
+
+      **Grain:** source, observation_id, observed_at
+
+
+      **What changes here:** how prison population, capacity, and headroom measures move across reporting
+      periods and population groups.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `uk_prison_estate` — licence: Open Government Licence; attribution required: True. Source configuration:
+      `extract/sources/uk_prison_estate.yml`.'
+    hideFrame: false
+    title: Uk prison estate
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Uk prison estate — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Reported prison measures by period date
+    chartSlug: fct-uk-prison-estate-reported-observations
+    hideTitle: false
+    title: Reported prison measures by period date
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average numeric measure by period date
+    chartSlug: fct-uk-prison-estate-average-measure
+    hideTitle: false
+    title: Average numeric measure by period date
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Reported measures by type
+    chartSlug: fct-uk-prison-estate-measures-by-type
+    hideTitle: false
+    title: Reported measures by type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Population-group mix of reported measures
+    chartSlug: fct-uk-prison-estate-population-mix
+    hideTitle: false
+    title: Population-group mix of reported measures
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Uk prison estate — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct observation by metric
+    chartSlug: fct-uk-prison-estate
+    hideTitle: false
+    title: Distinct observation by metric
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Uk prison estate — observations
+    chartSlug: fct-uk-prison-estate-details
+    hideTitle: false
+    title: Uk prison estate — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

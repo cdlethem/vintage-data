@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_geojson_shelter_status_observed_at_day
+          yRef:
+            field: fct_geojson_shelter_status_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct feature
+    layout:
+      xField: fct_geojson_shelter_status_observed_at_day
+      yField:
+      - fct_geojson_shelter_status_distinct_entities
+  type: cartesian
+description: Distinct `feature_id` values present in the GeoJSON feed on each observation day. This is
+  a level rather than a flow because the publisher republishes shelter features; changes reflect the returned
+  catalogue. Days without a successful observation are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_geojson_shelter_status_observed_at_day
+  exploreName: fct_geojson_shelter_status
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_geojson_shelter_status_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_geojson_shelter_status_observed_at_day
+  tableCalculations: []
+name: Distinct shelters observed per day
+slug: fct-geojson-shelter-status-shelters-observed
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_geojson_shelter_status_observed_at_day
+  - fct_geojson_shelter_status_distinct_entities
+tableName: fct_geojson_shelter_status
+version: 1

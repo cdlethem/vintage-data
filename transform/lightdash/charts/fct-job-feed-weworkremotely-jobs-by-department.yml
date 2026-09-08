@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_job_feed_weworkremotely_posted_at_day
+          yRef:
+            field: fct_job_feed_weworkremotely_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Day)
+      yAxis:
+      - name: Distinct job
+    layout:
+      xField: fct_job_feed_weworkremotely_posted_at_day
+      yField:
+      - fct_job_feed_weworkremotely_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values per posting day for the eight departments with the largest totals
+  in the available history. The remainder is excluded rather than aggregated, so changing membership can
+  look like a trend.
+metricQuery:
+  dimensions:
+  - fct_job_feed_weworkremotely_posted_at_day
+  - fct_job_feed_weworkremotely_department
+  exploreName: fct_job_feed_weworkremotely
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_feed_weworkremotely_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_weworkremotely_distinct_entities
+  - descending: false
+    fieldId: fct_job_feed_weworkremotely_posted_at_day
+  tableCalculations: []
+name: Leading departments by posting day
+pivotConfig:
+  columns:
+  - fct_job_feed_weworkremotely_department
+slug: fct-job-feed-weworkremotely-jobs-by-department
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_feed_weworkremotely_posted_at_day
+  - fct_job_feed_weworkremotely_department
+  - fct_job_feed_weworkremotely_distinct_entities
+tableName: fct_job_feed_weworkremotely
+version: 1

@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily incremental history of IMDb title rating observations. Each row is one title at one
+  upstream fetch timestamp, preserving the reported rating, vote count, change metadata, and raw-load
+  lineage. Replayed copies of the same title and observation timestamp are reduced to the latest loaded
+  row; this model does not infer title metadata or fill omitted publisher values.
+metricQuery:
+  dimensions: &id001
+  - fct_imdb_rating_observation_observed_at
+  - fct_imdb_rating_observation_title_id
+  - fct_imdb_rating_observation_change_status
+  - fct_imdb_rating_observation_average_rating
+  - fct_imdb_rating_observation_source_loaded_at
+  exploreName: fct_imdb_rating_observation
+  filters:
+    dimensions:
+      and:
+      - id: 6a24b418-1100-5c35-a985-86fe36dea0d9
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_imdb_rating_observation_observed_at
+        values:
+        - 30
+      id: 8a642efd-b48e-584e-92ef-c18c29b82a0b
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_imdb_rating_observation_observed_at
+  tableCalculations: []
+name: Imdb rating observation — observations
+slug: fct-imdb-rating-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_imdb_rating_observation
+version: 1

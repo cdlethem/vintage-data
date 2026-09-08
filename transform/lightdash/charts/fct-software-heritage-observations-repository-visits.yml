@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_software_heritage_observations_last_visit_at_month
+          yRef:
+            field: fct_software_heritage_observations_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Last visit at (Month)
+      yAxis:
+      - name: Distinct repository
+    layout:
+      xField: fct_software_heritage_observations_last_visit_at_month
+      yField:
+      - fct_software_heritage_observations_distinct_entities
+  type: cartesian
+description: Distinct `repository_id` values whose reported `last_visit_at` falls in each month. This
+  is a sparse history of latest-visit attributes rather than every visit event; months with no reported
+  last visits are absent rather than zero, and null timestamps are excluded.
+metricQuery:
+  dimensions:
+  - fct_software_heritage_observations_last_visit_at_month
+  exploreName: fct_software_heritage_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_software_heritage_observations_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_software_heritage_observations_last_visit_at_month
+  tableCalculations: []
+name: Repositories by reported last visit month
+slug: fct-software-heritage-observations-repository-visits
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_software_heritage_observations_last_visit_at_month
+  - fct_software_heritage_observations_distinct_entities
+tableName: fct_software_heritage_observations
+version: 1

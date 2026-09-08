@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_quebec_emergency_department_observation_observed_at_hour
+          yRef:
+            field: fct_quebec_emergency_department_observation_avg_occupied
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Mean occupied stretchers
+    layout:
+      stack: true
+      xField: fct_quebec_emergency_department_observation_observed_at_hour
+      yField:
+      - fct_quebec_emergency_department_observation_avg_occupied
+  type: cartesian
+description: Mean occupied stretchers per observed hour stacked by `reporting_level`, showing the mix
+  of facility and regional-total status rows. This is not a sum of stretchers; missing hours or unreported
+  measures are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_quebec_emergency_department_observation_observed_at_hour
+  - fct_quebec_emergency_department_observation_reporting_level
+  exploreName: fct_quebec_emergency_department_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_quebec_emergency_department_observation_avg_occupied
+  sorts:
+  - descending: true
+    fieldId: fct_quebec_emergency_department_observation_avg_occupied
+  - descending: false
+    fieldId: fct_quebec_emergency_department_observation_observed_at_hour
+  tableCalculations: []
+name: Occupied stretchers by reporting level
+pivotConfig:
+  columns:
+  - fct_quebec_emergency_department_observation_reporting_level
+slug: fct-quebec-emergency-department-observation-stretcher-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_quebec_emergency_department_observation_observed_at_hour
+  - fct_quebec_emergency_department_observation_reporting_level
+  - fct_quebec_emergency_department_observation_avg_occupied
+tableName: fct_quebec_emergency_department_observation
+version: 1

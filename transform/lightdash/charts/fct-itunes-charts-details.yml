@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of Apple iTunes chart observations. Each row represents one storefront,
+  chart, observation timestamp, and chart rank, retaining the track attributes and raw-load lineage for
+  replay and audit. Repeated raw loads of the same chart rank are reduced to the latest loaded record.
+metricQuery:
+  dimensions: &id001
+  - fct_itunes_charts_fetched_at
+  - fct_itunes_charts_id
+  - fct_itunes_charts_genre
+  - fct_itunes_charts_rank
+  - fct_itunes_charts_source_loaded_at
+  exploreName: fct_itunes_charts
+  filters:
+    dimensions:
+      and:
+      - id: 30d407f6-3749-504d-aae1-30797c4b314e
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_itunes_charts_fetched_at
+        values:
+        - 30
+      id: 59b7082b-308f-52e8-8192-83cb27f04ae5
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_itunes_charts_fetched_at
+  tableCalculations: []
+name: Itunes charts — observations
+slug: fct-itunes-charts-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_itunes_charts
+version: 1

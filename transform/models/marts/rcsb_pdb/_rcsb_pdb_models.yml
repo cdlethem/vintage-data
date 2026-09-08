@@ -1,0 +1,286 @@
+version: 2
+models:
+- name: fct_rcsb_pdb_structure_snapshot
+  description: Daily physical history of structures published by the RCSB Protein Data Bank feed. Each
+    row is one structure observed in one source snapshot, retaining publication dimensions and raw-load
+    lineage for replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: structure_id, observed_at
+      label: Rcsb pdb structure snapshot
+      group_label: Rcsb pdb
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: structure_snapshot_key
+      vintage:
+        visualization:
+          dimension: experimental_method
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct structure by experimental method
+          description: Distinct `structure_id` values by `experimental_method` among observations in the
+            selected window. Repeated observations of an entity count once within each group. An entity
+            that changed category can appear in multiple groups; these groups are not additive and do
+            not represent a current-state census.
+          detail_fields:
+          - observed_at
+          - structure_id
+          - experimental_method
+          - source_loaded_at
+          sources:
+          - '`rcsb_pdb` — licence: unstated (public structural database); attribution required: False.
+            Source configuration: `extract/sources/rcsb_pdb.yml`.'
+          analysis:
+            headline: how the observed structure catalogue changes by experimental method and which source
+              revision months contribute to its current level.
+            event_time: revision_date
+            grain: MONTH
+            controls:
+            - experimental_method
+            - keywords
+            - title
+            trends:
+            - slug: structures-observed
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct structures observed each day
+              description: Distinct `structure_id` values present in each collection-day snapshot. This
+                is a catalogue level rather than a publication flow because the feed republishes records;
+                days with no successful extract are absent rather than zero.
+              width: half
+            - slug: titles-observed
+              kind: total
+              metric: distinct_titles
+              time: observed_at
+              grain: DAY
+              title: Distinct structure titles observed each day
+              description: Distinct non-null `title` values present in each collection-day snapshot. Titles
+                are a second view of catalogue variety, not additive records; absent collection days are
+                absent rather than zero.
+              width: half
+            - slug: structures-by-method
+              kind: composition
+              metric: distinct_entities
+              breakdown: experimental_method
+              top_n: 2
+              time: observed_at
+              grain: DAY
+              title: Structure catalogue mix by experimental method
+              description: Distinct structures observed each day stacked by experimental method. Both
+                methods in this extract are shown and no remainder is aggregated; absent collection days
+                are absent rather than zero.
+              width: full
+            - slug: revised-structures
+              kind: composition
+              metric: distinct_entities
+              breakdown: experimental_method
+              top_n: 2
+              time: revision_date
+              grain: MONTH
+              title: Structures by source revision month
+              description: Distinct structures grouped by the month of source `revision_date`, stacked by
+                experimental method. The source history has two populated months, so this sparse event-time
+                view omits months without reported revisions rather than treating them as zero.
+              width: full
+  columns:
+  - name: structure_snapshot_key
+    description: Stable hash of the source, structure identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Structure snapshot key
+          hidden: true
+  - name: source_name
+    description: RCSB source identifier supplied by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: structure_id
+    description: Four-character PDB accession identifying the deposited structure.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct structure
+            description: Distinct `structure_id` values by `experimental_method` among observations in
+              the selected window. Repeated observations of an entity count once within each group. An
+              entity that changed category can appear in multiple groups; these groups are not additive
+              and do not represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Structure id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed this structure in the RCSB snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: initial_release_date
+    description: UTC calendar date on which the structure was initially released.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Initial release date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: deposit_date
+    description: UTC calendar date on which the structure was deposited.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Deposit date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: revision_date
+    description: UTC calendar date of the latest revision reported by RCSB.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Revision date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: experimental_method
+    description: Experimental technique reported for determining the structure.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Experimental method
+          hidden: false
+  - name: title
+    description: RCSB descriptive title for the structure entry.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_titles:
+            type: count_distinct
+            label: Distinct structure titles
+            description: Distinct non-null `title` values represented in the selected observation window.
+              This is catalogue variety and should not be added across experimental-method groups.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: keywords
+    description: RCSB keyword classification for the structure entry.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Keywords
+          hidden: false
+  - name: _batch_id
+    description: Load batch identifier that supplied the retained snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position of the retained snapshot in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content for lineage and replay.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

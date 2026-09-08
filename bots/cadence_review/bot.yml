@@ -1,0 +1,29 @@
+name: cadence_review
+description: audit adaptive cadence and portfolio usefulness
+schedule: "37 */4 * * *"
+enabled: true
+model: audit_cli
+prompt: prompt.md
+timeout_minutes: 25
+context_budget_minutes: 6
+model_budget_minutes: 15
+cleanup_margin_seconds: 120
+capacity_policy: skip
+retry_on: [transient]
+freshness_sla_minutes: 300
+requires_capabilities: [repository_read]
+context:
+  CADENCE_CONTEXT:
+    command: ["orchestration/.venv/bin/python", "bots/agent_context.py", "cadence", "--window-hours", "48", "--audit-size", "12"]
+    cwd: .
+    timeout_s: 360
+triggers: []
+gate:
+  context: CADENCE_CONTEXT
+  path: review_required
+  operator: equals
+  value: false
+  reason_code: cadence_review_not_required
+output:
+  format: json
+  schema: cadence_review_v2

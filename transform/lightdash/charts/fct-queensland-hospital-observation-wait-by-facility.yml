@@ -1,0 +1,64 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_queensland_hospital_observation_observed_at_day
+          yRef:
+            field: fct_queensland_hospital_observation_m_3993bc09
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed wait time all patients minutes
+    layout:
+      xField: fct_queensland_hospital_observation_observed_at_day
+      yField:
+      - fct_queensland_hospital_observation_m_3993bc09
+  type: cartesian
+description: Mean non-null all-patient wait minutes per observation day for the six largest `facility_name`
+  series. Remaining facilities are excluded rather than aggregated; this keeps the four-day operational
+  gauge readable.
+metricQuery:
+  dimensions:
+  - fct_queensland_hospital_observation_observed_at_day
+  - fct_queensland_hospital_observation_facility_name
+  exploreName: fct_queensland_hospital_observation
+  filters:
+    dimensions:
+      and:
+      - id: bcaa2f32-69ea-5c8f-a272-2acec7f383fc
+        operator: equals
+        target:
+          fieldId: fct_queensland_hospital_observation_live_data_available
+        values:
+        - true
+      id: d18ed8db-3359-51e3-8282-62e86b8df5a7
+  limit: 5000
+  metrics:
+  - fct_queensland_hospital_observation_m_3993bc09
+  sorts:
+  - descending: true
+    fieldId: fct_queensland_hospital_observation_m_3993bc09
+  - descending: false
+    fieldId: fct_queensland_hospital_observation_observed_at_day
+  tableCalculations: []
+name: All-patient wait by facility
+pivotConfig:
+  columns:
+  - fct_queensland_hospital_observation_facility_name
+slug: fct-queensland-hospital-observation-wait-by-facility
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_queensland_hospital_observation_observed_at_day
+  - fct_queensland_hospital_observation_facility_name
+  - fct_queensland_hospital_observation_m_3993bc09
+tableName: fct_queensland_hospital_observation
+version: 1

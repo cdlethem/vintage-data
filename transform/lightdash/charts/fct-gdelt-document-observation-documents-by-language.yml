@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_gdelt_document_observation_published_at_day
+          yRef:
+            field: fct_gdelt_document_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Published at (Day)
+      yAxis:
+      - name: Distinct document
+    layout:
+      xField: fct_gdelt_document_observation_published_at_day
+      yField:
+      - fct_gdelt_document_observation_distinct_entities
+  type: cartesian
+description: Distinct `document_id` values per source `published_at` day pivoted by reported language.
+  This is publication activity in the two-day sample; the six largest languages are shown and smaller
+  languages are excluded, not aggregated. Days without published documents are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_gdelt_document_observation_published_at_day
+  - fct_gdelt_document_observation_language
+  exploreName: fct_gdelt_document_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gdelt_document_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_gdelt_document_observation_distinct_entities
+  - descending: false
+    fieldId: fct_gdelt_document_observation_published_at_day
+  tableCalculations: []
+name: Documents published per day by language
+pivotConfig:
+  columns:
+  - fct_gdelt_document_observation_language
+slug: fct-gdelt-document-observation-documents-by-language
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gdelt_document_observation_published_at_day
+  - fct_gdelt_document_observation_language
+  - fct_gdelt_document_observation_distinct_entities
+tableName: fct_gdelt_document_observation
+version: 1

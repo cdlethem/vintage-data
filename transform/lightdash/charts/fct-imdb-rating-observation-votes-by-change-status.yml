@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_imdb_rating_observation_observed_at_day
+          yRef:
+            field: fct_imdb_rating_observation_average_vote_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed vote count
+    layout:
+      xField: fct_imdb_rating_observation_observed_at_day
+      yField:
+      - fct_imdb_rating_observation_average_vote_count
+  type: cartesian
+description: Mean reported vote count per observation day for the three observed change-status groups,
+  including null. This compares snapshot levels and excludes no observed group; equal row weighting means
+  the values are not additive across statuses.
+metricQuery:
+  dimensions:
+  - fct_imdb_rating_observation_observed_at_day
+  - fct_imdb_rating_observation_change_status
+  exploreName: fct_imdb_rating_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_imdb_rating_observation_average_vote_count
+  sorts:
+  - descending: true
+    fieldId: fct_imdb_rating_observation_average_vote_count
+  - descending: false
+    fieldId: fct_imdb_rating_observation_observed_at_day
+  tableCalculations: []
+name: Mean votes by publisher change status
+pivotConfig:
+  columns:
+  - fct_imdb_rating_observation_change_status
+slug: fct-imdb-rating-observation-votes-by-change-status
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_imdb_rating_observation_observed_at_day
+  - fct_imdb_rating_observation_change_status
+  - fct_imdb_rating_observation_average_vote_count
+tableName: fct_imdb_rating_observation
+version: 1

@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_clinicaltrials_study_observation_last_update_day
+          yRef:
+            field: fct_clinicaltrials_study_observation_average_enrollment
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Last update (Day)
+      yAxis:
+      - name: Average enrollment
+    layout:
+      xField: fct_clinicaltrials_study_observation_last_update_day
+      yField:
+      - fct_clinicaltrials_study_observation_average_enrollment
+  type: cartesian
+description: Average non-null reported enrollment per study observation by `last_update` date. This is
+  a reported planning or actual measure, not a total participant count, and empty dates are absent.
+metricQuery:
+  dimensions:
+  - fct_clinicaltrials_study_observation_last_update_day
+  exploreName: fct_clinicaltrials_study_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_clinicaltrials_study_observation_average_enrollment
+  sorts:
+  - descending: false
+    fieldId: fct_clinicaltrials_study_observation_last_update_day
+  tableCalculations: []
+name: Average reported enrollment by update date
+slug: fct-clinicaltrials-study-observation-average-enrollment
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_clinicaltrials_study_observation_last_update_day
+  - fct_clinicaltrials_study_observation_average_enrollment
+tableName: fct_clinicaltrials_study_observation
+version: 1

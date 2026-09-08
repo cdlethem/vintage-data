@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ofac_sanction_observation_observed_at_day
+          yRef:
+            field: fct_ofac_sanction_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct sanction
+    layout:
+      xField: fct_ofac_sanction_observation_observed_at_day
+      yField:
+      - fct_ofac_sanction_observation_distinct_entities
+  type: cartesian
+description: Distinct `sanction_id` values present in the republished OFAC snapshot on each observation
+  day. This is a level rather than a flow — the feed republishes its catalogue, so changes indicate additions
+  or withdrawals. Missing observation days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_ofac_sanction_observation_observed_at_day
+  exploreName: fct_ofac_sanction_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ofac_sanction_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_ofac_sanction_observation_observed_at_day
+  tableCalculations: []
+name: Sanctioned records present each observation day
+slug: fct-ofac-sanction-observation-sanctions-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ofac_sanction_observation_observed_at_day
+  - fct_ofac_sanction_observation_distinct_entities
+tableName: fct_ofac_sanction_observation
+version: 1

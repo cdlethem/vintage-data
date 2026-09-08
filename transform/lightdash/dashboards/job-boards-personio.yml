@@ -1,0 +1,172 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: f6c89476-b13b-5e2d-9b91-bccf33c50147
+    label: 'Job boards personio: Company country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_personio_company_country
+      tableName: fct_job_boards_personio
+    values: []
+  - disabled: true
+    id: 04801ce6-36ac-5d64-9ff3-a1907831b8a4
+    label: 'Job boards personio: Company industry'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_personio_company_industry
+      tableName: fct_job_boards_personio
+    values: []
+  - disabled: true
+    id: 47674739-5d49-5113-807d-3aa0288d64a4
+    label: 'Job boards personio: Employment type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_personio_employment_type
+      tableName: fct_job_boards_personio
+    values: []
+  - disabled: true
+    id: b90a4609-756f-5cc0-809e-52fea21119d8
+    label: 'Job boards personio: Experience level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_personio_experience_level
+      tableName: fct_job_boards_personio
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Boards Personio
+slug: job-boards-personio
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of job observations returned by Personio applicant-tracking system
+      boards. Each row represents one upstream source, job identifier, and extractor observation timestamp;
+      repeated raw copies of an observation are reduced to the latest loaded lineage record while listing
+      attributes and load metadata remain available for audit and replay.
+
+
+      **Grain:** source, job_id, observed_at
+
+
+      **What changes here:** how the published job catalogue and its posting mix change across companies
+      and industries.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_boards_personio` — licence: public ATS board endpoints; attribution required: False. Source
+      configuration: `extract/sources/job_boards_personio.yml`.'
+    hideFrame: false
+    title: Job boards personio
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards personio — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Jobs present in the catalogue per observation day
+    chartSlug: fct-job-boards-personio-observed-jobs
+    hideTitle: false
+    title: Jobs present in the catalogue per observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Hiring companies present per observation day
+    chartSlug: fct-job-boards-personio-observed-companies
+    hideTitle: false
+    title: Hiring companies present per observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Jobs posted per month
+    chartSlug: fct-job-boards-personio-posted-jobs
+    hideTitle: false
+    title: Jobs posted per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Jobs posted per month by company country
+    chartSlug: fct-job-boards-personio-postings-by-country
+    hideTitle: false
+    title: Jobs posted per month by company country
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Monthly posting mix by company industry
+    chartSlug: fct-job-boards-personio-posting-mix-by-industry
+    hideTitle: false
+    title: Monthly posting mix by company industry
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards personio — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-boards-personio
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Job boards personio — observations
+    chartSlug: fct-job-boards-personio-details
+    hideTitle: false
+    title: Job boards personio — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

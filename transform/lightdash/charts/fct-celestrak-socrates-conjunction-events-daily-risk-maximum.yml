@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_celestrak_socrates_conjunction_events_tca_day
+          yRef:
+            field: fct_celestrak_socrates_conjunction_events_max_max_probability
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Tca (Day)
+      yAxis:
+      - name: Maximum observed max probability
+    layout:
+      xField: fct_celestrak_socrates_conjunction_events_tca_day
+      yField:
+      - fct_celestrak_socrates_conjunction_events_max_max_probability
+  type: cartesian
+description: Maximum reported `max_probability` among conjunction events on each `tca` day. This is the
+  highest predicted event risk per day, not a sum of probabilities or a latest snapshot; days without
+  events are absent.
+metricQuery:
+  dimensions:
+  - fct_celestrak_socrates_conjunction_events_tca_day
+  exploreName: fct_celestrak_socrates_conjunction_events
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_celestrak_socrates_conjunction_events_max_max_probability
+  sorts:
+  - descending: false
+    fieldId: fct_celestrak_socrates_conjunction_events_tca_day
+  tableCalculations: []
+name: Maximum collision probability by TCA day
+slug: fct-celestrak-socrates-conjunction-events-daily-risk-maximum
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_celestrak_socrates_conjunction_events_tca_day
+  - fct_celestrak_socrates_conjunction_events_max_max_probability
+tableName: fct_celestrak_socrates_conjunction_events
+version: 1

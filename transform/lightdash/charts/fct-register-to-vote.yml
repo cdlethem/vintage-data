@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_register_to_vote_published_at
+          yRef:
+            field: fct_register_to_vote_average_application_count
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_register_to_vote_published_at
+      yField:
+      - fct_register_to_vote_average_application_count
+  type: cartesian
+description: Mean observed application count by `published_at` in the selected observation window. Number
+  of applications reported by the upstream feed for the observation. Each retained observation has equal
+  weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure
+  or an additive total.
+metricQuery:
+  dimensions:
+  - fct_register_to_vote_published_at
+  exploreName: fct_register_to_vote
+  filters:
+    dimensions:
+      and:
+      - id: c243adb8-8862-5c6c-b375-01d772414765
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_register_to_vote_observed_at
+        values:
+        - 30
+      id: 189cbf25-4fbb-54c8-94d2-386bfca4e1cc
+  limit: 20
+  metrics:
+  - fct_register_to_vote_average_application_count
+  sorts:
+  - descending: true
+    fieldId: fct_register_to_vote_average_application_count
+  tableCalculations: []
+name: Mean observed application count by published at
+slug: fct-register-to-vote
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_register_to_vote_published_at
+  - fct_register_to_vote_average_application_count
+tableName: fct_register_to_vote
+version: 1

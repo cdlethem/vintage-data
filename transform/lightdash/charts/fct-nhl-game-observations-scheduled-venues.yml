@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nhl_game_observations_scheduled_at_day
+          yRef:
+            field: fct_nhl_game_observations_distinct_venues
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Scheduled at (Day)
+      yAxis:
+      - name: Distinct venues
+    layout:
+      xField: fct_nhl_game_observations_scheduled_at_day
+      yField:
+      - fct_nhl_game_observations_distinct_venues
+  type: cartesian
+description: Distinct non-null `venue` values by scheduled game day. This shows how widely the upcoming
+  slate is distributed across arenas, not attendance or venue activity.
+metricQuery:
+  dimensions:
+  - fct_nhl_game_observations_scheduled_at_day
+  exploreName: fct_nhl_game_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nhl_game_observations_distinct_venues
+  sorts:
+  - descending: false
+    fieldId: fct_nhl_game_observations_scheduled_at_day
+  tableCalculations: []
+name: Scheduled venues by day
+slug: fct-nhl-game-observations-scheduled-venues
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nhl_game_observations_scheduled_at_day
+  - fct_nhl_game_observations_distinct_venues
+tableName: fct_nhl_game_observations
+version: 1

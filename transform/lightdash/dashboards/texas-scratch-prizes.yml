@@ -1,0 +1,172 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 0af02f79-7606-553d-bf0b-f172725f91bb
+    label: 'Texas scratch prize observation: Game name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_texas_scratch_prize_observation_game_name
+      tableName: fct_texas_scratch_prize_observation
+    values: []
+  - disabled: true
+    id: 4790de70-f944-566b-9861-f0419f1a7001
+    label: 'Texas scratch prize observation: Ticket price'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_texas_scratch_prize_observation_ticket_price
+      tableName: fct_texas_scratch_prize_observation
+    values: []
+  - disabled: true
+    id: d9f768ab-9d21-567c-8cc0-2de9b7d2bdde
+    label: 'Texas scratch prize observation: Prize level label'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_texas_scratch_prize_observation_prize_level_label
+      tableName: fct_texas_scratch_prize_observation
+    values: []
+  - disabled: true
+    id: d94e154e-9d7c-5e41-ac6e-26fa9060c4d1
+    label: 'Texas scratch prize observation: Is total prize level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_texas_scratch_prize_observation_is_total_prize_level
+      tableName: fct_texas_scratch_prize_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Texas Scratch Prizes
+slug: texas-scratch-prizes
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical observation fact for the Texas Lottery scratch-ticket prize inventory feed. Each
+      row is the latest retained raw record for one prize record at one feed observation timestamp, preserving
+      the game, prize level, claim counts, publisher date, and raw load lineage. The model does not estimate
+      remaining prizes or infer ticket sales.
+
+
+      **Grain:** source_system, prize_id, observed_at
+
+
+      **What changes here:** how claimed-prize levels change across publisher updates and which games
+      and ticket prices carry the inventory.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `texas_scratch_prizes` — licence: Texas Lottery terms; attribution required: True. Source configuration:
+      `extract/sources/texas_scratch_prizes.yml`.'
+    hideFrame: false
+    title: Texas scratch prize observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Texas scratch prize observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean prizes claimed per publisher update
+    chartSlug: fct-texas-scratch-prize-observation-claimed-levels
+    hideTitle: false
+    title: Mean prizes claimed per publisher update
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean original prizes per level
+    chartSlug: fct-texas-scratch-prize-observation-inventory-level
+    hideTitle: false
+    title: Mean original prizes per level
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean prizes claimed by game
+    chartSlug: fct-texas-scratch-prize-observation-claimed-by-game
+    hideTitle: false
+    title: Mean prizes claimed by game
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Prize inventory mix by ticket price
+    chartSlug: fct-texas-scratch-prize-observation-inventory-by-price
+    hideTitle: false
+    title: Prize inventory mix by ticket price
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Prize levels by scheduled game close date
+    chartSlug: fct-texas-scratch-prize-observation-closing-schedule
+    hideTitle: false
+    title: Prize levels by scheduled game close date
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Texas scratch prize observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Maximum observed prizes claimed by game name
+    chartSlug: fct-texas-scratch-prize-observation
+    hideTitle: false
+    title: Maximum observed prizes claimed by game name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Texas scratch prize observation — observations
+    chartSlug: fct-texas-scratch-prize-observation-details
+    hideTitle: false
+    title: Texas scratch prize observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_stac_imagery_observed_at_day
+          yRef:
+            field: fct_stac_imagery_average_cloud_cover
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed cloud cover
+    layout:
+      xField: fct_stac_imagery_observed_at_day
+      yField:
+      - fct_stac_imagery_average_cloud_cover
+  type: cartesian
+description: Mean reported `cloud_cover` percentage for retained items at each observation day. Each item
+  observation has equal weight and the measure is not additive; absent observation days are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_stac_imagery_observed_at_day
+  exploreName: fct_stac_imagery
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_stac_imagery_average_cloud_cover
+  sorts:
+  - descending: false
+    fieldId: fct_stac_imagery_observed_at_day
+  tableCalculations: []
+name: Mean cloud cover of observed items per day
+slug: fct-stac-imagery-cloud-cover-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_stac_imagery_observed_at_day
+  - fct_stac_imagery_average_cloud_cover
+tableName: fct_stac_imagery
+version: 1

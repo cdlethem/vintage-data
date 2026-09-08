@@ -1,0 +1,491 @@
+version: 2
+models:
+- name: fct_niord_warning_observation
+  description: Hourly physical history of maritime warnings published through the Danish Niord service.
+    Each row represents one warning identifier from one source at one extractor observation time, with
+    nested warning content and raw-load lineage retained for audit and replay. Repeated insert-only copies
+    of the same observation are reduced to the latest loaded copy.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, warning_id, observed_at
+      label: Niord warning observation
+      group_label: Niord warnings
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: niord_warning_key
+      vintage:
+        visualization:
+          dimension: warning_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct warning by warning type
+          description: Distinct `warning_id` values by `warning_type` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - warning_id
+          - warning_type
+          - source_loaded_at
+          sources:
+          - '`niord_warnings` — licence: Danish Maritime Authority terms; attribution required: True.
+            Source configuration: `extract/sources/niord_warnings.yml`.'
+          analysis:
+            headline: how maritime warning creation accelerates across warning types and classifications.
+            event_time: created_at
+            grain: MONTH
+            controls:
+            - warning_type
+            - main_type
+            - original_information
+            trends:
+            - slug: monthly-warnings
+              kind: total
+              metric: distinct_entities
+              time: created_at
+              grain: MONTH
+              title: Warnings created per month
+              description: Distinct `warning_id` values by the month Niord reports them as created. This is
+                a source flow rather than a current warning census; months with no source rows are absent
+                rather than zero.
+              width: half
+            - slug: warning-type-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: warning_type
+              top_n: 6
+              time: created_at
+              grain: MONTH
+              title: Warnings created by warning type
+              description: Distinct `warning_id` values per creation month stacked by warning type. All six
+                observed warning types are retained; empty months are absent rather than zero and segments
+                show the composition of the source flow.
+              width: full
+            - slug: main-type-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: main_type
+              top_n: 2
+              time: created_at
+              grain: MONTH
+              title: Warnings created by main classification
+              description: Distinct `warning_id` values per creation month stacked by the two main
+                classifications. The stack describes mix among recorded warnings, not a current-state
+                total; months with no source rows are absent.
+              width: full
+            - slug: classification-breadth
+              kind: total
+              metric: distinct_main_types
+              time: created_at
+              grain: MONTH
+              title: Main warning classifications represented each month
+              description: Distinct non-null `main_type` values among warnings by their reported creation
+                month. This measures classification breadth rather than warning volume, and absent months
+                have no source rows rather than zero breadth.
+              width: half
+            - slug: follow-up-schedule
+              kind: total
+              metric: distinct_entities
+              time: follow_up_date
+              grain: MONTH
+              title: Warnings by scheduled follow-up month
+              description: Distinct `warning_id` values grouped by the source-supplied follow-up month.
+                Future-dated months expose planned follow-ups through 2028; null follow-up dates and months
+                without rows are absent rather than zero.
+              width: half
+  columns:
+  - name: niord_warning_key
+    description: Stable hash of the source name, warning identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Niord warning key
+          hidden: true
+  - name: source_name
+    description: Niord source product that published the warning.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: warning_id
+    description: Stable Niord identifier for the warning.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct warning
+            description: Distinct `warning_id` values by `warning_type` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Warning id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the warning.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: created_at
+    description: UTC timestamp when Niord reports that the warning was created.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Created at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: updated_at
+    description: UTC timestamp when Niord reports that the warning was last updated.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: warning_number
+    description: Numeric warning number assigned by Niord.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Warning number
+          hidden: false
+          format: '#,##0'
+  - name: short_id
+    description: Human-readable short warning identifier assigned by Niord.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Short id
+          hidden: false
+  - name: main_type
+    description: Niord top-level classification for the warning.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_main_types:
+            type: count_distinct
+            label: Distinct main classifications
+            description: Distinct non-null `main_type` values among warnings in each reported creation-month
+              bucket. This measures classification breadth, not the number of warnings.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Main type
+          hidden: false
+  - name: warning_type
+    description: Detailed Niord classification for the warning.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Warning type
+          hidden: false
+  - name: status
+    description: Publication status reported by Niord for the warning.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status
+          hidden: false
+  - name: message_series
+    description: Structured Niord message-series metadata for the warning.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Message series
+          hidden: true
+          sql: CAST(${TABLE}.message_series AS VARCHAR)
+  - name: areas
+    description: Structured geographic areas affected by the warning.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Areas
+          hidden: true
+          sql: CAST(${TABLE}.areas AS VARCHAR)
+  - name: publish_date_from
+    description: UTC timestamp at which Niord says the warning period begins.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Publish date from
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: follow_up_date
+    description: UTC timestamp for the source-supplied follow-up point for the warning.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Follow up date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: original_information
+    description: Whether Niord marks the warning as original information.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Original information
+          hidden: false
+  - name: parts
+    description: Structured warning parts and event dates supplied by Niord.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Parts
+          hidden: true
+          sql: CAST(${TABLE}.parts AS VARCHAR)
+  - name: descriptions
+    description: Localized warning descriptions supplied by Niord.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Descriptions
+          hidden: true
+          sql: CAST(${TABLE}.descriptions AS VARCHAR)
+  - name: references_json
+    description: Structured external references associated with the warning.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: References json
+          hidden: true
+          sql: CAST(${TABLE}.references_json AS VARCHAR)
+  - name: charts
+    description: Structured chart references associated with the warning.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Charts
+          hidden: true
+          sql: CAST(${TABLE}.charts AS VARCHAR)
+  - name: attachments
+    description: Structured attachments associated with the warning.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Attachments
+          hidden: true
+          sql: CAST(${TABLE}.attachments AS VARCHAR)
+  - name: categories
+    description: Structured category labels associated with the warning.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Categories
+          hidden: true
+          sql: CAST(${TABLE}.categories AS VARCHAR)
+  - name: publish_date_to
+    description: UTC timestamp at which Niord says the warning period ends, when provided.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Publish date to
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: horizontal_datum
+    description: Horizontal geodetic datum reported for warning coordinates, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Horizontal datum
+          hidden: false
+  - name: source_row_id
+    description: Raw loader row identifier for the retained warning observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained warning observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained warning observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained warning observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date for the retained warning observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction began for the retained warning observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Load operation identifier that inserted the retained warning observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained warning observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained warning record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

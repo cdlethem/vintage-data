@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_public_art_arcgis_category
+          yRef:
+            field: fct_public_art_arcgis_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_public_art_arcgis_category
+      yField:
+      - fct_public_art_arcgis_distinct_entities
+  type: cartesian
+description: Distinct `feature_id` values by `category` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_public_art_arcgis_category
+  exploreName: fct_public_art_arcgis
+  filters:
+    dimensions:
+      and:
+      - id: f42c03d8-f25b-504a-95b6-9ff9132c3a35
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_public_art_arcgis_observed_at
+        values:
+        - 30
+      id: ed7b7d58-429b-50d1-b354-4b81822b069e
+  limit: 20
+  metrics:
+  - fct_public_art_arcgis_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_public_art_arcgis_distinct_entities
+  tableCalculations: []
+name: Distinct feature by category
+slug: fct-public-art-arcgis
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_public_art_arcgis_category
+  - fct_public_art_arcgis_distinct_entities
+tableName: fct_public_art_arcgis
+version: 1

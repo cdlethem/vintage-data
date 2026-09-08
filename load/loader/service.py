@@ -21,6 +21,7 @@ import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
 
+from .cadence import CadenceEvaluator
 from .config import LoadConfig, load_config
 from .destinations import LoadRequest, get_destination
 from .discovery import scan
@@ -135,6 +136,8 @@ class LoaderService:
                 result["message"] = "service alive"
             elif job.kind in ("scan", "files"):
                 self._run_load(job, load_id, result)
+            elif job.kind == "cadence":
+                self._run_cadence(job, load_id, result)
             else:
                 raise ValueError(f"unknown job kind {job.kind!r}")
         except Exception as exc:
@@ -157,19 +160,29 @@ class LoaderService:
         return result
 
     def _candidates(self, job: Job):
-        """Files this job should load: discovered, minus what the ledger has."""
+        """Files this job should load: discovered, minus what the ledger has.
+
+        Held files are discovered (so the job reports them) but never become a
+        load candidate — the exclusion happens before any ledger retry/skip
+        logic, because a hold is a stronger, human decision than the ledger.
+        """
         body = job.body
-        if job.kind == "files":
+        include_paths = job.kind == "files"
+        found = scan(self.config.source_root,
+                     sources=body.get("sources") if not include_paths else None,
+                     min_age_s=body.get("min_age_s", self.config.defaults.min_age_s)
+                     if not include_paths else 0,
+                     include_held=True)
+        if include_paths:
             wanted = {str(pathlib.Path(p).expanduser()) for p in body.get("paths", [])}
-            found = [f for f in scan(self.config.source_root, min_age_s=0)
-                     if f.key in wanted]
-        else:
-            found = scan(self.config.source_root,
-                         sources=body.get("sources"),
-                         min_age_s=body.get("min_age_s", self.config.defaults.min_age_s))
+            found = [f for f in found if f.key in wanted]
         ledger = self.destination.ledger()
-        candidates, skipped, abandoned = [], 0, []
+        candidates, skipped, abandoned, held = [], 0, [], []
         for file in found:
+            if file.held is not None:
+                # On hold: visible, reported, and never loaded. No ledger write.
+                held.append(file)
+                continue
             if not self.config.for_source(file.source).enabled:
                 skipped += 1
                 continue
@@ -189,20 +202,26 @@ class LoaderService:
         truncated = False
         if max_files and len(candidates) > max_files:
             candidates, truncated = candidates[:max_files], True
-        return found, candidates, skipped, truncated, abandoned
+        return found, candidates, skipped, truncated, abandoned, held
 
     def _run_load(self, job: Job, load_id: str, result: dict) -> None:
-        found, candidates, skipped, truncated, abandoned = self._candidates(job)
+        found, candidates, skipped, truncated, abandoned, held = self._candidates(job)
         result["files_seen"] = len(found)
         result["files_skipped"] = skipped
         result["files_pending_after"] = truncated
         result["files_abandoned"] = len(abandoned)
+        result["files_held"] = len(held)
+        result["files_partial"] = sum(1 for f in candidates
+                                      if f.extract_completeness == "partial")
+        if held:
+            log.info("%d file(s) on hold and excluded from this job: %s",
+                     len(held), ", ".join(f.path.name for f in held))
         if abandoned:
             log.warning("%d file(s) have exhausted max_attempts and are no longer "
                         "retried; their rows are NOT in the warehouse: %s",
                         len(abandoned), ", ".join(a.rsplit("/", 1)[-1] for a in abandoned[:5]))
-        log.info("job %s: %d files in sink, %d already loaded/skipped, %d to load%s",
-                 job.job_id, len(found), skipped, len(candidates),
+        log.info("job %s: %d files in sink, %d already loaded/skipped, %d on hold, %d to load%s",
+                 job.job_id, len(found), skipped, len(held), len(candidates),
                  " (capped by max_files)" if truncated else "")
 
         by_source: dict[str, list] = defaultdict(list)
@@ -259,6 +278,22 @@ class LoaderService:
                 self.queue.heartbeat(state="working", job_id=job.job_id,
                                      loaded=result["files_loaded"])
             result["by_source"][source] = stats
+
+    def _run_cadence(self, job: Job, load_id: str, result: dict) -> None:
+        """Re-decide each managed source's schedule from what the last run brought.
+
+        This runs in the writer service for the same reason loading does: it is
+        the only process allowed to hold the warehouse connection. It reads two
+        batches per source and writes nothing outside the cadence tables and
+        the published plan file.
+        """
+        policy = self.config.cadence
+        if not policy.enabled:
+            result["cadence"] = {"enabled": False}
+            log.info("cadence is disabled in %s", self.config.path)
+            return
+        CadenceEvaluator(self.config, self.destination, policy).run(
+            load_id, result, sources=job.body.get("sources"))
 
     def _columns_for(self, source, table, files, settings, load_id):
         """Infer the source's columns from a sample, then evolve the table.

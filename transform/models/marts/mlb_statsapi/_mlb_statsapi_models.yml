@@ -1,0 +1,361 @@
+version: 2
+models:
+- name: fct_mlb_statsapi_game_observations
+  description: Physical observation fact for MLB schedule records. Each row is one observed game snapshot
+    at the StatsAPI fetch timestamp, retaining the scheduled game, participating teams, status, scores,
+    venue, probable pitchers, and raw-load lineage. The source does not expose player-level statistics,
+    so this model intentionally has no player grain.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: game_id, observed_at
+      label: Mlb statsapi game observations
+      group_label: Mlb statsapi
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: mlb_game_observation_key
+      vintage:
+        visualization:
+          dimension: game_status
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct game by game status
+          description: Distinct `game_id` values by `game_status` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - game_id
+          - game_status
+          - source_loaded_at
+          sources:
+          - '`mlb_statsapi` — licence: MLB Advanced Media — personal/prototype use only, read their terms
+            before going further; attribution required: True. Source configuration: `extract/sources/mlb_statsapi.yml`.'
+          analysis:
+            headline: how the scheduled game slate, status mix, and reported scores change across the
+              collection window.
+            event_time: scheduled_at
+            grain: HOUR
+            controls:
+            - game_status
+            - game_abstract_status
+            - home_team
+            - venue
+            trends:
+            - slug: scheduled-games
+              kind: total
+              metric: distinct_entities
+              time: scheduled_at
+              grain: HOUR
+              title: Distinct scheduled games by start hour
+              description: Distinct `game_id` values by the scheduled start hour. This is a short-horizon
+                schedule flow rather than a historical game total; repeated snapshots count once per hour.
+                Hours without scheduled games are absent rather than zero.
+              width: half
+            - slug: home-score-level
+              kind: total
+              metric: average_home_score
+              time: scheduled_at
+              grain: HOUR
+              title: Mean reported home score by scheduled hour
+              description: Average non-null `home_score` reported for games at each scheduled start hour.
+                Scores are snapshots and repeated observations have equal weight, so this is not a sum of
+                runs or a final-score census. Future games without scores are absent from the mean.
+              width: half
+            - slug: status-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: game_abstract_status
+              top_n: 3
+              time: scheduled_at
+              grain: HOUR
+              title: Scheduled games by broad status and start hour
+              description: Distinct `game_id` values grouped by scheduled start hour and broad StatsAPI
+                status. The three observed statuses are shown as stacked bars; status can change between
+                snapshots, so segments are not additive across the full window.
+              width: full
+            - slug: home-teams
+              kind: breakdown
+              metric: average_home_score
+              breakdown: home_team
+              top_n: 6
+              time: scheduled_at
+              grain: HOUR
+              title: Mean home score by leading home teams
+              description: Average reported `home_score` by scheduled start hour, pivoted to the six home
+                teams with the largest distinct-game presence. Teams with fewer games are excluded rather
+                than aggregated; pregame null scores are absent, not zero.
+              width: full
+  columns:
+  - name: mlb_game_observation_key
+    description: Stable hash of the MLB game identifier and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Mlb game observation key
+          hidden: true
+  - name: source_system
+    description: Upstream source stream identifier reported by the MLB record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source system
+          hidden: false
+  - name: game_id
+    description: StatsAPI identifier of the scheduled MLB game.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct game
+            description: Distinct `game_id` values by `game_status` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Game id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this game observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: scheduled_at
+    description: UTC scheduled start timestamp for the game.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Scheduled at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: game_status
+    description: Detailed StatsAPI status of the game at observation time.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Game status
+          hidden: false
+  - name: game_abstract_status
+    description: Broad StatsAPI status category of the game at observation time.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Game abstract status
+          hidden: false
+  - name: home_team
+    description: Name of the team listed as home for the game.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Home team
+          hidden: false
+  - name: away_team
+    description: Name of the team listed as away for the game.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Away team
+          hidden: false
+  - name: home_score
+    description: Home team's score at observation time; null before scoring begins.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_home_score:
+            type: average
+            label: Mean home score
+            description: Mean non-null `home_score` reported per scheduled period. Repeated snapshots have
+              equal weight and pregame nulls are excluded; this is a snapshot level rather than a sum of runs.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Home score
+          hidden: false
+          format: '#,##0'
+  - name: away_score
+    description: Away team's score at observation time; null before scoring begins.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_away_score:
+            type: average
+            label: Mean away score
+            description: Mean non-null `away_score` reported per scheduled period. Repeated snapshots have
+              equal weight and pregame nulls are excluded; this is a snapshot level rather than a sum of runs.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Away score
+          hidden: false
+          format: '#,##0'
+  - name: venue
+    description: Venue name reported for the scheduled game.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Venue
+          hidden: false
+  - name: home_probable_pitcher
+    description: Probable home pitcher reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Home probable pitcher
+          hidden: false
+  - name: away_probable_pitcher
+    description: Probable away pitcher reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Away probable pitcher
+          hidden: false
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the game observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: Row position of the game observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load job that inserted the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the source row.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

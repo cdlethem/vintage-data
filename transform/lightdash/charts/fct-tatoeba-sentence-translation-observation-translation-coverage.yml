@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_tatoeba_sentence_translation_observation_observed_at_day
+          yRef:
+            field: fct_tatoeba_sentence_translation_observation_translation_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct translations
+    layout:
+      xField: fct_tatoeba_sentence_translation_observation_observed_at_day
+      yField:
+      - fct_tatoeba_sentence_translation_observation_translation_count
+  type: cartesian
+description: Distinct non-null `translation_id` values attached to retained source sentences on each observation
+  day. This is feed coverage at fetch time, not new translations created that day; absent observation
+  days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_tatoeba_sentence_translation_observation_observed_at_day
+  exploreName: fct_tatoeba_sentence_translation_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_tatoeba_sentence_translation_observation_translation_count
+  sorts:
+  - descending: false
+    fieldId: fct_tatoeba_sentence_translation_observation_observed_at_day
+  tableCalculations: []
+name: Distinct translations by observation day
+slug: fct-tatoeba-sentence-translation-observation-translation-coverage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_tatoeba_sentence_translation_observation_observed_at_day
+  - fct_tatoeba_sentence_translation_observation_translation_count
+tableName: fct_tatoeba_sentence_translation_observation
+version: 1

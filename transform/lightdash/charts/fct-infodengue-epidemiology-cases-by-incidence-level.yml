@@ -1,0 +1,68 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_infodengue_epidemiology_week_start_date_week
+          yRef:
+            field: fct_infodengue_epidemiology_average_cases_estimate
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Week start date (Week)
+      yAxis:
+      - name: Mean estimated cases
+    layout:
+      stack: true
+      xField: fct_infodengue_epidemiology_week_start_date_week
+      yField:
+      - fct_infodengue_epidemiology_average_cases_estimate
+  type: cartesian
+description: Mean provider `cases_estimate` in each epidemiological week stacked by `incidence_level`
+  over the latest three years. The three levels are all retained; averages describe reported values and
+  must not be read as a sum of cases.
+metricQuery:
+  dimensions:
+  - fct_infodengue_epidemiology_week_start_date_week
+  - fct_infodengue_epidemiology_incidence_level
+  exploreName: fct_infodengue_epidemiology
+  filters:
+    dimensions:
+      and:
+      - id: 472c45ad-8645-59d2-8845-d204c7e4066d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_infodengue_epidemiology_week_start_date
+        values:
+        - 1095
+      id: 4bdc91f8-846f-532b-8350-a2f2c5e68b41
+  limit: 5000
+  metrics:
+  - fct_infodengue_epidemiology_average_cases_estimate
+  sorts:
+  - descending: true
+    fieldId: fct_infodengue_epidemiology_average_cases_estimate
+  - descending: false
+    fieldId: fct_infodengue_epidemiology_week_start_date_week
+  tableCalculations: []
+name: Mean estimated cases by incidence level
+pivotConfig:
+  columns:
+  - fct_infodengue_epidemiology_incidence_level
+slug: fct-infodengue-epidemiology-cases-by-incidence-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_infodengue_epidemiology_week_start_date_week
+  - fct_infodengue_epidemiology_incidence_level
+  - fct_infodengue_epidemiology_average_cases_estimate
+tableName: fct_infodengue_epidemiology
+version: 1

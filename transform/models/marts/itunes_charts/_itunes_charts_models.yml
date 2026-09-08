@@ -1,0 +1,341 @@
+version: 2
+models:
+- name: fct_itunes_charts
+  description: Daily physical history of Apple iTunes chart observations. Each row represents one storefront,
+    chart, observation timestamp, and chart rank, retaining the track attributes and raw-load lineage
+    for replay and audit. Repeated raw loads of the same chart rank are reduced to the latest loaded record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, storefront, chart, fetched_at, rank
+      label: Itunes charts
+      group_label: Itunes charts
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: itunes_chart_observation_key
+      vintage:
+        visualization:
+          dimension: genre
+          metric: average_rank
+          time: fetched_at
+          window_days: 30
+          title: Mean observed rank by genre
+          description: Mean observed rank by `genre` in the selected observation window. One-based position
+            of the track within the chart observation. Each retained observation has equal weight; polling
+            frequency and repeated snapshots can affect the mean. This is not a latest-value measure or
+            an additive total.
+          detail_fields:
+          - fetched_at
+          - id
+          - genre
+          - rank
+          - source_loaded_at
+          sources:
+          - '`itunes_charts` — licence: unstated; attribution required: False. Source configuration: `extract/sources/itunes_charts.yml`.'
+          analysis:
+            headline: how daily iTunes chart rank and genre mix change alongside the historical release dates
+              represented in the chart.
+            event_time: release_date
+            grain: MONTH
+            controls:
+            - storefront
+            - chart
+            - genre
+            - artist
+            trends:
+            - slug: charted-tracks
+              kind: total
+              metric: distinct_tracks
+              time: fetched_at
+              grain: DAY
+              title: Tracks in each daily chart snapshot
+              description: Distinct `id` values in each fetched chart snapshot. This is a level rather than
+                a flow because the chart republishes its ranked catalogue; all five observed days are
+                present and a missing fetch day would be absent rather than zero.
+              width: half
+            - slug: mean-rank
+              kind: total
+              metric: average_rank
+              time: fetched_at
+              grain: DAY
+              title: Mean chart rank by day
+              description: Average one-based `rank` across each fetched chart snapshot. Lower values mean
+                better chart position; each retained observation has equal weight, so repeated polling can
+                affect the average and missing fetch days are absent rather than zero.
+              width: half
+            - slug: releases-over-time
+              kind: total
+              metric: distinct_tracks
+              time: release_date
+              grain: MONTH
+              title: Tracks by reported release month
+              description: Distinct `id` values by source-reported `release_date` month across 23 populated
+                months from 1966 through 2026. This is an event-time view of the represented catalogue, not
+                chart additions; months without a release date are absent rather than zero.
+              width: full
+            - slug: genre-rank
+              kind: breakdown
+              metric: average_rank
+              breakdown: genre
+              top_n: 8
+              time: fetched_at
+              grain: DAY
+              title: Mean rank by genre and fetch day
+              description: Average chart rank per genre for the eight largest genre series in each daily
+                snapshot. Lower is better; other genres are excluded rather than aggregated, and missing
+                fetch days are absent rather than zero.
+              width: full
+            - slug: genre-release-mix
+              kind: composition
+              metric: distinct_tracks
+              breakdown: genre
+              top_n: 8
+              time: release_date
+              grain: MONTH
+              title: Represented tracks by release month and genre
+              description: Distinct `id` values stacked by genre for each populated release month. Bars
+                show the sparse event-time catalogue mix; only the eight largest genre series are kept and
+                the remainder is excluded rather than aggregated.
+              width: full
+  columns:
+  - name: itunes_chart_observation_key
+    description: Stable hash of the source, storefront, chart, observation timestamp, and chart rank defining
+      the row grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '35 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '35 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Itunes chart observation key
+          hidden: true
+  - name: source
+    description: Upstream source label carried by the iTunes chart record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: id
+    description: Apple catalog identifier of the ranked track.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_tracks:
+            type: count_distinct
+            label: Distinct track
+            description: Distinct Apple catalog `id` values in the selected chart snapshot or release-month
+              group. Repeated observations of a track do not inflate this catalogue count.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp when the extractor observed this chart snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: storefront
+    description: Apple storefront or country code whose chart is represented.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Storefront
+          hidden: false
+  - name: chart
+    description: Name of the iTunes chart containing the ranked track.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Chart
+          hidden: false
+  - name: rank
+    description: One-based position of the track within the chart observation.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_rank:
+            type: average
+            label: Mean observed rank
+            description: Mean observed rank by `genre` in the selected observation window. One-based position
+              of the track within the chart observation. Each retained observation has equal weight; polling
+              frequency and repeated snapshots can affect the mean. This is not a latest-value measure
+              or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Rank
+          hidden: false
+          format: '#,##0'
+  - name: name
+    description: Track title reported by the iTunes chart.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Name
+          hidden: false
+  - name: artist
+    description: Track artist or collaborating artists reported by iTunes.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Artist
+          hidden: false
+  - name: collection
+    description: Album or collection title reported for the track.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Collection
+          hidden: false
+  - name: release_date
+    description: Release timestamp reported for the track or collection.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Release date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: genre
+    description: Genre label reported by iTunes for the track.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Genre
+          hidden: false
+  - name: price_amount
+    description: Storefront price amount reported by iTunes, retained as the source string.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Price amount
+          hidden: false
+  - name: price_currency
+    description: Currency code associated with the reported price amount.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Price currency
+          hidden: false
+  - name: url
+    description: iTunes URL for the ranked track.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Url
+          hidden: false
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained chart record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load operation that inserted the retained chart record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained chart record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained chart record in its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained chart record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer content hash of the retained raw chart record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

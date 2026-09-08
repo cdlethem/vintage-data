@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_jpl_ssd_observation_observed_at_day
+          yRef:
+            field: fct_jpl_ssd_observation_distinct_observations
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct fireball event
+    layout:
+      stack: true
+      xField: fct_jpl_ssd_observation_observed_at_day
+      yField:
+      - fct_jpl_ssd_observation_distinct_observations
+  type: cartesian
+description: Distinct `observation_id` values per observation day stacked by source name. The source currently
+  has one observed value, so the stack is a feed-coverage check; absent snapshot days are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_jpl_ssd_observation_observed_at_day
+  - fct_jpl_ssd_observation_source_name
+  exploreName: fct_jpl_ssd_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_jpl_ssd_observation_distinct_observations
+  sorts:
+  - descending: true
+    fieldId: fct_jpl_ssd_observation_distinct_observations
+  - descending: false
+    fieldId: fct_jpl_ssd_observation_observed_at_day
+  tableCalculations: []
+name: Fireball event mix by source and observation day
+pivotConfig:
+  columns:
+  - fct_jpl_ssd_observation_source_name
+slug: fct-jpl-ssd-observation-event-composition
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_jpl_ssd_observation_observed_at_day
+  - fct_jpl_ssd_observation_source_name
+  - fct_jpl_ssd_observation_distinct_observations
+tableName: fct_jpl_ssd_observation
+version: 1

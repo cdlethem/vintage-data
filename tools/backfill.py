@@ -53,6 +53,12 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "orchestration" / "include"))
 
 import yaml
+from run_metadata import (
+    RunSummaryError,
+    build_manifest,
+    extract_summary_line,
+    validate_summary,
+)
 from sinks import get_sink
 
 SCRIPTS_DIR = REPO_ROOT / "extract" / "scripts"
@@ -78,10 +84,13 @@ def plan_units(spec: dict, today: date | None = None) -> list[dict]:
     today = today or datetime.now(timezone.utc).date()
     kind = spec.get("unit", "single")
     end = spec.get("end")
-    if end and len(end) == 7:
-        end_date = date.fromisoformat(end + "-01")
+    end_s = str(end) if end else None
+    if end_s and len(end_s) == 7:                 # "YYYY-MM"
+        end_date = date.fromisoformat(end_s + "-01")
+    elif end_s and end_s.isdigit() and len(end_s) == 4:   # bare year "YYYY"
+        end_date = date(int(end_s), 12, 31)       # end of that year
     else:
-        end_date = date.fromisoformat(end) if end else today
+        end_date = date.fromisoformat(end_s) if end_s else today
 
     if kind == "single":
         return [{"id": "full", "dt": today.isoformat(), "fields": {}}]
@@ -100,7 +109,11 @@ def plan_units(spec: dict, today: date | None = None) -> list[dict]:
 
     units: list[dict] = []
     if kind == "year":
-        for y in range(int(str(start)[:4]), end_date.year + 1):
+        # start/end may be bare years ("2010"/"2026") or full ISO dates;
+        # both endpoints are inclusive.
+        start_y = int(str(start)[:4])
+        end_y = int(str(end or end_date)[:4])
+        for y in range(start_y, end_y + 1):
             units.append({"id": f"{y}", "dt": f"{y}-01-01", "fields": {"yyyy": f"{y}"}})
         return units
 
@@ -191,21 +204,70 @@ def run_unit(cfg: dict, unit: dict, timeout_s: int) -> dict:
         err.seek(0)
         stderr = err.read().strip()
 
-    meta = {
-        "source": name,
-        "script": cfg["script"],
-        "args": args,
-        "backfill_unit": unit["id"],
-        "started_at": started.isoformat(),
-        "duration_s": round((datetime.now(timezone.utc) - started).total_seconds(), 3),
-        "exit_code": returncode,
-        "records": records,
-        "bytes": bytes_written,
-    }
+    summary_payload, ordinary = None, stderr
+
+    def _flag(value) -> bool:
+        if isinstance(value, dict):
+            return bool(value.get("required", False))
+        return bool(value)
+    required = _flag(cfg.get("run_summary")) or _flag(spec.get("run_summary"))
+    try:
+        summary_payload, ordinary = extract_summary_line(stderr)
+    except RunSummaryError as exc:
+        failed = build_manifest(
+            source=name, script=cfg["script"], args=args, backfill_unit=unit["id"],
+            started_at=started.isoformat(),
+            finished_at=datetime.now(timezone.utc).isoformat(),
+            duration_s=(datetime.now(timezone.utc) - started).total_seconds(),
+            exit_code=returncode, observed_records=records, observed_bytes=bytes_written,
+            summary=None, status="failed", error=str(exc),
+        )
+        sink.fail(failed)
+        raise RuntimeError(f"{cfg['script']} {' '.join(args)} run-summary rejected: {exc}") from exc
+    if required and summary_payload is None:
+        failed = build_manifest(
+            source=name, script=cfg["script"], args=args, backfill_unit=unit["id"],
+            started_at=started.isoformat(),
+            finished_at=datetime.now(timezone.utc).isoformat(),
+            duration_s=(datetime.now(timezone.utc) - started).total_seconds(),
+            exit_code=returncode, observed_records=records, observed_bytes=bytes_written,
+            summary=None, status="failed",
+            error="run_summary required but the script emitted no summary line",
+        )
+        sink.fail(failed)
+        raise RuntimeError(f"{cfg['script']} {' '.join(args)} required a run_summary but none was emitted")
+
+    finished = datetime.now(timezone.utc)
     if returncode != 0:
-        meta["error"] = stderr[-500:] if stderr else None
-        sink.fail(meta)
+        failed = build_manifest(
+            source=name, script=cfg["script"], args=args, backfill_unit=unit["id"],
+            started_at=started.isoformat(), finished_at=finished.isoformat(),
+            duration_s=(finished - started).total_seconds(),
+            exit_code=returncode, observed_records=records, observed_bytes=bytes_written,
+            summary=None, status="failed",
+            error=ordinary[-500:] if ordinary else None,
+        )
+        sink.fail(failed)
         raise RuntimeError(f"{cfg['script']} {' '.join(args)} exited {returncode}")
+    try:
+        summary = validate_summary(json.loads(summary_payload)) if summary_payload else {}
+    except RunSummaryError as exc:
+        failed = build_manifest(
+            source=name, script=cfg["script"], args=args, backfill_unit=unit["id"],
+            started_at=started.isoformat(), finished_at=finished.isoformat(),
+            duration_s=(finished - started).total_seconds(),
+            exit_code=returncode, observed_records=records, observed_bytes=bytes_written,
+            summary=None, status="failed", error=str(exc),
+        )
+        sink.fail(failed)
+        raise RuntimeError(f"{cfg['script']} {' '.join(args)} run-summary invalid: {exc}") from exc
+    meta = build_manifest(
+        source=name, script=cfg["script"], args=args, backfill_unit=unit["id"],
+        started_at=started.isoformat(), finished_at=finished.isoformat(),
+        duration_s=(finished - started).total_seconds(),
+        exit_code=returncode, observed_records=records, observed_bytes=bytes_written,
+        summary=summary, status="success",
+    )
     sink.commit(meta)
     return meta
 

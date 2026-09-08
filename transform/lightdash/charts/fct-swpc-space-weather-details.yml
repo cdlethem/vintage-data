@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of NOAA SWPC planetary K-index observations. Each row represents
+  one source, SWPC observation identifier, and three-hour observation timestamp. Repeated insert-only
+  raw snapshots are reduced to the latest loaded copy for that observation while extractor and load lineage
+  remain available for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_swpc_space_weather_fetched_at
+  - fct_swpc_space_weather_observation_id
+  - fct_swpc_space_weather_observation_at
+  - fct_swpc_space_weather_kp_index
+  - fct_swpc_space_weather_source_loaded_at
+  exploreName: fct_swpc_space_weather
+  filters:
+    dimensions:
+      and:
+      - id: 0afa8a6f-19a7-52e4-98e8-91a3168b1495
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_swpc_space_weather_fetched_at
+        values:
+        - 30
+      id: dfbcfcaa-cbe1-5bc6-8497-e73e07a347ec
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_swpc_space_weather_fetched_at
+  tableCalculations: []
+name: Swpc space weather — observations
+slug: fct-swpc-space-weather-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_swpc_space_weather
+version: 1

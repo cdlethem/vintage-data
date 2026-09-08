@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_rcsb_pdb_structure_snapshot_experimental_method
+          yRef:
+            field: fct_rcsb_pdb_structure_snapshot_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_rcsb_pdb_structure_snapshot_experimental_method
+      yField:
+      - fct_rcsb_pdb_structure_snapshot_distinct_entities
+  type: cartesian
+description: Distinct `structure_id` values by `experimental_method` among observations in the selected
+  window. Repeated observations of an entity count once within each group. An entity that changed category
+  can appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_rcsb_pdb_structure_snapshot_experimental_method
+  exploreName: fct_rcsb_pdb_structure_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: 8944e83b-8fea-5eb0-a864-581309230003
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_rcsb_pdb_structure_snapshot_observed_at
+        values:
+        - 30
+      id: b9484b2a-7f43-52a9-9547-5be100585a55
+  limit: 20
+  metrics:
+  - fct_rcsb_pdb_structure_snapshot_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_rcsb_pdb_structure_snapshot_distinct_entities
+  tableCalculations: []
+name: Distinct structure by experimental method
+slug: fct-rcsb-pdb-structure-snapshot
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_rcsb_pdb_structure_snapshot_experimental_method
+  - fct_rcsb_pdb_structure_snapshot_distinct_entities
+tableName: fct_rcsb_pdb_structure_snapshot
+version: 1

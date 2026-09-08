@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_usaspending_award_observations_awarding_agency
+          yRef:
+            field: fct_usaspending_award_observations_average_award_amount
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_usaspending_award_observations_awarding_agency
+      yField:
+      - fct_usaspending_award_observations_average_award_amount
+  type: cartesian
+description: Mean observed award amount by `awarding_agency` in the selected observation window. Award
+  amount in US dollars, represented with two decimal places. Each retained observation has equal weight;
+  polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure or
+  an additive total.
+metricQuery:
+  dimensions:
+  - fct_usaspending_award_observations_awarding_agency
+  exploreName: fct_usaspending_award_observations
+  filters:
+    dimensions:
+      and:
+      - id: 58607d2d-42c6-58a5-ad1d-30429c103af6
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_usaspending_award_observations_observed_at
+        values:
+        - 30
+      id: 1e408edb-f8da-58fb-a79d-d1be6d01868a
+  limit: 20
+  metrics:
+  - fct_usaspending_award_observations_average_award_amount
+  sorts:
+  - descending: true
+    fieldId: fct_usaspending_award_observations_average_award_amount
+  tableCalculations: []
+name: Mean observed award amount by awarding agency
+slug: fct-usaspending-award-observations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_usaspending_award_observations_awarding_agency
+  - fct_usaspending_award_observations_average_award_amount
+tableName: fct_usaspending_award_observations
+version: 1

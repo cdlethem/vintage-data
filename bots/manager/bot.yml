@@ -1,0 +1,22 @@
+name: manager
+description: make daily portfolio decisions from freshness-qualified evidence
+schedule: "57 9 * * *"
+enabled: true
+model: plan_cli
+prompt: prompt.md
+timeout_minutes: 30
+context_budget_minutes: 5
+model_budget_minutes: 20
+cleanup_margin_seconds: 180
+capacity_policy: retry
+retry_on: [capacity, transient]
+requires_capabilities: [repository_read]
+context:
+  MANAGER_CONTEXT:
+    command: ["orchestration/.venv/bin/python", "bots/agent_context.py", "manager", "--days", "7"]
+    cwd: .
+    timeout_s: 300
+triggers: []
+output:
+  format: json
+  schema: manager_v3

@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: a1a8c46d-2041-5a3f-b79c-9b1a6268b773
+    label: 'Gazette insolvency notice observation: Notice code'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gazette_insolvency_notice_observation_notice_code
+      tableName: fct_gazette_insolvency_notice_observation
+    values: []
+  - disabled: true
+    id: 3d7c33ab-4a5b-51c4-a2f3-bf685e98a4f0
+    label: 'Gazette insolvency notice observation: Name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gazette_insolvency_notice_observation_name
+      tableName: fct_gazette_insolvency_notice_observation
+    values: []
+  - disabled: true
+    id: b9be87d8-32b1-53b3-bb3e-e83114a9e11d
+    label: 'Gazette insolvency notice observation: Family name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gazette_insolvency_notice_observation_family_name
+      tableName: fct_gazette_insolvency_notice_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Gazette Insolvency
+slug: gazette-insolvency
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical observation fact for UK Gazette insolvency notices. Each row records one
+      notice identifier at one source fetch timestamp, retaining the notice publication fields, feed metadata,
+      and raw-load lineage. Repeated copies of the same source, notice, and observation timestamp retain
+      the latest loaded row.
+
+
+      **Grain:** source_name, notice_id, observed_at
+
+
+      **What changes here:** how the published notice catalogue and reported feed size move across the
+      latest four observation days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `gazette_insolvency` — licence: notice-specific reuse rights; attribution required: True. Source
+      configuration: `extract/sources/gazette_insolvency.yml`.'
+    hideFrame: false
+    title: Gazette insolvency notice observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Gazette insolvency notice observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct notices observed per day
+    chartSlug: fct-gazette-insolvency-notice-observation-notices-observed
+    hideTitle: false
+    title: Distinct notices observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Reported feed total per observation day
+    chartSlug: fct-gazette-insolvency-notice-observation-reported-feed-size
+    hideTitle: false
+    title: Reported feed total per observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Notices published per day by notice code
+    chartSlug: fct-gazette-insolvency-notice-observation-notices-by-code
+    hideTitle: false
+    title: Notices published per day by notice code
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Published notices by family name
+    chartSlug: fct-gazette-insolvency-notice-observation-notices-by-family
+    hideTitle: false
+    title: Published notices by family name
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Gazette insolvency notice observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct notice by notice code
+    chartSlug: fct-gazette-insolvency-notice-observation
+    hideTitle: false
+    title: Distinct notice by notice code
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Gazette insolvency notice observation — observations
+    chartSlug: fct-gazette-insolvency-notice-observation-details
+    hideTitle: false
+    title: Gazette insolvency notice observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

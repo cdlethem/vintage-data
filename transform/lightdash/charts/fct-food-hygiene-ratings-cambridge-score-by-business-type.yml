@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_food_hygiene_ratings_cambridge_rating_date_month
+          yRef:
+            field: fct_food_hygiene_ratings_cambridge_avg_hygiene
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Rating date (Month)
+      yAxis:
+      - name: Average hygiene score
+    layout:
+      xField: fct_food_hygiene_ratings_cambridge_rating_date_month
+      yField:
+      - fct_food_hygiene_ratings_cambridge_avg_hygiene
+  type: cartesian
+description: Average non-null `hygiene_score` per rating month for the eight largest business types. The
+  lines compare reported component levels, not the number of inspections — null scores and months without
+  scores are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_food_hygiene_ratings_cambridge_rating_date_month
+  - fct_food_hygiene_ratings_cambridge_business_type
+  exploreName: fct_food_hygiene_ratings_cambridge
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_food_hygiene_ratings_cambridge_avg_hygiene
+  sorts:
+  - descending: true
+    fieldId: fct_food_hygiene_ratings_cambridge_avg_hygiene
+  - descending: false
+    fieldId: fct_food_hygiene_ratings_cambridge_rating_date_month
+  tableCalculations: []
+name: Hygiene score by business type
+pivotConfig:
+  columns:
+  - fct_food_hygiene_ratings_cambridge_business_type
+slug: fct-food-hygiene-ratings-cambridge-score-by-business-type
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_food_hygiene_ratings_cambridge_rating_date_month
+  - fct_food_hygiene_ratings_cambridge_business_type
+  - fct_food_hygiene_ratings_cambridge_avg_hygiene
+tableName: fct_food_hygiene_ratings_cambridge
+version: 1

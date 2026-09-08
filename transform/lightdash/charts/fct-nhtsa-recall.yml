@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nhtsa_recall_manufacturer
+          yRef:
+            field: fct_nhtsa_recall_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_nhtsa_recall_manufacturer
+      yField:
+      - fct_nhtsa_recall_distinct_entities
+  type: cartesian
+description: Distinct `recall_id` values by `manufacturer` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_nhtsa_recall_manufacturer
+  exploreName: fct_nhtsa_recall
+  filters:
+    dimensions:
+      and:
+      - id: 1b19ae0a-f4c1-5172-ade0-15d9dc109db2
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nhtsa_recall_observed_at
+        values:
+        - 30
+      id: a1deb6ee-a57a-5c4c-9df0-8b25d0f6efbc
+  limit: 20
+  metrics:
+  - fct_nhtsa_recall_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_nhtsa_recall_distinct_entities
+  tableCalculations: []
+name: Distinct recall by manufacturer
+slug: fct-nhtsa-recall
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nhtsa_recall_manufacturer
+  - fct_nhtsa_recall_distinct_entities
+tableName: fct_nhtsa_recall
+version: 1

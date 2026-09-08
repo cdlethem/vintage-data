@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_quebec_emergency_department_observation_observed_at_hour
+          yRef:
+            field: fct_quebec_emergency_department_observation_dept_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct departments
+    layout:
+      xField: fct_quebec_emergency_department_observation_observed_at_hour
+      yField:
+      - fct_quebec_emergency_department_observation_dept_count
+  type: cartesian
+description: Distinct non-null `department_id` values present in each observed hour. This is a coverage
+  level for the status feed, not a count of patients; hours without a successful extract are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_quebec_emergency_department_observation_observed_at_hour
+  exploreName: fct_quebec_emergency_department_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_quebec_emergency_department_observation_dept_count
+  sorts:
+  - descending: false
+    fieldId: fct_quebec_emergency_department_observation_observed_at_hour
+  tableCalculations: []
+name: Departments reporting per hour
+slug: fct-quebec-emergency-department-observation-departments-observed
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_quebec_emergency_department_observation_observed_at_hour
+  - fct_quebec_emergency_department_observation_dept_count
+tableName: fct_quebec_emergency_department_observation
+version: 1

@@ -1,0 +1,405 @@
+version: 2
+models:
+- name: fct_radio_browser_station_snapshot
+  description: Daily physical history of stations returned by the Radio Browser directory. Each row is
+    one station observed in one source snapshot, keyed by the source, station identifier, and observation
+    timestamp. Raw re-ingestion of the same snapshot is reduced to the latest loaded copy while load lineage
+    is retained.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, station_id, observed_at
+      label: Radio browser station snapshot
+      group_label: Radio browser
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: radio_browser_station_663165
+      vintage:
+        visualization:
+          dimension: country_code
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct station by country code
+          description: Distinct `station_id` values by `country_code` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - station_id
+          - country_code
+          - source_loaded_at
+          sources:
+          - '`radio_browser` — licence: Radio Browser — community project; attribution required: False.
+            Source configuration: `extract/sources/radio_browser.yml`.'
+          analysis:
+            headline: how the monitored station catalogue and reported engagement measures change while
+              station metadata is revised.
+            event_time: last_changed_at
+            grain: MONTH
+            controls:
+            - country_code
+            - state
+            - language
+            - codec
+            trends:
+            - slug: stations-observed
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct stations observed each day
+              description: Distinct `station_id` values in each collection-day snapshot. This is a
+                catalogue level rather than a flow because the directory republishes station records;
+                days with no successful extract are absent rather than zero.
+              width: half
+            - slug: average-clicks
+              kind: total
+              metric: average_click_count
+              time: observed_at
+              grain: DAY
+              title: Mean reported clicks per day
+              description: Average cumulative `click_count` reported across stations on each collection
+                day. This is a reported snapshot level, not clicks accumulated in the day; irregular
+                polling weights the mean and missing days are absent rather than zero.
+              width: half
+            - slug: stations-by-country
+              kind: composition
+              metric: distinct_entities
+              breakdown: country_code
+              top_n: 8
+              time: observed_at
+              grain: DAY
+              title: Station catalogue mix by country
+              description: Distinct stations observed per collection day stacked by country code. The
+                eight countries with the largest observed station counts are shown and the remainder is
+                excluded rather than aggregated; absent collection days are absent rather than zero.
+              width: full
+            - slug: changed-stations
+              kind: composition
+              metric: distinct_entities
+              breakdown: country_code
+              top_n: 8
+              time: last_changed_at
+              grain: MONTH
+              title: Stations with metadata changes by month
+              description: Distinct stations by the month of source `last_changed_at`, stacked by country
+                code. This source-event view is sparse with five populated months; the eight largest
+                countries are shown and months without reported changes are absent rather than zero.
+              width: full
+  columns:
+  - name: radio_browser_station_snapshot_key
+    description: Stable hash of the source, station identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Radio browser station snapshot key
+          hidden: true
+          name: radio_browser_station_663165
+  - name: source
+    description: Radio Browser source identifier supplied by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: station_id
+    description: Stable Radio Browser identifier for the station.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct station
+            description: Distinct `station_id` values by `country_code` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Station id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the station directory record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: station_name
+    description: Display name reported for the station.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Station name
+          hidden: false
+  - name: country_code
+    description: Country code reported for the station.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Country code
+          hidden: false
+  - name: state
+    description: State, province, or region reported for the station.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: State
+          hidden: false
+  - name: language
+    description: Comma-separated language names reported for the station.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Language
+          hidden: false
+  - name: language_codes
+    description: Comma-separated language codes reported for the station.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Language codes
+          hidden: false
+  - name: tags
+    description: JSON array or object of directory tags reported for the station.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Tags
+          hidden: true
+          sql: CAST(${TABLE}.tags AS VARCHAR)
+  - name: codec
+    description: Audio codec reported for the station stream.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Codec
+          hidden: false
+  - name: bitrate_kbps
+    description: Stream bitrate reported by Radio Browser, in kilobits per second.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Bitrate kbps
+          hidden: false
+          format: '#,##0'
+  - name: homepage
+    description: Station homepage URL reported by Radio Browser.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Homepage
+          hidden: false
+  - name: click_count
+    description: Cumulative directory click count reported for the station.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_click_count:
+            type: average
+            label: Mean reported click count
+            description: Average cumulative `click_count` reported across stations in the selected window.
+              This is a snapshot level rather than clicks accumulated during the window; irregular polling
+              weights the mean.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Click count
+          hidden: false
+          format: '#,##0'
+  - name: click_trend
+    description: Directory click trend reported for the station.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Click trend
+          hidden: false
+          format: '#,##0'
+  - name: vote_count
+    description: Cumulative directory vote count reported for the station.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Vote count
+          hidden: false
+          format: '#,##0'
+  - name: click_observed_at
+    description: UTC timestamp of the latest directory click reported for the station.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Click observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: last_check_ok
+    description: Whether the latest Radio Browser stream check succeeded.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Last check ok
+          hidden: false
+  - name: last_checked_at
+    description: UTC timestamp of the latest Radio Browser stream check.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Last checked at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: last_changed_at
+    description: UTC timestamp of the latest station metadata change reported by Radio Browser.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Last changed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: latitude
+    description: Station latitude reported by Radio Browser, when available.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: longitude
+    description: Station longitude reported by Radio Browser, when available.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: _batch_id
+    description: Extract batch identifier that supplied the retained station snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained station snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained station snapshot in its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained station snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw station record for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

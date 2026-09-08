@@ -1,0 +1,146 @@
+config:
+  dateZoomGranularities:
+  - Hour
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Hour
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: cf2f1235-e6ef-564c-a66e-df5317187962
+    label: 'Sncf station equipment observation: Operating status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sncf_station_equipment_observation_operating_status
+      tableName: fct_sncf_station_equipment_observation
+    values: []
+  - disabled: true
+    id: 70a6fdbc-72ed-51bf-8095-57d010b5783d
+    label: 'Sncf station equipment observation: Location description'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sncf_station_equipment_observation_location_description
+      tableName: fct_sncf_station_equipment_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Sncf Station Equipment
+slug: sncf-station-equipment
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical history of equipment published by SNCF station services. Each row
+      represents one equipment identifier from one source at one extractor observation time. Repeated
+      copies of an observation from later insert-only raw loads are reduced to the latest loaded copy,
+      while source and load lineage are retained. The source coordinate text is preserved and parsed into
+      nullable latitude and longitude values.
+
+
+      **Grain:** source_name, equipment_id, observed_at
+
+
+      **What changes here:** how the reported station-equipment catalogue and operating-status mix change
+      across each polling hour.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `sncf_station_equipment` — licence: SNCF open-data reuse terms; attribution required: True. Source
+      configuration: `extract/sources/sncf_station_equipment.yml`.'
+    hideFrame: false
+    title: Sncf station equipment observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Sncf station equipment observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct equipment observed each hour
+    chartSlug: fct-sncf-station-equipment-observation-equipment-level
+    hideTitle: false
+    title: Distinct equipment observed each hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct stations represented each hour
+    chartSlug: fct-sncf-station-equipment-observation-station-level
+    hideTitle: false
+    title: Distinct stations represented each hour
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Equipment catalogue by operating status
+    chartSlug: fct-sncf-station-equipment-observation-status-mix
+    hideTitle: false
+    title: Equipment catalogue by operating status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Stations represented by operating status
+    chartSlug: fct-sncf-station-equipment-observation-stations-by-status
+    hideTitle: false
+    title: Stations represented by operating status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Sncf station equipment observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct equipment by operating status
+    chartSlug: fct-sncf-station-equipment-observation
+    hideTitle: false
+    title: Distinct equipment by operating status
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Sncf station equipment observation — observations
+    chartSlug: fct-sncf-station-equipment-observation-details
+    hideTitle: false
+    title: Sncf station equipment observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

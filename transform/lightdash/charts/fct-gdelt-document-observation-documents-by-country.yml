@@ -1,0 +1,57 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_gdelt_document_observation_published_at_day
+          yRef:
+            field: fct_gdelt_document_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Published at (Day)
+      yAxis:
+      - name: Distinct document
+    layout:
+      stack: true
+      xField: fct_gdelt_document_observation_published_at_day
+      yField:
+      - fct_gdelt_document_observation_distinct_entities
+  type: cartesian
+description: Distinct `document_id` values per source publication day stacked by `source_country`. Bars
+  reveal how the short-window geographic mix shifts, not a cumulative count; the eight largest countries
+  are shown and smaller countries are excluded. Days without published documents are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_gdelt_document_observation_published_at_day
+  - fct_gdelt_document_observation_source_country
+  exploreName: fct_gdelt_document_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gdelt_document_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_gdelt_document_observation_distinct_entities
+  - descending: false
+    fieldId: fct_gdelt_document_observation_published_at_day
+  tableCalculations: []
+name: Published document mix by source country
+pivotConfig:
+  columns:
+  - fct_gdelt_document_observation_source_country
+slug: fct-gdelt-document-observation-documents-by-country
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gdelt_document_observation_published_at_day
+  - fct_gdelt_document_observation_source_country
+  - fct_gdelt_document_observation_distinct_entities
+tableName: fct_gdelt_document_observation
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_malaysia_blood_donations_donation_date_day
+          yRef:
+            field: fct_malaysia_blood_donations_average_donation_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Donation date (Day)
+      yAxis:
+      - name: Mean observed donation count
+    layout:
+      xField: fct_malaysia_blood_donations_donation_date_day
+      yField:
+      - fct_malaysia_blood_donations_average_donation_count
+  type: cartesian
+description: Mean `donation_count` among retained observations for each reported `donation_date`. Repeated
+  snapshots and irregular polling receive equal row weight, so this is a reported level rather than an
+  additive flow; dates absent from the source are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_malaysia_blood_donations_donation_date_day
+  exploreName: fct_malaysia_blood_donations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_malaysia_blood_donations_average_donation_count
+  sorts:
+  - descending: false
+    fieldId: fct_malaysia_blood_donations_donation_date_day
+  tableCalculations: []
+name: Mean reported donations per day
+slug: fct-malaysia-blood-donations-donation-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_malaysia_blood_donations_donation_date_day
+  - fct_malaysia_blood_donations_average_donation_count
+tableName: fct_malaysia_blood_donations
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_public_art_arcgis_observed_at_day
+          yRef:
+            field: fct_public_art_arcgis_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct feature
+    layout:
+      xField: fct_public_art_arcgis_observed_at_day
+      yField:
+      - fct_public_art_arcgis_distinct_entities
+  type: cartesian
+description: Distinct `feature_id` values present in the feed on each observation day. This is a level
+  rather than a flow — the feed republishes its whole catalogue, so the line moves only when the publisher
+  adds or withdraws a record. Days with no successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_public_art_arcgis_observed_at_day
+  exploreName: fct_public_art_arcgis
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_public_art_arcgis_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_public_art_arcgis_observed_at_day
+  tableCalculations: []
+name: Artworks published per day
+slug: fct-public-art-arcgis-published-features
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_public_art_arcgis_observed_at_day
+  - fct_public_art_arcgis_distinct_entities
+tableName: fct_public_art_arcgis
+version: 1

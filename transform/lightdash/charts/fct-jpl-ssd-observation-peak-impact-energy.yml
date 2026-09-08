@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_jpl_ssd_observation_observed_at_day
+          yRef:
+            field: fct_jpl_ssd_observation_max_impact_energy_kt
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Maximum observed impact energy kt
+    layout:
+      xField: fct_jpl_ssd_observation_observed_at_day
+      yField:
+      - fct_jpl_ssd_observation_max_impact_energy_kt
+  type: cartesian
+description: Maximum reported impact energy in kilotons in each daily snapshot. This is a republished
+  measure level rather than an additive energy total, and absent snapshot days are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_jpl_ssd_observation_observed_at_day
+  exploreName: fct_jpl_ssd_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_jpl_ssd_observation_max_impact_energy_kt
+  sorts:
+  - descending: false
+    fieldId: fct_jpl_ssd_observation_observed_at_day
+  tableCalculations: []
+name: Peak reported impact energy by observation day
+slug: fct-jpl-ssd-observation-peak-impact-energy
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_jpl_ssd_observation_observed_at_day
+  - fct_jpl_ssd_observation_max_impact_energy_kt
+tableName: fct_jpl_ssd_observation
+version: 1

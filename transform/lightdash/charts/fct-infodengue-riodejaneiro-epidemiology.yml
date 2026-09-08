@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_infodengue_riodejaneiro_epidemiology_municipality_name
+          yRef:
+            field: fct_infodengue_riodejaneiro_epidemiology_m_13c38800
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_infodengue_riodejaneiro_epidemiology_municipality_name
+      yField:
+      - fct_infodengue_riodejaneiro_epidemiology_m_13c38800
+  type: cartesian
+description: Mean observed incidence per 100k by `municipality_name` in the selected observation window.
+  Estimated incidence per 100,000 population. Each retained observation has equal weight; polling frequency
+  and repeated snapshots can affect the mean. This is not a latest-value measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_infodengue_riodejaneiro_epidemiology_municipality_name
+  exploreName: fct_infodengue_riodejaneiro_epidemiology
+  filters:
+    dimensions:
+      and:
+      - id: e623b9a8-ad32-5927-871c-726e25d21da5
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_infodengue_riodejaneiro_epidemiology_fetched_at
+        values:
+        - 30
+      id: 29530d72-3e3d-592d-89ee-6815bda759c9
+  limit: 20
+  metrics:
+  - fct_infodengue_riodejaneiro_epidemiology_m_13c38800
+  sorts:
+  - descending: true
+    fieldId: fct_infodengue_riodejaneiro_epidemiology_m_13c38800
+  tableCalculations: []
+name: Mean observed incidence per 100k by municipality name
+slug: fct-infodengue-riodejaneiro-epidemiology
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_infodengue_riodejaneiro_epidemiology_municipality_name
+  - fct_infodengue_riodejaneiro_epidemiology_m_13c38800
+tableName: fct_infodengue_riodejaneiro_epidemiology
+version: 1

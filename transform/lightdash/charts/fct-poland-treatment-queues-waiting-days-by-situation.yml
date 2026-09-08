@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_poland_treatment_queues_situation_date_day
+          yRef:
+            field: fct_poland_treatment_queues_avg_wait_days
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Situation date (Day)
+      yAxis:
+      - name: Mean reported wait days
+    layout:
+      xField: fct_poland_treatment_queues_situation_date_day
+      yField:
+      - fct_poland_treatment_queues_avg_wait_days
+  type: cartesian
+description: Average non-null `average_wait_days` reported by providers on each NFZ situation date. This
+  is an observation-weighted measure of the published queue statistic, not a sum or patient throughput;
+  dates with no reported values are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_poland_treatment_queues_situation_date_day
+  exploreName: fct_poland_treatment_queues
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_poland_treatment_queues_avg_wait_days
+  sorts:
+  - descending: false
+    fieldId: fct_poland_treatment_queues_situation_date_day
+  tableCalculations: []
+name: Reported average wait days by situation date
+slug: fct-poland-treatment-queues-waiting-days-by-situation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_poland_treatment_queues_situation_date_day
+  - fct_poland_treatment_queues_avg_wait_days
+tableName: fct_poland_treatment_queues
+version: 1

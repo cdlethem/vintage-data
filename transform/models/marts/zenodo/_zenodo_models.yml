@@ -1,0 +1,332 @@
+version: 2
+models:
+- name: fct_zenodo_record_observation
+  description: Twice-hourly physical observation fact for records returned by the Zenodo extractor. Each
+    row is one Zenodo record identifier at one extractor observation timestamp, preserving descriptive
+    metadata and raw-load lineage. Repeated copies of the same source, record, and observation timestamp
+    retain the latest loaded row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, record_id, observed_at
+      label: Zenodo record observation
+      group_label: Zenodo
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: zenodo_record_observation_key
+      vintage:
+        visualization:
+          dimension: resource_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct record by resource type
+          description: Distinct `record_id` values by `resource_type` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - record_id
+          - resource_type
+          - source_loaded_at
+          sources:
+          - '`zenodo` — licence: per-record (cc-by-4.0 observed); varies; attribution required: True.
+            Source configuration: `extract/sources/zenodo.yml`.'
+          analysis:
+            headline: how Zenodo's observed catalogue size and newly created record mix shift by resource type
+              and access right across the five-day window.
+            event_time: created_at
+            grain: DAY
+            controls:
+            - resource_type
+            - access_right
+            - license
+            trends:
+            - slug: catalogue-by-observation-day
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Observed Zenodo catalogue by day
+              description: Distinct `record_id` values present in the Zenodo feed on each UTC observation
+                day. This collection-time series is a level rather than a creation flow; the five-day span
+                reflects the extractor window, and absent extract days are absent rather than zero.
+              width: half
+            - slug: concepts-by-observation-day
+              kind: total
+              metric: distinct_concepts
+              time: observed_at
+              grain: DAY
+              title: Observed concepts by day
+              description: Distinct non-null `concept_doi` values present in the feed on each UTC observation
+                day. This is a collection-level measure, not a count of newly created concepts; absent extract
+                days are absent rather than zero.
+              width: half
+            - slug: records-created-by-day
+              kind: total
+              metric: distinct_entities
+              time: created_at
+              grain: DAY
+              title: Records by Zenodo creation day
+              description: Distinct `record_id` values whose Zenodo `created_at` falls on each UTC day. This
+                source-event axis spans only five days in the mart, so it is a recent slice rather than a
+                long historical publication trend; absent event days are absent rather than zero.
+              width: half
+            - slug: resource-mix-by-created-day
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: resource_type
+              top_n: 8
+              time: created_at
+              grain: DAY
+              title: Created records by resource type
+              description: Distinct `record_id` values per UTC Zenodo creation day, split among the eight
+                busiest observed `resource_type` values. Remaining resource types are excluded rather than
+                aggregated, and the source axis covers only the five-day extract window.
+              width: full
+            - slug: access-right-mix-by-created-day
+              kind: composition
+              metric: distinct_entities
+              breakdown: access_right
+              top_n: 3
+              time: created_at
+              grain: DAY
+              title: Created records by access right
+              description: Distinct `record_id` values per UTC creation day stacked by access-right category.
+                All three observed access-right values are shown, so each bar describes the day's created
+                record mix; absent event days are absent rather than zero.
+              width: full
+  columns:
+  - name: zenodo_record_observation_key
+    description: Stable hash of the Zenodo source, record identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Zenodo record observation key
+          hidden: true
+  - name: source_name
+    description: Source label supplied by the Zenodo extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: record_id
+    description: Zenodo numeric record identifier represented as text for stable cross-system joins.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct record
+            description: Distinct `record_id` values by `resource_type` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Record id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the Zenodo record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: doi
+    description: Digital Object Identifier assigned to this Zenodo record, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Doi
+          hidden: false
+  - name: concept_doi
+    description: DOI identifying the conceptual Zenodo record across versions, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_concepts:
+            type: count_distinct
+            label: Distinct concepts
+            description: Distinct non-null `concept_doi` values present in each grouped Zenodo observation or
+              creation slice. Multiple versions sharing a concept DOI count once within that slice.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Concept doi
+          hidden: false
+  - name: title
+    description: Title of the deposited Zenodo record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: publication_date
+    description: Zenodo publication date text, which may be a full ISO date or a year-only value.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publication date
+          hidden: false
+  - name: created_at
+    description: UTC timestamp when Zenodo reports that the record was created.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Created at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: resource_type
+    description: Zenodo resource classification such as publication, dataset, or software.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Resource type
+          hidden: false
+  - name: access_right
+    description: Access-right classification reported by Zenodo, such as open or embargoed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Access right
+          hidden: false
+  - name: license
+    description: License identifier reported for the deposited record, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: License
+          hidden: false
+  - name: creators
+    description: JSON array of creators attributed to the deposited record.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Creators
+          hidden: true
+          sql: CAST(${TABLE}.creators AS VARCHAR)
+  - name: keywords
+    description: JSON array of keywords assigned to the deposited record.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Keywords
+          hidden: true
+          sql: CAST(${TABLE}.keywords AS VARCHAR)
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained Zenodo observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the original raw observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

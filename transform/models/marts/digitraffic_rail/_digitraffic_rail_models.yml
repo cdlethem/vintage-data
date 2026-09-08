@@ -1,0 +1,423 @@
+version: 2
+models:
+- name: fct_digitraffic_rail_train_observation
+  description: Physical history of train snapshots reported by the Digitraffic Rail live trains feed.
+    Each row is one train from one feed at one observation timestamp, with the source timetable stop array
+    retained as JSON and the raw load lineage preserved. Re-ingested copies of the same feed, train, and
+    observation timestamp are reduced to the latest loaded copy.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_feed, train_id, observed_at
+      label: Digitraffic rail train observation
+      group_label: Digitraffic rail
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: digitraffic_rail__60ec99
+      vintage:
+        visualization:
+          dimension: train_category
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct train by train category
+          description: Distinct `train_id` values by `train_category` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - train_id
+          - train_category
+          - source_loaded_at
+          sources:
+          - '`digitraffic_rail` — licence: CC BY 4.0; attribution required: True. Source configuration:
+            `extract/sources/digitraffic_rail.yml`.'
+          analysis:
+            headline: how the published train roster and source timetable mix change across observation and acceptance time.
+            event_time: timetable_acceptance_at
+            grain: MONTH
+            controls:
+            - train_category
+            - train_type
+            - operator_short_code
+            - timetable_type
+            trends:
+            - slug: observed-trains
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct trains observed per day
+              description: Distinct `train_id` values present in each extractor observation day. This is a
+                published-roster level rather than a flow — the feed republishes trains, so movement reflects
+                additions, removals, or changed coverage. Days with no successful extract are absent rather than
+                zero.
+              width: half
+            - slug: record-version
+              kind: total
+              metric: average_record_version
+              time: observed_at
+              grain: DAY
+              title: Mean source record version per day
+              description: Average `record_version` reported across train observations on each observation day.
+                Versions are source revision numbers, not train counts; repeated polling gives each retained
+                observation equal weight and missing days are absent rather than zero.
+              width: half
+            - slug: accepted-by-category
+              kind: composition
+              metric: distinct_entities
+              breakdown: train_category
+              top_n: 4
+              time: timetable_acceptance_at
+              time_dimension: accepted
+              grain: MONTH
+              title: Accepted trains by category each month
+              description: Distinct `train_id` values by `train_category` and timetable-acceptance month.
+                Stacked bars show the mix of accepted timetable records; the four observed categories are all
+                included and months without accepted records are absent rather than zero.
+              width: full
+            - slug: accepted-by-operator
+              kind: composition
+              metric: distinct_entities
+              breakdown: operator_short_code
+              top_n: 5
+              time: timetable_acceptance_at
+              time_dimension: accepted
+              grain: MONTH
+              title: Accepted trains by operator each month
+              description: Distinct `train_id` values by operator and timetable-acceptance month. Stacked bars
+                show how the accepted roster mix changes; all five operators are retained and unobserved months
+                are absent rather than zero.
+              width: full
+  columns:
+  - name: digitraffic_rail_train_observation_key
+    description: Stable hash of the feed, train identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Digitraffic rail train observation key
+          hidden: true
+          name: digitraffic_rail__60ec99
+  - name: source_feed
+    description: Digitraffic feed identifier reported by the source record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source feed
+          hidden: false
+  - name: train_id
+    description: Source identifier for the observed train run.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct train
+            description: Distinct `train_id` values by `train_category` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Train id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when Digitraffic observed the train record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: commuter_line_id
+    description: Commuter-line identifier reported for the train, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Commuter line id
+          hidden: false
+  - name: is_running_currently
+    description: Whether the source reports the train as currently running.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is running currently
+          hidden: false
+  - name: is_cancelled
+    description: Whether the source reports the train as cancelled.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is cancelled
+          hidden: false
+  - name: record_version
+    description: Source version number for the train record.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Record version
+          hidden: false
+          format: '#,##0'
+        metrics:
+          average_record_version:
+            type: average
+            label: Mean record version
+            description: Average `record_version` reported across retained train observations. This is a
+              source revision measure rather than a train count and each observation has equal weight.
+            format: '#,##0.00'
+  - name: timetable_type
+    description: Timetable classification reported for the train.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Timetable type
+          hidden: false
+  - name: timetable_acceptance_at
+    description: UTC timestamp when the source timetable was accepted.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Timetable acceptance at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: timetable_7e0144
+        additional_dimensions:
+          accepted:
+            type: timestamp
+            label: Timetable accepted
+            description: Timetable acceptance timestamp, exposed under a short dimension key so its
+              date-truncated variants stay inside Postgres's 63-byte identifier limit.
+            sql: ${TABLE}.timetable_acceptance_at
+            time_intervals:
+            - DAY
+            - WEEK
+            - MONTH
+            - YEAR
+  - name: departure_date
+    description: Calendar date on which the train is scheduled to depart.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Departure date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: train_number
+    description: Numeric train number reported by Digitraffic.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Train number
+          hidden: false
+          format: '#,##0'
+  - name: operator_uic_code
+    description: UIC code of the train operator.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Operator uic code
+          hidden: false
+          format: '#,##0'
+  - name: operator_short_code
+    description: Short code of the train operator.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Operator short code
+          hidden: false
+  - name: timetable_rows
+    description: JSON array of scheduled and observed station stops reported for the train.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Timetable rows
+          hidden: true
+          sql: CAST(${TABLE}.timetable_rows AS VARCHAR)
+  - name: train_category
+    description: Broad train category reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Train category
+          hidden: false
+  - name: train_type
+    description: Train type code reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Train type
+          hidden: false
+  - name: requested_station
+    description: Station context requested by the source feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Requested station
+          hidden: false
+  - name: source_row_id
+    description: Raw load row identifier for this train observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that supplied this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing this train observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of this observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: extract_s_51074f
+  - name: load_id
+    description: Identifier of the load job that inserted this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw observation content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

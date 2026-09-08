@@ -1,0 +1,60 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_pubchem_compound_snapshot_query
+          yRef:
+            field: fct_pubchem_compound_snapshot_average_molecular_weight
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_pubchem_compound_snapshot_query
+      yField:
+      - fct_pubchem_compound_snapshot_average_molecular_weight
+  type: cartesian
+description: Mean observed molecular weight by `query` in the selected observation window. Molecular weight
+  returned by PubChem, converted from the raw string to a decimal value. Each retained observation has
+  equal weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+  measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_pubchem_compound_snapshot_query
+  exploreName: fct_pubchem_compound_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: cb60fec5-7f07-5a21-bc7b-84ff128c85e1
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_pubchem_compound_snapshot_fetched_at
+        values:
+        - 30
+      - id: 0510fe62-8da0-5d5b-919b-5a3f38e6f4a2
+        operator: equals
+        target:
+          fieldId: fct_pubchem_compound_snapshot_found
+        values:
+        - true
+      id: dc561984-4d39-5a88-910c-37fa25b30560
+  limit: 20
+  metrics:
+  - fct_pubchem_compound_snapshot_average_molecular_weight
+  sorts:
+  - descending: true
+    fieldId: fct_pubchem_compound_snapshot_average_molecular_weight
+  tableCalculations: []
+name: Mean observed molecular weight by query
+slug: fct-pubchem-compound-snapshot
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_pubchem_compound_snapshot_query
+  - fct_pubchem_compound_snapshot_average_molecular_weight
+tableName: fct_pubchem_compound_snapshot
+version: 1

@@ -1,0 +1,152 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: f165f0ee-6237-57a0-bbd9-fadfbe5a0cfe
+    label: 'Netflix top10: Category'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_netflix_top10_category
+      tableName: fct_netflix_top10
+    values: []
+  - disabled: true
+    id: cdff9307-d2a7-5b33-96c7-82780ba860c9
+    label: 'Netflix top10: Scope'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_netflix_top10_scope
+      tableName: fct_netflix_top10
+    values: []
+  - disabled: true
+    id: 74830f03-1245-5818-a7b3-031eef0f7c8a
+    label: 'Netflix top10: Season title'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_netflix_top10_season_title
+      tableName: fct_netflix_top10
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Netflix Top10
+slug: netflix-top10
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily-refreshed physical fact of Netflix Top 10 observations. Each row is one weekly title
+      rank within a geographic scope and category, with repeated insert-only loads reduced to the latest
+      copy and raw-load lineage retained.
+
+
+      **Grain:** week, scope, category, weekly_rank, show_title
+
+
+      **What changes here:** how the observed Top 10 catalogue level and viewing-hour mix move across
+      daily fetches and ranking weeks.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `netflix_top10` — licence: Netflix data-use terms; attribution required: True. Source configuration:
+      `extract/sources/netflix_top10.yml`.'
+    hideFrame: false
+    title: Netflix top10
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Netflix top10 — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct titles per fetch day
+    chartSlug: fct-netflix-top10-observed-titles
+    hideTitle: false
+    title: Distinct titles per fetch day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean weekly hours viewed per fetch day
+    chartSlug: fct-netflix-top10-viewing-hours
+    hideTitle: false
+    title: Mean weekly hours viewed per fetch day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Viewing hours by category
+    chartSlug: fct-netflix-top10-category-hours
+    hideTitle: false
+    title: Viewing hours by category
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Ranked titles by category and source week
+    chartSlug: fct-netflix-top10-ranking-week-mix
+    hideTitle: false
+    title: Ranked titles by category and source week
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Netflix top10 — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed weekly hours viewed by category
+    chartSlug: fct-netflix-top10
+    hideTitle: false
+    title: Mean observed weekly hours viewed by category
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Netflix top10 — observations
+    chartSlug: fct-netflix-top10-details
+    hideTitle: false
+    title: Netflix top10 — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

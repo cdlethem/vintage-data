@@ -1,0 +1,543 @@
+version: 2
+models:
+- name: fct_sensor_community_measurement
+  description: Incremental physical history of measurements published by Sensor Community. Each row represents
+    one sensor at one measurement timestamp. Repeated snapshots from the insert-only raw feed are reduced
+    to the latest loaded copy for the sensor and timestamp, while the source metadata, typed common measurements,
+    original values, and load lineage remain available for audit and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, sensor_id, observed_at
+      label: Sensor community measurement
+      group_label: Sensor community
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: sensor_community_measur_ee65d2
+      vintage:
+        visualization:
+          dimension: country
+          metric: average_pm25
+          time: observed_at
+          window_days: 30
+          title: Mean observed pm25 by country
+          description: Mean observed pm25 by `country` in the selected observation window. Particulate
+            matter PM2.5 concentration extracted from the measurement values, when supplied. Each retained
+            observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+            This is not a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - measurement_id
+          - country
+          - pm25
+          - source_loaded_at
+          sources:
+          - '`sensor_community` — licence: Sensor.Community — public, attribution via User-Agent contact;
+            attribution required: False. Source configuration: `extract/sources/sensor_community.yml`.'
+          filters:
+          - field: is_clean
+            values:
+            - true
+          analysis:
+            headline: how reporting coverage and particulate levels move across daily sensor observations.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - country
+            - sensor_type
+            - manufacturer
+            - is_indoor
+            trends:
+            - slug: sensor-coverage
+              kind: total
+              metric: distinct_sensors
+              time: observed_at
+              grain: DAY
+              title: Distinct reporting sensors by observation day
+              description: Distinct `sensor_id` values present on each observation day. This is a collection
+                level over five observed days rather than a long-run sensor flow; repeated measurement rows
+                do not inflate the count, and absent days are absent rather than zero.
+              width: half
+            - slug: pm25-level
+              kind: total
+              metric: average_pm25
+              time: observed_at
+              grain: DAY
+              title: Mean observed PM2.5 by observation day
+              description: Observation-weighted mean reported PM2.5 concentration for each observation day
+                under the dashboard's `is_clean` filter. Polling frequency affects the mean, and the short
+                five-day series is a level rather than a historical air-quality flow; absent days are absent
+                rather than zero.
+              width: half
+            - slug: country-pm25
+              kind: composition
+              metric: average_pm25
+              breakdown: country
+              top_n: 8
+              time: observed_at
+              grain: DAY
+              title: PM2.5 mix across the largest countries
+              description: Mean reported PM2.5 per observation day stacked by the eight countries with the
+                largest observed series. The remaining countries are excluded rather than aggregated; this
+                compares observation levels and does not imply additive particulate mass.
+              width: full
+            - slug: sensor-type-fetches
+              kind: breakdown
+              metric: distinct_sensors
+              breakdown: sensor_type
+              top_n: 6
+              time: fetched_at
+              grain: DAY
+              title: Distinct sensors fetched by sensor type
+              description: Distinct sensors fetched on each upstream `fetched_at` day, split by the six
+                largest sensor types. The remaining types are excluded rather than aggregated; this axis
+                shows retrieval activity over the five-day source-fetch span, not sensor emission history.
+              width: full
+  columns:
+  - name: sensor_community_measurement_key
+    description: Stable hash of the source name, sensor identifier, and measurement timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sensor community measurement key
+          hidden: true
+          name: sensor_community_measur_ee65d2
+  - name: source_name
+    description: Source label reported by the Sensor Community record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: measurement_id
+    description: Sensor Community record identifier retained from the selected latest raw copy.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Measurement id
+          hidden: false
+  - name: sensor_id
+    description: Numeric identifier of the physical sensor that produced the measurement.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Sensor id
+          hidden: false
+          format: '#,##0'
+        metrics:
+          distinct_sensors:
+            type: count_distinct
+            label: Distinct reporting sensors
+            description: Distinct `sensor_id` values present in each observation or fetch-time group.
+              Repeated measurements from one sensor count once and the result is a reporting-coverage level,
+              not a sum of readings.
+            format: '#,##0'
+  - name: observed_at
+    description: UTC timestamp reported by the sensor for the measurement.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: fetched_at
+    description: UTC timestamp when the upstream extraction fetched the measurement record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: location_id
+    description: Sensor Community location identifier associated with the sensor, when supplied.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Location id
+          hidden: false
+          format: '#,##0'
+  - name: sensor_type
+    description: Hardware sensor type reported by Sensor Community.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sensor type
+          hidden: false
+  - name: manufacturer
+    description: Sensor hardware manufacturer reported by Sensor Community.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Manufacturer
+          hidden: false
+  - name: country
+    description: Two-letter country code for the sensor location, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Country
+          hidden: false
+  - name: latitude
+    description: Sensor latitude in decimal degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: longitude
+    description: Sensor longitude in decimal degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: altitude
+    description: Sensor altitude in the source-reported units.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Altitude
+          hidden: false
+          format: '#,##0.00'
+  - name: is_indoor
+    description: Whether Sensor Community identifies the sensor as installed indoors.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is indoor
+          hidden: false
+  - name: has_exact_location
+    description: Whether the source reports the sensor location as exact rather than approximate.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Has exact location
+          hidden: false
+  - name: pm1
+    description: Particulate matter PM1 concentration extracted from the measurement values, when supplied.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Pm1
+          hidden: false
+          format: '#,##0.00'
+  - name: pm25
+    description: Particulate matter PM2.5 concentration extracted from the measurement values, when supplied.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_pm25:
+            type: average
+            label: Mean observed pm25
+            description: Mean observed pm25 by `country` in the selected observation window. Particulate
+              matter PM2.5 concentration extracted from the measurement values, when supplied. Each retained
+              observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+              This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Pm25
+          hidden: false
+          format: '#,##0.00'
+  - name: pm4
+    description: Particulate matter PM4 concentration extracted from the measurement values, when supplied.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Pm4
+          hidden: false
+          format: '#,##0.00'
+  - name: pm10
+    description: Particulate matter PM10 concentration extracted from the measurement values, when supplied.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Pm10
+          hidden: false
+          format: '#,##0.00'
+  - name: temperature
+    description: Temperature measurement extracted from the source values, in source-reported units.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Temperature
+          hidden: false
+          format: '#,##0.00'
+  - name: humidity
+    description: Relative humidity measurement extracted from the source values, in source-reported units.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Humidity
+          hidden: false
+          format: '#,##0.00'
+  - name: pressure
+    description: Atmospheric pressure measurement extracted from the source values, in source-reported
+      units.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Pressure
+          hidden: false
+          format: '#,##0.00'
+  - name: pressure_at_sea_level
+    description: Atmospheric pressure adjusted to sea level, extracted from either supported source key.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Pressure at sea level
+          hidden: false
+          format: '#,##0.00'
+  - name: co2_ppm
+    description: Carbon dioxide concentration in parts per million, when supplied by the sensor.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Co2 ppm
+          hidden: false
+          format: '#,##0.00'
+  - name: noise_laeq
+    description: A-weighted equivalent sound level extracted from the source values, when supplied.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Noise laeq
+          hidden: false
+          format: '#,##0.00'
+  - name: noise_la_max
+    description: Maximum A-weighted sound level extracted from the source values, when supplied.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Noise la max
+          hidden: false
+          format: '#,##0.00'
+  - name: noise_la_min
+    description: Minimum A-weighted sound level extracted from the source values, when supplied.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Noise la min
+          hidden: false
+          format: '#,##0.00'
+  - name: radiation_msi
+    description: Radiation measurement in the source's MSI representation, when supplied.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Radiation msi
+          hidden: false
+          format: '#,##0.00'
+  - name: measurement_values
+    description: Original JSON measurement-value object retained for metrics not normalized into typed
+      columns.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Measurement values
+          hidden: true
+          sql: CAST(${TABLE}.measurement_values AS VARCHAR)
+  - name: quality_flags
+    description: Original JSON quality-flag collection reported for the measurement.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Quality flags
+          hidden: true
+          sql: CAST(${TABLE}.quality_flags AS VARCHAR)
+  - name: is_clean
+    description: Source quality indicator identifying whether the selected record passed Sensor Community
+      cleaning.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is clean
+          hidden: false
+  - name: source_row_id
+    description: Load-layer row identifier for the retained source measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained source measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained source measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained measurement in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date for the retained source measurement.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction began for the retained source measurement.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_load_id
+    description: Load operation identifier that inserted the retained source measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained source measurement.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained raw record content for replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

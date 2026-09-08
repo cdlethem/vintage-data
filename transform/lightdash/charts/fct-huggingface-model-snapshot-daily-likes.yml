@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_huggingface_model_snapshot_observed_at_day
+          yRef:
+            field: fct_huggingface_model_snapshot_average_like_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed like count
+    layout:
+      xField: fct_huggingface_model_snapshot_observed_at_day
+      yField:
+      - fct_huggingface_model_snapshot_average_like_count
+  type: cartesian
+description: Mean non-null `like_count` reported by the catalogue on each observation day. Each retained
+  snapshot has equal weight, so polling frequency and repeated snapshots can affect the level; this is
+  not a sum of likes or a latest-value measure.
+metricQuery:
+  dimensions:
+  - fct_huggingface_model_snapshot_observed_at_day
+  exploreName: fct_huggingface_model_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_huggingface_model_snapshot_average_like_count
+  sorts:
+  - descending: false
+    fieldId: fct_huggingface_model_snapshot_observed_at_day
+  tableCalculations: []
+name: Mean reported likes observed each day
+slug: fct-huggingface-model-snapshot-daily-likes
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_huggingface_model_snapshot_observed_at_day
+  - fct_huggingface_model_snapshot_average_like_count
+tableName: fct_huggingface_model_snapshot
+version: 1

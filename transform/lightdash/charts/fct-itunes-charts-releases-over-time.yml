@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_itunes_charts_release_date_month
+          yRef:
+            field: fct_itunes_charts_distinct_tracks
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Release date (Month)
+      yAxis:
+      - name: Distinct track
+    layout:
+      xField: fct_itunes_charts_release_date_month
+      yField:
+      - fct_itunes_charts_distinct_tracks
+  type: cartesian
+description: Distinct `id` values by source-reported `release_date` month across 23 populated months from
+  1966 through 2026. This is an event-time view of the represented catalogue, not chart additions; months
+  without a release date are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_itunes_charts_release_date_month
+  exploreName: fct_itunes_charts
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_itunes_charts_distinct_tracks
+  sorts:
+  - descending: false
+    fieldId: fct_itunes_charts_release_date_month
+  tableCalculations: []
+name: Tracks by reported release month
+slug: fct-itunes-charts-releases-over-time
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_itunes_charts_release_date_month
+  - fct_itunes_charts_distinct_tracks
+tableName: fct_itunes_charts
+version: 1

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_gbif_occurrence_snapshot_event_date_day
+          yRef:
+            field: fct_gbif_occurrence_snapshot_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Event date (Day)
+      yAxis:
+      - name: Distinct occurrence
+    layout:
+      stack: true
+      xField: fct_gbif_occurrence_snapshot_event_date_day
+      yField:
+      - fct_gbif_occurrence_snapshot_distinct_entities
+  type: cartesian
+description: Distinct `occurrence_id` values per reported `event_date` day stacked by `basis_of_record`.
+  Bars show how collection methods contribute to the source event mix; this is not a cumulative flow and
+  all four observed methods fit the chart. Event days with no records are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_gbif_occurrence_snapshot_event_date_day
+  - fct_gbif_occurrence_snapshot_basis_of_record
+  exploreName: fct_gbif_occurrence_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gbif_occurrence_snapshot_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_gbif_occurrence_snapshot_distinct_entities
+  - descending: false
+    fieldId: fct_gbif_occurrence_snapshot_event_date_day
+  tableCalculations: []
+name: Occurrence mix by event day and basis of record
+pivotConfig:
+  columns:
+  - fct_gbif_occurrence_snapshot_basis_of_record
+slug: fct-gbif-occurrence-snapshot-observation-method-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gbif_occurrence_snapshot_event_date_day
+  - fct_gbif_occurrence_snapshot_basis_of_record
+  - fct_gbif_occurrence_snapshot_distinct_entities
+tableName: fct_gbif_occurrence_snapshot
+version: 1

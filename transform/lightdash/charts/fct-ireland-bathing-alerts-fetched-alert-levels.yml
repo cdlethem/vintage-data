@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_ireland_bathing_alerts_fetched_at_day
+          yRef:
+            field: fct_ireland_bathing_alerts_average_duration
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Average expected duration
+    layout:
+      xField: fct_ireland_bathing_alerts_fetched_at_day
+      yField:
+      - fct_ireland_bathing_alerts_average_duration
+  type: cartesian
+description: Average expected duration per restriction type on each extractor fetch day. The four-day
+  collection series describes the observed snapshot level, not new incidents; absent fetch days are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_ireland_bathing_alerts_fetched_at_day
+  - fct_ireland_bathing_alerts_restriction_type
+  exploreName: fct_ireland_bathing_alerts
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ireland_bathing_alerts_average_duration
+  sorts:
+  - descending: true
+    fieldId: fct_ireland_bathing_alerts_average_duration
+  - descending: false
+    fieldId: fct_ireland_bathing_alerts_fetched_at_day
+  tableCalculations: []
+name: Expected duration by restriction type and fetch day
+pivotConfig:
+  columns:
+  - fct_ireland_bathing_alerts_restriction_type
+slug: fct-ireland-bathing-alerts-fetched-alert-levels
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ireland_bathing_alerts_fetched_at_day
+  - fct_ireland_bathing_alerts_restriction_type
+  - fct_ireland_bathing_alerts_average_duration
+tableName: fct_ireland_bathing_alerts
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_carbon_intensity_observed_at_hour
+          yRef:
+            field: fct_carbon_intensity_average_actual_intensity
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Mean observed actual intensity
+    layout:
+      xField: fct_carbon_intensity_observed_at_hour
+      yField:
+      - fct_carbon_intensity_average_actual_intensity
+  type: cartesian
+description: Observation-weighted average actual intensity in grams of CO2 per kilowatt-hour for each
+  extractor observation hour. Repeated snapshots and unequal polling make this an observation-weighted
+  level, not a generation-weighted total; hours with no actual value are absent from the average.
+metricQuery:
+  dimensions:
+  - fct_carbon_intensity_observed_at_hour
+  exploreName: fct_carbon_intensity
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_carbon_intensity_average_actual_intensity
+  sorts:
+  - descending: false
+    fieldId: fct_carbon_intensity_observed_at_hour
+  tableCalculations: []
+name: Actual carbon intensity by observation hour
+slug: fct-carbon-intensity-actual-intensity
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_carbon_intensity_observed_at_hour
+  - fct_carbon_intensity_average_actual_intensity
+tableName: fct_carbon_intensity
+version: 1

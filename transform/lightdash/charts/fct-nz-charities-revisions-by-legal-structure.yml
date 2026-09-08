@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 7
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_nz_charities_modifiedon_day
+          yRef:
+            field: fct_nz_charities_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Modifiedon (Day)
+      yAxis:
+      - name: Distinct id
+    layout:
+      xField: fct_nz_charities_modifiedon_day
+      yField:
+      - fct_nz_charities_distinct_entities
+  type: cartesian
+description: Distinct `id` values revised on each `modifiedon` day, compared across the largest legal-structure
+  groups. The remaining structures are excluded rather than aggregated; this is revision activity, not
+  a current census.
+metricQuery:
+  dimensions:
+  - fct_nz_charities_modifiedon_day
+  - fct_nz_charities_legalstructure
+  exploreName: fct_nz_charities
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nz_charities_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_nz_charities_distinct_entities
+  - descending: false
+    fieldId: fct_nz_charities_modifiedon_day
+  tableCalculations: []
+name: Modified charities by legal structure
+pivotConfig:
+  columns:
+  - fct_nz_charities_legalstructure
+slug: fct-nz-charities-revisions-by-legal-structure
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nz_charities_modifiedon_day
+  - fct_nz_charities_legalstructure
+  - fct_nz_charities_distinct_entities
+tableName: fct_nz_charities
+version: 1

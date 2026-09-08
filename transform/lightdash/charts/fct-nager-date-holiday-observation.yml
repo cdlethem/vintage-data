@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nager_date_holiday_observation_observance_scope
+          yRef:
+            field: fct_nager_date_holiday_observation_distinct_holidays
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_nager_date_holiday_observation_observance_scope
+      yField:
+      - fct_nager_date_holiday_observation_distinct_holidays
+  type: cartesian
+description: Distinct holiday variants observed in the last 30 collection days, grouped by applicability.
+  Repeated polls count once. Variants can overlap on a calendar date; this is not a count of days off
+  or a current-state census.
+metricQuery:
+  dimensions:
+  - fct_nager_date_holiday_observation_observance_scope
+  exploreName: fct_nager_date_holiday_observation
+  filters:
+    dimensions:
+      and:
+      - id: 795b6ea5-5de4-5605-a35e-0adc28155145
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nager_date_holiday_observation_observed_at
+        values:
+        - 30
+      id: efb3beef-9383-5323-89f8-040a45b7132e
+  limit: 20
+  metrics:
+  - fct_nager_date_holiday_observation_distinct_holidays
+  sorts:
+  - descending: true
+    fieldId: fct_nager_date_holiday_observation_distinct_holidays
+  tableCalculations: []
+name: Holiday variants by observance scope
+slug: fct-nager-date-holiday-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nager_date_holiday_observation_observance_scope
+  - fct_nager_date_holiday_observation_distinct_holidays
+tableName: fct_nager_date_holiday_observation
+version: 1

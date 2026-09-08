@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_mlb_statsapi_game_observations_scheduled_at_hour
+          yRef:
+            field: fct_mlb_statsapi_game_observations_average_home_score
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Scheduled at (Hour)
+      yAxis:
+      - name: Mean home score
+    layout:
+      xField: fct_mlb_statsapi_game_observations_scheduled_at_hour
+      yField:
+      - fct_mlb_statsapi_game_observations_average_home_score
+  type: cartesian
+description: Average non-null `home_score` reported for games at each scheduled start hour. Scores are
+  snapshots and repeated observations have equal weight, so this is not a sum of runs or a final-score
+  census. Future games without scores are absent from the mean.
+metricQuery:
+  dimensions:
+  - fct_mlb_statsapi_game_observations_scheduled_at_hour
+  exploreName: fct_mlb_statsapi_game_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_mlb_statsapi_game_observations_average_home_score
+  sorts:
+  - descending: false
+    fieldId: fct_mlb_statsapi_game_observations_scheduled_at_hour
+  tableCalculations: []
+name: Mean reported home score by scheduled hour
+slug: fct-mlb-statsapi-game-observations-home-score-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_mlb_statsapi_game_observations_scheduled_at_hour
+  - fct_mlb_statsapi_game_observations_average_home_score
+tableName: fct_mlb_statsapi_game_observations
+version: 1

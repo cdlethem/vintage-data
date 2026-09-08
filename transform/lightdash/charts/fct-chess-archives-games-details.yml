@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical fact of Chess.com archive games from the chess_archives extraction. Each row
+  is one player and game identifier; repeated append-only copies are reduced to the latest loaded record
+  while game attributes and raw-load lineage remain available for audit.
+metricQuery:
+  dimensions: &id001
+  - fct_chess_archives_games_fetched_at
+  - fct_chess_archives_games_game_id
+  - fct_chess_archives_games_player_result
+  - fct_chess_archives_games_source_loaded_at
+  exploreName: fct_chess_archives_games
+  filters:
+    dimensions:
+      and:
+      - id: d10abf83-ff9d-555e-9c38-67e61cd83791
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_chess_archives_games_fetched_at
+        values:
+        - 30
+      id: c9d5ff35-f886-571a-b7ae-680a1db15f3f
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_chess_archives_games_fetched_at
+  tableCalculations: []
+name: Chess archives games — observations
+slug: fct-chess-archives-games-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_chess_archives_games
+version: 1

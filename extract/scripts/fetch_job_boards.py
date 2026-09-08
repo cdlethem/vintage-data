@@ -27,6 +27,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from job_boards_lib import Board, FETCHERS, fetch, is_permanent_miss
 from job_boards_lib.catalog import load_catalog
+from job_boards_lib.common import CLIENT
 
 
 def fetch_board(board: Board, max_per_board: int = 10000) -> list[dict]:
@@ -34,48 +35,73 @@ def fetch_board(board: Board, max_per_board: int = 10000) -> list[dict]:
     return list(fetch(board, max_per_board))
 
 
-def fetch_catalog(boards: list[Board], workers: int = 12, max_per_board: int = 10000):
-    """Fetch boards concurrently and tolerate isolated stale company tokens.
+def _fetch_board_with_stats(board: Board, max_per_board: int) -> tuple[list[dict], dict]:
+    CLIENT.begin_observation()
+    try:
+        rows = fetch_board(board, max_per_board)
+    except Exception as exc:
+        stats = CLIENT.request_stats()
+        status = getattr(exc, "code", None)
+        stats.update({"status": status, "error": f"{type(exc).__name__}: {exc}"[:500]})
+        raise _TenantFailure(stats) from exc
+    stats = CLIENT.request_stats()
+    stats.update({"status": stats["statuses"][-1] if stats["statuses"] else 200, "error": None})
+    return rows, stats
 
-    An isolated company can migrate ATSs without making a provider unavailable.
-    Conversely, a task must fail when a provider-wide outage affects nearly the
-    whole catalog; otherwise Airflow would record a false success and no retry.
+
+class _TenantFailure(RuntimeError):
+    def __init__(self, stats: dict):
+        self.stats = stats
+        super().__init__(stats["error"])
+
+
+def fetch_catalog(boards: list[Board], workers: int = 12, max_per_board: int = 10000):
+    """Fetch tenants independently; retain every success exactly once.
+
+    Workday's shared ``HttpClient`` policy supplies 4-way concurrency, 150 ms
+    pacing, bounded Retry-After, and three attempts. A failed tenant makes the
+    successful run partial; only an all/near-all provider failure is hard.
     """
     succeeded = failed = records = 0
-    errors: list[str] = []
+    tenant_results: list[dict] = []
+    workers = min(workers, 4) if boards and all(b.provider == "workday" for b in boards) else workers
     with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
-        futures = {
-            pool.submit(fetch_board, board, max_per_board): board for board in boards
-        }
+        futures = {pool.submit(_fetch_board_with_stats, board, max_per_board): board for board in boards}
         for future in as_completed(futures):
             board = futures[future]
+            tenant = {"tenant": board.token, "provider": board.provider}
             try:
-                rows = future.result()
-            except Exception as exc:  # keep unrelated company boards running
+                rows, stats = future.result()
+            except _TenantFailure as exc:
                 failed += 1
-                kind = "retired" if is_permanent_miss(exc) else "error"
-                message = f"{board.provider}/{board.token}: {kind}: {exc!r}"
-                errors.append(message)
-                print(f"job_boards: skipping {message}", file=sys.stderr)
-                continue
-            succeeded += 1
-            records += len(rows)
-            yield from rows
+                stats = exc.stats
+                cause = exc.__cause__
+                tenant.update({"outcome": "failed", "records": 0, "retry_count": stats["retries"],
+                               "final_status": stats["status"], "error": stats["error"]})
+                kind = "retired" if cause is not None and is_permanent_miss(cause) else "error"
+                print(f"job_boards: skipping {board.provider}/{board.token}: {kind}: {stats['error']}",
+                      file=sys.stderr)
+            else:
+                succeeded += 1
+                records += len(rows)
+                tenant.update({"outcome": "succeeded", "records": len(rows), "retry_count": stats["retries"],
+                               "final_status": stats["status"], "error": None})
+                yield from rows
+            tenant_results.append(tenant)
 
     total = succeeded + failed
-    print(
-        f"job_boards: boards={total} succeeded={succeeded} failed={failed} records={records}",
-        file=sys.stderr,
-    )
-    # All-failed is always a provider outage, even for a tiny provider catalog.
-    # For larger catalogs, 80% across at least three boards separates normal
-    # token churn from a broad upstream or response-contract failure.
-    if failed == total or (failed >= 3 and failed / total >= 0.8):
-        raise RuntimeError(
-            f"provider-wide failure: {failed}/{total} boards failed; first errors: "
-            + "; ".join(errors[:3])
-        )
-
+    broad_failure = total == 0 or failed == total or (failed >= 3 and failed / total >= 0.8)
+    payload = {
+        "health": "failed" if broad_failure else ("degraded" if failed else "healthy"),
+        "completeness": "failed" if broad_failure else ("partial" if failed else "complete"),
+        "records": records,
+        "partitions": {"attempted": total, "succeeded": succeeded, "failed": failed,
+                       "failures": [t for t in tenant_results if t["outcome"] == "failed"][:100]},
+        "metrics": {"tenant_results": sorted(tenant_results, key=lambda t: t["tenant"])},
+    }
+    print("VINTAGE_RUN_SUMMARY\t" + json.dumps(payload, separators=(",", ":")), file=sys.stderr)
+    if broad_failure:
+        raise RuntimeError(f"provider-wide failure: {failed}/{total} tenants failed")
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])

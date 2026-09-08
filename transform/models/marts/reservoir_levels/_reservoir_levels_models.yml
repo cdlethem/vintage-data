@@ -1,0 +1,384 @@
+version: 2
+models:
+- name: fct_reservoir_level_observation
+  description: Daily physical history of reservoir measurements published by the California Data Exchange
+    Center. Each row is one upstream measurement identifier from one extractor observation timestamp,
+    preserving the station, sensor, measurement interval, reported value, quality flags, capacity context,
+    and raw-load lineage for audit and replay. The model grain is source_name, reservoir_level_id, observed_at.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, reservoir_level_id, observed_at
+      label: Reservoir level observation
+      group_label: Reservoir levels
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: reservoir_level_observation_key
+      vintage:
+        visualization:
+          dimension: station
+          metric: average_pct_of_capacity
+          time: observed_at
+          window_days: 30
+          title: Mean observed pct of capacity by station
+          description: Mean observed pct of capacity by `station` in the selected observation window.
+            Reservoir storage as a percentage of capacity when supplied by the upstream measurement. Each
+            retained observation has equal weight; polling frequency and repeated snapshots can affect
+            the mean. This is not a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - reservoir_level_id
+          - station
+          - pct_of_capacity
+          - source_loaded_at
+          sources:
+          - '`reservoir_levels` — licence: California DWR — public domain, attribution requested; attribution
+            required: True. Source configuration: `extract/sources/reservoir_levels.yml`.'
+          filters:
+          - field: is_missing
+            values:
+            - false
+          analysis:
+            headline: how reservoir storage levels and reported flow measures change across stations and
+              their 35-day source observation history.
+            event_time: observation_start_at
+            grain: DAY
+            controls:
+            - station
+            - measure
+            - sensor_type
+            - units
+            trends:
+            - slug: levels-observed
+              kind: total
+              metric: distinct_levels
+              time: observed_at
+              grain: DAY
+              title: Reservoir levels represented per observation day
+              description: Distinct non-null `reservoir_level_id` values present in each extractor observation
+                day. This is a five-day collection level rather than a flow; repeated daily snapshots do
+                not mean new reservoirs, and days without a successful extract are absent rather than zero.
+              width: half
+            - slug: storage-percent
+              kind: total
+              metric: average_pct_of_capacity
+              time: observation_start_at
+              grain: DAY
+              title: Mean storage percentage by source observation day
+              description: Mean non-null `pct_of_capacity` reported on each source observation day across
+                the 35-day event history. Each retained observation has equal weight, so irregular polling
+                can bias the mean; days without storage percentages are absent rather than zero.
+              width: half
+            - slug: station-percent
+              kind: breakdown
+              metric: average_pct_of_capacity
+              breakdown: station
+              top_n: 8
+              time: observation_start_at
+              grain: DAY
+              title: Storage percentage trajectories for leading stations
+              description: Mean non-null `pct_of_capacity` per source observation day for the eight stations
+                with the largest values in the selected window. The remaining six stations are excluded
+                rather than aggregated; sparse station-days are absent rather than zero.
+              width: full
+            - slug: measure-coverage
+              kind: composition
+              metric: distinct_levels
+              breakdown: measure
+              top_n: 3
+              time: observation_start_at
+              grain: DAY
+              title: Reservoir measurements by source measure
+              description: Distinct `reservoir_level_id` values per source observation day, stacked by the
+                three reported measures — inflow, outflow, and storage. The bars show the mix of publisher
+                measurement types, not an additive water volume; missing measure-days are absent.
+              width: full
+  columns:
+  - name: reservoir_level_observation_key
+    description: Stable hash of the upstream source, measurement identifier, and extractor observation
+      timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Reservoir level observation key
+          hidden: true
+  - name: source_name
+    description: Upstream source that published the reservoir measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: reservoir_level_id
+    description: Upstream identifier for the reservoir measurement record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Reservoir level id
+          hidden: false
+        metrics:
+          distinct_levels:
+            type: count_distinct
+            label: Distinct reservoir levels
+            description: Distinct non-null `reservoir_level_id` values represented in each observation
+              time and dimension group. Repeated snapshots count once within each group and this measures
+              published reservoir coverage rather than water volume.
+            format: '#,##0'
+  - name: observed_at
+    description: Timestamp when the extractor fetched the upstream measurement, with timezone preserved.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: station
+    description: Upstream station code identifying the reservoir monitoring station.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Station
+          hidden: false
+  - name: sensor_num
+    description: Numeric sensor number assigned by the upstream station.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Sensor num
+          hidden: false
+          format: '#,##0'
+  - name: measure
+    description: Upstream measurement name, such as storage, inflow, or outflow.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Measure
+          hidden: false
+  - name: sensor_type
+    description: Upstream sensor category for the measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sensor type
+          hidden: false
+  - name: duration_code
+    description: Upstream duration code describing the measurement interval.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Duration code
+          hidden: false
+  - name: observation_start_at
+    description: Start timestamp of the upstream measurement interval, with timezone preserved.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observation start at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: observation_end_at
+    description: End timestamp of the upstream measurement interval, with timezone preserved when provided.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observation end at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: measurement_value
+    description: Numeric value reported by the upstream sensor in units.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Measurement value
+          hidden: false
+          format: '#,##0'
+  - name: units
+    description: Unit label for measurement_value, such as AF or CFS.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Units
+          hidden: false
+  - name: is_missing
+    description: Whether the upstream marks the measurement value as missing.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is missing
+          hidden: false
+  - name: is_estimated
+    description: Whether the upstream marks the measurement value as estimated.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is estimated
+          hidden: false
+  - name: is_revised
+    description: Whether the upstream marks the measurement value as revised.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is revised
+          hidden: false
+  - name: capacity_af
+    description: Reservoir capacity in acre-feet when supplied by the upstream measurement.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Capacity af
+          hidden: false
+          format: '#,##0'
+  - name: pct_of_capacity
+    description: Reservoir storage as a percentage of capacity when supplied by the upstream measurement.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_pct_of_capacity:
+            type: average
+            label: Mean observed pct of capacity
+            description: Mean observed pct of capacity by `station` in the selected observation window.
+              Reservoir storage as a percentage of capacity when supplied by the upstream measurement.
+              Each retained observation has equal weight; polling frequency and repeated snapshots can
+              affect the mean. This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Pct of capacity
+          hidden: false
+          format: '#,##0.00'
+  - name: _row_id
+    description: Load-layer row identifier for the retained raw measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Extract batch identifier that produced the retained raw measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Load operation identifier that inserted the retained raw measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained measurement in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted the retained measurement into the raw warehouse,
+      with timezone preserved.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the retained raw measurement content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

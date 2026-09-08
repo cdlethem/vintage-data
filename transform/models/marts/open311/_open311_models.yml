@@ -1,0 +1,396 @@
+version: 2
+models:
+- name: fct_open311_service_request_observation
+  description: Twice-hourly incremental history of Open311 service-request observations. Each row is one
+    source request at one extractor observation timestamp, retaining the normalized request status and
+    attributes together with raw load lineage. Repeated copies of the same observation are reduced to
+    the latest loaded copy so the insert-only source can be replayed safely.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, request_id, observed_at
+      label: Open311 service request observation
+      group_label: Open311
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: open311_request__515e44
+      vintage:
+        visualization:
+          dimension: service_name
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct request by service name
+          description: Distinct `request_id` values by `service_name` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - request_id
+          - service_name
+          - source_loaded_at
+          sources:
+          - '`open311` — licence: open311 public data; attribution required: True. Source configuration:
+            `extract/sources/open311.yml`.'
+          analysis:
+            headline: how service-request demand, service breadth, and status mix change by request week.
+            event_time: requested_at
+            grain: WEEK
+            controls:
+            - service_name
+            - service_code
+            - status
+            trends:
+            - slug: weekly-requests
+              kind: total
+              metric: distinct_entities
+              time: requested_at
+              grain: WEEK
+              title: Distinct requests by request week
+              description: Distinct `request_id` values by the week when requests were submitted across the
+                full source history. This is an event flow rather than a polling volume; weeks with no
+                submitted requests are absent rather than zero.
+              width: half
+            - slug: weekly-service-breadth
+              kind: total
+              metric: distinct_service_codes
+              time: requested_at
+              grain: WEEK
+              title: Service codes represented by request week
+              description: Distinct `service_code` values among requests submitted in each week across the
+                full source history. This measures breadth of demand, not the number of requests; weeks
+                without submitted requests are absent.
+              width: half
+            - slug: requests-by-service-code
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: service_code
+              top_n: 8
+              time: requested_at
+              grain: WEEK
+              title: Request trajectories for leading service codes
+              description: Distinct requests per request week pivoted by the eight service codes with the
+                most requests across the full history. The other 73 codes are excluded rather than
+                aggregated, so the lines do not represent all demand.
+              width: full
+            - slug: status-composition
+              kind: composition
+              metric: distinct_entities
+              breakdown: status
+              top_n: 2
+              time: requested_at
+              grain: WEEK
+              title: Request status composition by week
+              description: Distinct requests per request week stacked by the two observed statuses. The
+                bars show how open and closed requests make up each week's submitted demand; empty weeks
+                are absent rather than zero.
+              width: full
+  columns:
+  - name: open311_request_observation_key
+    description: Stable hash of the source name, request identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Open311 request observation key
+          hidden: true
+          name: open311_request__515e44
+  - name: source_name
+    description: Open311 publisher or endpoint name that supplied the service request.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: request_id
+    description: Source identifier for the service request across observations.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct request
+            description: Distinct `request_id` values by `service_name` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Request id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this service-request observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: service_request_id
+    description: Human-facing service-request identifier reported by the Open311 endpoint.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Service request id
+          hidden: false
+  - name: status
+    description: Current request status reported by the Open311 endpoint.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status
+          hidden: false
+  - name: status_notes
+    description: Free-text explanation or resolution note supplied with the request status.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status notes
+          hidden: false
+  - name: service_name
+    description: Human-readable service category name reported by the endpoint.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Service name
+          hidden: false
+  - name: service_code
+    description: Stable service category code reported by the endpoint.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_service_codes:
+            type: count_distinct
+            label: Distinct service code
+            description: Distinct `service_code` values represented among requests in the selected request
+              window. This measures service breadth and is not a count of request observations.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Service code
+          hidden: false
+  - name: description
+    description: Free-text description of the reported issue.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Description
+          hidden: true
+  - name: requested_at
+    description: UTC timestamp when the service request was originally submitted.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Requested at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: updated_at
+    description: UTC timestamp when the endpoint last updated the service request.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: address
+    description: Street address or location text reported for the request.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Address
+          hidden: false
+  - name: latitude
+    description: Latitude reported for the request location in decimal degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: longitude
+    description: Longitude reported for the request location in decimal degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: token
+    description: Endpoint token or opaque request value supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Token
+          hidden: false
+  - name: city
+    description: City associated with the service request.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: City
+          hidden: false
+  - name: source_row_id
+    description: Load-layer row identifier for the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date for the retained source observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction began for the retained source observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: extract__51074f
+  - name: load_id
+    description: Load operation identifier that inserted the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained source observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: source_l_2059e1
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

@@ -1,0 +1,42 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of Rio de Janeiro epidemiological surveillance observations from
+  the InfoDengue city-alerts feed. The table retains one row at the source relation and provider record
+  identifier grain, chooses the latest loaded replay for each identifier, preserves raw-load lineage,
+  and converts provider measures to stable analytical types. Source values are not imputed or otherwise
+  reinterpreted.
+metricQuery:
+  dimensions: &id001
+  - fct_infodengue_riodejaneiro_epidemiology_fetched_at
+  - fct_infodengue_riodejaneiro_epidemiology_record_id
+  - fct_infodengue_riodejaneiro_epidemiology_municipality_name
+  - fct_infodengue_riodejaneiro_epidemiology_incidence_per_100k
+  - fct_infodengue_riodejaneiro_epidemiology_source__2059e1
+  exploreName: fct_infodengue_riodejaneiro_epidemiology
+  filters:
+    dimensions:
+      and:
+      - id: e623b9a8-ad32-5927-871c-726e25d21da5
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_infodengue_riodejaneiro_epidemiology_fetched_at
+        values:
+        - 30
+      id: 29530d72-3e3d-592d-89ee-6815bda759c9
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_infodengue_riodejaneiro_epidemiology_fetched_at
+  tableCalculations: []
+name: Infodengue riodejaneiro epidemiology — observations
+slug: fct-infodengue-riodejaneiro-epidemiology-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_infodengue_riodejaneiro_epidemiology
+version: 1

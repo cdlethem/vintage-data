@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical hourly observation fact for OpenLigaDB football match records. Each row is one match
+  from one upstream league snapshot at one fetched timestamp. Repeated snapshots preserve changes to completion,
+  scores, and source update time; duplicate raw rows at the same source, match, and observation grain
+  are reduced to the latest loaded record while raw-load lineage is retained.
+metricQuery:
+  dimensions: &id001
+  - fct_openligadb_match_observations_observed_at
+  - fct_openligadb_match_observations_match_id
+  - fct_openligadb_match_observations_league
+  - fct_openligadb_match_observations_source_loaded_at
+  exploreName: fct_openligadb_match_observations
+  filters:
+    dimensions:
+      and:
+      - id: d66785a2-c2a6-512b-bab6-b3fb0393769b
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_openligadb_match_observations_observed_at
+        values:
+        - 30
+      id: 718d7663-561c-580c-b0a2-3b59bdcb577c
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_openligadb_match_observations_observed_at
+  tableCalculations: []
+name: Openligadb match observations — observations
+slug: fct-openligadb-match-observations-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_openligadb_match_observations
+version: 1

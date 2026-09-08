@@ -1,0 +1,63 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_tpims_parking_status_observed_at_day
+          yRef:
+            field: fct_tpims_parking_status_average_reported_available_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed reported available count
+    layout:
+      xField: fct_tpims_parking_status_observed_at_day
+      yField:
+      - fct_tpims_parking_status_average_reported_available_count
+  type: cartesian
+description: Average numeric reported availability per observation day split by region. Both regions are
+  shown; null or categorical values are excluded from the mean and absent days are not zero-filled.
+metricQuery:
+  dimensions:
+  - fct_tpims_parking_status_observed_at_day
+  - fct_tpims_parking_status_region
+  exploreName: fct_tpims_parking_status
+  filters:
+    dimensions:
+      and:
+      - id: fdfd0636-e47c-50f0-9038-53d1451a946a
+        operator: equals
+        target:
+          fieldId: fct_tpims_parking_status_trusts_data
+        values:
+        - true
+      id: 7d9f9782-46f8-56df-b597-5ef02a157017
+  limit: 5000
+  metrics:
+  - fct_tpims_parking_status_average_reported_available_count
+  sorts:
+  - descending: true
+    fieldId: fct_tpims_parking_status_average_reported_available_count
+  - descending: false
+    fieldId: fct_tpims_parking_status_observed_at_day
+  tableCalculations: []
+name: Mean available spaces by region
+pivotConfig:
+  columns:
+  - fct_tpims_parking_status_region
+slug: fct-tpims-parking-status-availability-by-region
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_tpims_parking_status_observed_at_day
+  - fct_tpims_parking_status_region
+  - fct_tpims_parking_status_average_reported_available_count
+tableName: fct_tpims_parking_status
+version: 1

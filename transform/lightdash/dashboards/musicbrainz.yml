@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: a1420b54-fc44-5b4c-a73b-19c454d87814
+    label: 'Musicbrainz release observation: Release group type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_musicbrainz_release_observation_release_group_type
+      tableName: fct_musicbrainz_release_observation
+    values: []
+  - disabled: true
+    id: 878df369-b597-5313-b228-3771808d95bc
+    label: 'Musicbrainz release observation: Country code'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_musicbrainz_release_observation_country_code
+      tableName: fct_musicbrainz_release_observation
+    values: []
+  - disabled: true
+    id: 91b95091-c29d-5bad-ab32-34799308e8f1
+    label: 'Musicbrainz release observation: Release status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_musicbrainz_release_observation_release_status
+      tableName: fct_musicbrainz_release_observation
+    values: []
+  - disabled: true
+    id: e3271e5b-196a-5ab7-b0fb-007ff0245ec0
+    label: 'Musicbrainz release observation: Release date text'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_musicbrainz_release_observation_release_date_text
+      tableName: fct_musicbrainz_release_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Musicbrainz
+slug: musicbrainz
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of MusicBrainz release-search observations. Each row represents
+      one source release identifier at one extractor observation timestamp, retaining release metadata
+      and loader lineage. The source has a small observed hourly payload (25 rows per load), so a table
+      rebuild is preferred over incremental state while preserving the complete history. Repeated copies
+      of the same source, release, and observation timestamp retain the latest loaded row.
+
+
+      **Grain:** source_name, release_id, observed_at
+
+
+      **What changes here:** how the small observed release catalogue and its track depth shift across
+      daily MusicBrainz polls.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `musicbrainz` — licence: CC0 for MusicBrainz''s own database content per their standard terms
+      (not independently re-verified here); attribution required: False. Source configuration: `extract/sources/musicbrainz.yml`.'
+    hideFrame: false
+    title: Musicbrainz release observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Musicbrainz release observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct releases observed per day
+    chartSlug: fct-musicbrainz-release-observation-observed-releases
+    hideTitle: false
+    title: Distinct releases observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average tracks per observed release
+    chartSlug: fct-musicbrainz-release-observation-track-depth
+    hideTitle: false
+    title: Average tracks per observed release
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Release groups observed by type
+    chartSlug: fct-musicbrainz-release-observation-release-group-mix
+    hideTitle: false
+    title: Release groups observed by type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Observed releases by country
+    chartSlug: fct-musicbrainz-release-observation-country-release-mix
+    hideTitle: false
+    title: Observed releases by country
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Musicbrainz release observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct release by release group type
+    chartSlug: fct-musicbrainz-release-observation
+    hideTitle: false
+    title: Distinct release by release group type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Musicbrainz release observation — observations
+    chartSlug: fct-musicbrainz-release-observation-details
+    hideTitle: false
+    title: Musicbrainz release observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

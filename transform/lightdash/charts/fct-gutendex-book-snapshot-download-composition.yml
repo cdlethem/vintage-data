@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_gutendex_book_snapshot_fetched_at_day
+          yRef:
+            field: fct_gutendex_book_snapshot_average_downloads
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Mean downloads
+    layout:
+      stack: true
+      xField: fct_gutendex_book_snapshot_fetched_at_day
+      yField:
+      - fct_gutendex_book_snapshot_average_downloads
+  type: cartesian
+description: Average reported `download_count` per fetch day stacked by `copyright`. The source currently
+  contains only False, so this single segment describes the observed catalog and is not a public-versus-copyrighted
+  comparison.
+metricQuery:
+  dimensions:
+  - fct_gutendex_book_snapshot_fetched_at_day
+  - fct_gutendex_book_snapshot_copyright
+  exploreName: fct_gutendex_book_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gutendex_book_snapshot_average_downloads
+  sorts:
+  - descending: true
+    fieldId: fct_gutendex_book_snapshot_average_downloads
+  - descending: false
+    fieldId: fct_gutendex_book_snapshot_fetched_at_day
+  tableCalculations: []
+name: Mean downloads by copyright mix
+pivotConfig:
+  columns:
+  - fct_gutendex_book_snapshot_copyright
+slug: fct-gutendex-book-snapshot-download-composition
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gutendex_book_snapshot_fetched_at_day
+  - fct_gutendex_book_snapshot_copyright
+  - fct_gutendex_book_snapshot_average_downloads
+tableName: fct_gutendex_book_snapshot
+version: 1

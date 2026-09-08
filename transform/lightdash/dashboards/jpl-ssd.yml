@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 3ce3477a-3d34-58df-8a59-790231d9a5ba
+    label: 'Jpl ssd observation: Source name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_jpl_ssd_observation_source_name
+      tableName: fct_jpl_ssd_observation
+    values: []
+  - disabled: true
+    id: 4852a790-fa1d-5123-8165-42fb492d97f9
+    label: 'Jpl ssd observation: Latitude deg'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_jpl_ssd_observation_latitude_deg
+      tableName: fct_jpl_ssd_observation
+    values: []
+  - disabled: true
+    id: 86bad8ef-c4f0-597e-833c-04f748c2ddb1
+    label: 'Jpl ssd observation: Longitude deg'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_jpl_ssd_observation_longitude_deg
+      tableName: fct_jpl_ssd_observation
+    values: []
+  - disabled: true
+    id: 112079c8-ba81-5544-99b7-acaba741a5dd
+    label: 'Jpl ssd observation: Altitude km'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_jpl_ssd_observation_altitude_km
+      tableName: fct_jpl_ssd_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Jpl Ssd
+slug: jpl-ssd
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical observation fact for the JPL SSD fireball feed. Each row is one source observation
+      identified by its source, reported identifier, and fetch timestamp. Source-load lineage is retained
+      so append-only arrivals can be audited and replayed without exposing the raw payload.
+
+
+      **Grain:** source_name, observation_id, observed_at
+
+
+      **What changes here:** how the five-day fireball snapshot changes in reported event coverage and
+      impact-energy levels.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `jpl_ssd` — licence: NASA/JPL — public domain; attribution required: False. Source configuration:
+      `extract/sources/jpl_ssd.yml`.'
+    hideFrame: false
+    title: Jpl ssd observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Jpl ssd observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct fireball events by observation day
+    chartSlug: fct-jpl-ssd-observation-observed-events
+    hideTitle: false
+    title: Distinct fireball events by observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Peak reported impact energy by observation day
+    chartSlug: fct-jpl-ssd-observation-peak-impact-energy
+    hideTitle: false
+    title: Peak reported impact energy by observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Peak impact energy by feed source
+    chartSlug: fct-jpl-ssd-observation-energy-by-source
+    hideTitle: false
+    title: Peak impact energy by feed source
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Fireball event mix by source and observation day
+    chartSlug: fct-jpl-ssd-observation-event-composition
+    hideTitle: false
+    title: Fireball event mix by source and observation day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Jpl ssd observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Maximum observed impact energy kt by observation id
+    chartSlug: fct-jpl-ssd-observation
+    hideTitle: false
+    title: Maximum observed impact energy kt by observation id
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Jpl ssd observation — observations
+    chartSlug: fct-jpl-ssd-observation-details
+    hideTitle: false
+    title: Jpl ssd observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

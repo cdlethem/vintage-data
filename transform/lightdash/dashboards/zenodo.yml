@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 67e2c698-27f7-5f4d-ba83-6f150d8d0399
+    label: 'Zenodo record observation: Resource type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_zenodo_record_observation_resource_type
+      tableName: fct_zenodo_record_observation
+    values: []
+  - disabled: true
+    id: 676c39fe-0040-5b41-b95d-f95b747e2512
+    label: 'Zenodo record observation: Access right'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_zenodo_record_observation_access_right
+      tableName: fct_zenodo_record_observation
+    values: []
+  - disabled: true
+    id: 0c4c12ef-82da-506d-8fba-574a70e4b3ac
+    label: 'Zenodo record observation: License'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_zenodo_record_observation_license
+      tableName: fct_zenodo_record_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Zenodo
+slug: zenodo
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical observation fact for records returned by the Zenodo extractor. Each
+      row is one Zenodo record identifier at one extractor observation timestamp, preserving descriptive
+      metadata and raw-load lineage. Repeated copies of the same source, record, and observation timestamp
+      retain the latest loaded row.
+
+
+      **Grain:** source_name, record_id, observed_at
+
+
+      **What changes here:** how Zenodo''s observed catalogue size and newly created record mix shift
+      by resource type and access right across the five-day window.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `zenodo` — licence: per-record (cc-by-4.0 observed); varies; attribution required: True. Source
+      configuration: `extract/sources/zenodo.yml`.'
+    hideFrame: false
+    title: Zenodo record observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Zenodo record observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Observed Zenodo catalogue by day
+    chartSlug: fct-zenodo-record-observation-catalogue-by-observation-day
+    hideTitle: false
+    title: Observed Zenodo catalogue by day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Observed concepts by day
+    chartSlug: fct-zenodo-record-observation-concepts-by-observation-day
+    hideTitle: false
+    title: Observed concepts by day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Records by Zenodo creation day
+    chartSlug: fct-zenodo-record-observation-records-created-by-day
+    hideTitle: false
+    title: Records by Zenodo creation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Created records by resource type
+    chartSlug: fct-zenodo-record-observation-resource-mix-by-created-day
+    hideTitle: false
+    title: Created records by resource type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Created records by access right
+    chartSlug: fct-zenodo-record-observation-access-right-mix-by-created-day
+    hideTitle: false
+    title: Created records by access right
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Zenodo record observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct record by resource type
+    chartSlug: fct-zenodo-record-observation
+    hideTitle: false
+    title: Distinct record by resource type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Zenodo record observation — observations
+    chartSlug: fct-zenodo-record-observation-details
+    hideTitle: false
+    title: Zenodo record observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

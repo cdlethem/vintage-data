@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_avalanche_forecasts_start_date_day
+          yRef:
+            field: fct_avalanche_forecasts_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Start date (Day)
+      yAxis:
+      - name: Distinct forecast
+    layout:
+      xField: fct_avalanche_forecasts_start_date_day
+      yField:
+      - fct_avalanche_forecasts_distinct_entities
+  type: cartesian
+description: Distinct `forecast_id` values by the published forecast `start_date` day. Only 175 rows have
+  a start date and the eight observed days are sparse season schedules; missing days are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_avalanche_forecasts_start_date_day
+  exploreName: fct_avalanche_forecasts
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_avalanche_forecasts_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_avalanche_forecasts_start_date_day
+  tableCalculations: []
+name: Forecast zones by published start day
+slug: fct-avalanche-forecasts-season-starts
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_avalanche_forecasts_start_date_day
+  - fct_avalanche_forecasts_distinct_entities
+tableName: fct_avalanche_forecasts
+version: 1

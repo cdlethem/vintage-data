@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_stackexchange_question_observation_observed_at_day
+          yRef:
+            field: fct_stackexchange_question_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct question
+    layout:
+      stack: true
+      xField: fct_stackexchange_question_observation_observed_at_day
+      yField:
+      - fct_stackexchange_question_observation_distinct_entities
+  type: cartesian
+description: Distinct `question_id` values per observation day stacked by `is_answered`. The two boolean
+  states cover the reported question set, but repeated polling means this is a daily level rather than
+  a cumulative flow.
+metricQuery:
+  dimensions:
+  - fct_stackexchange_question_observation_observed_at_day
+  - fct_stackexchange_question_observation_is_answered
+  exploreName: fct_stackexchange_question_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_stackexchange_question_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_stackexchange_question_observation_distinct_entities
+  - descending: false
+    fieldId: fct_stackexchange_question_observation_observed_at_day
+  tableCalculations: []
+name: Answered and unanswered question mix
+pivotConfig:
+  columns:
+  - fct_stackexchange_question_observation_is_answered
+slug: fct-stackexchange-question-observation-answered-mix-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_stackexchange_question_observation_observed_at_day
+  - fct_stackexchange_question_observation_is_answered
+  - fct_stackexchange_question_observation_distinct_entities
+tableName: fct_stackexchange_question_observation
+version: 1

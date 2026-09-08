@@ -1,0 +1,30 @@
+{
+  "name": "vintage-bot-dashboard-ui",
+  "private": true,
+  "packageManager": "pnpm@10.15.1",
+  "scripts": {
+    "test": "vitest run",
+    "build:dashboard": "vite build --config vite.dashboard.config.ts",
+    "build:app": "vite build --config vite.app.config.ts",
+    "build": "corepack pnpm build:dashboard && corepack pnpm build:app && node scripts/build-manifest.mjs"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "3.26.0",
+    "@emotion/react": "11.14.0",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "react-router-dom": "7.8.2"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "6.8.0",
+    "@testing-library/react": "16.3.0",
+    "@types/node": "22.18.0",
+    "@types/react": "19.1.12",
+    "@types/react-dom": "19.1.9",
+    "@vitejs/plugin-react": "5.0.2",
+    "jsdom": "26.1.0",
+    "typescript": "5.9.2",
+    "vite": "7.1.4",
+    "vitest": "3.2.4"
+  }
+}

@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 5
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_drivebc_event_observations_event_created_at_week
+          yRef:
+            field: fct_drivebc_event_observations_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Event created at (Week)
+      yAxis:
+      - name: Distinct event
+    layout:
+      stack: true
+      xField: fct_drivebc_event_observations_event_created_at_week
+      yField:
+      - fct_drivebc_event_observations_distinct_entities
+  type: cartesian
+description: Distinct `event_id` values by source creation week stacked by `event_type`. All five observed
+  event types are retained; sparse weeks and types with no represented events are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_drivebc_event_observations_event_created_at_week
+  - fct_drivebc_event_observations_event_type
+  exploreName: fct_drivebc_event_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_drivebc_event_observations_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_drivebc_event_observations_distinct_entities
+  - descending: false
+    fieldId: fct_drivebc_event_observations_event_created_at_week
+  tableCalculations: []
+name: Created events by type each week
+pivotConfig:
+  columns:
+  - fct_drivebc_event_observations_event_type
+slug: fct-drivebc-event-observations-created-by-type
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_drivebc_event_observations_event_created_at_week
+  - fct_drivebc_event_observations_event_type
+  - fct_drivebc_event_observations_distinct_entities
+tableName: fct_drivebc_event_observations
+version: 1

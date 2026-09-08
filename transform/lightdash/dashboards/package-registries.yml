@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 1fea98d4-26d7-554d-a5c0-69663fccc675
+    label: 'Package registry release observation: Source name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_package_registry_release_observation_source_name
+      tableName: fct_package_registry_release_observation
+    values: []
+  - disabled: true
+    id: 2c335d34-6b4c-5cdb-8f5d-55fb51f17ac2
+    label: 'Package registry release observation: Source relation'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_package_registry_release_observation_source_relation
+      tableName: fct_package_registry_release_observation
+    values: []
+  - disabled: true
+    id: f813ad61-4d22-5a5a-9c22-c97b448d52cd
+    label: 'Package registry release observation: Author'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_package_registry_release_observation_author
+      tableName: fct_package_registry_release_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Package Registries
+slug: package-registries
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical history of package releases observed from the package registry. Each row represents
+      one registry source, package, version, and observation timestamp, with the latest insert-only copy
+      retained when a load is replayed. Package metadata and raw-load lineage are typed for dependable
+      release discovery and audit.
+
+
+      **Grain:** source_name, package_name, package_version, observed_at
+
+
+      **What changes here:** how the observed package and release catalogue levels move and which packages
+      and authors account for the latest publication bursts.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `package_registries` — licence: PyPI / crates.io public feeds; attribution required: False. Source
+      configuration: `extract/sources/package_registries.yml`.'
+    hideFrame: false
+    title: Package registry release observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Package registry release observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct releases present each observation day
+    chartSlug: fct-package-registry-release-observation-observed-releases
+    hideTitle: false
+    title: Distinct releases present each observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct packages present each observation day
+    chartSlug: fct-package-registry-release-observation-observed-packages
+    hideTitle: false
+    title: Distinct packages present each observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Published release bursts by leading package
+    chartSlug: fct-package-registry-release-observation-published-release-bursts
+    hideTitle: false
+    title: Published release bursts by leading package
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Published releases by leading author
+    chartSlug: fct-package-registry-release-observation-published-author-bursts
+    hideTitle: false
+    title: Published releases by leading author
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Package registry release observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct release by package name
+    chartSlug: fct-package-registry-release-observation
+    hideTitle: false
+    title: Distinct release by package name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Package registry release observation — observations
+    chartSlug: fct-package-registry-release-observation-details
+    hideTitle: false
+    title: Package registry release observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

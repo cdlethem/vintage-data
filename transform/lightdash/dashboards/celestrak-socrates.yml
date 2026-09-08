@@ -1,0 +1,152 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 6bd4dd4d-3e2f-51e1-9d38-b775d7132351
+    label: 'Celestrak socrates conjunction events: Object name 1'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_celestrak_socrates_conjunction_events_object_name_1
+      tableName: fct_celestrak_socrates_conjunction_events
+    values: []
+  - disabled: true
+    id: fbb2e6af-263e-57ab-9a1d-8e3d6d8ae0fa
+    label: 'Celestrak socrates conjunction events: Object name 2'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_celestrak_socrates_conjunction_events_object_name_2
+      tableName: fct_celestrak_socrates_conjunction_events
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Celestrak Socrates
+slug: celestrak-socrates
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of satellite conjunction events reported by the CelesTrak SOCRATES
+      feed. Each row is one conjunction event as observed at one extractor timestamp, retaining close-approach
+      measures and raw-load lineage for replay and audit.
+
+
+      **Grain:** conjunction_id, observed_at
+
+
+      **What changes here:** how scheduled conjunction volume and close-approach risk vary across the
+      eight-day TCA horizon.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `celestrak_socrates` — licence: unstated; attribution required: True. Source configuration: `extract/sources/celestrak_socrates.yml`.'
+    hideFrame: false
+    title: Celestrak socrates conjunction events
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Celestrak socrates conjunction events — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Conjunction events by closest-approach day
+    chartSlug: fct-celestrak-socrates-conjunction-events-daily-conjunctions
+    hideTitle: false
+    title: Conjunction events by closest-approach day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Maximum collision probability by TCA day
+    chartSlug: fct-celestrak-socrates-conjunction-events-daily-risk-maximum
+    hideTitle: false
+    title: Maximum collision probability by TCA day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean predicted separation by TCA day
+    chartSlug: fct-celestrak-socrates-conjunction-events-daily-range
+    hideTitle: false
+    title: Mean predicted separation by TCA day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Maximum collision probability by primary object
+    chartSlug: fct-celestrak-socrates-conjunction-events-risk-by-primary-object
+    hideTitle: false
+    title: Maximum collision probability by primary object
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Conjunction mix by secondary object
+    chartSlug: fct-celestrak-socrates-conjunction-events-events-by-secondary-object
+    hideTitle: false
+    title: Conjunction mix by secondary object
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Celestrak socrates conjunction events — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Maximum observed max probability by object name 1
+    chartSlug: fct-celestrak-socrates-conjunction-events
+    hideTitle: false
+    title: Maximum observed max probability by object name 1
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Celestrak socrates conjunction events — observations
+    chartSlug: fct-celestrak-socrates-conjunction-events-details
+    hideTitle: false
+    title: Celestrak socrates conjunction events — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

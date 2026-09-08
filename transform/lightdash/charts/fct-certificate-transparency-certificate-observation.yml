@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_certificate_transparency_certificate_observation_issuer
+          yRef:
+            field: fct_certificate_transparency_certificate_observation_m_a6e4e251
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_certificate_transparency_certificate_observation_issuer
+      yField:
+      - fct_certificate_transparency_certificate_observation_m_a6e4e251
+  type: cartesian
+description: Distinct `certificate_id` values by `issuer` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_certificate_transparency_certificate_observation_issuer
+  exploreName: fct_certificate_transparency_certificate_observation
+  filters:
+    dimensions:
+      and:
+      - id: 21757ff8-14db-514e-97d0-4098d3feba06
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_certificate_transparency_certificate_observation_da
+        values:
+        - 30
+      id: d38965b5-50ea-563a-b3e2-a7a96ee8cb94
+  limit: 20
+  metrics:
+  - fct_certificate_transparency_certificate_observation_m_a6e4e251
+  sorts:
+  - descending: true
+    fieldId: fct_certificate_transparency_certificate_observation_m_a6e4e251
+  tableCalculations: []
+name: Distinct certificate by issuer
+slug: fct-certificate-transparency-certificate-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_certificate_transparency_certificate_observation_issuer
+  - fct_certificate_transparency_certificate_observation_m_a6e4e251
+tableName: fct_certificate_transparency_certificate_observation
+version: 1

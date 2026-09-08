@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_niord_warning_observation_created_at_month
+          yRef:
+            field: fct_niord_warning_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Month)
+      yAxis:
+      - name: Distinct warning
+    layout:
+      xField: fct_niord_warning_observation_created_at_month
+      yField:
+      - fct_niord_warning_observation_distinct_entities
+  type: cartesian
+description: Distinct `warning_id` values by the month Niord reports them as created. This is a source
+  flow rather than a current warning census; months with no source rows are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_niord_warning_observation_created_at_month
+  exploreName: fct_niord_warning_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_niord_warning_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_niord_warning_observation_created_at_month
+  tableCalculations: []
+name: Warnings created per month
+slug: fct-niord-warning-observation-monthly-warnings
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_niord_warning_observation_created_at_month
+  - fct_niord_warning_observation_distinct_entities
+tableName: fct_niord_warning_observation
+version: 1

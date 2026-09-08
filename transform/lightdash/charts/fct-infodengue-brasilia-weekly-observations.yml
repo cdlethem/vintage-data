@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_infodengue_brasilia_week_start_date_week
+          yRef:
+            field: fct_infodengue_brasilia_distinct_observations
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Week start date (Week)
+      yAxis:
+      - name: Distinct epidemiological observations
+    layout:
+      xField: fct_infodengue_brasilia_week_start_date_week
+      yField:
+      - fct_infodengue_brasilia_distinct_observations
+  type: cartesian
+description: Distinct `observation_id` values reported for each epidemiological week across the published
+  history. This counts source observations rather than cases; missing weeks are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_infodengue_brasilia_week_start_date_week
+  exploreName: fct_infodengue_brasilia
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_infodengue_brasilia_distinct_observations
+  sorts:
+  - descending: false
+    fieldId: fct_infodengue_brasilia_week_start_date_week
+  tableCalculations: []
+name: Distinct epidemiological observations per week
+slug: fct-infodengue-brasilia-weekly-observations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_infodengue_brasilia_week_start_date_week
+  - fct_infodengue_brasilia_distinct_observations
+tableName: fct_infodengue_brasilia
+version: 1

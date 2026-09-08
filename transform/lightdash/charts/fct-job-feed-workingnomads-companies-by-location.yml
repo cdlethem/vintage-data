@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_job_feed_workingnomads_posted_at_day
+          yRef:
+            field: fct_job_feed_workingnomads_distinct_companies
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Day)
+      yAxis:
+      - name: Distinct company
+    layout:
+      stack: true
+      xField: fct_job_feed_workingnomads_posted_at_day
+      yField:
+      - fct_job_feed_workingnomads_distinct_companies
+  type: cartesian
+description: Distinct companies per posting day stacked by the eight most common non-null `location_country`
+  values. The remainder and null country are excluded rather than aggregated, so the mix can change as
+  coverage changes.
+metricQuery:
+  dimensions:
+  - fct_job_feed_workingnomads_posted_at_day
+  - fct_job_feed_workingnomads_location_country
+  exploreName: fct_job_feed_workingnomads
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_feed_workingnomads_distinct_companies
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_workingnomads_distinct_companies
+  - descending: false
+    fieldId: fct_job_feed_workingnomads_posted_at_day
+  tableCalculations: []
+name: Company mix by posting day and country
+pivotConfig:
+  columns:
+  - fct_job_feed_workingnomads_location_country
+slug: fct-job-feed-workingnomads-companies-by-location
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_feed_workingnomads_posted_at_day
+  - fct_job_feed_workingnomads_location_country
+  - fct_job_feed_workingnomads_distinct_companies
+tableName: fct_job_feed_workingnomads
+version: 1

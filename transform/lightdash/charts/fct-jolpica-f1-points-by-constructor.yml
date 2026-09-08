@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_jolpica_f1_observed_at_day
+          yRef:
+            field: fct_jolpica_f1_max_championship_points
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Maximum observed championship points
+    layout:
+      xField: fct_jolpica_f1_observed_at_day
+      yField:
+      - fct_jolpica_f1_max_championship_points
+  type: cartesian
+description: Maximum accumulated championship points per observation day for the eight constructors with
+  the largest observed totals. The remaining constructors are excluded rather than aggregated, and missing
+  snapshot days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_jolpica_f1_observed_at_day
+  - fct_jolpica_f1_constructor
+  exploreName: fct_jolpica_f1
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_jolpica_f1_max_championship_points
+  sorts:
+  - descending: true
+    fieldId: fct_jolpica_f1_max_championship_points
+  - descending: false
+    fieldId: fct_jolpica_f1_observed_at_day
+  tableCalculations: []
+name: Constructor points by observation day
+pivotConfig:
+  columns:
+  - fct_jolpica_f1_constructor
+slug: fct-jolpica-f1-points-by-constructor
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_jolpica_f1_observed_at_day
+  - fct_jolpica_f1_constructor
+  - fct_jolpica_f1_max_championship_points
+tableName: fct_jolpica_f1
+version: 1

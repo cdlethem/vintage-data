@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_niord_warning_observation_follow_up_date_month
+          yRef:
+            field: fct_niord_warning_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Follow up date (Month)
+      yAxis:
+      - name: Distinct warning
+    layout:
+      xField: fct_niord_warning_observation_follow_up_date_month
+      yField:
+      - fct_niord_warning_observation_distinct_entities
+  type: cartesian
+description: Distinct `warning_id` values grouped by the source-supplied follow-up month. Future-dated
+  months expose planned follow-ups through 2028; null follow-up dates and months without rows are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_niord_warning_observation_follow_up_date_month
+  exploreName: fct_niord_warning_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_niord_warning_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_niord_warning_observation_follow_up_date_month
+  tableCalculations: []
+name: Warnings by scheduled follow-up month
+slug: fct-niord-warning-observation-follow-up-schedule
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_niord_warning_observation_follow_up_date_month
+  - fct_niord_warning_observation_distinct_entities
+tableName: fct_niord_warning_observation
+version: 1

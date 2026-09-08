@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_police_crime_observation_outcome_month_month
+          yRef:
+            field: fct_uk_police_crime_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Outcome month (Month)
+      yAxis:
+      - name: Distinct crime
+    layout:
+      stack: true
+      xField: fct_uk_police_crime_observation_outcome_month_month
+      yField:
+      - fct_uk_police_crime_observation_distinct_entities
+  type: cartesian
+description: Distinct `crime_id` values per `outcome_month`, stacked by the eight most common outcome
+  values — other outcomes are excluded rather than aggregated. Missing outcomes have no outcome-month
+  event and therefore do not appear; absent months are not zero.
+metricQuery:
+  dimensions:
+  - fct_uk_police_crime_observation_outcome_month_month
+  - fct_uk_police_crime_observation_outcome
+  exploreName: fct_uk_police_crime_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_uk_police_crime_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_uk_police_crime_observation_distinct_entities
+  - descending: false
+    fieldId: fct_uk_police_crime_observation_outcome_month_month
+  tableCalculations: []
+name: Crime outcomes by source month
+pivotConfig:
+  columns:
+  - fct_uk_police_crime_observation_outcome
+slug: fct-uk-police-crime-observation-outcome-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_police_crime_observation_outcome_month_month
+  - fct_uk_police_crime_observation_outcome
+  - fct_uk_police_crime_observation_distinct_entities
+tableName: fct_uk_police_crime_observation
+version: 1

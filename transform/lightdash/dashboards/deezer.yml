@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 1be78eef-1889-551f-b1a2-352b12ec65ca
+    label: 'Deezer chart observation: Artist name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_deezer_chart_observation_artist_name
+      tableName: fct_deezer_chart_observation
+    values: []
+  - disabled: true
+    id: 5a5759c7-aad2-58f4-97b6-d52b2b9f518f
+    label: 'Deezer chart observation: Is explicit'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_deezer_chart_observation_is_explicit
+      tableName: fct_deezer_chart_observation
+    values: []
+  - disabled: true
+    id: d43284ba-31eb-5b5c-b073-a594f02f0c19
+    label: 'Deezer chart observation: Album title'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_deezer_chart_observation_album_title
+      tableName: fct_deezer_chart_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Deezer
+slug: deezer
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of Deezer chart observations. Each row represents one source, track,
+      observation timestamp, and chart position, retaining track metadata and raw-load lineage. Repeated
+      raw loads of the same chart slot are reduced to the latest loaded record.
+
+
+      **Grain:** source_name, track_id, observed_at, chart_position
+
+
+      **What changes here:** how Deezer''s short-window chart level, artist breadth, ranking, and explicit-content
+      mix move across observations.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `deezer` — licence: unstated; attribution required: False. Source configuration: `extract/sources/deezer.yml`.'
+    hideFrame: false
+    title: Deezer chart observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Deezer chart observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean chart position per day
+    chartSlug: fct-deezer-chart-observation-daily-chart-position
+    hideTitle: false
+    title: Mean chart position per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct tracks observed per day
+    chartSlug: fct-deezer-chart-observation-daily-track-breadth
+    hideTitle: false
+    title: Distinct tracks observed per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean chart position by leading artist
+    chartSlug: fct-deezer-chart-observation-artist-rank-trajectories
+    hideTitle: false
+    title: Mean chart position by leading artist
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Chart tracks by explicit-content flag
+    chartSlug: fct-deezer-chart-observation-explicit-content-mix
+    hideTitle: false
+    title: Chart tracks by explicit-content flag
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Mean track duration by leading artist
+    chartSlug: fct-deezer-chart-observation-artist-duration-trajectories
+    hideTitle: false
+    title: Mean track duration by leading artist
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Deezer chart observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed chart position by artist name
+    chartSlug: fct-deezer-chart-observation
+    hideTitle: false
+    title: Mean observed chart position by artist name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Deezer chart observation — observations
+    chartSlug: fct-deezer-chart-observation-details
+    hideTitle: false
+    title: Deezer chart observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

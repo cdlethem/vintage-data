@@ -1,0 +1,393 @@
+version: 2
+models:
+- name: fct_noaa_catch_quotas
+  description: Physical daily fact of NOAA catch-share quota observations. Each row is the latest loaded
+    record for one quota identifier at one source-fetch timestamp; repeated raw loads of the same observation
+    are reduced using load lineage. The source's display-formatted quota fields are retained alongside
+    its typed numeric value fields, while quota_increase_value remains text because the source can report
+    multiple comma-separated values in that field.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, quota_id, observed_at
+      label: Noaa catch quotas
+      group_label: Noaa catch quotas
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: catch_quota_observation_key
+      vintage:
+        visualization:
+          dimension: share_category
+          metric: average_quota_remaining_value
+          time: observed_at
+          window_days: 30
+          title: Mean observed quota remaining value by share category
+          description: Mean observed quota remaining value by `share_category` in the selected observation
+            window. Typed quota amount remaining, in the source's reported units. Each retained observation
+            has equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+            a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - quota_id
+          - share_category
+          - quota_remaining_value
+          - source_loaded_at
+          sources:
+          - '`noaa_catch_quotas` — licence: US federal public data; attribution required: False. Source
+            configuration: `extract/sources/noaa_catch_quotas.yml`.'
+          analysis:
+            headline: how the current NOAA quota catalogue and reported remaining and landing levels move
+              across collection days.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - management_system
+            - share_category
+            - fishery_year
+            trends:
+            - slug: quota-catalogue
+              kind: total
+              metric: distinct_quotas
+              time: observed_at
+              grain: DAY
+              title: Published quotas by collection day
+              description: Distinct `quota_id` values present in each daily NOAA snapshot. This is a
+                collection-time level rather than a source-event flow, and days without a successful
+                snapshot are absent rather than zero.
+              width: half
+            - slug: remaining-level
+              kind: total
+              metric: average_quota_remaining_value
+              time: observed_at
+              grain: DAY
+              title: Mean quota remaining by collection day
+              description: Observation-weighted mean typed `quota_remaining_value` in source-reported units
+                by collection day. Repeated snapshots and polling frequency can influence the level, so it
+                is not a quota balance total.
+              width: half
+            - slug: remaining-by-share
+              kind: composition
+              metric: average_quota_remaining_value
+              breakdown: share_category
+              top_n: 8
+              time: observed_at
+              grain: DAY
+              title: Mean quota remaining by share category
+              description: Observation-weighted mean typed quota remaining stacked by the eight observed
+                `share_category` values on each collection day. The source has four populated days, and
+                categories are not additive balances.
+              width: full
+            - slug: landings-by-management
+              kind: breakdown
+              metric: average_landings_value
+              breakdown: management_system
+              top_n: 2
+              time: observed_at
+              grain: DAY
+              title: Mean landings by management system
+              description: Observation-weighted mean typed `landings_value` by management system and
+                collection day. This is a snapshot level, not cumulative landings across polls.
+              width: full
+  columns:
+  - name: catch_quota_observation_key
+    description: Stable hash of source, quota identifier, and source observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Catch quota observation key
+          hidden: true
+  - name: source
+    description: Source-system identifier supplied by the NOAA catch-share quota extract.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: quota_id
+    description: Extract-provided quota identifier, combining fishery year, management system, and share
+      category.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_quotas:
+            type: count_distinct
+            label: Distinct quotas
+            description: Distinct `quota_id` values represented in each selected collection-time group.
+              Repeated snapshots count each quota once per group, so this is a catalogue breadth level.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Quota id
+          hidden: false
+  - name: observed_at
+    description: Timestamp when the NOAA quota source snapshot was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: management_system
+    description: NOAA quota management system, such as IFQ or HBC.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Management system
+          hidden: false
+  - name: share_category
+    description: Fishery share category to which the quota observation applies.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Share category
+          hidden: false
+  - name: start_of_year_quota
+    description: Source-formatted starting quota amount for the fishery year.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Start of year quota
+          hidden: false
+  - name: quota_increase
+    description: Source-formatted quota increase amount for the fishery year.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Quota increase
+          hidden: false
+  - name: quota_increase_date
+    description: Source-formatted date on which the quota increase took effect.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Quota increase date
+          hidden: false
+  - name: end_of_year_quota
+    description: Source-formatted ending quota amount for the fishery year.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: End of year quota
+          hidden: false
+  - name: landings
+    description: Source-formatted landings amount reported for the fishery year.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Landings
+          hidden: false
+  - name: quota_landed
+    description: Source-formatted percentage of quota landed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Quota landed
+          hidden: false
+  - name: quota_remaining
+    description: Source-formatted quota amount remaining.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Quota remaining
+          hidden: false
+  - name: start_of_year_quota_value
+    description: Typed starting quota amount for the fishery year, in the source's reported units.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Start of year quota value
+          hidden: false
+          format: '#,##0'
+  - name: quota_increase_value
+    description: Raw quota increase value text in the source's reported units; may contain multiple comma-separated
+      values.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Quota increase value
+          hidden: false
+  - name: end_of_year_quota_value
+    description: Typed ending quota amount for the fishery year, in the source's reported units.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: End of year quota value
+          hidden: false
+          format: '#,##0'
+  - name: landings_value
+    description: Typed landings amount for the fishery year, in the source's reported units.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_landings_value:
+            type: average
+            label: Mean observed landings value
+            description: Observation-weighted mean typed `landings_value` in source-reported units for each
+              selected collection-time group. Repeated snapshots and polling frequency can influence this
+              level; it is not cumulative landings.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Landings value
+          hidden: false
+  - name: quota_landed_value
+    description: Typed percentage of quota landed.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Quota landed value
+          hidden: false
+          format: '#,##0.00'
+  - name: quota_remaining_value
+    description: Typed quota amount remaining, in the source's reported units.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_quota_remaining_value:
+            type: average
+            label: Mean observed quota remaining value
+            description: Mean observed quota remaining value by `share_category` in the selected observation
+              window. Typed quota amount remaining, in the source's reported units. Each retained observation
+              has equal weight; polling frequency and repeated snapshots can affect the mean. This is
+              not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Quota remaining value
+          hidden: false
+          format: '#,##0.00'
+  - name: fishery_year
+    description: Fishery year to which the quota observation applies.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Fishery year
+          hidden: false
+          format: '#,##0'
+  - name: _row_id
+    description: Raw loader row identifier retained for lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Identifier of the raw load batch that produced this row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted this row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position of this observation in the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted this observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_niord_warning_observation_created_at_month
+          yRef:
+            field: fct_niord_warning_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Month)
+      yAxis:
+      - name: Distinct warning
+    layout:
+      stack: true
+      xField: fct_niord_warning_observation_created_at_month
+      yField:
+      - fct_niord_warning_observation_distinct_entities
+  type: cartesian
+description: Distinct `warning_id` values per creation month stacked by the two main classifications.
+  The stack describes mix among recorded warnings, not a current-state total; months with no source rows
+  are absent.
+metricQuery:
+  dimensions:
+  - fct_niord_warning_observation_created_at_month
+  - fct_niord_warning_observation_main_type
+  exploreName: fct_niord_warning_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_niord_warning_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_niord_warning_observation_distinct_entities
+  - descending: false
+    fieldId: fct_niord_warning_observation_created_at_month
+  tableCalculations: []
+name: Warnings created by main classification
+pivotConfig:
+  columns:
+  - fct_niord_warning_observation_main_type
+slug: fct-niord-warning-observation-main-type-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_niord_warning_observation_created_at_month
+  - fct_niord_warning_observation_main_type
+  - fct_niord_warning_observation_distinct_entities
+tableName: fct_niord_warning_observation
+version: 1

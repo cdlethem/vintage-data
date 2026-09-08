@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_sncf_station_equipment_observation_observed_at_hour
+          yRef:
+            field: fct_sncf_station_equipment_observation_distinct_stations
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct stations
+    layout:
+      xField: fct_sncf_station_equipment_observation_observed_at_hour
+      yField:
+      - fct_sncf_station_equipment_observation_distinct_stations
+  type: cartesian
+description: Distinct `station_id` values per observation hour pivoted by `operating_status`. The four
+  observed statuses are shown and are not additive when a station has equipment in multiple statuses;
+  missing poll hours are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_sncf_station_equipment_observation_observed_at_hour
+  - fct_sncf_station_equipment_observation_operating_status
+  exploreName: fct_sncf_station_equipment_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sncf_station_equipment_observation_distinct_stations
+  sorts:
+  - descending: true
+    fieldId: fct_sncf_station_equipment_observation_distinct_stations
+  - descending: false
+    fieldId: fct_sncf_station_equipment_observation_observed_at_hour
+  tableCalculations: []
+name: Stations represented by operating status
+pivotConfig:
+  columns:
+  - fct_sncf_station_equipment_observation_operating_status
+slug: fct-sncf-station-equipment-observation-stations-by-status
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sncf_station_equipment_observation_observed_at_hour
+  - fct_sncf_station_equipment_observation_operating_status
+  - fct_sncf_station_equipment_observation_distinct_stations
+tableName: fct_sncf_station_equipment_observation
+version: 1

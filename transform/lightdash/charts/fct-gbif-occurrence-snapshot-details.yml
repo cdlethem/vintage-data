@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical snapshot of GBIF occurrence records returned by the configured occurrence
+  search. Each row represents one occurrence identifier from one GBIF API observation timestamp, with
+  taxonomy, event, location, and raw-load lineage retained for reproducibility.
+metricQuery:
+  dimensions: &id001
+  - fct_gbif_occurrence_snapshot_fetched_at
+  - fct_gbif_occurrence_snapshot_occurrence_id
+  - fct_gbif_occurrence_snapshot_country
+  - fct_gbif_occurrence_snapshot_source_loaded_at
+  exploreName: fct_gbif_occurrence_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: 98f4ad6e-cdf4-511d-92ff-5a55700d7b42
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_gbif_occurrence_snapshot_fetched_at
+        values:
+        - 30
+      id: d5bb3b6a-e358-560f-a5ee-de20a36b56a4
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_gbif_occurrence_snapshot_fetched_at
+  tableCalculations: []
+name: Gbif occurrence snapshot — observations
+slug: fct-gbif-occurrence-snapshot-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_gbif_occurrence_snapshot
+version: 1

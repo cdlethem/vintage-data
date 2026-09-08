@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_nc_lab_turnaround_fetched_at_day
+          yRef:
+            field: fct_nc_lab_turnaround_distinct_turnarounds
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Distinct turnaround reports
+    layout:
+      stack: true
+      xField: fct_nc_lab_turnaround_fetched_at_day
+      yField:
+      - fct_nc_lab_turnaround_distinct_turnarounds
+  type: cartesian
+description: Distinct `turnaround_id` values per fetch day stacked by `report_type`. Bars show the composition
+  of observed reports without summing the repeated processing-day snapshot level; the three largest report
+  types are shown and the remainder is excluded rather than aggregated.
+metricQuery:
+  dimensions:
+  - fct_nc_lab_turnaround_fetched_at_day
+  - fct_nc_lab_turnaround_report_type
+  exploreName: fct_nc_lab_turnaround
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nc_lab_turnaround_distinct_turnarounds
+  sorts:
+  - descending: true
+    fieldId: fct_nc_lab_turnaround_distinct_turnarounds
+  - descending: false
+    fieldId: fct_nc_lab_turnaround_fetched_at_day
+  tableCalculations: []
+name: Observed turnaround reports by type
+pivotConfig:
+  columns:
+  - fct_nc_lab_turnaround_report_type
+slug: fct-nc-lab-turnaround-report-type-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nc_lab_turnaround_fetched_at_day
+  - fct_nc_lab_turnaround_report_type
+  - fct_nc_lab_turnaround_distinct_turnarounds
+tableName: fct_nc_lab_turnaround
+version: 1

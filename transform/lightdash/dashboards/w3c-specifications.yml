@@ -1,0 +1,134 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 1f25eaf2-3878-51b9-9a40-68b675d8124f
+    label: 'W3c specification observation: Specification title'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_w3c_specification_observation_specification_title
+      tableName: fct_w3c_specification_observation
+    values: []
+  - disabled: true
+    id: ca3a17d4-a3a7-587d-aebd-868aef6c5a4d
+    label: 'W3c specification observation: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_w3c_specification_observation_source
+      tableName: fct_w3c_specification_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: W3C Specifications
+slug: w3c-specifications
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of W3C specifications returned by the W3C specifications feed. Each
+      row represents one specification identifier from one extractor observation timestamp, retaining
+      the canonical URL, title, and raw-load lineage. Repeated ingestion of the same source, specification,
+      and observation timestamp is reduced to the latest loaded record.
+
+
+      **Grain:** source, specification_id, observed_at
+
+
+      **What changes here:** how the published W3C specification catalogue changes in size and title mix
+      across extractor observation days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `w3c_specifications` — licence: W3C document and data terms; attribution required: True. Source
+      configuration: `extract/sources/w3c_specifications.yml`.'
+    hideFrame: false
+    title: W3c specification observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: W3c specification observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Specifications present per observation day
+    chartSlug: fct-w3c-specification-observation-specifications-per-day
+    hideTitle: false
+    title: Specifications present per observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Canonical specification URLs per day
+    chartSlug: fct-w3c-specification-observation-canonical-urls-per-day
+    hideTitle: false
+    title: Canonical specification URLs per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Specification catalogue mix by title
+    chartSlug: fct-w3c-specification-observation-title-mix
+    hideTitle: false
+    title: Specification catalogue mix by title
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 1
+  properties:
+    showDivider: true
+    text: W3c specification observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Distinct specification by specification title
+    chartSlug: fct-w3c-specification-observation
+    hideTitle: false
+    title: Distinct specification by specification title
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 28
+- h: 10
+  properties:
+    chartName: W3c specification observation — observations
+    chartSlug: fct-w3c-specification-observation-details
+    hideTitle: false
+    title: W3c specification observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 28
+version: 1

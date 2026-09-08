@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nz_charities_modifiedon_day
+          yRef:
+            field: fct_nz_charities_average_percentagespentoverseas
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Modifiedon (Day)
+      yAxis:
+      - name: Mean overseas spending percentage
+    layout:
+      xField: fct_nz_charities_modifiedon_day
+      yField:
+      - fct_nz_charities_average_percentagespentoverseas
+  type: cartesian
+description: Mean non-null `percentagespentoverseas` among records by `modifiedon` day. Most rows do not
+  report this field, so the average describes only reporting organisations and days with no reported value
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_nz_charities_modifiedon_day
+  exploreName: fct_nz_charities
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nz_charities_average_percentagespentoverseas
+  sorts:
+  - descending: false
+    fieldId: fct_nz_charities_modifiedon_day
+  tableCalculations: []
+name: Reported overseas spending share by revision day
+slug: fct-nz-charities-overseas-spending
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nz_charities_modifiedon_day
+  - fct_nz_charities_average_percentagespentoverseas
+tableName: fct_nz_charities
+version: 1

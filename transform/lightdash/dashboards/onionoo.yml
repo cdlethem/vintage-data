@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 0dc393ff-1836-595c-8888-093ba5c18288
+    label: 'Onionoo relay status: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_onionoo_relay_status_source
+      tableName: fct_onionoo_relay_status
+    values: []
+  - disabled: true
+    id: 94c3990a-7cdc-5699-952b-cb58d9918d63
+    label: 'Onionoo relay status: Running'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_onionoo_relay_status_running
+      tableName: fct_onionoo_relay_status
+    values: []
+  - disabled: true
+    id: bbdf58d9-3821-50f8-84be-06477f3244c0
+    label: 'Onionoo relay status: Nickname'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_onionoo_relay_status_nickname
+      tableName: fct_onionoo_relay_status
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Onionoo
+slug: onionoo
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly incremental physical history of Tor relays reported by the Onionoo feed. Each
+      row represents one relay from one upstream source at one fetched observation timestamp. Re-ingested
+      copies of an observation are reduced to the latest raw-load record while source lineage is retained
+      for audit and replay.
+
+
+      **Grain:** source, relay_id, observed_at
+
+
+      **What changes here:** The five-day relay-status level shows a nearly fixed running population while
+      published batches expose short-term coverage changes.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `onionoo` — licence: unstated; run by the Tor Project itself; attribution required: False. Source
+      configuration: `extract/sources/onionoo.yml`.'
+    hideFrame: false
+    title: Onionoo relay status
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Onionoo relay status — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct relays present each observation day
+    chartSlug: fct-onionoo-relay-status-relays-by-observation-day
+    hideTitle: false
+    title: Distinct relays present each observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct relay nicknames each observation day
+    chartSlug: fct-onionoo-relay-status-nicknames-by-observation-day
+    hideTitle: false
+    title: Distinct relay nicknames each observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct relays by Onionoo publication day
+    chartSlug: fct-onionoo-relay-status-relays-by-publication-day
+    hideTitle: false
+    title: Distinct relays by Onionoo publication day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Running status mix by observation day
+    chartSlug: fct-onionoo-relay-status-running-relay-mix
+    hideTitle: false
+    title: Running status mix by observation day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Distinct nicknames by published running status
+    chartSlug: fct-onionoo-relay-status-published-running-relays
+    hideTitle: false
+    title: Distinct nicknames by published running status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Onionoo relay status — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct relay by running
+    chartSlug: fct-onionoo-relay-status
+    hideTitle: false
+    title: Distinct relay by running
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Onionoo relay status — observations
+    chartSlug: fct-onionoo-relay-status-details
+    hideTitle: false
+    title: Onionoo relay status — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

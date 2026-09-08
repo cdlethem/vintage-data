@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical change-observation fact for medicine shortages published by the European
+  Medicines Agency. The extractor emits one row when a catalogue entry is first seen, updated, or removed,
+  and emits every entry when seeding its baseline. Each row is one source label, stable shortage identifier,
+  and extractor fetch timestamp. Replayed raw copies of the same observation are reduced to the latest
+  loaded row while the source change history remains available.
+metricQuery:
+  dimensions: &id001
+  - fct_ema_medicine_shortage_fetched_at
+  - fct_ema_medicine_shortage_shortage_id
+  - fct_ema_medicine_shortage_supply_shortage_status
+  - fct_ema_medicine_shortage_source_loaded_at
+  exploreName: fct_ema_medicine_shortage
+  filters:
+    dimensions:
+      and:
+      - id: 04552118-3b66-53a6-8a98-e8d45bd20e9f
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_ema_medicine_shortage_fetched_at
+        values:
+        - 30
+      id: ecdaaf4e-c078-5be8-ac2d-e5b0a5e21c5b
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_ema_medicine_shortage_fetched_at
+  tableCalculations: []
+name: Ema medicine shortage — observations
+slug: fct-ema-medicine-shortage-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_ema_medicine_shortage
+version: 1

@@ -1,0 +1,143 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: b80879a1-8919-5202-a375-405e914221a1
+    label: 'Wayback cdx observation: Mimetype'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_wayback_cdx_observation_mimetype
+      tableName: fct_wayback_cdx_observation
+    values: []
+  - disabled: true
+    id: acf6f4d4-2ca2-544c-bb09-11d7cfa4526b
+    label: 'Wayback cdx observation: Status code'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_wayback_cdx_observation_status_code
+      tableName: fct_wayback_cdx_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Wayback Cdx
+slug: wayback-cdx
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of Internet Archive Wayback CDX captures. Each row records one CDX
+      capture identifier observed in one extractor fetch, with typed capture metadata and raw-load lineage;
+      repeated ingestion of the same source, capture, and observation timestamp retains the latest copy.
+
+
+      **Grain:** source_name, capture_id, observed_at
+
+
+      **What changes here:** how archived capture volume, response size, and status mix change across
+      capture days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `wayback_cdx` — licence: Internet Archive — public; attribution required: False. Source configuration:
+      `extract/sources/wayback_cdx.yml`.'
+    hideFrame: false
+    title: Wayback cdx observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Wayback cdx observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct captures by capture day
+    chartSlug: fct-wayback-cdx-observation-captures-by-day
+    hideTitle: false
+    title: Distinct captures by capture day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average archived response size by day
+    chartSlug: fct-wayback-cdx-observation-average-response-size
+    hideTitle: false
+    title: Average archived response size by day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Captures by MIME type
+    chartSlug: fct-wayback-cdx-observation-captures-by-mimetype
+    hideTitle: false
+    title: Captures by MIME type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Capture status-code mix
+    chartSlug: fct-wayback-cdx-observation-status-mix
+    hideTitle: false
+    title: Capture status-code mix
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Wayback cdx observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct capture by mimetype
+    chartSlug: fct-wayback-cdx-observation
+    hideTitle: false
+    title: Distinct capture by mimetype
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Wayback cdx observation — observations
+    chartSlug: fct-wayback-cdx-observation-details
+    hideTitle: false
+    title: Wayback cdx observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

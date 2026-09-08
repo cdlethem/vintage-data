@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_queensland_hospital_observation_spaces_date_day
+          yRef:
+            field: fct_queensland_hospital_observation_avg_treatment_spaces
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Treatment spaces updated date (Day)
+      yAxis:
+      - name: Mean treatment spaces
+    layout:
+      xField: fct_queensland_hospital_observation_spaces_date_day
+      yField:
+      - fct_queensland_hospital_observation_avg_treatment_spaces
+  type: cartesian
+description: Mean `treatment_spaces` by the source-published `treatment_spaces_updated_date`. Only four
+  reference dates are present from 2024-12-24 through 2025-01-15, so this is a sparse source-level comparison
+  rather than a continuous operational history; missing dates are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_queensland_hospital_observation_spaces_date_day
+  exploreName: fct_queensland_hospital_observation
+  filters:
+    dimensions:
+      and:
+      - id: be3e4d52-20f7-5615-9e48-ed5515716f08
+        operator: equals
+        target:
+          fieldId: fct_queensland_hospital_observation_live_data_available
+        values:
+        - true
+      id: b55ea1a7-3456-5ba6-a60a-587585b9d847
+  limit: 5000
+  metrics:
+  - fct_queensland_hospital_observation_avg_treatment_spaces
+  sorts:
+  - descending: false
+    fieldId: fct_queensland_hospital_observation_spaces_date_day
+  tableCalculations: []
+name: Treatment spaces by publisher reference date
+slug: fct-queensland-hospital-observation-spaces-by-source-date
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_queensland_hospital_observation_spaces_date_day
+  - fct_queensland_hospital_observation_avg_treatment_spaces
+tableName: fct_queensland_hospital_observation
+version: 1

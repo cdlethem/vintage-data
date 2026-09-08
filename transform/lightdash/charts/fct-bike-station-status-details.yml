@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Deduplicated GBFS station availability observations across supported networks, with source
+  lineage retained for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_bike_station_status_observed_at
+  - fct_bike_station_status_station_id
+  - fct_bike_station_status_network
+  - fct_bike_station_status_num_bikes_available
+  - fct_bike_station_status_source_loaded_at
+  exploreName: fct_bike_station_status
+  filters:
+    dimensions:
+      and:
+      - id: b4679367-2628-5942-abd5-efa14051c1bc
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_bike_station_status_observed_at
+        values:
+        - 30
+      id: 65aaa833-447d-58b5-8e08-f9f2ed3d5745
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_bike_station_status_observed_at
+  tableCalculations: []
+name: Bike station availability — observations
+slug: fct-bike-station-status-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_bike_station_status
+version: 1

@@ -1,0 +1,299 @@
+version: 2
+models:
+- name: fct_arxiv_new_paper_observation
+  description: Physical observation fact for papers returned by the arXiv feed. Each row records one paper
+    identifier at one feed observation timestamp, preserving the publication metadata and raw-load lineage
+    needed to reproduce the insert-only source history. Repeated copies of the same source, paper, and
+    observation timestamp retain the latest loaded row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, paper_id, observed_at
+      label: Arxiv new paper observation
+      group_label: Arxiv new
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: paper_observation_key
+      vintage:
+        visualization:
+          dimension: primary_category
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct paper by primary category
+          description: Distinct `paper_id` values by `primary_category` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - paper_id
+          - primary_category
+          - source_loaded_at
+          sources:
+          - '`arxiv_new` — licence: arXiv API — free reuse, attribution requested; attribution required:
+            True. Source configuration: `extract/sources/arxiv_new.yml`.'
+          analysis:
+            headline: how the newly observed arXiv feed and its subject mix change across publication hours.
+            event_time: published_at
+            grain: HOUR
+            controls:
+            - primary_category
+            - source_name
+            trends:
+            - slug: feed-observations
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: HOUR
+              title: Distinct papers per feed observation hour
+              description: Distinct `paper_id` values present in each extractor observation hour. This is a
+                one-day catalogue level with only three observed fetches; hours without a fetch are absent
+                rather than zero.
+              width: half
+            - slug: published-papers
+              kind: total
+              metric: distinct_entities
+              time: published_at
+              grain: HOUR
+              title: Distinct papers by publication hour
+              description: Distinct `paper_id` values by the publication hour reported by arXiv. The
+                current extract covers one publication day, so this is a short burst rather than a
+                long-run publication rate; hours without papers are absent rather than zero.
+              width: half
+            - slug: category-count
+              kind: total
+              metric: distinct_categories
+              time: published_at
+              grain: HOUR
+              title: Subject categories represented by publication hour
+              description: Distinct `primary_category` values among papers published in each reported hour.
+                This measures subject breadth rather than paper volume; hours without papers are absent
+                rather than zero.
+              width: half
+            - slug: category-mix
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: primary_category
+              top_n: 8
+              time: published_at
+              grain: HOUR
+              title: Leading arXiv categories by publication hour
+              description: Distinct `paper_id` values per publication hour for the eight categories with
+                the largest totals in this extract. Remaining categories are excluded rather than
+                aggregated, so the chart is a readable view of the current one-day burst.
+              width: full
+  columns:
+  - name: paper_observation_key
+    description: Stable hash of the source name, paper identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Paper observation key
+          hidden: true
+  - name: source_name
+    description: arXiv source identifier supplied by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: paper_id
+    description: Canonical arXiv identifier or URL for the observed paper.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct paper
+            description: Distinct `paper_id` values by `primary_category` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Paper id
+          hidden: false
+  - name: observed_at
+    description: Timestamp at which the arXiv feed observation was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: published_at
+    description: Publication timestamp reported by arXiv for the paper.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Published at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: updated_at
+    description: Latest update timestamp reported by arXiv for the paper.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: title
+    description: Paper title reported by arXiv.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: abstract
+    description: Paper abstract reported by arXiv.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Abstract
+          hidden: true
+  - name: authors
+    description: JSON array of author names reported by arXiv.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Authors
+          hidden: true
+          sql: CAST(${TABLE}.authors AS VARCHAR)
+  - name: primary_category
+    description: Primary arXiv subject category reported for the paper.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_categories:
+            type: count_distinct
+            label: Distinct subject categories
+            description: Distinct `primary_category` values represented by papers in each publication-time
+              bucket. This measures subject breadth rather than the number of papers.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Primary category
+          hidden: false
+  - name: categories
+    description: JSON array of all arXiv subject categories reported for the paper.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Categories
+          hidden: true
+          sql: CAST(${TABLE}.categories AS VARCHAR)
+  - name: _batch_id
+    description: Load batch identifier that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Load job identifier that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content for lineage and replay.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

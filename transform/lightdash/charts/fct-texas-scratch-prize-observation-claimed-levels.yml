@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_texas_scratch_prize_observation_publisher_updated_at_day
+          yRef:
+            field: fct_texas_scratch_prize_observation_average_prizes_claimed
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Publisher updated at (Day)
+      yAxis:
+      - name: Mean observed prizes claimed
+    layout:
+      xField: fct_texas_scratch_prize_observation_publisher_updated_at_day
+      yField:
+      - fct_texas_scratch_prize_observation_average_prizes_claimed
+  type: cartesian
+description: Average non-null `prizes_claimed` across retained prize levels on each publisher update date.
+  This is an observation-weighted snapshot level, not a count of tickets sold; dates with no published
+  update are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_texas_scratch_prize_observation_publisher_updated_at_day
+  exploreName: fct_texas_scratch_prize_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_texas_scratch_prize_observation_average_prizes_claimed
+  sorts:
+  - descending: false
+    fieldId: fct_texas_scratch_prize_observation_publisher_updated_at_day
+  tableCalculations: []
+name: Mean prizes claimed per publisher update
+slug: fct-texas-scratch-prize-observation-claimed-levels
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_texas_scratch_prize_observation_publisher_updated_at_day
+  - fct_texas_scratch_prize_observation_average_prizes_claimed
+tableName: fct_texas_scratch_prize_observation
+version: 1

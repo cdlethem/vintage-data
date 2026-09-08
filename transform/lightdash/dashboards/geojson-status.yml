@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: f7130952-9b31-5efc-a7f6-fc8d786a33db
+    label: 'Geojson shelter status: State'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_geojson_shelter_status_state
+      tableName: fct_geojson_shelter_status
+    values: []
+  - disabled: true
+    id: 3aa16d33-f6a1-5587-8cdd-f944d4dafc24
+    label: 'Geojson shelter status: City'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_geojson_shelter_status_city
+      tableName: fct_geojson_shelter_status
+    values: []
+  - disabled: true
+    id: 3656b42d-6f6b-5e82-8348-f6c414bc21c7
+    label: 'Geojson shelter status: Subfacility code'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_geojson_shelter_status_subfacility_code
+      tableName: fct_geojson_shelter_status
+    values: []
+  - disabled: true
+    id: efe9be8c-6a7f-535f-9451-860d4830c3ac
+    label: 'Geojson shelter status: Ada compliant'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_geojson_shelter_status_ada_compliant
+      tableName: fct_geojson_shelter_status
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Geojson Status
+slug: geojson-status
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Incremental physical history of GeoJSON shelter status features. Each row is one upstream
+      feature at one extractor observation timestamp, with the normalized shelter attributes, point geometry,
+      and raw-load lineage needed to audit refreshes and replay the insert-only source.
+
+
+      **Grain:** source_name, feature_id, observed_at
+
+
+      **What changes here:** how the shelter catalogue level and reported population move across four
+      days of extractor observations.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `geojson_status` — licence: varies per feed (US federal / NSW / ND DOT); attribution required:
+      True. Source configuration: `extract/sources/geojson_status.yml`.'
+    hideFrame: false
+    title: Geojson shelter status
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Geojson shelter status — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct shelters observed per day
+    chartSlug: fct-geojson-shelter-status-shelters-observed
+    hideTitle: false
+    title: Distinct shelters observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average reported population per observation day
+    chartSlug: fct-geojson-shelter-status-population-level
+    hideTitle: false
+    title: Average reported population per observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Shelters observed per day by state
+    chartSlug: fct-geojson-shelter-status-shelters-by-state
+    hideTitle: false
+    title: Shelters observed per day by state
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Shelter catalogue mix by facility code
+    chartSlug: fct-geojson-shelter-status-facility-mix
+    hideTitle: false
+    title: Shelter catalogue mix by facility code
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Geojson shelter status — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct feature by shelter status
+    chartSlug: fct-geojson-shelter-status
+    hideTitle: false
+    title: Distinct feature by shelter status
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Geojson shelter status — observations
+    chartSlug: fct-geojson-shelter-status-details
+    hideTitle: false
+    title: Geojson shelter status — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

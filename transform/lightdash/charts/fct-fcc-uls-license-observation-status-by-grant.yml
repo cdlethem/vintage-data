@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_fcc_uls_license_observation_grant_date_month
+          yRef:
+            field: fct_fcc_uls_license_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Grant date (Month)
+      yAxis:
+      - name: Distinct license
+    layout:
+      xField: fct_fcc_uls_license_observation_grant_date_month
+      yField:
+      - fct_fcc_uls_license_observation_distinct_entities
+  type: cartesian
+description: Distinct `license_id` values by FCC `grant_date` month, pivoted across the three observed
+  `license_status` codes. All three codes are shown; this event view is not a snapshot of current status
+  and empty months remain absent.
+metricQuery:
+  dimensions:
+  - fct_fcc_uls_license_observation_grant_date_month
+  - fct_fcc_uls_license_observation_license_status
+  exploreName: fct_fcc_uls_license_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_fcc_uls_license_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_fcc_uls_license_observation_distinct_entities
+  - descending: false
+    fieldId: fct_fcc_uls_license_observation_grant_date_month
+  tableCalculations: []
+name: Grants by license status
+pivotConfig:
+  columns:
+  - fct_fcc_uls_license_observation_license_status
+slug: fct-fcc-uls-license-observation-status-by-grant
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_fcc_uls_license_observation_grant_date_month
+  - fct_fcc_uls_license_observation_license_status
+  - fct_fcc_uls_license_observation_distinct_entities
+tableName: fct_fcc_uls_license_observation
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_imdb_processing_times_publisher_updated_date_day
+          yRef:
+            field: fct_imdb_processing_times_average_queue_age_days
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Publisher updated date (Day)
+      yAxis:
+      - name: Mean observed queue age days
+    layout:
+      xField: fct_imdb_processing_times_publisher_updated_date_day
+      yField:
+      - fct_imdb_processing_times_average_queue_age_days
+  type: cartesian
+description: Mean queue age grouped by the publisher update date attached to each record. This source
+  date spans only four recent days, so it is not durable historical depth and should be read as a recent
+  level; absent dates are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_imdb_processing_times_publisher_updated_date_day
+  exploreName: fct_imdb_processing_times
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_imdb_processing_times_average_queue_age_days
+  sorts:
+  - descending: false
+    fieldId: fct_imdb_processing_times_publisher_updated_date_day
+  tableCalculations: []
+name: Queue age by publisher update day
+slug: fct-imdb-processing-times-publisher-update-age
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_imdb_processing_times_publisher_updated_date_day
+  - fct_imdb_processing_times_average_queue_age_days
+tableName: fct_imdb_processing_times
+version: 1

@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: ad8295aa-916c-5cee-8e73-880a228880cb
+    label: 'Stac imagery: Collection'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_stac_imagery_collection
+      tableName: fct_stac_imagery
+    values: []
+  - disabled: true
+    id: 28e96d8f-e15c-5feb-a5c8-42401cac69be
+    label: 'Stac imagery: Platform'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_stac_imagery_platform
+      tableName: fct_stac_imagery
+    values: []
+  - disabled: true
+    id: b1e652e2-f9be-5516-abd3-27672a2ca1ba
+    label: 'Stac imagery: Epsg'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_stac_imagery_epsg
+      tableName: fct_stac_imagery
+    values: []
+  - disabled: true
+    id: b8eb0990-1be3-537e-96a7-5cf08912beec
+    label: 'Stac imagery: Grid'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_stac_imagery_grid
+      tableName: fct_stac_imagery
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Stac Imagery
+slug: stac-imagery
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of STAC imagery items returned by the imagery discovery feed. Each
+      row is one imagery item observed at one fetch timestamp; repeated ingestion of the same item snapshot
+      is reduced to the latest loaded copy while the item attributes and raw-load lineage remain available.
+
+
+      **Grain:** source_name, item_id, observed_at
+
+
+      **What changes here:** how the five-day observed imagery catalogue changes in size, cloudiness,
+      and platform mix while captured-scene history remains shallow.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `stac_imagery` — licence: varies per collection (naip/landsat public domain; Sentinel proprietary
+      notice); attribution required: True. Source configuration: `extract/sources/stac_imagery.yml`.'
+    hideFrame: false
+    title: Stac imagery
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Stac imagery — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct imagery items observed per day
+    chartSlug: fct-stac-imagery-observed-items-by-day
+    hideTitle: false
+    title: Distinct imagery items observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean cloud cover of observed items per day
+    chartSlug: fct-stac-imagery-cloud-cover-by-day
+    hideTitle: false
+    title: Mean cloud cover of observed items per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean imagery age at observation
+    chartSlug: fct-stac-imagery-age-by-day
+    hideTitle: false
+    title: Mean imagery age at observation
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Captured imagery mix by platform
+    chartSlug: fct-stac-imagery-platform-capture-mix
+    hideTitle: false
+    title: Captured imagery mix by platform
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Stac imagery — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed cloud cover by collection
+    chartSlug: fct-stac-imagery
+    hideTitle: false
+    title: Mean observed cloud cover by collection
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Stac imagery — observations
+    chartSlug: fct-stac-imagery-details
+    hideTitle: false
+    title: Stac imagery — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

@@ -1,9 +1,8 @@
-"""Contract tests for the bot layer: model selection, gating, and failure modes.
+from __future__ import annotations
 
-Run with an interpreter that has PyYAML:
-    orchestration/.venv/bin/python -m unittest discover -s bots -t bots
-"""
+import datetime as dt
 import json
+import os
 import pathlib
 import sys
 import tempfile
@@ -13,199 +12,262 @@ from unittest import mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-import bot_runner  # noqa: E402
-import providers  # noqa: E402
-
-MODELS = textwrap.dedent("""
-    default: fake
-    models:
-      fake:
-        provider: command
-        model: whatever
-        argv: ["/bin/cat"]
-      other:
-        provider: command
-        model: whatever
-        argv: ["/bin/echo", "from-other"]
-      keyed:
-        provider: openai_chat
-        endpoint: http://127.0.0.1:1/v1/chat/completions
-        model: m
-        api_key_env: TEST_KEY_THAT_IS_UNSET
-""")
+import bot_runner
+import providers
 
 
-class BotFixture:
-    """A bot whose only context command is `echo`, so tests need no network."""
-
-    def __init__(self, tmp: str, *, gate=True, model=None, context_status="STATUS: OK"):
-        self.root = pathlib.Path(tmp)
-        (self.root / "demo").mkdir()
-        (self.root / "demo" / "prompt.md").write_text("digest follows:\n{{DIGEST}}\n")
-        cfg = {
-            "name": "demo",
-            "schedule": "manual",
-            "prompt": "prompt.md",
-            "context": {"DIGEST": {"command": ["/bin/echo", context_status]}},
-        }
-        if model:
-            cfg["model"] = model
-        if gate:
-            cfg["gate"] = {"context": "DIGEST", "skip_if_matches": "(?m)^STATUS: OK",
-                           "skip_report": "all clear"}
-        (self.root / "demo" / "bot.yml").write_text(json.dumps(cfg))
-        self.models = self.root / "models.yml"
-        self.models.write_text(MODELS)
-
-    def load(self):
-        return bot_runner.load_bot(self.root / "demo")
+def setUpModule() -> None:
+    """Never contend with the deployment's shared inference slot directory."""
+    global _LOCKS
+    _LOCKS = tempfile.TemporaryDirectory(prefix="bot-test-locks-")
+    bot_runner.LOCKS_DIR = pathlib.Path(_LOCKS.name)
 
 
-class ModelSelectionTest(unittest.TestCase):
-    def test_alias_defaults_to_the_machine_default(self):
-        cfg = bot_runner.load_models_from_text = None  # guard against typos below
-        del cfg
+def tearDownModule() -> None:
+    _LOCKS.cleanup()
+
+
+IDENTITY = {
+    "dag_id": "bot__demo",
+    "run_id": "run-1",
+    "task_id": "run",
+    "map_index": -1,
+    "try_number": 1,
+}
+
+def _cfg(tmp: str, **overrides) -> dict:
+    root = pathlib.Path(tmp)
+    bot = root / "demo"
+    bot.mkdir(exist_ok=True)
+    (bot / "prompt.md").write_text("prompt {{CTX}}")
+    value = {
+        "name": "source_discovery",
+        "dir": str(bot),
+        "schedule": "manual",
+        "prompt": "prompt.md",
+        "timeout_minutes": 1,
+        "context_budget_minutes": 1,
+        "model_budget_minutes": 1,
+        "cleanup_margin_seconds": 1,
+        "capacity_policy": "skip",
+        "retry_on": [],
+        "context": {},
+        "output": {"format": "json", "schema": "source_discovery_v2"},
+    }
+    value.update(overrides)
+    return value
+
+
+def _models(tmp: str, aliases=("fake",), *, capabilities=None) -> pathlib.Path:
+    models = {
+        "default": aliases[0],
+        "concurrency": {"max_active": 2},
+        "models": {
+            alias: {
+                "provider": "command",
+                "model": "fake",
+                "argv": ["/bin/echo", "{}"],
+                "capabilities": capabilities or [],
+            }
+            for alias in aliases
+        },
+    }
+    path = pathlib.Path(tmp) / "models.yml"
+    path.write_text(json.dumps(models))
+    return path
+
+
+class RunnerDeadlineTest(unittest.TestCase):
+    def test_one_wall_clock_budget_exhaustion_skips_context_model_and_persistence(self):
         with tempfile.TemporaryDirectory() as tmp:
-            fixture = BotFixture(tmp)
-            models = bot_runner.load_models(fixture.models)
-            self.assertEqual(bot_runner.resolve_model(None, models)["alias"], "fake")
+            cfg = _cfg(tmp)
+            class Client:
+                deadline_at = None
+                def claim_budget(self, identity, total):
+                    return {"deadline_at": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(seconds=1)).isoformat()}
+                def submit_run(self, envelope):
+                    self.envelope = envelope
+                    return {"outcome": envelope["outcome"], "retry_class": envelope["retry_class"], "execution": envelope["identity"]}
 
-    def test_unknown_alias_names_the_available_ones(self):
+            client = Client()
+            with mock.patch.object(bot_runner, "build_prompt", side_effect=AssertionError("context invoked")), \
+                 mock.patch.object(bot_runner.providers, "get_provider", side_effect=AssertionError("model invoked")):
+                result = bot_runner.run(cfg, identity=IDENTITY, models_config=_models(tmp), client=client)
+            self.assertEqual((result.outcome, result.retry_class, result.reason_code), ("timed_out", "terminal", "deadline_exhausted"))
+            self.assertEqual(client.envelope["attempts"], [])
+            self.assertIsNone(client.envelope["payload"])
+
+    def test_command_and_http_deadlines_are_timeouts_not_capacity(self):
+        model = {"provider": "command", "argv": [sys.executable, "-c", "import time; time.sleep(2)"], "timeout_s": 0.05}
+        with self.assertRaises(providers.ProviderTimeout) as caught:
+            providers.command(model, "prompt")
+        self.assertNotIsInstance(caught.exception, providers.ProviderBusy)
+
+        class TimedOut:
+            def __enter__(self):
+                raise AssertionError("context manager not expected")
+            def __exit__(self, *args):
+                return False
+
+        with mock.patch.object(providers.urllib.request, "urlopen", side_effect=TimeoutError("socket timed out")):
+            with self.assertRaises(providers.ProviderTimeout) as caught:
+                providers.openai_chat({"endpoint": "http://provider.invalid", "model": "m"}, "prompt", timeout_s=.05)
+        self.assertNotIsInstance(caught.exception, providers.ProviderBusy)
+
+    def test_terminal_provider_failure_does_not_try_fallback(self):
         with tempfile.TemporaryDirectory() as tmp:
-            fixture = BotFixture(tmp)
-            models = bot_runner.load_models(fixture.models)
-            with self.assertRaises(bot_runner.BotError) as caught:
-                bot_runner.resolve_model("gpt-9", models)
-            message = str(caught.exception)
-            self.assertIn("gpt-9", message)
-            self.assertIn("fake", message)      # never silently substitutes
+            cfg = _cfg(tmp)
+            models = _models(tmp, ("primary", "fallback"))
+            calls = []
+            def invoke(model, prompt, **kwargs):
+                calls.append(model["alias"])
+                raise providers.ProviderTerminal("bad schema")
+            with mock.patch.object(bot_runner.providers, "get_provider", return_value=invoke):
+                result = bot_runner.run(cfg, identity=IDENTITY, models_config=models, ephemeral=True, context_values={"CTX": {}})
+            self.assertEqual(calls, ["primary"])
+            self.assertEqual((result.outcome, result.retry_class), ("failed", "terminal"))
 
-    def test_bot_alias_wins_over_default(self):
+    def test_missing_credential_is_terminal_without_fallback(self):
         with tempfile.TemporaryDirectory() as tmp:
-            fixture = BotFixture(tmp, gate=False, model="other")
-            with mock.patch.object(bot_runner, "RUNS_DIR", pathlib.Path(tmp) / "runs"):
-                result = bot_runner.run(fixture.load(), models_config=fixture.models)
-            self.assertEqual(result.model_alias, "other")
-            self.assertIn("from-other", result.report)
+            cfg = _cfg(tmp, model=["primary", "fallback"])
+            path = _models(tmp, ("primary", "fallback"))
+            value = json.loads(path.read_text())
+            value["models"]["primary"].update({
+                "provider": "openai_chat",
+                "endpoint": "http://provider.invalid",
+                "model": "m",
+                "api_key_env": "MISSING_TEST_CREDENTIAL",
+            })
+            path.write_text(json.dumps(value))
+            with mock.patch.dict(os.environ, {}, clear=False), mock.patch.object(bot_runner.providers, "get_provider", side_effect=AssertionError("model invoked")):
+                result = bot_runner.run(cfg, identity=IDENTITY, models_config=path, ephemeral=True, context_values={"CTX": {}})
+            self.assertEqual((result.outcome, result.retry_class), ("failed", "terminal"))
 
-    def test_missing_api_key_names_the_env_var(self):
+    def test_capacity_obeys_skip_or_retry_policy(self):
+        for policy, retry_on, expected in (("skip", [], "none"), ("retry", ["capacity"], "capacity")):
+            with self.subTest(policy=policy), tempfile.TemporaryDirectory() as tmp:
+                cfg = _cfg(tmp, capacity_policy=policy, retry_on=retry_on)
+                def invoke(model, prompt, **kwargs):
+                    raise providers.ProviderBusy("at capacity")
+                with mock.patch.object(bot_runner.providers, "get_provider", return_value=invoke):
+                    result = bot_runner.run(cfg, identity=IDENTITY, models_config=_models(tmp), ephemeral=True, context_values={"CTX": {}})
+                self.assertEqual(result.outcome, "capacity_unavailable")
+                self.assertEqual(result.retry_class, expected)
+
+    def test_typed_json_gate_skips_without_model(self):
         with tempfile.TemporaryDirectory() as tmp:
-            fixture = BotFixture(tmp)
-            models = bot_runner.load_models(fixture.models)
-            model = bot_runner.resolve_model("keyed", models)
-            with self.assertRaises(providers.ProviderError) as caught:
-                providers.openai_chat(model, "hi")
-            self.assertIn("TEST_KEY_THAT_IS_UNSET", str(caught.exception))
+            cfg = _cfg(tmp, context={"CTX": {"command": [sys.executable, "-c", "import json; print(json.dumps({'pending': 0}))"], "timeout_s": 2}}, gate={"context": "CTX", "path": "pending", "operator": "equals", "value": 0, "reason_code": "gate_no_work"})
+            with mock.patch.object(bot_runner.providers, "get_provider", side_effect=AssertionError("model invoked")):
+                result = bot_runner.run(cfg, identity=IDENTITY, models_config=_models(tmp), ephemeral=True)
+            self.assertEqual((result.outcome, result.retry_class, result.reason_code), ("skipped", "none", "gate_no_work"))
 
-
-class GateTest(unittest.TestCase):
-    def test_gate_skips_the_model_entirely(self):
+    def test_xcom_is_body_free(self):
         with tempfile.TemporaryDirectory() as tmp:
-            fixture = BotFixture(tmp)
-            # No models.yml passed at all: a gated run must not need model wiring.
-            with mock.patch.object(bot_runner, "RUNS_DIR", pathlib.Path(tmp) / "runs"), \
-                 mock.patch.object(providers, "get_provider",
-                                   side_effect=AssertionError("model was called")):
-                result = bot_runner.run(fixture.load(), models_config=tmp + "/missing.yml")
-            self.assertEqual(result.status, bot_runner.SKIPPED)
-            self.assertIsNone(result.model_alias)
-            self.assertIn("all clear", result.report)
-            self.assertTrue(pathlib.Path(result.report_path).is_file())
+            cfg = _cfg(tmp, gate={"context": "CTX", "path": "healthy", "operator": "equals", "value": True, "reason_code": "gate_no_work"})
+            result = bot_runner.run(cfg, identity=IDENTITY, context_values={"CTX": {"healthy": True, "secret": "credential"}}, ephemeral=True)
+            projection = result.xcom()
+            encoded = json.dumps(projection)
+            self.assertEqual(set(projection), {"outcome", "retry_class", "reason_code", "execution"})
+            for forbidden in ("payload", "context", "credential", "secret", str(pathlib.Path(tmp))):
+                self.assertNotIn(forbidden, encoded)
 
-    def test_gate_miss_reaches_the_model(self):
+
+class InferenceSlotTest(unittest.TestCase):
+    def test_partial_acquisition_releases_already_acquired_slot(self):
+        first = mock.Mock()
+        with mock.patch.object(bot_runner, "_acquire_one", side_effect=[first, None]), \
+             mock.patch.object(bot_runner.fcntl, "flock") as flock:
+            with self.assertRaises(providers.ProviderBusy):
+                with bot_runner._inference_slot({"concurrency": {"max_active": 1}}, {"alias": "m", "max_concurrency": 1}):
+                    pass
+        self.assertEqual(first.close.call_count, 1)
+        flock.assert_called_once_with(first, bot_runner.fcntl.LOCK_UN)
+
+
+class CommandChildStdinTest(unittest.TestCase):
+    """An argv prompt must leave the child no inherited stdin to block on."""
+
+    SCRIPT = "import sys; print('eof' if sys.stdin.read() == '' else 'data')"
+
+    def _run(self, argv: list[str], prompt: str) -> str:
+        reader, _writer = os.pipe()
+        saved = os.dup(0)
+        os.dup2(reader, 0)  # emulate a worker whose stdin pipe never closes
+        try:
+            return providers.command(
+                {"provider": "command", "argv": argv, "inherit_env": False, "pass_env": [], "timeout_s": 30},
+                prompt,
+            ).text.strip()
+        finally:
+            os.dup2(saved, 0)
+            os.close(saved)
+            os.close(reader)
+            os.close(_writer)
+
+    def test_argv_prompt_closes_child_stdin(self):
+        argv = [sys.executable, "-c", self.SCRIPT, "{prompt}"]
+        self.assertEqual("eof", self._run(argv, "argv-prompt"))
+
+    def test_stdin_prompt_still_reaches_the_child(self):
+        argv = [sys.executable, "-c", "import sys; sys.stdout.write(sys.stdin.read())"]
+        self.assertEqual("piped-prompt", self._run(argv, "piped-prompt"))
+
+
+class StrictDefinitionValidationTest(unittest.TestCase):
+    def test_all_tracked_bots_and_models_validate_strictly(self):
+        for path in bot_runner.discover():
+            bot_runner.load_bot(path.parent)
+        bot_runner.load_models("bots/models.yml")
+        bot_runner.load_models("bots/models.example.yml")
+
+    def test_unknown_keys_output_schema_trigger_and_fallback_capability_are_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
-            fixture = BotFixture(tmp, context_status="STATUS: PROBLEM")
-            with mock.patch.object(bot_runner, "RUNS_DIR", pathlib.Path(tmp) / "runs"):
-                result = bot_runner.run(fixture.load(), models_config=fixture.models)
-            self.assertEqual(result.status, "ok")
-            self.assertEqual(result.model_alias, "fake")
-            # /bin/cat echoes the prompt back, proving context substitution ran.
-            self.assertIn("STATUS: PROBLEM", result.report)
+            root = pathlib.Path(tmp)
+            valid = _cfg(tmp)
+            for name, mutate in (
+                ("unknown", lambda c: c.update(mystery=True)),
+                ("output", lambda c: c.update(output={"format": "text", "schema": "x"})),
+                ("schema", lambda c: c.update(output={"format": "json"})),
+            ):
+                bot = root / name
+                bot.mkdir()
+                (bot / "prompt.md").write_text("{{CTX}}")
+                candidate = dict(valid, name=name, dir=str(bot))
+                mutate(candidate)
+                (bot / "bot.yml").write_text(json.dumps(candidate))
+                with self.assertRaises(bot_runner.BotError):
+                    bot_runner.load_bot(bot)
 
-
-class PromptTest(unittest.TestCase):
-    def test_unfilled_placeholder_is_an_error(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            fixture = BotFixture(tmp)
-            (fixture.root / "demo" / "prompt.md").write_text("{{DIGEST}} and {{MISSING}}")
-            with self.assertRaises(bot_runner.BotError) as caught:
-                bot_runner.build_prompt(fixture.load())
-            self.assertIn("MISSING", str(caught.exception))
-
-    def test_failed_context_command_fails_the_run(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            fixture = BotFixture(tmp)
-            cfg = fixture.load()
-            cfg["context"] = {"DIGEST": {"command": ["/bin/false"]}}
+            bot = root / "triggered"
+            bot.mkdir()
+            (bot / "prompt.md").write_text("{{CTX}}")
+            candidate = dict(valid, name="triggered", dir=str(bot), triggers=["missing"])
+            (bot / "bot.yml").write_text(json.dumps(candidate))
             with self.assertRaises(bot_runner.BotError):
-                bot_runner.build_prompt(cfg)
+                bot_runner.load_bot(bot)
 
-    def test_repo_relative_program_resolves_from_any_cwd(self):
+            # Every fallback must retain the bot's required capability.
+            cfg = dict(valid, requires_capabilities=["web"], model=["primary", "fallback"])
+            models = {
+                "default": "primary",
+                "models": {
+                    "primary": {"provider": "command", "argv": ["/bin/echo"], "capabilities": ["web"]},
+                    "fallback": {"provider": "command", "argv": ["/bin/echo"], "capabilities": []},
+                },
+                "bots": {"source_discovery": ["primary", "fallback"]},
+            }
+            model_path = root / "models.json"
+            model_path.write_text(json.dumps(models))
+            with self.assertRaises(bot_runner.BotError):
+                bot_runner.resolve_bot_models(cfg, bot_runner.load_models(model_path))
+
+    def test_budget_rule_rejects_context_plus_model_plus_cleanup_over_timeout(self):
         with tempfile.TemporaryDirectory() as tmp:
-            fixture = BotFixture(tmp)
-            cfg = fixture.load()
-            # argv[0] is repo-relative and cwd is a different directory, so a
-            # cwd-relative reading of the program path would not exist at all.
-            # free_slots is tracked, stdlib-only, and exits 0 against a dead
-            # endpoint ("unknown" is not "busy").
-            cfg["context"] = {"DIGEST": {"command": ["bots/bin/free_slots",
-                                                     "http://127.0.0.1:1/slots"],
-                                         "cwd": "monitoring"}}
-            prompt, context = bot_runner.build_prompt(cfg)
-            self.assertEqual(context["DIGEST"], "")
-            self.assertIn("digest follows:", prompt)
-
-    def test_unresolvable_program_path_is_reported(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            fixture = BotFixture(tmp)
-            cfg = fixture.load()
-            cfg["context"] = {"DIGEST": {"command": ["bots/bin/nope", "x"]}}
-            with self.assertRaises(bot_runner.BotError) as caught:
-                bot_runner.build_prompt(cfg)
-            self.assertIn("bots/bin/nope", str(caught.exception))
-
-
-class ProviderTest(unittest.TestCase):
-    def test_command_provider_exit_3_means_busy(self):
-        model = {"alias": "busy", "provider": "command", "model": "m",
-                 "argv": ["/bin/sh", "-c", "exit 3"]}
-        with self.assertRaises(providers.ProviderBusy):
-            providers.command(model, "prompt")
-
-    def test_command_provider_reports_a_missing_binary(self):
-        model = {"alias": "gone", "provider": "command", "model": "m",
-                 "argv": ["/nonexistent/model-cli"]}
-        with self.assertRaises(providers.ProviderError) as caught:
-            providers.command(model, "prompt")
-        self.assertIn("model-cli", str(caught.exception))
-
-    def test_empty_completion_explains_a_truncated_reasoning_model(self):
-        response = {"choices": [{"finish_reason": "length",
-                                 "message": {"content": "",
-                                             "reasoning_content": "thinking " * 50}}]}
-        model = {"alias": "local", "provider": "openai_chat", "model": "m",
-                 "endpoint": "http://example.invalid/v1/chat/completions"}
-        with mock.patch.object(providers, "_post_json", return_value=response):
-            with self.assertRaises(providers.ProviderError) as caught:
-                providers.openai_chat(model, "prompt")
-        message = str(caught.exception)
-        self.assertIn("finish_reason=length", message)
-        self.assertIn("max_tokens", message)
-
-    def test_unknown_provider_is_rejected(self):
-        with self.assertRaises(providers.ProviderError):
-            providers.get_provider("telepathy")
-
-
-class DiscoveryTest(unittest.TestCase):
-    def test_repo_bots_load_and_name_reachable_prompts(self):
-        paths = bot_runner.discover()
-        self.assertTrue(paths, "no bot definitions found")
-        for path in paths:
-            cfg = bot_runner.load_bot(path)
-            with self.subTest(bot=cfg["name"]):
-                self.assertTrue((pathlib.Path(cfg["dir"]) / cfg["prompt"]).is_file())
-                self.assertTrue(cfg["schedule"])
+            cfg = _cfg(tmp, timeout_minutes=1, context_budget_minutes=1, model_budget_minutes=1, cleanup_margin_seconds=1, context={"CTX": {"command": ["echo"], "timeout_s": 61}})
+            bot = pathlib.Path(tmp) / "demo"
+            (bot / "bot.yml").write_text(json.dumps(cfg))
+            with self.assertRaises(bot_runner.BotError):
+                bot_runner.load_bot(bot)
 
 
 if __name__ == "__main__":

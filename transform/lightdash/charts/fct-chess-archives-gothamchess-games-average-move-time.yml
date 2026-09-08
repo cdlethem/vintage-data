@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_chess_archives_gothamchess_games_ended_at_day
+          yRef:
+            field: fct_chess_archives_gothamchess_games_avg_median_move_time
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Ended at (Day)
+      yAxis:
+      - name: Average median move time
+    layout:
+      xField: fct_chess_archives_gothamchess_games_ended_at_day
+      yField:
+      - fct_chess_archives_gothamchess_games_avg_median_move_time
+  type: cartesian
+description: Average reported per-game median move time in seconds by the `ended_at` calendar day. It
+  describes move pacing, not total game duration, and days with no games are absent.
+metricQuery:
+  dimensions:
+  - fct_chess_archives_gothamchess_games_ended_at_day
+  exploreName: fct_chess_archives_gothamchess_games
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_chess_archives_gothamchess_games_avg_median_move_time
+  sorts:
+  - descending: false
+    fieldId: fct_chess_archives_gothamchess_games_ended_at_day
+  tableCalculations: []
+name: Average median move time per day
+slug: fct-chess-archives-gothamchess-games-average-move-time
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_chess_archives_gothamchess_games_ended_at_day
+  - fct_chess_archives_gothamchess_games_avg_median_move_time
+tableName: fct_chess_archives_gothamchess_games
+version: 1

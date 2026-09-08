@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_oeis_sequence_snapshot_observed_at_day
+          yRef:
+            field: fct_oeis_sequence_snapshot_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct sequence
+    layout:
+      xField: fct_oeis_sequence_snapshot_observed_at_day
+      yField:
+      - fct_oeis_sequence_snapshot_distinct_entities
+  type: cartesian
+description: Distinct `sequence_id` values present in each daily OEIS fetch. This is a catalogue level
+  rather than a sequence-publication flow; the five observed days are shown and days with no successful
+  fetch are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_oeis_sequence_snapshot_observed_at_day
+  exploreName: fct_oeis_sequence_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_oeis_sequence_snapshot_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_oeis_sequence_snapshot_observed_at_day
+  tableCalculations: []
+name: Distinct sequences observed per day
+slug: fct-oeis-sequence-snapshot-observed-sequences
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_oeis_sequence_snapshot_observed_at_day
+  - fct_oeis_sequence_snapshot_distinct_entities
+tableName: fct_oeis_sequence_snapshot
+version: 1

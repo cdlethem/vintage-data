@@ -62,6 +62,7 @@ aggregate in ways that re-identify a household, and prefer coarse spatial bins.
 
 Stdlib only.
 """
+import argparse
 import json
 import os
 import sys
@@ -185,16 +186,28 @@ def summarize(rows):
                                     key=lambda x: -x[1])[:10]}
 
 
+def main(argv=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--country", help="comma-separated country partition; production default remains global")
+    parser.add_argument("--clean-only", action="store_true")
+    parser.add_argument("--outdoor-only", action="store_true")
+    args = parser.parse_args(argv)
+    rows = fetch_by_country(args.country) if args.country else fetch_all(args.clean_only, args.outdoor_only)
+    total = 0; countries = set(); sensors = set(); reading_ids = set(); indoors = exact = clean = 0; ts = []
+    for row in rows:
+        print(json.dumps(row, ensure_ascii=False)); total += 1
+        countries.add(row["country"]); sensors.add(row["sensor_id"]); reading_ids.add(row["id"])
+        indoors += bool(row["indoor"]); exact += bool(row["exact_location"]); clean += bool(row["is_clean"])
+        if row["ts"]: ts.append(row["ts"])
+    print("VINTAGE_RUN_SUMMARY\t" + json.dumps({
+        "health": "healthy", "completeness": "complete", "records": total,
+        "requests": {"attempted": 1}, "partitions": {"attempted": 1, "succeeded": 1, "failed": 0},
+        "coverage": {"retrieval_mode": "country" if args.country else "global", "countries": len(countries),
+                     "time_min": min(ts) if ts else None, "time_max": max(ts) if ts else None},
+        "metrics": {"distinct_readings": len(reading_ids), "distinct_sensors": len(sensors),
+                    "indoor": indoors, "exact_location": exact, "clean": clean}}), file=sys.stderr)
+    return 0
+
+
 if __name__ == "__main__":
-    mode = sys.argv[1] if len(sys.argv) > 1 else "summary"
-    if mode == "summary":
-        print(json.dumps(summarize(fetch_all()), indent=2))
-    elif mode == "noise":
-        for r in fetch_noise():
-            print(json.dumps(r, ensure_ascii=False))
-    elif mode == "country":
-        for r in fetch_by_country(sys.argv[2] if len(sys.argv) > 2 else "ID"):
-            print(json.dumps(r, ensure_ascii=False))
-    else:
-        for r in fetch_all(clean_only=True, outdoor_only=True):
-            print(json.dumps(r, ensure_ascii=False))
+    raise SystemExit(main())

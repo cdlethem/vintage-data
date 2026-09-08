@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 7
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_clinicaltrials_study_observation_last_update_day
+          yRef:
+            field: fct_clinicaltrials_study_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Last update (Day)
+      yAxis:
+      - name: Distinct study
+    layout:
+      stack: true
+      xField: fct_clinicaltrials_study_observation_last_update_day
+      yField:
+      - fct_clinicaltrials_study_observation_distinct_entities
+  type: cartesian
+description: Distinct studies per source update date stacked by `sponsor_class`. The seven observed sponsor
+  classes are shown, with null classifications absent from the stack.
+metricQuery:
+  dimensions:
+  - fct_clinicaltrials_study_observation_last_update_day
+  - fct_clinicaltrials_study_observation_sponsor_class
+  exploreName: fct_clinicaltrials_study_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_clinicaltrials_study_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_clinicaltrials_study_observation_distinct_entities
+  - descending: false
+    fieldId: fct_clinicaltrials_study_observation_last_update_day
+  tableCalculations: []
+name: Study mix by sponsor class
+pivotConfig:
+  columns:
+  - fct_clinicaltrials_study_observation_sponsor_class
+slug: fct-clinicaltrials-study-observation-sponsor-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_clinicaltrials_study_observation_last_update_day
+  - fct_clinicaltrials_study_observation_sponsor_class
+  - fct_clinicaltrials_study_observation_distinct_entities
+tableName: fct_clinicaltrials_study_observation
+version: 1

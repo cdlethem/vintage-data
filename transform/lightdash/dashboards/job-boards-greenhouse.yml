@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 37d14b8d-8867-5c33-b19f-8eace4dad294
+    label: 'Job boards greenhouse: Company country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_greenhouse_company_country
+      tableName: fct_job_boards_greenhouse
+    values: []
+  - disabled: true
+    id: df73f6be-ec31-54be-86a8-eadb8ea9abba
+    label: 'Job boards greenhouse: Company industry'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_greenhouse_company_industry
+      tableName: fct_job_boards_greenhouse
+    values: []
+  - disabled: true
+    id: a0fa7fa9-a3c8-577a-900f-6fa0a97873e8
+    label: 'Job boards greenhouse: Department'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_greenhouse_department
+      tableName: fct_job_boards_greenhouse
+    values: []
+  - disabled: true
+    id: af500e2d-d495-54d5-9443-5f99f12b9272
+    label: 'Job boards greenhouse: Location country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_greenhouse_location_country
+      tableName: fct_job_boards_greenhouse
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Boards Greenhouse
+slug: job-boards-greenhouse
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of job observations returned by Greenhouse applicant tracking system
+      boards. Each row represents one upstream source, job identifier, and extractor observation timestamp;
+      repeated raw copies of an observation are reduced to the latest loaded lineage record while listing
+      attributes and load metadata remain available for audit and replay. A table materialization preserves
+      the append-only observation history for the daily feed without rescanning raw records at query time.
+
+
+      **Grain:** source, job_id, observed_at
+
+
+      **What changes here:** how Greenhouse hiring demand and employer mix change across the publication
+      history.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_boards_greenhouse` — licence: public ATS board endpoints; attribution required: False. Source
+      configuration: `extract/sources/job_boards_greenhouse.yml`.'
+    hideFrame: false
+    title: Job boards greenhouse
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards greenhouse — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct jobs posted per month
+    chartSlug: fct-job-boards-greenhouse-jobs-posted
+    hideTitle: false
+    title: Distinct jobs posted per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Hiring companies posting per month
+    chartSlug: fct-job-boards-greenhouse-companies-posting
+    hideTitle: false
+    title: Hiring companies posting per month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Jobs posted per month by industry
+    chartSlug: fct-job-boards-greenhouse-jobs-by-industry
+    hideTitle: false
+    title: Jobs posted per month by industry
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Monthly job mix by employer country
+    chartSlug: fct-job-boards-greenhouse-jobs-by-company-country
+    hideTitle: false
+    title: Monthly job mix by employer country
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards greenhouse — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-boards-greenhouse
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Job boards greenhouse — observations
+    chartSlug: fct-job-boards-greenhouse-details
+    hideTitle: false
+    title: Job boards greenhouse — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

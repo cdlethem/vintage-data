@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical observation fact for the US Treasury OFAC Specially Designated Nationals snapshot.
+  Each row is one source, sanction identifier, and extractor observation timestamp, retaining the reported
+  entity, programme tags, aliases, addresses, identifiers, and raw-load lineage. Repeated raw copies of
+  the same observation are reduced to the latest loaded record so the table remains one row per governed
+  grain while preserving the complete snapshot history.
+metricQuery:
+  dimensions: &id001
+  - fct_ofac_sanction_observation_observed_at
+  - fct_ofac_sanction_observation_sanction_id
+  - fct_ofac_sanction_observation_entity_type
+  - fct_ofac_sanction_observation_source_loaded_at
+  exploreName: fct_ofac_sanction_observation
+  filters:
+    dimensions:
+      and:
+      - id: a4335dfd-ec08-55a1-a7ea-c4335cd8f777
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_ofac_sanction_observation_observed_at
+        values:
+        - 30
+      id: 6714681a-331b-5334-adaa-eea70ca1546a
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_ofac_sanction_observation_observed_at
+  tableCalculations: []
+name: Ofac sanction observation — observations
+slug: fct-ofac-sanction-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_ofac_sanction_observation
+version: 1

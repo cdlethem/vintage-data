@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_safecast_radiation_measurement_captured_at_day
+          yRef:
+            field: fct_safecast_radiation_measurement_average_measurement_value
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Captured at (Day)
+      yAxis:
+      - name: Mean observed measurement value
+    layout:
+      stack: true
+      xField: fct_safecast_radiation_measurement_captured_at_day
+      yField:
+      - fct_safecast_radiation_measurement_average_measurement_value
+  type: cartesian
+description: Mean `measurement_value` per captured day stacked by the two reported units — cpm and usv.
+  Units have different scales, so the stack is a category comparison rather than an additive radiation
+  total; captured days without a unit are absent.
+metricQuery:
+  dimensions:
+  - fct_safecast_radiation_measurement_captured_at_day
+  - fct_safecast_radiation_measurement_measurement_unit
+  exploreName: fct_safecast_radiation_measurement
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_safecast_radiation_measurement_average_measurement_value
+  sorts:
+  - descending: true
+    fieldId: fct_safecast_radiation_measurement_average_measurement_value
+  - descending: false
+    fieldId: fct_safecast_radiation_measurement_captured_at_day
+  tableCalculations: []
+name: Radiation level mix by measurement unit
+pivotConfig:
+  columns:
+  - fct_safecast_radiation_measurement_measurement_unit
+slug: fct-safecast-radiation-measurement-unit-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_safecast_radiation_measurement_captured_at_day
+  - fct_safecast_radiation_measurement_measurement_unit
+  - fct_safecast_radiation_measurement_average_measurement_value
+tableName: fct_safecast_radiation_measurement
+version: 1

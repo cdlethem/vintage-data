@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+          yRef:
+            field: fct_infodengue_belohorizonte_epidemiology_avg_cases
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Week start date (Week)
+      yAxis:
+      - name: Mean estimated cases
+    layout:
+      xField: fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+      yField:
+      - fct_infodengue_belohorizonte_epidemiology_avg_cases
+  type: cartesian
+description: Mean `cases_estimate` for each epidemiological week in the published Belo Horizonte series.
+  One row currently represents each week, so this is the reported weekly level rather than a sum; absent
+  weeks are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+  exploreName: fct_infodengue_belohorizonte_epidemiology
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_infodengue_belohorizonte_epidemiology_avg_cases
+  sorts:
+  - descending: false
+    fieldId: fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+  tableCalculations: []
+name: Mean estimated cases per epidemiological week
+slug: fct-infodengue-belohorizonte-epidemiology-weekly-case-estimates
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+  - fct_infodengue_belohorizonte_epidemiology_avg_cases
+tableName: fct_infodengue_belohorizonte_epidemiology
+version: 1

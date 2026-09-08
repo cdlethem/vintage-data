@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_food_hygiene_ratings_birmingham_rating_date_month
+          yRef:
+            field: fct_food_hygiene_ratings_birmingham_average_hygiene_score
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Rating date (Month)
+      yAxis:
+      - name: Mean hygiene score
+    layout:
+      xField: fct_food_hygiene_ratings_birmingham_rating_date_month
+      yField:
+      - fct_food_hygiene_ratings_birmingham_average_hygiene_score
+  type: cartesian
+description: Average non-null hygiene component score by rating month for the six business types with
+  the largest observed populations. Remaining types are excluded rather than aggregated, and sparse months
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_food_hygiene_ratings_birmingham_rating_date_month
+  - fct_food_hygiene_ratings_birmingham_business_type
+  exploreName: fct_food_hygiene_ratings_birmingham
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_food_hygiene_ratings_birmingham_average_hygiene_score
+  sorts:
+  - descending: true
+    fieldId: fct_food_hygiene_ratings_birmingham_average_hygiene_score
+  - descending: false
+    fieldId: fct_food_hygiene_ratings_birmingham_rating_date_month
+  tableCalculations: []
+name: Hygiene scores for leading business types
+pivotConfig:
+  columns:
+  - fct_food_hygiene_ratings_birmingham_business_type
+slug: fct-food-hygiene-ratings-birmingham-hygiene-by-type
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_food_hygiene_ratings_birmingham_rating_date_month
+  - fct_food_hygiene_ratings_birmingham_business_type
+  - fct_food_hygiene_ratings_birmingham_average_hygiene_score
+tableName: fct_food_hygiene_ratings_birmingham
+version: 1

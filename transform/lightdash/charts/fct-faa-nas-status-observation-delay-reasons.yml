@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_faa_nas_status_observation_observed_at_hour
+          yRef:
+            field: fct_faa_nas_status_observation_distinct_airports
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct airports
+    layout:
+      stack: true
+      xField: fct_faa_nas_status_observation_observed_at_hour
+      yField:
+      - fct_faa_nas_status_observation_distinct_airports
+  type: cartesian
+description: Distinct airports stacked by reported `ground_delay_reason` in each observation hour. The
+  eight most common reasons are shown; null and less common reasons are excluded, not folded into an other
+  category.
+metricQuery:
+  dimensions:
+  - fct_faa_nas_status_observation_observed_at_hour
+  - fct_faa_nas_status_observation_ground_delay_reason
+  exploreName: fct_faa_nas_status_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_faa_nas_status_observation_distinct_airports
+  sorts:
+  - descending: true
+    fieldId: fct_faa_nas_status_observation_distinct_airports
+  - descending: false
+    fieldId: fct_faa_nas_status_observation_observed_at_hour
+  tableCalculations: []
+name: Airports by ground-delay reason
+pivotConfig:
+  columns:
+  - fct_faa_nas_status_observation_ground_delay_reason
+slug: fct-faa-nas-status-observation-delay-reasons
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_faa_nas_status_observation_observed_at_hour
+  - fct_faa_nas_status_observation_ground_delay_reason
+  - fct_faa_nas_status_observation_distinct_airports
+tableName: fct_faa_nas_status_observation
+version: 1

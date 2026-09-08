@@ -1,0 +1,344 @@
+version: 2
+models:
+- name: fct_socrata_civic_incident
+  description: Incremental physical history of Seattle Fire 911 incidents published through the Socrata
+    civic feed. Each row is one source record at one fetch timestamp (source, record_id, observed_at),
+    with typed event and location attributes, and raw-load lineage. Replayed records at the same grain
+    retain only the latest loaded copy.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_relation, record_id, observed_at
+      label: Socrata civic incident
+      group_label: Socrata civic
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: socrata_civic_incident_key
+      vintage:
+        visualization:
+          dimension: incident_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct record by incident type
+          description: Distinct `record_id` values by `incident_type` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - record_id
+          - incident_type
+          - source_loaded_at
+          sources:
+          - '`socrata_civic` — licence: Socrata/SODA — per-city open data licence; attribution required:
+            False. Source configuration: `extract/sources/socrata_civic.yml`.'
+          analysis:
+            headline: how the recent incident level, geographic spread, and incident-type mix move through
+              the five-day feed window.
+            event_time: observed_at
+            grain: HOUR
+            controls:
+            - incident_type
+            - address
+            trends:
+            - slug: incident-level
+              kind: total
+              metric: distinct_entities
+              time: event_at
+              grain: HOUR
+              title: Distinct incidents by event hour
+              description: Distinct `record_id` values by the source `event_at` hour. This candidate event
+                axis spans only five days, so this is a recent level rather than long-run history; hours
+                with no records are absent rather than zero.
+              width: half
+            - slug: geographic-spread
+              kind: total
+              metric: distinct_addresses
+              time: event_at
+              grain: HOUR
+              title: Distinct incident addresses by event hour
+              description: Distinct non-null `address` values by source `event_at` hour. The five-day event
+                span limits historical interpretation, and a location can host multiple incidents; hours
+                with no records are absent rather than zero.
+              width: half
+            - slug: incident-type-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: incident_type
+              top_n: 8
+              time: event_at
+              grain: HOUR
+              title: Incident level by type
+              description: Distinct `record_id` values per source event hour, stacked by `incident_type`.
+                The eight largest types by metric are shown; the remainder is excluded rather than
+                aggregated. This is a five-day level view, not a historical incident-rate series, and
+                empty hours are absent rather than zero.
+              width: full
+            - slug: fetched-incident-level
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: HOUR
+              title: Distinct incidents by fetch hour
+              description: Distinct `record_id` values present at each extractor `observed_at` hour. This
+                collection-time axis measures the current feed level and spans only five days; missing
+                fetch hours are absent rather than zero.
+              width: full
+  columns:
+  - name: socrata_civic_incident_key
+    description: Stable hash of the source label, upstream record identifier, and fetch timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Socrata civic incident key
+          hidden: true
+  - name: source_relation
+    description: Raw loader relation that supplied the retained Socrata civic record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source relation
+          hidden: false
+  - name: source
+    description: Upstream Socrata dataset label that published the civic incident record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: record_id
+    description: Upstream Socrata record identifier for the incident observation.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct record
+            description: Distinct `record_id` values by `incident_type` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Record id
+          hidden: false
+  - name: observed_at
+    description: Timestamp when the extractor fetched the incident record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: event_at
+    description: Timestamp when the incident was recorded by the civic source.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Event at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: incident_number
+    description: Fire department incident number supplied in the source record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Incident number
+          hidden: false
+  - name: incident_type
+    description: Incident classification supplied in the source record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Incident type
+          hidden: false
+  - name: address
+    description: Street address or intersection reported for the incident.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_addresses:
+            type: count_distinct
+            label: Distinct incident addresses
+            description: Distinct non-null `address` values by event time and any selected breakdown.
+              This measures geographic spread rather than the number of incidents.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Address
+          hidden: false
+  - name: latitude
+    description: Latitude supplied by the source record, in decimal degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: longitude
+    description: Longitude supplied by the source record, in decimal degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: report_location
+    description: Source point location object containing the incident coordinates.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Report location
+          hidden: true
+          sql: CAST(${TABLE}.report_location AS VARCHAR)
+  - name: source_row_id
+    description: Load-layer row identifier for the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extraction batch that produced the retained raw row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date for the retained source observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: Timestamp when extraction of the source batch began.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained raw row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted the retained raw row into the warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained source record content for replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

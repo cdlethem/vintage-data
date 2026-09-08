@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly incremental physical history of Thames Water discharge observations. Each row
+  represents one discharge location identifier at one extractor observation timestamp, with the reported
+  status, location and alert timing retained alongside raw-load lineage. Repeated insert-only raw copies
+  of the same observation are reduced to the latest loaded copy.
+metricQuery:
+  dimensions: &id001
+  - fct_thames_discharge_observed_at
+  - fct_thames_discharge_discharge_id
+  - fct_thames_discharge_alert_status
+  - fct_thames_discharge_source_loaded_at
+  exploreName: fct_thames_discharge
+  filters:
+    dimensions:
+      and:
+      - id: a6fa7d89-4b64-5e60-8a75-2810677564e6
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_thames_discharge_observed_at
+        values:
+        - 30
+      id: bec66e34-4f64-5a33-91f1-f9d39ef0b5d9
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_thames_discharge_observed_at
+  tableCalculations: []
+name: Thames discharge — observations
+slug: fct-thames-discharge-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_thames_discharge
+version: 1

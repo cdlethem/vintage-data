@@ -1,0 +1,154 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 59b6faac-3e5b-57c7-b179-ba2c4da02839
+    label: 'Ofac sanction observation: Entity type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ofac_sanction_observation_entity_type
+      tableName: fct_ofac_sanction_observation
+    values: []
+  - disabled: true
+    id: e3102a87-e1da-53bd-b459-9f1f6ce478da
+    label: 'Ofac sanction observation: Title'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ofac_sanction_observation_title
+      tableName: fct_ofac_sanction_observation
+    values: []
+  - disabled: true
+    id: 6403a83d-f6d1-598b-9c85-38b718c472a9
+    label: 'Ofac sanction observation: Source name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ofac_sanction_observation_source_name
+      tableName: fct_ofac_sanction_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Ofac Sanctions
+slug: ofac-sanctions
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical observation fact for the US Treasury OFAC Specially Designated Nationals
+      snapshot. Each row is one source, sanction identifier, and extractor observation timestamp, retaining
+      the reported entity, programme tags, aliases, addresses, identifiers, and raw-load lineage. Repeated
+      raw copies of the same observation are reduced to the latest loaded record so the table remains
+      one row per governed grain while preserving the complete snapshot history.
+
+
+      **Grain:** source_name, sanction_id, observed_at
+
+
+      **What changes here:** The OFAC snapshot level is stable overall while sanctioned entity categories
+      and programme mix reveal small daily revisions.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `ofac_sanctions` — licence: US Treasury public data; attribution required: False. Source configuration:
+      `extract/sources/ofac_sanctions.yml`.'
+    hideFrame: false
+    title: Ofac sanction observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Ofac sanction observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Sanctioned records present each observation day
+    chartSlug: fct-ofac-sanction-observation-sanctions-by-day
+    hideTitle: false
+    title: Sanctioned records present each observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct sanctioned names each observation day
+    chartSlug: fct-ofac-sanction-observation-names-by-day
+    hideTitle: false
+    title: Distinct sanctioned names each observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Sanctioned records by entity type
+    chartSlug: fct-ofac-sanction-observation-sanctions-by-entity-type
+    hideTitle: false
+    title: Sanctioned records by entity type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Snapshot mix across leading sanction programmes
+    chartSlug: fct-ofac-sanction-observation-sanctions-by-programme
+    hideTitle: false
+    title: Snapshot mix across leading sanction programmes
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Ofac sanction observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct sanction by entity type
+    chartSlug: fct-ofac-sanction-observation
+    hideTitle: false
+    title: Distinct sanction by entity type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Ofac sanction observation — observations
+    chartSlug: fct-ofac-sanction-observation-details
+    hideTitle: false
+    title: Ofac sanction observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

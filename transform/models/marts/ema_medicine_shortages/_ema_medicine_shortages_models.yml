@@ -1,0 +1,509 @@
+version: 2
+models:
+- name: fct_ema_medicine_shortage
+  description: Hourly physical change-observation fact for medicine shortages published by the European
+    Medicines Agency. The extractor emits one row when a catalogue entry is first seen, updated, or removed,
+    and emits every entry when seeding its baseline. Each row is one source label, stable shortage identifier,
+    and extractor fetch timestamp. Replayed raw copies of the same observation are reduced to the latest
+    loaded row while the source change history remains available.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, shortage_id, fetched_at
+      label: Ema medicine shortage
+      group_label: Ema medicine shortages
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: ema_medicine_shortage_key
+      vintage:
+        visualization:
+          dimension: supply_shortage_status
+          metric: distinct_entities
+          time: fetched_at
+          window_days: 30
+          title: Distinct shortage by supply shortage status
+          description: Distinct `shortage_id` values by `supply_shortage_status` among observations in
+            the selected window. Repeated observations of an entity count once within each group. An entity
+            that changed category can appear in multiple groups; these groups are not additive and do
+            not represent a current-state census.
+          detail_fields:
+          - fetched_at
+          - shortage_id
+          - supply_shortage_status
+          - source_loaded_at
+          sources:
+          - '`ema_medicine_shortages` — licence: EMA legal notice permits commercial and non-commercial
+            reproduction and distribution when EMA is acknowledged; third-party material excluded; attribution
+            required: True. Source configuration: `extract/sources/ema_medicine_shortages.yml`.'
+          analysis:
+            headline: how newly published medicine shortages and their status mix accumulate across EMA history.
+            event_time: first_published_date
+            grain: MONTH
+            controls:
+            - supply_shortage_status
+            - availability_of_alternatives
+            - therapeutic_area_mesh
+            trends:
+            - slug: published-shortages
+              kind: total
+              metric: distinct_entities
+              time: first_published_date
+              grain: MONTH
+              title: Shortages first published each month
+              description: Distinct `shortage_id` values by EMA `first_published_date` month. This is a source
+                publication flow rather than a current catalogue level; months without a publication are absent
+                rather than zero.
+              width: half
+            - slug: published-medicines
+              kind: total
+              metric: distinct_medicines
+              time: first_published_date
+              grain: MONTH
+              title: Affected medicines first published each month
+              description: Distinct non-null `medicine_affected` values by first-publication month. One medicine
+                can have multiple shortage records, so this line is not additive with the shortage count; months
+                without a publication are absent rather than zero.
+              width: half
+            - slug: status-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: supply_shortage_status
+              top_n: 3
+              time: first_published_date
+              grain: MONTH
+              title: Published shortages by status each month
+              description: Distinct `shortage_id` values by first-publication month stacked by
+                `supply_shortage_status`. All three observed statuses are retained; months without records are
+                absent rather than zero.
+              width: full
+            - slug: alternatives-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: availability_of_alternatives
+              top_n: 6
+              time: first_published_date
+              grain: MONTH
+              title: Published shortages by alternative availability
+              description: Distinct `shortage_id` values by first-publication month stacked by the six observed
+                alternative-availability values. Null availability and any excluded remainder are not aggregated;
+                months without records are absent rather than zero.
+              width: full
+            - slug: updated-status
+              kind: composition
+              metric: distinct_entities
+              breakdown: supply_shortage_status
+              top_n: 3
+              time: last_updated_date
+              grain: MONTH
+              title: Updated shortages by status each month
+              description: Distinct `shortage_id` values by EMA `last_updated_date` month stacked by status.
+                Only the 69 rows with a parsed last-updated date appear; null dates and months with no updates
+                are absent rather than zero.
+              width: full
+  columns:
+  - name: ema_medicine_shortage_key
+    description: Stable hash of the source label, shortage identifier, and extractor fetch timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Ema medicine shortage key
+          hidden: true
+  - name: source
+    description: EMA source label carried by the shortage record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: shortage_id
+    description: Stable EMA shortage identifier, observed as the canonical shortage URL.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct shortage
+            description: Distinct `shortage_id` values by `supply_shortage_status` among observations
+              in the selected window. Repeated observations of an entity count once within each group.
+              An entity that changed category can appear in multiple groups; these groups are not additive
+              and do not represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Shortage id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp when the extractor fetched the EMA catalogue used to identify this change.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: availability_of_alternatives
+    description: EMA statement about whether alternatives are available for the affected medicine.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Availability of alternatives
+          hidden: false
+  - name: category
+    description: EMA shortage category, such as Human.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Category
+          hidden: false
+  - name: change_type
+    description: Extractor classification for this change observation; new, updated, or removed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Change type
+          hidden: false
+  - name: expected_resolution
+    description: Free-text expected resolution statement supplied by EMA.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Expected resolution
+          hidden: false
+  - name: expected_resolution_date_text
+    description: Original expected resolution date text; retained because the source may publish non-date
+      wording or year-only values.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Expected resolution date text
+          hidden: false
+  - name: expected_resolution_date
+    description: Parsed expected resolution date when the source value is a day/month/year; null for blank
+      or non-date wording.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Expected resolution date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: first_published_date_raw
+    description: Original first-published date text retained for source fidelity.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: First published date raw
+          hidden: false
+  - name: first_published_date
+    description: Calendar date when EMA first published the shortage, parsed from the observed day/month/year
+      source format.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: First published date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: inn_or_common_name
+    description: International non-proprietary name or common name of the affected medicine.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Inn or common name
+          hidden: false
+  - name: last_updated_date_raw
+    description: Original last-updated date text retained for source fidelity.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Last updated date raw
+          hidden: false
+  - name: last_updated_date
+    description: Calendar date when EMA last updated the shortage, parsed from the observed day/month/year
+      source format.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Last updated date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: medicine_affected
+    description: Medicine or medicine group affected by the shortage.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_medicines:
+            type: count_distinct
+            label: Distinct affected medicines
+            description: Distinct non-null `medicine_affected` values among shortage observations. A medicine
+              can have multiple shortage records, so this count is not additive with distinct shortages.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Medicine affected
+          hidden: false
+  - name: pharmaceutical_forms_affected
+    description: Pharmaceutical forms affected by the shortage, as supplied by EMA.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Pharmaceutical forms affected
+          hidden: false
+  - name: publisher_timestamp
+    description: Timestamp published by EMA for the catalogue snapshot used to identify this change.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Publisher timestamp
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: shortage_url
+    description: Public EMA URL for the shortage record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Shortage url
+          hidden: false
+  - name: snapshot_sha256
+    description: SHA-256 identifier shared by changes detected from the same EMA catalogue snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Snapshot sha256
+          hidden: false
+  - name: start_of_shortage_date_raw
+    description: Original start-of-shortage date text retained for source fidelity.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Start of shortage date raw
+          hidden: false
+  - name: start_of_shortage_date
+    description: Calendar date when the shortage started, parsed from the observed day/month/year source
+      format.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Start of shortage date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: strengths_affected
+    description: Medicine strengths affected by the shortage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Strengths affected
+          hidden: false
+  - name: supply_shortage_status
+    description: Supply shortage status carried by this EMA change observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Supply shortage status
+          hidden: false
+  - name: therapeutic_area_mesh
+    description: Semicolon-delimited MeSH therapeutic areas supplied by EMA.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Therapeutic area mesh
+          hidden: false
+  - name: _row_id
+    description: Raw warehouse row identifier for the retained shortage observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _source
+    description: Loader source name for the raw relation containing the retained shortage observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source'
+          hidden: true
+  - name: _batch_id
+    description: Extract batch identifier that produced the retained shortage observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained shortage observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained shortage observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: _dt
+    description: Load-layer partition date associated with the retained shortage observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: UTC timestamp when extraction began for the retained shortage observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _load_id
+    description: Load operation identifier that inserted the retained shortage observation into raw.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained shortage observation into raw.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer content hash for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

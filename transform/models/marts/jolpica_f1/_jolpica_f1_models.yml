@@ -1,0 +1,282 @@
+version: 2
+models:
+- name: fct_jolpica_f1
+  description: Hourly physical history of Jolpica Formula 1 driver-standing observations. Each row is
+    one driver championship standing for a season and round at one extractor observation timestamp; duplicate
+    raw replays of that observation are reduced to the latest loaded row while raw-load lineage is retained.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: season, round, driver_id, observed_at
+      label: Jolpica f1
+      group_label: Jolpica f1
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: jolpica_f1_key
+      vintage:
+        visualization:
+          dimension: driver_name
+          metric: max_championship_points
+          time: observed_at
+          window_days: 30
+          title: Maximum observed championship points by driver name
+          description: Maximum observed championship points by `driver_name` in the selected observation
+            window. Driver's accumulated championship points at the observed round. Uses the largest retained
+            value within each group and window, not the latest value or a sum of snapshots.
+          detail_fields:
+          - observed_at
+          - driver_id
+          - driver_name
+          - championship_points
+          - source_loaded_at
+          sources:
+          - '`jolpica_f1` — licence: Jolpica-F1 — Ergast-compatible, respect ToS; attribution required:
+            False. Source configuration: `extract/sources/jolpica_f1.yml`.'
+          analysis:
+            headline: how the five-day championship snapshot changes in driver coverage, constructor mix, and
+              accumulated points.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - season
+            - round
+            - constructor
+            - nationality
+            trends:
+            - slug: drivers-observed
+              kind: total
+              metric: distinct_drivers
+              time: observed_at
+              grain: DAY
+              title: Drivers represented by observation day
+              description: Distinct `driver_id` values in each daily championship-standing snapshot. This is
+                a short collection-time level because Jolpica provides no source event timestamp; days without
+                a snapshot are absent rather than zero.
+              width: half
+            - slug: championship-points
+              kind: total
+              metric: max_championship_points
+              time: observed_at
+              grain: DAY
+              title: Highest championship points by observation day
+              description: Maximum reported accumulated championship points in each daily standing snapshot.
+                This is a republished snapshot measure rather than an additive race total; days without a
+                snapshot are absent rather than zero.
+              width: half
+            - slug: points-by-constructor
+              kind: breakdown
+              metric: max_championship_points
+              breakdown: constructor
+              top_n: 8
+              time: observed_at
+              grain: DAY
+              title: Constructor points by observation day
+              description: Maximum accumulated championship points per observation day for the eight
+                constructors with the largest observed totals. The remaining constructors are excluded rather
+                than aggregated, and missing snapshot days are absent rather than zero.
+              width: full
+            - slug: driver-mix-by-nationality
+              kind: composition
+              metric: distinct_drivers
+              breakdown: nationality
+              top_n: 10
+              time: observed_at
+              grain: DAY
+              title: Driver mix by nationality and observation day
+              description: Distinct drivers per observation day stacked by the ten nationalities with the
+                largest observed driver totals. The remainder is excluded rather than aggregated; this shows
+                snapshot composition, not a nationality-weighted championship total.
+              width: full
+  columns:
+  - name: jolpica_f1_key
+    description: Stable hash of the season, round, driver, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Jolpica f1 key
+          hidden: true
+  - name: season
+    description: Formula 1 championship season reported by Jolpica.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Season
+          hidden: false
+          format: '#,##0'
+  - name: round
+    description: Championship round number associated with the standing snapshot.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Round
+          hidden: false
+          format: '#,##0'
+  - name: driver_id
+    description: Jolpica driver identifier for the standing row.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_drivers:
+            type: count_distinct
+            label: Distinct driver
+            description: Distinct non-null `driver_id` values represented in each observed championship
+              snapshot. Repeated daily snapshots count a driver once per observation-day slice.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Driver id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the standing snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_record_id
+    description: Composite raw Jolpica record identifier for this driver standing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source record id
+          hidden: false
+  - name: driver_name
+    description: Driver display name reported by Jolpica.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Driver name
+          hidden: false
+  - name: nationality
+    description: Driver nationality reported by Jolpica.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Nationality
+          hidden: false
+  - name: constructor
+    description: Constructor name associated with the driver's standing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Constructor
+          hidden: false
+  - name: championship_position
+    description: Driver's championship position at the observed round.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Championship position
+          hidden: false
+          format: '#,##0'
+  - name: championship_points
+    description: Driver's accumulated championship points at the observed round.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          max_championship_points:
+            type: max
+            label: Maximum observed championship points
+            description: Maximum observed championship points by `driver_name` in the selected observation
+              window. Driver's accumulated championship points at the observed round. Uses the largest
+              retained value within each group and window, not the latest value or a sum of snapshots.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Championship points
+          hidden: false
+          format: '#,##0.00'
+  - name: race_wins
+    description: Driver's accumulated race wins at the observed round.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Race wins
+          hidden: false
+          format: '#,##0'
+  - name: source_file
+    description: Raw extract file containing this Jolpica observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: Row position of this observation within its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

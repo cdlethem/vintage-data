@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 83f243c5-07dc-54bf-afab-7b37a9c87bb2
+    label: 'Swpc space weather: Source name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_swpc_space_weather_source_name
+      tableName: fct_swpc_space_weather
+    values: []
+  - disabled: true
+    id: 3f1cec44-e732-58fb-b3c5-77c6de96a1f9
+    label: 'Swpc space weather: Station count'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_swpc_space_weather_station_count
+      tableName: fct_swpc_space_weather
+    values: []
+  - disabled: true
+    id: 8e3143e1-adff-5cf4-9922-f65b29a3ba10
+    label: 'Swpc space weather: A running index'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_swpc_space_weather_a_running_index
+      tableName: fct_swpc_space_weather
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Swpc Space Weather
+slug: swpc-space-weather
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of NOAA SWPC planetary K-index observations. Each row represents
+      one source, SWPC observation identifier, and three-hour observation timestamp. Repeated insert-only
+      raw snapshots are reduced to the latest loaded copy for that observation while extractor and load
+      lineage remain available for audit and replay.
+
+
+      **Grain:** source_name, observation_id, observation_at
+
+
+      **What changes here:** how NOAA''s planetary activity and reporting coverage move across source
+      observation days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `swpc_space_weather` — licence: NOAA SWPC — public domain; attribution required: False. Source
+      configuration: `extract/sources/swpc_space_weather.yml`.'
+    hideFrame: false
+    title: Swpc space weather
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Swpc space weather — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean planetary K-index by observation day
+    chartSlug: fct-swpc-space-weather-kp-activity
+    hideTitle: false
+    title: Mean planetary K-index by observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean running A-index by observation day
+    chartSlug: fct-swpc-space-weather-a-index-activity
+    hideTitle: false
+    title: Mean running A-index by observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reporting station count by day
+    chartSlug: fct-swpc-space-weather-station-coverage
+    hideTitle: false
+    title: Mean reporting station count by day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: K-index mix by reporting station count
+    chartSlug: fct-swpc-space-weather-activity-by-stations
+    hideTitle: false
+    title: K-index mix by reporting station count
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Swpc space weather — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed kp index by observation at
+    chartSlug: fct-swpc-space-weather
+    hideTitle: false
+    title: Mean observed kp index by observation at
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Swpc space weather — observations
+    chartSlug: fct-swpc-space-weather-details
+    hideTitle: false
+    title: Swpc space weather — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

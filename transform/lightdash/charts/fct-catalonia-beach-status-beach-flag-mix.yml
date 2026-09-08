@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_catalonia_beach_status_status_updated_at_day
+          yRef:
+            field: fct_catalonia_beach_status_distinct_beaches
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Status updated at (Day)
+      yAxis:
+      - name: Distinct beaches
+    layout:
+      stack: true
+      xField: fct_catalonia_beach_status_status_updated_at_day
+      yField:
+      - fct_catalonia_beach_status_distinct_beaches
+  type: cartesian
+description: Distinct `beach_id` values per `status_updated_at` day stacked by the source `beach_flag`.
+  The three observed flag values are retained, so bar heights show the reported roster mix and not a count
+  of new beaches; absent dates are absent.
+metricQuery:
+  dimensions:
+  - fct_catalonia_beach_status_status_updated_at_day
+  - fct_catalonia_beach_status_beach_flag
+  exploreName: fct_catalonia_beach_status
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_catalonia_beach_status_distinct_beaches
+  sorts:
+  - descending: true
+    fieldId: fct_catalonia_beach_status_distinct_beaches
+  - descending: false
+    fieldId: fct_catalonia_beach_status_status_updated_at_day
+  tableCalculations: []
+name: Distinct beaches by flag and status date
+pivotConfig:
+  columns:
+  - fct_catalonia_beach_status_beach_flag
+slug: fct-catalonia-beach-status-beach-flag-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_catalonia_beach_status_status_updated_at_day
+  - fct_catalonia_beach_status_beach_flag
+  - fct_catalonia_beach_status_distinct_beaches
+tableName: fct_catalonia_beach_status
+version: 1

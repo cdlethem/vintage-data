@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_zenodo_record_observation_created_at_day
+          yRef:
+            field: fct_zenodo_record_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct record
+    layout:
+      xField: fct_zenodo_record_observation_created_at_day
+      yField:
+      - fct_zenodo_record_observation_distinct_entities
+  type: cartesian
+description: Distinct `record_id` values whose Zenodo `created_at` falls on each UTC day. This source-event
+  axis spans only five days in the mart, so it is a recent slice rather than a long historical publication
+  trend; absent event days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_zenodo_record_observation_created_at_day
+  exploreName: fct_zenodo_record_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_zenodo_record_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_zenodo_record_observation_created_at_day
+  tableCalculations: []
+name: Records by Zenodo creation day
+slug: fct-zenodo-record-observation-records-created-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_zenodo_record_observation_created_at_day
+  - fct_zenodo_record_observation_distinct_entities
+tableName: fct_zenodo_record_observation
+version: 1

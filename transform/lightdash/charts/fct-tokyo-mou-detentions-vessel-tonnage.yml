@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_tokyo_mou_detentions_detention_date_day
+          yRef:
+            field: fct_tokyo_mou_detentions_average_gross_tonnage
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Detention date (Day)
+      yAxis:
+      - name: Mean gross tonnage
+    layout:
+      xField: fct_tokyo_mou_detentions_detention_date_day
+      yField:
+      - fct_tokyo_mou_detentions_average_gross_tonnage
+  type: cartesian
+description: Average `gross_tonnage` across retained detention observations by reported detention date.
+  Repeated extractor observations can weight the mean; a high line means the observed vessels were larger,
+  not that tonnage is additive, and empty dates are absent.
+metricQuery:
+  dimensions:
+  - fct_tokyo_mou_detentions_detention_date_day
+  exploreName: fct_tokyo_mou_detentions
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_tokyo_mou_detentions_average_gross_tonnage
+  sorts:
+  - descending: false
+    fieldId: fct_tokyo_mou_detentions_detention_date_day
+  tableCalculations: []
+name: Mean detained-vessel gross tonnage per day
+slug: fct-tokyo-mou-detentions-vessel-tonnage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_tokyo_mou_detentions_detention_date_day
+  - fct_tokyo_mou_detentions_average_gross_tonnage
+tableName: fct_tokyo_mou_detentions
+version: 1

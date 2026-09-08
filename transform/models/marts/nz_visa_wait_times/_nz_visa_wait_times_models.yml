@@ -1,0 +1,263 @@
+version: 2
+models:
+- name: fct_nz_visa_wait_times
+  description: Deduplicated observations of published New Zealand visa processing waits. Each row records
+    one visa type from an endpoint observation timestamp and retains the source text alongside wait durations
+    normalized to days.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, visa_type_key, observed_at
+      label: Nz visa wait times
+      group_label: Nz visa wait times
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: visa_wait_time_key
+      vintage:
+        visualization:
+          dimension: visa_type
+          metric: average_average_wait_days
+          time: observed_at
+          window_days: 30
+          title: Mean observed average wait days by visa type
+          description: Mean observed average wait days by `visa_type` in the selected observation window.
+            Average wait duration converted to days when the source text is a numeric day or week value;
+            otherwise null. Each retained observation has equal weight; polling frequency and repeated
+            snapshots can affect the mean. This is not a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - visa_wait_time_key
+          - visa_type
+          - average_wait_days
+          - source_loaded_at
+          sources:
+          - '`nz_visa_wait_times` — licence: Immigration NZ public data; attribution required: True. Source
+            configuration: `extract/sources/nz_visa_wait_times.yml`.'
+          analysis:
+            headline: how many visa categories the feed reports each day and whether published wait
+              durations are available to track.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - source
+            - visa_type
+            - average_wait_time_text
+            - most_completed_within_text
+            trends:
+            - slug: reported-visa-types
+              kind: total
+              metric: distinct_visa_types
+              time: observed_at
+              grain: DAY
+              title: Visa categories reported per day
+              description: Distinct `visa_type_key` values in each daily feed observation. This is a
+                catalogue level rather than an application flow; the four observed days are shown and
+                days with no successful extract are absent rather than zero.
+              width: half
+            - slug: average-wait-days
+              kind: total
+              metric: average_average_wait_days
+              time: observed_at
+              grain: DAY
+              title: Average wait duration by observation day
+              description: Mean parsed `average_wait_days` by feed observation day. The current 25 rows
+                contain no numeric day or week conversions, so this series is empty rather than zero;
+                the original text remains available for interpretation.
+              width: half
+            - slug: completion-window-days
+              kind: total
+              metric: average_most_completed_within_days
+              time: observed_at
+              grain: DAY
+              title: Most-completed window by observation day
+              description: Mean parsed `most_completed_within_days` by feed observation day. All current
+                values are null because the source text was not converted to numeric days; null is
+                preserved as absent data rather than a zero-day wait.
+              width: half
+            - slug: categories-by-day
+              kind: breakdown
+              metric: distinct_visa_types
+              breakdown: visa_type
+              top_n: 6
+              time: observed_at
+              grain: DAY
+              title: Visa categories reported by day
+              description: Distinct canonical visa types per observation day, compared across the six
+                published labels. All six labels are retained because the feed has six visible values;
+                this is catalogue coverage, not application volume.
+              width: full
+  columns:
+  - name: visa_wait_time_key
+    description: Stable hash of source endpoint, canonical visa type, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Visa wait time key
+          hidden: true
+  - name: source
+    description: Source endpoint identifier reported by the upstream visa wait feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: visa_type
+    description: Visa type label as published by the upstream feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Visa type
+          hidden: false
+  - name: visa_type_key
+    description: Lowercase punctuation-normalized visa type used to retain identity across label formatting
+      changes.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_visa_types:
+            type: count_distinct
+            label: Distinct visa types
+            description: Distinct canonical `visa_type_key` values reported by the feed in each observation
+              period. This counts published categories, not visa applications or processing outcomes.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Visa type key
+          hidden: true
+  - name: observed_at
+    description: UTC timestamp when the upstream feed was fetched and its wait values observed.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: average_wait_time_text
+    description: Original average wait-time text reported by the upstream feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Average wait time text
+          hidden: false
+  - name: average_wait_days
+    description: Average wait duration converted to days when the source text is a numeric day or week
+      value; otherwise null.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_average_wait_days:
+            type: average
+            label: Mean observed average wait days
+            description: Mean observed average wait days by `visa_type` in the selected observation window.
+              Average wait duration converted to days when the source text is a numeric day or week value;
+              otherwise null. Each retained observation has equal weight; polling frequency and repeated
+              snapshots can affect the mean. This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Average wait days
+          hidden: false
+          format: '#,##0.00'
+  - name: most_completed_within_text
+    description: Original text describing the period within which most applications are completed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Most completed within text
+          hidden: false
+  - name: most_completed_within_days
+    description: Most-completed-within duration converted to days when the source text is a numeric day
+      or week value; otherwise null.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_most_completed_within_days:
+            type: average
+            label: Mean most-completed-within days
+            description: Mean non-null `most_completed_within_days` reported in each observation period.
+              This measure describes the source's completion window and is not an application count or
+              an additive duration.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Most completed within days
+          hidden: false
+          format: '#,##0.00'
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position in the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the raw observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

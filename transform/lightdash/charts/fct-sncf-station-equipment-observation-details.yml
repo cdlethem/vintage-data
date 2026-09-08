@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical history of equipment published by SNCF station services. Each row represents
+  one equipment identifier from one source at one extractor observation time. Repeated copies of an observation
+  from later insert-only raw loads are reduced to the latest loaded copy, while source and load lineage
+  are retained. The source coordinate text is preserved and parsed into nullable latitude and longitude
+  values.
+metricQuery:
+  dimensions: &id001
+  - fct_sncf_station_equipment_observation_observed_at
+  - fct_sncf_station_equipment_observation_equipment_id
+  - fct_sncf_station_equipment_observation_operating_status
+  - fct_sncf_station_equipment_observation_source_loaded_at
+  exploreName: fct_sncf_station_equipment_observation
+  filters:
+    dimensions:
+      and:
+      - id: ab12d30b-1195-5454-8cab-18a67ad2cc8b
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sncf_station_equipment_observation_observed_at
+        values:
+        - 30
+      id: e321ffcf-fb45-59eb-addd-dad25dbe57a7
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_sncf_station_equipment_observation_observed_at
+  tableCalculations: []
+name: Sncf station equipment observation — observations
+slug: fct-sncf-station-equipment-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_sncf_station_equipment_observation
+version: 1

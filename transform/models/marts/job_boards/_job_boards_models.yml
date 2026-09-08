@@ -1,0 +1,295 @@
+version: 2
+models:
+- name: fct_job_boards
+  description: Daily physical history of job-listing observations collected from the combined Greenhouse,
+    Ashby, and Lever job-board feeds. The table is materialized as a physical relation so the append-only
+    source history can be queried repeatedly without rescanning the raw payloads. Each row represents
+    one source, job identifier, and extractor observation timestamp; repeated raw copies of that observation
+    are reduced to the latest loaded lineage record while listing attributes and load metadata remain
+    available for audit and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, job_id, observed_at
+      label: Job boards
+      group_label: Job boards
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: job_boards_key
+      vintage:
+        visualization:
+          dimension: company
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct job by company
+          description: Distinct `job_id` values by `company` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - job_id
+          - company
+          - source_loaded_at
+          sources:
+          - '`job_boards` — see dbt raw-source lineage.'
+          analysis:
+            headline: how posted job volume and company coverage change across job-board feeds.
+            event_time: posted_at
+            grain: MONTH
+            controls:
+            - source
+            - company
+            - department
+            - location
+            trends:
+            - slug: posted-jobs
+              kind: total
+              metric: distinct_entities
+              time: posted_at
+              grain: MONTH
+              title: Jobs posted per month
+              description: Distinct `job_id` values grouped by their upstream `posted_at` month. This is a
+                source-event flow — months with no listed jobs are absent rather than zero, and repeated
+                observations of a job are counted once within its posting month.
+              width: half
+            - slug: posting-companies
+              kind: total
+              metric: distinct_companies
+              time: posted_at
+              grain: MONTH
+              title: Hiring companies posting per month
+              description: Distinct non-null `company` values among jobs by upstream `posted_at` month.
+                This measures breadth of hiring activity rather than job volume — months with no source
+                postings are absent rather than zero.
+              width: half
+            - slug: jobs-by-company
+              kind: composition
+              metric: distinct_entities
+              breakdown: company
+              top_n: 8
+              time: posted_at
+              grain: MONTH
+              title: Monthly postings by leading company
+              description: Distinct jobs by upstream `posted_at` month, stacked for the eight companies
+                with the most jobs in this mart. Remaining companies are excluded rather than aggregated;
+                sparse source months are absent rather than zero.
+              width: full
+            - slug: catalogue-by-source
+              kind: composition
+              metric: distinct_entities
+              breakdown: source
+              top_n: 3
+              time: observed_at
+              grain: DAY
+              title: Observed job catalogue by feed
+              description: Distinct `job_id` values present on each extractor observation day, stacked by
+                upstream `source`. This is a catalogue level rather than a posting flow — a change means
+                the published feed changed, and days with no successful extract are absent rather than zero.
+              width: full
+  columns:
+  - name: job_boards_key
+    description: Stable hash of the source, job identifier, and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job boards key
+          hidden: true
+  - name: source
+    description: Upstream job-board feed label carried by the raw response, such as jobs_greenhouse, jobs_ashby,
+      or jobs_lever.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: job_id
+    description: Identifier assigned to the advertised job by the upstream job-board feed.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct job
+            description: Distinct `job_id` values by `company` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Job id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed this job listing.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: company
+    description: Hiring company name reported by the job-board feed.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_companies:
+            type: count_distinct
+            label: Distinct hiring companies
+            description: Distinct non-null `company` values per time bucket. This measures company coverage,
+              not posting volume, and repeated observations count once within each group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Company
+          hidden: false
+  - name: title
+    description: Public title of the advertised job.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: location
+    description: Free-text candidate location or geographic eligibility supplied by the listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location
+          hidden: false
+  - name: posted_at
+    description: Timestamp when the listing was posted according to the upstream feed.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Posted at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: department
+    description: Department or functional category reported for the job listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Department
+          hidden: false
+  - name: job_url
+    description: Canonical public URL for the advertised job posting.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job url
+          hidden: false
+  - name: description
+    description: Full job-description text supplied by the upstream feed when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Description
+          hidden: true
+  - name: _batch_id
+    description: Extract batch identifier associated with the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Load job identifier associated with the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Content hash of the retained raw observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

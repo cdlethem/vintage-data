@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_police_crime_observation_crime_month_month
+          yRef:
+            field: fct_uk_police_crime_observation_distinct_streets
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Crime month (Month)
+      yAxis:
+      - name: Distinct street
+    layout:
+      xField: fct_uk_police_crime_observation_crime_month_month
+      yField:
+      - fct_uk_police_crime_observation_distinct_streets
+  type: cartesian
+description: Distinct non-null `street` labels among crimes by source `crime_month` — this coverage proxy
+  can move independently of crime volume because one anonymised label can carry multiple nearby records.
+  Empty months are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_uk_police_crime_observation_crime_month_month
+  exploreName: fct_uk_police_crime_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_uk_police_crime_observation_distinct_streets
+  sorts:
+  - descending: false
+    fieldId: fct_uk_police_crime_observation_crime_month_month
+  tableCalculations: []
+name: Street labels represented per source month
+slug: fct-uk-police-crime-observation-monthly-street-coverage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_police_crime_observation_crime_month_month
+  - fct_uk_police_crime_observation_distinct_streets
+tableName: fct_uk_police_crime_observation
+version: 1

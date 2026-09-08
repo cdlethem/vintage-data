@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_gh_archive_events_created_at_day
+          yRef:
+            field: fct_gh_archive_events_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct event
+    layout:
+      stack: true
+      xField: fct_gh_archive_events_created_at_day
+      yField:
+      - fct_gh_archive_events_distinct_entities
+  type: cartesian
+description: Distinct events per creation day stacked by non-null `payload_ref_type`. This is a sparse
+  payload subset, so bars show bursts and absent combinations are absent rather than zero; the two observed
+  reference types are kept without a remainder.
+metricQuery:
+  dimensions:
+  - fct_gh_archive_events_created_at_day
+  - fct_gh_archive_events_payload_ref_type
+  exploreName: fct_gh_archive_events
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gh_archive_events_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_gh_archive_events_distinct_entities
+  - descending: false
+    fieldId: fct_gh_archive_events_created_at_day
+  tableCalculations: []
+name: Events with payload references by reference type
+pivotConfig:
+  columns:
+  - fct_gh_archive_events_payload_ref_type
+slug: fct-gh-archive-events-payload-reference-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gh_archive_events_created_at_day
+  - fct_gh_archive_events_payload_ref_type
+  - fct_gh_archive_events_distinct_entities
+tableName: fct_gh_archive_events
+version: 1

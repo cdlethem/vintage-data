@@ -1,0 +1,308 @@
+version: 2
+models:
+- name: fct_malaysia_organ_pledges
+  description: Physical observation fact for Malaysia's daily organ-donor pledge counts by state. Each
+    row records one state and pledge-date observation from one extractor snapshot, preserving repeated
+    snapshots so historical withdrawals and other publisher revisions remain visible. Duplicate copies
+    of the same source, pledge identifier, and observation timestamp are reduced to the latest loaded
+    record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, pledge_id, observed_at
+      label: Malaysia organ pledges
+      group_label: Malaysia organ pledges
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: malaysia_organ_pledge_observa_3ec65c
+      vintage:
+        visualization:
+          dimension: state
+          metric: average_pledge_count
+          time: observed_at
+          window_days: 30
+          title: Mean observed pledge count by state
+          description: Mean observed pledge count by `state` in the selected observation window. Number
+            of organ-donor pledges reported for the state and pledge date. Each retained observation has
+            equal weight; polling frequency and repeated snapshots can affect the mean. This is not a
+            latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - pledge_id
+          - state
+          - pledge_count
+          - source_loaded_at
+          sources:
+          - '`malaysia_organ_pledges` — licence: CC BY 4.0; attribution required: True. Source configuration:
+            `extract/sources/malaysia_organ_pledges.yml`.'
+          analysis:
+            headline: how reported organ-donor pledge volume changes by pledge date across the published feed.
+            event_time: pledge_date
+            grain: DAY
+            controls:
+            - state
+            - publisher_updated_at
+            trends:
+            - slug: pledge-observations
+              kind: total
+              metric: distinct_pledges
+              time: pledge_date
+              grain: DAY
+              title: Distinct pledge observations per day
+              description: Distinct `pledge_id` values by reported `pledge_date`. This is the state-level
+                feed's daily observation level, not a sum of pledges across repeated snapshots — dates with
+                no publisher record are absent rather than zero.
+              width: half
+            - slug: pledge-level
+              kind: total
+              metric: average_pledge_count
+              time: pledge_date
+              grain: DAY
+              title: Mean reported pledges per day
+              description: Mean `pledge_count` among retained observations for each reported `pledge_date`.
+                Repeated snapshots and irregular polling receive equal row weight, so this is a reported
+                level rather than an additive flow; dates absent from the source are absent rather than zero.
+              width: half
+            - slug: pledges-by-state
+              kind: breakdown
+              metric: distinct_pledges
+              breakdown: state
+              top_n: 2
+              time: pledge_date
+              grain: DAY
+              title: Pledge observations by state
+              description: Distinct pledge observations per reported day, split by `state`. The feed currently
+                contains one observed state, so the chart intentionally shows that single series rather than
+                implying nationwide coverage; missing source dates are absent rather than zero.
+              width: full
+            - slug: pledge-mix-by-state
+              kind: composition
+              metric: distinct_pledges
+              breakdown: state
+              top_n: 2
+              time: pledge_date
+              grain: DAY
+              title: Pledge observations by state
+              description: Distinct pledge observations per reported day stacked by `state`. Only the one
+                observed state is present in this extract, so bars show feed coverage rather than a sum of
+                republished pledge counts; dates absent from the source are absent rather than zero.
+              width: full
+  columns:
+  - name: malaysia_organ_pledge_observation_key
+    description: Stable hash of the source, pledge identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Malaysia organ pledge observation key
+          hidden: true
+          name: malaysia_organ_pledge_observa_3ec65c
+  - name: source_name
+    description: Dataset source identifier reported by the Malaysia OpenDOSM extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: pledge_id
+    description: Extractor observation identifier composed from pledge date and state.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_pledges:
+            type: count_distinct
+            label: Distinct pledge observations
+            description: Distinct source `pledge_id` values among matching pledge records. Repeated snapshots
+              count once within each filter group, so this tracks published observation coverage.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Pledge id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this pledge observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: pledge_date
+    description: Calendar date to which the state-level pledge count applies.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Pledge date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: state
+    description: Malaysian state or federal territory reported for the pledge count.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: State
+          hidden: false
+  - name: pledge_count
+    description: Number of organ-donor pledges reported for the state and pledge date.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_pledge_count:
+            type: average
+            label: Mean observed pledge count
+            description: Mean observed pledge count by `state` in the selected observation window. Number
+              of organ-donor pledges reported for the state and pledge date. Each retained observation
+              has equal weight; polling frequency and repeated snapshots can affect the mean. This is
+              not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Pledge count
+          hidden: false
+          format: '#,##0'
+  - name: publisher_updated_at
+    description: Publisher Last-Modified value returned with the source file, retained as text because
+      the source supplies an HTTP date string.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publisher updated at
+          hidden: false
+  - name: source_row_id
+    description: Stable raw-load row identifier for this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the raw load batch that produced this row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of this observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load job that inserted this row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this row.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw record content used for lineage and deduplication.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

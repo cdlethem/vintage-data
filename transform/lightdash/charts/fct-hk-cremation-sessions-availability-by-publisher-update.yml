@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_hk_cremation_sessions_publisher_updated_at_day
+          yRef:
+            field: fct_hk_cremation_sessions_average_available_sessions
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Publisher updated at (Day)
+      yAxis:
+      - name: Mean observed available sessions
+    layout:
+      xField: fct_hk_cremation_sessions_publisher_updated_at_day
+      yField:
+      - fct_hk_cremation_sessions_average_available_sessions
+  type: cartesian
+description: Average numeric `available_sessions` by the day the publisher says the schedule was updated.
+  This four-day update-time view describes refresh timing rather than service history; null states and
+  absent update days are omitted, not zero-filled.
+metricQuery:
+  dimensions:
+  - fct_hk_cremation_sessions_publisher_updated_at_day
+  exploreName: fct_hk_cremation_sessions
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_hk_cremation_sessions_average_available_sessions
+  sorts:
+  - descending: false
+    fieldId: fct_hk_cremation_sessions_publisher_updated_at_day
+  tableCalculations: []
+name: Mean availability by publisher update day
+slug: fct-hk-cremation-sessions-availability-by-publisher-update
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hk_cremation_sessions_publisher_updated_at_day
+  - fct_hk_cremation_sessions_average_available_sessions
+tableName: fct_hk_cremation_sessions
+version: 1

@@ -1,0 +1,379 @@
+version: 2
+models:
+- name: fct_open_collective_account_observation
+  description: Daily physical history of Open Collective account snapshots. Each row is one account observed
+    at one fetch timestamp, with account balances, funding totals, and source-load lineage retained for
+    replay auditing. The source is insert-only and repeated copies of one observation are reduced to the
+    latest loaded record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, account_id, observed_at
+      label: Open collective account observation
+      group_label: Open collective
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: open_collective__9a585d
+      vintage:
+        visualization:
+          dimension: currency_code
+          metric: average_balance_amount
+          time: observed_at
+          window_days: 30
+          title: Mean observed balance amount by currency code
+          description: Mean observed balance amount by `currency_code` in the selected observation window.
+            Current account balance in the account currency. Each retained observation has equal weight;
+            polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure
+            or an additive total.
+          detail_fields:
+          - observed_at
+          - account_id
+          - currency_code
+          - balance_amount
+          - source_loaded_at
+          sources:
+          - '`open_collective` — licence: Open Collective — public; attribution required: False. Source
+            configuration: `extract/sources/open_collective.yml`.'
+          analysis:
+            headline: Account balances and backer levels move only slightly across four daily snapshots while currency mix explains most scale differences.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - currency_code
+            - account_name
+            - source_name
+            trends:
+            - slug: average-balance-by-day
+              kind: total
+              metric: average_balance_amount
+              time: observed_at
+              grain: DAY
+              title: Mean observed account balance by day
+              description: Mean `balance_amount` across retained account observations on each fetch day. This is a snapshot level, not an additive financial total; currencies are mixed unless filtered, and missing fetch days are absent rather than zero.
+              width: half
+            - slug: average-backers-by-day
+              kind: total
+              metric: average_backer_count
+              time: observed_at
+              grain: DAY
+              title: Mean reported backer count by day
+              description: Mean reported `backer_count` across accounts on each fetch day. This is an observation-weighted snapshot level and not a sum of backers; sparse or missing fetch days are absent rather than zero.
+              width: half
+            - slug: balance-by-currency
+              kind: breakdown
+              metric: average_balance_amount
+              breakdown: currency_code
+              top_n: 8
+              time: observed_at
+              grain: DAY
+              title: Mean balance by leading currency
+              description: Mean account `balance_amount` per day pivoted by the eight currencies with the largest observed populations. The remaining currencies are excluded rather than aggregated, and values are not converted so cross-currency heights are not directly comparable.
+              width: full
+            - slug: accounts-by-currency
+              kind: composition
+              metric: distinct_accounts
+              breakdown: currency_code
+              top_n: 8
+              time: observed_at
+              grain: DAY
+              title: Account population mix by currency
+              description: Distinct `account_id` values per fetch day stacked by the eight most common `currency_code` values. The remainder is excluded rather than aggregated; this is a catalogue level and not a financial total.
+              width: full
+  columns:
+  - name: open_collective_account_observation_key
+    description: Stable hash of the source name, account identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Open collective account observation key
+          hidden: true
+          name: open_collective__9a585d
+  - name: source_name
+    description: Identifier of the Open Collective account endpoint that produced the observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: account_id
+    description: Open Collective slug-like identifier for the account.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_accounts:
+            type: count_distinct
+            label: Distinct account
+            description: Distinct non-null `account_id` values present in each Open Collective observation group. Repeated snapshots count once, so this measures catalogue breadth rather than account creation flow.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Account id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp at which the extractor fetched the account snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: account_slug
+    description: URL-friendly Open Collective account slug.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Account slug
+          hidden: false
+  - name: currency_code
+    description: ISO-like currency code used for the account monetary values.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Currency code
+          hidden: false
+  - name: image_url
+    description: URL of the account image supplied by Open Collective.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Image url
+          hidden: false
+  - name: balance_amount
+    description: Current account balance in the account currency.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_balance_amount:
+            type: average
+            label: Mean observed balance amount
+            description: Mean observed balance amount by `currency_code` in the selected observation window.
+              Current account balance in the account currency. Each retained observation has equal weight;
+              polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+              measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Balance amount
+          hidden: false
+          format: '#,##0.00'
+  - name: legacy_yearly_income
+    description: Legacy yearly income value supplied by the source, when available.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Legacy yearly income
+          hidden: false
+          format: '#,##0'
+  - name: legacy_backer_count
+    description: Legacy backer count value supplied by the source, when available.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Legacy backer count
+          hidden: false
+          format: '#,##0'
+  - name: account_name
+    description: Display name of the Open Collective account.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Account name
+          hidden: false
+  - name: legacy_account_id
+    description: Numeric legacy Open Collective identifier, when available.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Legacy account id
+          hidden: false
+          format: '#,##0'
+  - name: yearly_budget_amount
+    description: Yearly budget in the account currency, when supplied by the source.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Yearly budget amount
+          hidden: false
+          format: '#,##0.00'
+  - name: backer_count
+    description: Current number of account backers, when supplied by the source.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_backer_count:
+            type: average
+            label: Mean reported backer count
+            description: Mean reported `backer_count` across account observations in each time and breakdown group. Each retained observation has equal weight and this is a snapshot level, not an additive count.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Backer count
+          hidden: false
+          format: '#,##0'
+  - name: total_amount_spent
+    description: Cumulative amount spent by the account in the account currency.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Total amount spent
+          hidden: false
+          format: '#,##0.00'
+  - name: total_amount_received
+    description: Cumulative amount received by the account in the account currency.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Total amount received
+          hidden: false
+          format: '#,##0.00'
+  - name: source_row_id
+    description: Stable load-layer row identifier for the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained account observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load partition date assigned to the retained raw record.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch began.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: extract__51074f
+  - name: source_load_id
+    description: Identifier of the load operation that inserted the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained raw record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: source_l_2059e1
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw record content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

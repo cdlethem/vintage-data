@@ -1,0 +1,60 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_steam_player_observation_game_id
+          yRef:
+            field: fct_steam_player_observation_average_concurrent_player_count
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_steam_player_observation_game_id
+      yField:
+      - fct_steam_player_observation_average_concurrent_player_count
+  type: cartesian
+description: Mean observed concurrent player count by `game_id` in the selected observation window. Number
+  of concurrent players reported by Steam for the game at observation time. Each retained observation
+  has equal weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+  measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_steam_player_observation_game_id
+  exploreName: fct_steam_player_observation
+  filters:
+    dimensions:
+      and:
+      - id: bc187b16-d6ab-514b-bb22-ca108eef7a27
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_steam_player_observation_observed_at
+        values:
+        - 30
+      - id: 0fda3485-c3cc-5a94-95b1-50a4a39f2b66
+        operator: equals
+        target:
+          fieldId: fct_steam_player_observation_request_succeeded
+        values:
+        - true
+      id: 8ad2f2dd-dc4f-5dd0-b9ac-bf057898096d
+  limit: 20
+  metrics:
+  - fct_steam_player_observation_average_concurrent_player_count
+  sorts:
+  - descending: true
+    fieldId: fct_steam_player_observation_average_concurrent_player_count
+  tableCalculations: []
+name: Mean observed concurrent player count by game id
+slug: fct-steam-player-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_steam_player_observation_game_id
+  - fct_steam_player_observation_average_concurrent_player_count
+tableName: fct_steam_player_observation
+version: 1

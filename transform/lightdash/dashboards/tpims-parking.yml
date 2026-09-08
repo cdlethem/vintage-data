@@ -1,0 +1,172 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 91d89e6b-de67-508f-9b1d-cf3b1e2d6bff
+    label: 'Tpims parking status: Region'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_tpims_parking_status_region
+      tableName: fct_tpims_parking_status
+    values: []
+  - disabled: true
+    id: 0cae55d8-b2a4-53db-ac16-4bac09aa484b
+    label: 'Tpims parking status: Availability trend'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_tpims_parking_status_availability_trend
+      tableName: fct_tpims_parking_status
+    values: []
+  - disabled: true
+    id: 68ea3cf2-bf80-5fff-8c28-16e258fdb5f1
+    label: 'Tpims parking status: Is open'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_tpims_parking_status_is_open
+      tableName: fct_tpims_parking_status
+    values: []
+  - disabled: true
+    id: 0cec2105-3829-5471-ab68-1f21ebefdad3
+    label: 'Tpims parking status: Trusts data'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_tpims_parking_status_trusts_data
+      tableName: fct_tpims_parking_status
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Tpims Parking
+slug: tpims-parking
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical observation fact for truck-parking status snapshots published by TPIMS.
+      Each row represents one parking site at one extractor observation time, with reported availability,
+      operational flags, publisher timestamps, and raw load lineage. Repeated copies of the same observation
+      grain retain the latest loaded row.
+
+
+      **Grain:** source, site_id, observed_at
+
+
+      **What changes here:** how many parking sites report, how much availability they show, and how static
+      site updates differ by region.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `tpims_parking` — licence: State DOT terms; attribution required: True. Source configuration:
+      `extract/sources/tpims_parking.yml`.'
+    hideFrame: false
+    title: Tpims parking status
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Tpims parking status — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Parking sites reporting per day
+    chartSlug: fct-tpims-parking-status-reporting-sites
+    hideTitle: false
+    title: Parking sites reporting per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported available spaces per day
+    chartSlug: fct-tpims-parking-status-available-level
+    hideTitle: false
+    title: Mean reported available spaces per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean available spaces by region
+    chartSlug: fct-tpims-parking-status-availability-by-region
+    hideTitle: false
+    title: Mean available spaces by region
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean capacity at static-status update dates
+    chartSlug: fct-tpims-parking-status-static-capacity-history
+    hideTitle: false
+    title: Mean capacity at static-status update dates
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Mean availability by publisher status-update day
+    chartSlug: fct-tpims-parking-status-status-updates-by-region
+    hideTitle: false
+    title: Mean availability by publisher status-update day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Tpims parking status — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed reported available count by region
+    chartSlug: fct-tpims-parking-status
+    hideTitle: false
+    title: Mean observed reported available count by region
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Tpims parking status — observations
+    chartSlug: fct-tpims-parking-status-details
+    hideTitle: false
+    title: Tpims parking status — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

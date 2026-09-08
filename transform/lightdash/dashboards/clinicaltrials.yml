@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 1bb58407-34bb-59f0-a558-aac89c51eb1b
+    label: 'Clinicaltrials study observation: Status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_clinicaltrials_study_observation_status
+      tableName: fct_clinicaltrials_study_observation
+    values: []
+  - disabled: true
+    id: 84203b92-12e5-518c-8efa-ffb2a2cfd6c4
+    label: 'Clinicaltrials study observation: Study type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_clinicaltrials_study_observation_study_type
+      tableName: fct_clinicaltrials_study_observation
+    values: []
+  - disabled: true
+    id: 5b714fce-66f9-5708-911d-8850ec77a1f1
+    label: 'Clinicaltrials study observation: Sponsor class'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_clinicaltrials_study_observation_sponsor_class
+      tableName: fct_clinicaltrials_study_observation
+    values: []
+  - disabled: true
+    id: 180e332c-4390-53af-88f5-f9c99b6b8839
+    label: 'Clinicaltrials study observation: Sex'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_clinicaltrials_study_observation_sex
+      tableName: fct_clinicaltrials_study_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Clinicaltrials
+slug: clinicaltrials
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of ClinicalTrials.gov study records. Each row is one study observed
+      at one extractor timestamp, preserving publication attributes, eligibility and intervention details,
+      and raw-load lineage. Repeated copies of the same study observation are reduced to the latest loaded
+      row.
+
+
+      **Grain:** study_id, observed_at
+
+
+      **What changes here:** how the two-day catalogue level, study statuses, sponsor mix, and reported
+      enrollment differ across source update dates.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `clinicaltrials` — licence: NLM public domain (US Gov work); attribution required: False. Source
+      configuration: `extract/sources/clinicaltrials.yml`.'
+    hideFrame: false
+    title: Clinicaltrials study observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Clinicaltrials study observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct studies by source update date
+    chartSlug: fct-clinicaltrials-study-observation-studies-updated
+    hideTitle: false
+    title: Distinct studies by source update date
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average reported enrollment by update date
+    chartSlug: fct-clinicaltrials-study-observation-average-enrollment
+    hideTitle: false
+    title: Average reported enrollment by update date
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Studies by status and update date
+    chartSlug: fct-clinicaltrials-study-observation-status-by-day
+    hideTitle: false
+    title: Studies by status and update date
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Study mix by sponsor class
+    chartSlug: fct-clinicaltrials-study-observation-sponsor-mix
+    hideTitle: false
+    title: Study mix by sponsor class
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Clinicaltrials study observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct study by status
+    chartSlug: fct-clinicaltrials-study-observation
+    hideTitle: false
+    title: Distinct study by status
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Clinicaltrials study observation — observations
+    chartSlug: fct-clinicaltrials-study-observation-details
+    hideTitle: false
+    title: Clinicaltrials study observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

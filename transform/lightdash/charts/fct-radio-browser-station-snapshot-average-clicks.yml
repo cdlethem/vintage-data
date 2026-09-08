@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_radio_browser_station_snapshot_observed_at_day
+          yRef:
+            field: fct_radio_browser_station_snapshot_average_click_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean reported click count
+    layout:
+      xField: fct_radio_browser_station_snapshot_observed_at_day
+      yField:
+      - fct_radio_browser_station_snapshot_average_click_count
+  type: cartesian
+description: Average cumulative `click_count` reported across stations on each collection day. This is
+  a reported snapshot level, not clicks accumulated in the day; irregular polling weights the mean and
+  missing days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_radio_browser_station_snapshot_observed_at_day
+  exploreName: fct_radio_browser_station_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_radio_browser_station_snapshot_average_click_count
+  sorts:
+  - descending: false
+    fieldId: fct_radio_browser_station_snapshot_observed_at_day
+  tableCalculations: []
+name: Mean reported clicks per day
+slug: fct-radio-browser-station-snapshot-average-clicks
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_radio_browser_station_snapshot_observed_at_day
+  - fct_radio_browser_station_snapshot_average_click_count
+tableName: fct_radio_browser_station_snapshot
+version: 1

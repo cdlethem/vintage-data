@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_hk_cremation_sessions_session_date_day
+          yRef:
+            field: fct_hk_cremation_sessions_average_available_sessions
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Session date (Day)
+      yAxis:
+      - name: Mean observed available sessions
+    layout:
+      xField: fct_hk_cremation_sessions_session_date_day
+      yField:
+      - fct_hk_cremation_sessions_average_available_sessions
+  type: cartesian
+description: Average numeric `available_sessions` per service date pivoted by `crematorium`. All six observed
+  crematoria are retained, and null states are excluded rather than treated as zero; no remainder is aggregated.
+metricQuery:
+  dimensions:
+  - fct_hk_cremation_sessions_session_date_day
+  - fct_hk_cremation_sessions_crematorium
+  exploreName: fct_hk_cremation_sessions
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_hk_cremation_sessions_average_available_sessions
+  sorts:
+  - descending: true
+    fieldId: fct_hk_cremation_sessions_average_available_sessions
+  - descending: false
+    fieldId: fct_hk_cremation_sessions_session_date_day
+  tableCalculations: []
+name: Mean availability by crematorium and service date
+pivotConfig:
+  columns:
+  - fct_hk_cremation_sessions_crematorium
+slug: fct-hk-cremation-sessions-availability-by-crematorium
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hk_cremation_sessions_session_date_day
+  - fct_hk_cremation_sessions_crematorium
+  - fct_hk_cremation_sessions_average_available_sessions
+tableName: fct_hk_cremation_sessions
+version: 1

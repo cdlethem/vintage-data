@@ -1,0 +1,328 @@
+version: 2
+models:
+- name: fct_uk_prison_estate
+  description: Physical fact of UK Ministry of Justice prison-estate observations. Each row records one
+    metric and population group for one source snapshot and reporting period. The source does not expose
+    an individual establishment identifier; observation_id is the extractor's composite period, metric,
+    and group key. Numeric source values are available in measure_value and the original source text is
+    retained in measure_value_text for nonnumeric source markers.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, observation_id, observed_at
+      label: Uk prison estate
+      group_label: Uk prison estate
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: prison_estate_observation_key
+      vintage:
+        visualization:
+          dimension: metric
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct observation by metric
+          description: Distinct `observation_id` values by `metric` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - observation_id
+          - metric
+          - source_loaded_at
+          sources:
+          - '`uk_prison_estate` — licence: Open Government Licence; attribution required: True. Source
+            configuration: `extract/sources/uk_prison_estate.yml`.'
+          analysis:
+            headline: how prison population, capacity, and headroom measures move across reporting periods and
+              population groups.
+            event_time: period_date
+            grain: DAY
+            controls:
+            - metric
+            - population_group
+            - period
+            trends:
+            - slug: reported-observations
+              kind: total
+              metric: distinct_entities
+              time: period_date
+              grain: DAY
+              title: Reported prison measures by period date
+              description: Distinct `observation_id` values on each reported `period_date`. This is a sparse
+                source level with three reported dates rather than a continuous flow — absent dates are absent
+                rather than zero.
+              width: half
+            - slug: average-measure
+              kind: total
+              metric: average_measure_value
+              time: period_date
+              grain: DAY
+              title: Average numeric measure by period date
+              description: Average non-null `measure_value` on each reported `period_date` across the published
+                metrics. This mixes measures with different units, so use it as a broad numeric level rather
+                than a single population statistic; absent dates are absent rather than zero.
+              width: half
+            - slug: measures-by-type
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: metric
+              top_n: 4
+              time: period_date
+              grain: DAY
+              title: Reported measures by type
+              description: Distinct `observation_id` values per `period_date` and prison `metric`, limited to
+                the four largest metric series. The remainder is excluded rather than aggregated, and sparse
+                dates are absent rather than zero.
+              width: full
+            - slug: population-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: population_group
+              top_n: 4
+              time: period_date
+              grain: DAY
+              title: Population-group mix of reported measures
+              description: Distinct `observation_id` values per `period_date` stacked by `population_group`.
+                Stacks show the reported group mix, not additive people across different metrics; dates without
+                source reports are absent rather than zero.
+              width: full
+  columns:
+  - name: prison_estate_observation_key
+    description: Stable hash of the source, source observation identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Prison estate observation key
+          hidden: true
+  - name: source
+    description: Source-system identifier that supplied the prison-estate observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: observation_id
+    description: Extractor-provided composite identifier formed from period date, metric, and population
+      group.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct observation
+            description: Distinct `observation_id` values by `metric` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Observation id
+          hidden: false
+  - name: observed_at
+    description: Timestamp when the source snapshot was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: report_date
+    description: Publication report date for the weekly prison population and capacity bulletin.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Report date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: period
+    description: Relative reporting-period label such as current, last_week, or year_ago.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Period
+          hidden: false
+  - name: period_date
+    description: Date represented by the metric observation within the publication.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Period date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: metric
+    description: Prison-estate measure name reported by the publication.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Metric
+          hidden: false
+  - name: population_group
+    description: Population grouping to which the metric applies, such as Total, Adult Male, Female, or
+      YCS.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Population group
+          hidden: false
+  - name: measure_value
+    description: Numeric interpretation of the source measure when the reported value is an integer; null
+      for source text markers.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Measure value
+          hidden: false
+          format: '#,##0'
+        metrics:
+          average_measure_value:
+            type: average
+            label: Average numeric measure
+            description: Average non-null `measure_value` across reported prison metrics. Source markers
+              represented only as text are excluded, and different measures may have different units.
+            format: '#,##0.00'
+  - name: measure_value_text
+    description: Original source value retained as text, including nonnumeric publication markers.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Measure value text
+          hidden: false
+  - name: attachment_title
+    description: Title of the source publication attachment containing the observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Attachment title
+          hidden: false
+  - name: attachment_url
+    description: URL of the source publication attachment containing the observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Attachment url
+          hidden: false
+  - name: publisher_updated_at
+    description: Timestamp when the publisher last updated the source publication.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Publisher updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _row_id
+    description: Raw loader row identifier retained for lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position of this observation in the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted this observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

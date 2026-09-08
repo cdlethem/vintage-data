@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_opensky_flight_observation_observed_at_hour
+          yRef:
+            field: fct_opensky_flight_observation_average_baro_altitude_m
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Mean observed baro altitude m
+    layout:
+      xField: fct_opensky_flight_observation_observed_at_hour
+      yField:
+      - fct_opensky_flight_observation_average_baro_altitude_m
+  type: cartesian
+description: Observation-weighted mean `baro_altitude_m` in metres by snapshot hour. Missing altitude
+  values do not contribute and irregular polling or repeated aircraft states can weight the average; empty
+  hours are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_opensky_flight_observation_observed_at_hour
+  exploreName: fct_opensky_flight_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_opensky_flight_observation_average_baro_altitude_m
+  sorts:
+  - descending: false
+    fieldId: fct_opensky_flight_observation_observed_at_hour
+  tableCalculations: []
+name: Mean reported barometric altitude by hour
+slug: fct-opensky-flight-observation-altitude-by-hour
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_opensky_flight_observation_observed_at_hour
+  - fct_opensky_flight_observation_average_baro_altitude_m
+tableName: fct_opensky_flight_observation
+version: 1

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_w3c_specification_observation_observed_at_day
+          yRef:
+            field: fct_w3c_specification_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct specification
+    layout:
+      stack: true
+      xField: fct_w3c_specification_observation_observed_at_day
+      yField:
+      - fct_w3c_specification_observation_distinct_entities
+  type: cartesian
+description: Distinct `specification_id` values per observation day stacked by the eight largest `specification_title`
+  series. The remainder is excluded rather than aggregated, and stacks describe the current feed level
+  rather than additive publication volume.
+metricQuery:
+  dimensions:
+  - fct_w3c_specification_observation_observed_at_day
+  - fct_w3c_specification_observation_specification_title
+  exploreName: fct_w3c_specification_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_w3c_specification_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_w3c_specification_observation_distinct_entities
+  - descending: false
+    fieldId: fct_w3c_specification_observation_observed_at_day
+  tableCalculations: []
+name: Specification catalogue mix by title
+pivotConfig:
+  columns:
+  - fct_w3c_specification_observation_specification_title
+slug: fct-w3c-specification-observation-title-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_w3c_specification_observation_observed_at_day
+  - fct_w3c_specification_observation_specification_title
+  - fct_w3c_specification_observation_distinct_entities
+tableName: fct_w3c_specification_observation
+version: 1

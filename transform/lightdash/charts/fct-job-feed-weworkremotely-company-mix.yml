@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 5
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_job_feed_weworkremotely_posted_at_day
+          yRef:
+            field: fct_job_feed_weworkremotely_distinct_companies
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Day)
+      yAxis:
+      - name: Distinct company
+    layout:
+      stack: true
+      xField: fct_job_feed_weworkremotely_posted_at_day
+      yField:
+      - fct_job_feed_weworkremotely_distinct_companies
+  type: cartesian
+description: Distinct companies per posting day stacked by the five observed location values. The stack
+  shows how employer presence is distributed across locations; absent posting days are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_job_feed_weworkremotely_posted_at_day
+  - fct_job_feed_weworkremotely_location
+  exploreName: fct_job_feed_weworkremotely
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_feed_weworkremotely_distinct_companies
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_weworkremotely_distinct_companies
+  - descending: false
+    fieldId: fct_job_feed_weworkremotely_posted_at_day
+  tableCalculations: []
+name: Employer mix by posting day and location
+pivotConfig:
+  columns:
+  - fct_job_feed_weworkremotely_location
+slug: fct-job-feed-weworkremotely-company-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_feed_weworkremotely_posted_at_day
+  - fct_job_feed_weworkremotely_location
+  - fct_job_feed_weworkremotely_distinct_companies
+tableName: fct_job_feed_weworkremotely
+version: 1

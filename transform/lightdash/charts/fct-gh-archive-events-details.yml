@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical hourly fact of GitHub Archive events. Each row represents one archive source, event
+  identifier, and extractor fetch timestamp, retaining event metadata, typed scalar payload fields, the
+  event payload, and raw-load lineage. Repeated copies of the same event observation retain the latest
+  loaded record.
+metricQuery:
+  dimensions: &id001
+  - fct_gh_archive_events_fetched_at
+  - fct_gh_archive_events_event_id
+  - fct_gh_archive_events_event_type
+  - fct_gh_archive_events_source_loaded_at
+  exploreName: fct_gh_archive_events
+  filters:
+    dimensions:
+      and:
+      - id: 3d85691a-63cd-5003-8809-3f61b78543b3
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_gh_archive_events_fetched_at
+        values:
+        - 30
+      id: 0f517750-3dc3-507f-ad87-5b53126bb1b5
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_gh_archive_events_fetched_at
+  tableCalculations: []
+name: Gh archive events — observations
+slug: fct-gh-archive-events-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_gh_archive_events
+version: 1

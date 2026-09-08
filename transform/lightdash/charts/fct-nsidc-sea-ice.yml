@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nsidc_sea_ice_observation_date
+          yRef:
+            field: fct_nsidc_sea_ice_average_extent_million_km2
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_nsidc_sea_ice_observation_date
+      yField:
+      - fct_nsidc_sea_ice_average_extent_million_km2
+  type: cartesian
+description: Mean observed extent million km2 by `observation_date` in the selected observation window.
+  Sea-ice extent reported by NSIDC, measured in million square kilometres. Each retained observation has
+  equal weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+  measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_nsidc_sea_ice_observation_date
+  exploreName: fct_nsidc_sea_ice
+  filters:
+    dimensions:
+      and:
+      - id: 00592571-e36d-5d17-91cc-c96a709d446c
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nsidc_sea_ice_fetched_at
+        values:
+        - 30
+      id: d4e388ac-6921-5049-904b-94f23f3670ad
+  limit: 20
+  metrics:
+  - fct_nsidc_sea_ice_average_extent_million_km2
+  sorts:
+  - descending: true
+    fieldId: fct_nsidc_sea_ice_average_extent_million_km2
+  tableCalculations: []
+name: Mean observed extent million km2 by observation date
+slug: fct-nsidc-sea-ice
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nsidc_sea_ice_observation_date
+  - fct_nsidc_sea_ice_average_extent_million_km2
+tableName: fct_nsidc_sea_ice
+version: 1

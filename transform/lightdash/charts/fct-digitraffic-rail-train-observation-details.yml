@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical history of train snapshots reported by the Digitraffic Rail live trains feed. Each
+  row is one train from one feed at one observation timestamp, with the source timetable stop array retained
+  as JSON and the raw load lineage preserved. Re-ingested copies of the same feed, train, and observation
+  timestamp are reduced to the latest loaded copy.
+metricQuery:
+  dimensions: &id001
+  - fct_digitraffic_rail_train_observation_observed_at
+  - fct_digitraffic_rail_train_observation_train_id
+  - fct_digitraffic_rail_train_observation_train_category
+  - fct_digitraffic_rail_train_observation_source_loaded_at
+  exploreName: fct_digitraffic_rail_train_observation
+  filters:
+    dimensions:
+      and:
+      - id: a0fd681f-636d-552d-b42b-77ab813a0e89
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_digitraffic_rail_train_observation_observed_at
+        values:
+        - 30
+      id: 4c8d1738-3673-5144-85ed-a6a18ea38d43
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_digitraffic_rail_train_observation_observed_at
+  tableCalculations: []
+name: Digitraffic rail train observation — observations
+slug: fct-digitraffic-rail-train-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_digitraffic_rail_train_observation
+version: 1

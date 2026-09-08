@@ -1,0 +1,410 @@
+version: 2
+models:
+- name: fct_tokyo_mou_detentions
+  description: Hourly physical history of Tokyo MOU port-state-control detention observations. Each row
+    is one detention event returned by the current-month APCIS query at one extractor observation timestamp;
+    repeated raw copies of that observation are reduced to the latest loaded row while vessel, deficiency,
+    release, query, and load lineage remain available.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: detention_id, observed_at
+      label: Tokyo mou detentions
+      group_label: Tokyo mou detentions
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: tokyo_mou_detention_observation_key
+      vintage:
+        visualization:
+          dimension: flag_country
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct detention by flag country
+          description: Distinct `detention_id` values by `flag_country` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - detention_id
+          - flag_country
+          - source_loaded_at
+          sources:
+          - '`tokyo_mou_detentions` — licence: Tokyo MOU terms; attribution required: True. Source configuration:
+            `extract/sources/tokyo_mou_detentions.yml`.'
+          analysis:
+            headline: how detention events vary by day, flag state, vessel type, and vessel size.
+            event_time: detention_date
+            grain: DAY
+            controls:
+            - flag_country
+            - ship_type
+            - detention_location
+            - classification_society
+            trends:
+            - slug: daily-detentions
+              kind: total
+              metric: distinct_entities
+              time: detention_date
+              grain: DAY
+              title: Detentions recorded per day
+              description: Distinct `detention_id` values by the reported detention date. This source
+                currently covers five populated days; dates with no returned detention are absent rather
+                than zero, and repeated extractor observations are deduplicated by detention identifier.
+              width: half
+            - slug: vessel-tonnage
+              kind: total
+              metric: average_gross_tonnage
+              time: detention_date
+              grain: DAY
+              title: Mean detained-vessel gross tonnage per day
+              description: Average `gross_tonnage` across retained detention observations by reported
+                detention date. Repeated extractor observations can weight the mean; a high line means the
+                observed vessels were larger, not that tonnage is additive, and empty dates are absent.
+              width: half
+            - slug: detentions-by-flag
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: flag_country
+              top_n: 6
+              time: detention_date
+              grain: DAY
+              title: Detentions by flag country
+              description: Distinct `detention_id` values per detention day split by flag country. The six
+                largest flag series are shown; smaller flags are excluded rather than aggregated.
+              width: full
+            - slug: tonnage-by-vessel-type
+              kind: composition
+              metric: average_gross_tonnage
+              breakdown: ship_type
+              top_n: 4
+              time: detention_date
+              grain: DAY
+              title: Mean vessel tonnage by ship type
+              description: Average `gross_tonnage` per detention day stacked by `ship_type`. All four
+                vessel-type categories are shown; stacked heights describe composition of the observed
+                average, not a sum of tonnage across ships.
+              width: full
+            - slug: releases-by-day
+              kind: total
+              metric: distinct_entities
+              time: release_date
+              grain: DAY
+              title: Detentions with a release date
+              description: Distinct `detention_id` values by reported release date. Only 154 of 318 rows
+                have a release date, so unreleased records and dates with no release are absent rather than
+                zero.
+              width: half
+  columns:
+  - name: tokyo_mou_detention_observation_key
+    description: Stable hash of the Tokyo MOU detention identifier and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Tokyo mou detention observation key
+          hidden: true
+  - name: source_relation
+    description: Raw relation label identifying the source family that produced this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source relation
+          hidden: false
+  - name: source_name
+    description: Upstream source label carried by the Tokyo MOU APCIS response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: source_row_id
+    description: Load-layer row identifier for the retained raw detention observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: detention_id
+    description: Tokyo MOU detention event identifier, formed by the vessel IMO number and detention date.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct detention
+            description: Distinct `detention_id` values by `flag_country` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Detention id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this Tokyo MOU detention observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: imo_number
+    description: International Maritime Organization number of the detained vessel.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Imo number
+          hidden: false
+  - name: ship_name
+    description: Vessel name reported by Tokyo MOU.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Ship name
+          hidden: false
+  - name: flag_country
+    description: Flag state reported for the detained vessel.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Flag country
+          hidden: false
+  - name: build_date
+    description: Vessel build date reported by Tokyo MOU.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Build date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: gross_tonnage
+    description: Gross tonnage of the vessel, parsed from the numeric source value.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_gross_tonnage:
+            type: average
+            label: Mean gross tonnage
+            description: Average `gross_tonnage` across retained detention observations by reported
+              detention date. Repeated extractor observations can weight the mean; this describes vessel
+              size rather than an additive tonnage total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Gross tonnage
+          hidden: false
+          format: '#,##0'
+  - name: ship_type
+    description: Vessel type reported by Tokyo MOU.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Ship type
+          hidden: false
+  - name: classification_society
+    description: Classification society reported for the vessel.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Classification society
+          hidden: false
+  - name: related_recognized_organizations
+    description: Recognized organizations related to the detention, as reported by Tokyo MOU.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Related recognized organizations
+          hidden: false
+  - name: company_name
+    description: Company or ship manager reported for the detained vessel.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Company name
+          hidden: false
+  - name: detention_location
+    description: Port and country location where the vessel was detained.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Detention location
+          hidden: false
+  - name: detention_date
+    description: Calendar date of detention, parsed from the source day-month-year value.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Detention date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: release_date
+    description: Calendar date on which the vessel was released; null means Tokyo MOU reported no release
+      date.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Release date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: deficiency_summary
+    description: Concatenated coded deficiencies reported for this detention event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Deficiency summary
+          hidden: false
+  - name: query_year
+    description: Year parameter used for the Tokyo MOU current-month query that returned this observation.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Query year
+          hidden: false
+          format: '#,##0'
+  - name: query_month
+    description: Month parameter used for the Tokyo MOU current-month query that returned this observation.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Query month
+          hidden: false
+          format: '#,##0'
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained raw detention observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained raw detention observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained detention observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained detention observation in its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained detention observation into the
+      raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the retained raw detention content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

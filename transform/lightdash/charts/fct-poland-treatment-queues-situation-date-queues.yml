@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_poland_treatment_queues_situation_date_day
+          yRef:
+            field: fct_poland_treatment_queues_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Situation date (Day)
+      yAxis:
+      - name: Distinct queue
+    layout:
+      xField: fct_poland_treatment_queues_situation_date_day
+      yField:
+      - fct_poland_treatment_queues_distinct_entities
+  type: cartesian
+description: Distinct `queue_id` values carrying each NFZ `situation_date` across the published June to
+  August 2026 history. This follows the source's situation dates rather than collection time; dates absent
+  from the retained feed are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_poland_treatment_queues_situation_date_day
+  exploreName: fct_poland_treatment_queues
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_poland_treatment_queues_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_poland_treatment_queues_situation_date_day
+  tableCalculations: []
+name: Queues by published situation date
+slug: fct-poland-treatment-queues-situation-date-queues
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_poland_treatment_queues_situation_date_day
+  - fct_poland_treatment_queues_distinct_entities
+tableName: fct_poland_treatment_queues
+version: 1

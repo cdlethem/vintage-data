@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_drivebc_event_observations_severity
+          yRef:
+            field: fct_drivebc_event_observations_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_drivebc_event_observations_severity
+      yField:
+      - fct_drivebc_event_observations_distinct_entities
+  type: cartesian
+description: Distinct `event_id` values by `severity` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_drivebc_event_observations_severity
+  exploreName: fct_drivebc_event_observations
+  filters:
+    dimensions:
+      and:
+      - id: 3dee3b17-5a8e-58a8-a700-e4fe8525bc3d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_drivebc_event_observations_observed_at
+        values:
+        - 30
+      id: 77c2f7a3-5716-5a31-9339-45801a25d153
+  limit: 20
+  metrics:
+  - fct_drivebc_event_observations_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_drivebc_event_observations_distinct_entities
+  tableCalculations: []
+name: Distinct event by severity
+slug: fct-drivebc-event-observations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_drivebc_event_observations_severity
+  - fct_drivebc_event_observations_distinct_entities
+tableName: fct_drivebc_event_observations
+version: 1

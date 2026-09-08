@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_reservoir_level_observation_observed_at_day
+          yRef:
+            field: fct_reservoir_level_observation_distinct_levels
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct reservoir levels
+    layout:
+      xField: fct_reservoir_level_observation_observed_at_day
+      yField:
+      - fct_reservoir_level_observation_distinct_levels
+  type: cartesian
+description: Distinct non-null `reservoir_level_id` values present in each extractor observation day.
+  This is a five-day collection level rather than a flow; repeated daily snapshots do not mean new reservoirs,
+  and days without a successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_reservoir_level_observation_observed_at_day
+  exploreName: fct_reservoir_level_observation
+  filters:
+    dimensions:
+      and:
+      - id: c0c625bf-511f-54af-b888-318b1645b026
+        operator: equals
+        target:
+          fieldId: fct_reservoir_level_observation_is_missing
+        values:
+        - false
+      id: bee0fb62-5182-5835-a43c-9dd44a343a3a
+  limit: 5000
+  metrics:
+  - fct_reservoir_level_observation_distinct_levels
+  sorts:
+  - descending: false
+    fieldId: fct_reservoir_level_observation_observed_at_day
+  tableCalculations: []
+name: Reservoir levels represented per observation day
+slug: fct-reservoir-level-observation-levels-observed
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_reservoir_level_observation_observed_at_day
+  - fct_reservoir_level_observation_distinct_levels
+tableName: fct_reservoir_level_observation
+version: 1

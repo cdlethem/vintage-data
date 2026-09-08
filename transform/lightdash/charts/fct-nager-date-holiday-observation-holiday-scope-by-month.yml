@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_nager_date_holiday_observation_holiday_date_month
+          yRef:
+            field: fct_nager_date_holiday_observation_distinct_holidays
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Holiday date (Month)
+      yAxis:
+      - name: Distinct holiday variants
+    layout:
+      stack: true
+      xField: fct_nager_date_holiday_observation_holiday_date_month
+      yField:
+      - fct_nager_date_holiday_observation_distinct_holidays
+  type: cartesian
+description: Observed holiday variants by published month, stacked by nationwide, regional or unspecified
+  applicability. Repeated polls count once within each group. A variant whose scope changes can appear
+  in multiple groups across snapshots; categories describe recorded coverage, not guaranteed closures.
+metricQuery:
+  dimensions:
+  - fct_nager_date_holiday_observation_holiday_date_month
+  - fct_nager_date_holiday_observation_observance_scope
+  exploreName: fct_nager_date_holiday_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nager_date_holiday_observation_distinct_holidays
+  sorts:
+  - descending: true
+    fieldId: fct_nager_date_holiday_observation_distinct_holidays
+  - descending: false
+    fieldId: fct_nager_date_holiday_observation_holiday_date_month
+  tableCalculations: []
+name: Nationwide and regional holidays by month
+pivotConfig:
+  columns:
+  - fct_nager_date_holiday_observation_observance_scope
+slug: fct-nager-date-holiday-observation-holiday-scope-by-month
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nager_date_holiday_observation_holiday_date_month
+  - fct_nager_date_holiday_observation_observance_scope
+  - fct_nager_date_holiday_observation_distinct_holidays
+tableName: fct_nager_date_holiday_observation
+version: 1

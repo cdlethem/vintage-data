@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_chess_archives_magnuscarlsen_games_ended_at_day
+          yRef:
+            field: fct_chess_archives_magnuscarlsen_games_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Ended at (Day)
+      yAxis:
+      - name: Distinct game
+    layout:
+      xField: fct_chess_archives_magnuscarlsen_games_ended_at_day
+      yField:
+      - fct_chess_archives_magnuscarlsen_games_distinct_entities
+  type: cartesian
+description: Distinct `game_id` values by the `ended_at` calendar day. This is a one-day event-time level
+  in the current extract, and dates with no games are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_chess_archives_magnuscarlsen_games_ended_at_day
+  exploreName: fct_chess_archives_magnuscarlsen_games
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_chess_archives_magnuscarlsen_games_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_chess_archives_magnuscarlsen_games_ended_at_day
+  tableCalculations: []
+name: Games ended per day
+slug: fct-chess-archives-magnuscarlsen-games-games-ended
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_chess_archives_magnuscarlsen_games_ended_at_day
+  - fct_chess_archives_magnuscarlsen_games_distinct_entities
+tableName: fct_chess_archives_magnuscarlsen_games
+version: 1

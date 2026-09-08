@@ -1,0 +1,172 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 2cce3276-78ae-534b-b6e6-a1ba5c03a26e
+    label: 'Gh archive events: Event type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gh_archive_events_event_type
+      tableName: fct_gh_archive_events
+    values: []
+  - disabled: true
+    id: ea295ae6-51e4-5add-b811-f0aef3f099ee
+    label: 'Gh archive events: Is public'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gh_archive_events_is_public
+      tableName: fct_gh_archive_events
+    values: []
+  - disabled: true
+    id: 30ccd80c-ec39-5fa8-8b5a-62857b7f479a
+    label: 'Gh archive events: Payload action'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gh_archive_events_payload_action
+      tableName: fct_gh_archive_events
+    values: []
+  - disabled: true
+    id: 6554b6e0-7e16-5cd4-b7db-a54d0214b74f
+    label: 'Gh archive events: Payload ref type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gh_archive_events_payload_ref_type
+      tableName: fct_gh_archive_events
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Gh Archive
+slug: gh-archive
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical hourly fact of GitHub Archive events. Each row represents one archive source, event
+      identifier, and extractor fetch timestamp, retaining event metadata, typed scalar payload fields,
+      the event payload, and raw-load lineage. Repeated copies of the same event observation retain the
+      latest loaded record.
+
+
+      **Grain:** archive_source, event_id, fetched_at
+
+
+      **What changes here:** how GitHub event volume and distinct actors change by event type across the
+      short observation and event windows.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `gh_archive` — licence: unstated (GitHub public event data, redistributed by GH Archive); attribution
+      required: False. Source configuration: `extract/sources/gh_archive.yml`.'
+    hideFrame: false
+    title: Gh archive events
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Gh archive events — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: GitHub events created per day
+    chartSlug: fct-gh-archive-events-events-by-created-day
+    hideTitle: false
+    title: GitHub events created per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct actors creating events per day
+    chartSlug: fct-gh-archive-events-actors-by-created-day
+    hideTitle: false
+    title: Distinct actors creating events per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Event volume by GitHub event type
+    chartSlug: fct-gh-archive-events-events-by-type
+    hideTitle: false
+    title: Event volume by GitHub event type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Events with payload references by reference type
+    chartSlug: fct-gh-archive-events-payload-reference-mix
+    hideTitle: false
+    title: Events with payload references by reference type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Distinct events fetched per day
+    chartSlug: fct-gh-archive-events-fetched-event-level
+    hideTitle: false
+    title: Distinct events fetched per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Gh archive events — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct event by event type
+    chartSlug: fct-gh-archive-events
+    hideTitle: false
+    title: Distinct event by event type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Gh archive events — observations
+    chartSlug: fct-gh-archive-events-details
+    hideTitle: false
+    title: Gh archive events — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

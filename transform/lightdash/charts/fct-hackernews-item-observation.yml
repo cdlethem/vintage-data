@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_hackernews_item_observation_item_type
+          yRef:
+            field: fct_hackernews_item_observation_average_score
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_hackernews_item_observation_item_type
+      yField:
+      - fct_hackernews_item_observation_average_score
+  type: cartesian
+description: Mean observed score by `item_type` in the selected observation window. Hacker News score
+  reported for the item at observation time. Each retained observation has equal weight; polling frequency
+  and repeated snapshots can affect the mean. This is not a latest-value measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_hackernews_item_observation_item_type
+  exploreName: fct_hackernews_item_observation
+  filters:
+    dimensions:
+      and:
+      - id: b3df802b-62e3-5cc5-82cd-fab329886d27
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_hackernews_item_observation_observed_at
+        values:
+        - 30
+      id: 84f1a896-bf38-514a-b102-1c25376f576e
+  limit: 20
+  metrics:
+  - fct_hackernews_item_observation_average_score
+  sorts:
+  - descending: true
+    fieldId: fct_hackernews_item_observation_average_score
+  tableCalculations: []
+name: Mean observed score by item type
+slug: fct-hackernews-item-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hackernews_item_observation_item_type
+  - fct_hackernews_item_observation_average_score
+tableName: fct_hackernews_item_observation
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of Nager.Date holiday calendar observations. Grain is one source and
+  publisher-derived holiday variant per UTC fetch timestamp. Replay copies are deduplicated while later
+  observations remain auditable. Identity includes holiday types and subdivisions, so same-date variants
+  survive. Event-time analysis includes future published dates and all observed versions; it is not a
+  latest-only authoritative calendar or a guarantee of business closures.
+metricQuery:
+  dimensions: &id001
+  - fct_nager_date_holiday_observation_holiday_date
+  - fct_nager_date_holiday_observation_country_code
+  - fct_nager_date_holiday_observation_holiday_name
+  - fct_nager_date_holiday_observation_observance_scope
+  - fct_nager_date_holiday_observation_holiday_types
+  - fct_nager_date_holiday_observation_subdivision_codes
+  - fct_nager_date_holiday_observation_observed_at
+  exploreName: fct_nager_date_holiday_observation
+  filters:
+    dimensions:
+      and:
+      - id: 795b6ea5-5de4-5605-a35e-0adc28155145
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nager_date_holiday_observation_observed_at
+        values:
+        - 30
+      id: efb3beef-9383-5323-89f8-040a45b7132e
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_nager_date_holiday_observation_observed_at
+  tableCalculations: []
+name: Holiday calendar observations — observations
+slug: fct-nager-date-holiday-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_nager_date_holiday_observation
+version: 1

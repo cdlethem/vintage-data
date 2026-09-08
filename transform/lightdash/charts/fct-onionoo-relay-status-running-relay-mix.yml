@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_onionoo_relay_status_observed_at_day
+          yRef:
+            field: fct_onionoo_relay_status_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct relay
+    layout:
+      stack: true
+      xField: fct_onionoo_relay_status_observed_at_day
+      yField:
+      - fct_onionoo_relay_status_distinct_entities
+  type: cartesian
+description: Distinct `relay_id` values stacked by the reported `running` state for each observation day.
+  Only states present in the feed appear, and the two-value limit keeps the status mix readable rather
+  than inventing absent states.
+metricQuery:
+  dimensions:
+  - fct_onionoo_relay_status_observed_at_day
+  - fct_onionoo_relay_status_running
+  exploreName: fct_onionoo_relay_status
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_onionoo_relay_status_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_onionoo_relay_status_distinct_entities
+  - descending: false
+    fieldId: fct_onionoo_relay_status_observed_at_day
+  tableCalculations: []
+name: Running status mix by observation day
+pivotConfig:
+  columns:
+  - fct_onionoo_relay_status_running
+slug: fct-onionoo-relay-status-running-relay-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_onionoo_relay_status_observed_at_day
+  - fct_onionoo_relay_status_running
+  - fct_onionoo_relay_status_distinct_entities
+tableName: fct_onionoo_relay_status
+version: 1

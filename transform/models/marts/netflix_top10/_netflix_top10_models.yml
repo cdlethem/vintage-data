@@ -1,0 +1,372 @@
+version: 2
+models:
+- name: fct_netflix_top10
+  description: Daily-refreshed physical fact of Netflix Top 10 observations. Each row is one weekly title
+    rank within a geographic scope and category, with repeated insert-only loads reduced to the latest
+    copy and raw-load lineage retained.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: week, scope, category, weekly_rank, show_title
+      label: Netflix top10
+      group_label: Netflix top10
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: netflix_top10_key
+      vintage:
+        visualization:
+          dimension: category
+          metric: average_weekly_hours_viewed
+          time: fetched_at
+          window_days: 30
+          title: Mean observed weekly hours viewed by category
+          description: Mean observed weekly hours viewed by `category` in the selected observation window.
+            Hours viewed for the title during the ranking week. Each retained observation has equal weight;
+            polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure
+            or an additive total.
+          detail_fields:
+          - fetched_at
+          - title_id
+          - category
+          - weekly_hours_viewed
+          - source_loaded_at
+          sources:
+          - '`netflix_top10` — licence: Netflix data-use terms; attribution required: True. Source configuration:
+            `extract/sources/netflix_top10.yml`.'
+          analysis:
+            headline: how the observed Top 10 catalogue level and viewing-hour mix move across daily fetches and ranking weeks.
+            event_time: fetched_at
+            grain: DAY
+            controls:
+            - category
+            - scope
+            - season_title
+            trends:
+            - slug: observed-titles
+              kind: total
+              metric: distinct_titles
+              time: fetched_at
+              grain: DAY
+              title: Distinct titles per fetch day
+              description: Distinct `title_id` values present in each daily Netflix fetch. This is a
+                snapshot level of the published Top 10 feed, not a flow of new titles; days without a
+                successful fetch are absent rather than zero.
+              width: half
+            - slug: viewing-hours
+              kind: total
+              metric: average_weekly_hours_viewed
+              time: fetched_at
+              grain: DAY
+              title: Mean weekly hours viewed per fetch day
+              description: Mean publisher-reported `weekly_hours_viewed` across titles in each daily fetch.
+                Each title row has equal weight, so this is a cross-title average of a ranking-week measure,
+                not a summed audience total; absent fetch days are absent rather than zero.
+              width: half
+            - slug: category-hours
+              kind: breakdown
+              metric: average_weekly_hours_viewed
+              breakdown: category
+              top_n: 4
+              time: fetched_at
+              grain: DAY
+              title: Viewing hours by category
+              description: Mean reported `weekly_hours_viewed` per fetch day compared across the four
+                observed `category` values. All four categories are retained; any category outside the
+                selected top four would be excluded rather than aggregated.
+              width: full
+            - slug: ranking-week-mix
+              kind: composition
+              metric: distinct_titles
+              breakdown: category
+              top_n: 4
+              time: week
+              grain: WEEK
+              title: Ranked titles by category and source week
+              description: Distinct `title_id` values stacked by `category` for each source `week`. This
+                uses event time for the ranking period rather than fetch time; only one source week is
+                currently populated, and missing weeks are absent rather than zero.
+              width: full
+  columns:
+  - name: netflix_top10_key
+    description: Stable hash of the weekly date, geographic scope, category, rank, and title.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Netflix top10 key
+          hidden: true
+  - name: scope
+    description: Geographic scope reported by Netflix, such as a country or the global catalog.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Scope
+          hidden: false
+  - name: week
+    description: Week-ending date represented by the Netflix Top 10 ranking.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Week
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: category
+    description: Netflix ranking category, such as an English film or television list.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Category
+          hidden: false
+  - name: weekly_rank
+    description: One-based rank of the title within its weekly scope and category list.
+    data_type: integer
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Weekly rank
+          hidden: false
+          format: '#,##0'
+  - name: show_title
+    description: Display title of the ranked film or television show.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Show title
+          hidden: false
+  - name: season_title
+    description: Season or installment title supplied by Netflix, when applicable.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Season title
+          hidden: false
+  - name: weekly_hours_viewed
+    description: Hours viewed for the title during the ranking week.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_weekly_hours_viewed:
+            type: average
+            label: Mean observed weekly hours viewed
+            description: Mean observed weekly hours viewed by `category` in the selected observation window.
+              Hours viewed for the title during the ranking week. Each retained observation has equal
+              weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+              measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Weekly hours viewed
+          hidden: false
+          format: '#,##0'
+  - name: runtime
+    description: Runtime in hours used by Netflix to calculate viewing metrics.
+    data_type: decimal(18,4)
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Runtime
+          hidden: false
+          format: '#,##0.00'
+  - name: weekly_views
+    description: Netflix's reported equivalent full views during the ranking week.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Weekly views
+          hidden: false
+          format: '#,##0'
+  - name: cumulative_weeks_in_top_10
+    description: Number of weeks the title has appeared in a Netflix Top 10 list.
+    data_type: integer
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Cumulative weeks in top 10
+          hidden: false
+          format: '#,##0'
+  - name: source_name
+    description: Upstream source label carried by the extracted business record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: title_id
+    description: Composite identifier supplied by the Netflix Top 10 source for this title rank.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_titles:
+            type: count_distinct
+            label: Distinct titles
+            description: Distinct `title_id` values present in each Netflix Top 10 snapshot. Repeated
+              title rows across categories or ranking weeks count once within each time and filter group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Title id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp when the extractor fetched the ranking record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: publisher_updated_at
+    description: Publisher-provided update timestamp text from the Netflix ranking feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publisher updated at
+          hidden: false
+  - name: source_row_id
+    description: Raw warehouse row identifier for the retained ranking record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained ranking record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained ranking record in its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Extraction partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the retained source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Load-layer identifier for the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained raw record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the retained raw record content for replay and lineage auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

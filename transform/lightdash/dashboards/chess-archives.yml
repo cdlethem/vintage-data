@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: a9c9dc32-908a-5010-b681-596ea0f67745
+    label: 'Chess archives games: Time class'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_chess_archives_games_time_class
+      tableName: fct_chess_archives_games
+    values: []
+  - disabled: true
+    id: 9db31f88-c49e-563d-8ca1-6caa1b1e8381
+    label: 'Chess archives games: Player result'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_chess_archives_games_player_result
+      tableName: fct_chess_archives_games
+    values: []
+  - disabled: true
+    id: 899b1c0d-d8fc-58b3-96d8-9184dd97dd5a
+    label: 'Chess archives games: Player color'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_chess_archives_games_player_color
+      tableName: fct_chess_archives_games
+    values: []
+  - disabled: true
+    id: 70d2f7e8-1d45-570c-b624-ecddab35fbbd
+    label: 'Chess archives games: Is rated'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_chess_archives_games_is_rated
+      tableName: fct_chess_archives_games
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Chess Archives
+slug: chess-archives
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical fact of Chess.com archive games from the chess_archives extraction. Each
+      row is one player and game identifier; repeated append-only copies are reduced to the latest loaded
+      record while game attributes and raw-load lineage remain available for audit.
+
+
+      **Grain:** player_user, game_id
+
+
+      **What changes here:** how recorded chess volume, time controls, results, and player strength shift
+      over game history.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `chess_archives` — licence: chess.com public API; attribution required: False. Source configuration:
+      `extract/sources/chess_archives.yml`.'
+    hideFrame: false
+    title: Chess archives games
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Chess archives games — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct games ended per month
+    chartSlug: fct-chess-archives-games-games-ended
+    hideTitle: false
+    title: Distinct games ended per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Games ended per month by time class
+    chartSlug: fct-chess-archives-games-games-by-time-class
+    hideTitle: false
+    title: Games ended per month by time class
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Monthly game mix by player result
+    chartSlug: fct-chess-archives-games-result-mix
+    hideTitle: false
+    title: Monthly game mix by player result
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Mean player rating by time class
+    chartSlug: fct-chess-archives-games-rating-by-time-class
+    hideTitle: false
+    title: Mean player rating by time class
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Chess archives games — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct game by player result
+    chartSlug: fct-chess-archives-games
+    hideTitle: false
+    title: Distinct game by player result
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Chess archives games — observations
+    chartSlug: fct-chess-archives-games-details
+    hideTitle: false
+    title: Chess archives games — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

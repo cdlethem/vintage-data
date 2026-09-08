@@ -1,0 +1,665 @@
+{
+  "candidates": [
+    {
+      "sector": "aviation safety reporting",
+      "slug": "nasa_asrs",
+      "status": "pending",
+      "title": "NASA ASRS"
+    },
+    {
+      "sector": "bird migration intensity derived from weather radar",
+      "slug": "birdcast",
+      "status": "pending",
+      "title": "BirdCast"
+    },
+    {
+      "sector": "Markets and physical infrastructure",
+      "slug": "fuel_prices",
+      "status": "pending",
+      "title": "Retail fuel prices"
+    },
+    {
+      "sector": "Markets and physical infrastructure",
+      "slug": "open_charge_map",
+      "status": "pending",
+      "title": "Open Charge Map"
+    },
+    {
+      "sector": "genuinely random number streams",
+      "slug": "lottery_draws",
+      "status": "pending",
+      "title": "Lottery draws"
+    },
+    {
+      "sector": "animal shelters",
+      "slug": "animal_shelters",
+      "status": "pending",
+      "title": "Animal shelters"
+    },
+    {
+      "sector": "fast radio bursts",
+      "slug": "chime_frb",
+      "status": "pending",
+      "title": "CHIME/FRB"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "certificate_transparency_logs",
+      "status": "pending",
+      "title": "Certificate Transparency logs"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "ripe_ris_live",
+      "status": "pending",
+      "title": "RIPE RIS Live"
+    },
+    {
+      "covered_by": "fetch_socrata_civic.py",
+      "note": "already reached by fetch_socrata_civic.py",
+      "sector": "second sweep",
+      "slug": "nyc_311_any_socrata",
+      "status": "prescripted",
+      "title": "NYC 311 / any Socrata portal"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "sec_edgar_latest_filings",
+      "status": "pending",
+      "title": "SEC EDGAR latest filings"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "gbfs_bike_share_feeds",
+      "status": "pending",
+      "title": "GBFS bike-share feeds"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "gtfs_realtime_transit_feeds",
+      "status": "pending",
+      "title": "GTFS-Realtime transit feeds"
+    },
+    {
+      "covered_by": "fetch_carbon_intensity.py",
+      "note": "already reached by fetch_carbon_intensity.py",
+      "sector": "second sweep",
+      "slug": "uk_carbon_intensity_api",
+      "status": "prescripted",
+      "title": "UK Carbon Intensity API"
+    },
+    {
+      "note": "same source as #77 Stack Exchange",
+      "sector": "second sweep",
+      "slug": "stack_exchange_api",
+      "status": "alias",
+      "title": "Stack Exchange API"
+    },
+    {
+      "note": "same source as #79 OpenStreetMap changesets",
+      "sector": "second sweep",
+      "slug": "openstreetmap_changesets",
+      "status": "alias",
+      "title": "OpenStreetMap changesets"
+    },
+    {
+      "note": "same source as #65 ListenBrainz",
+      "sector": "second sweep",
+      "slug": "listenbrainz",
+      "status": "alias",
+      "title": "ListenBrainz"
+    },
+    {
+      "note": "same source as #95 Open Food Facts contributors",
+      "sector": "second sweep",
+      "slug": "open_food_facts",
+      "status": "alias",
+      "title": "Open Food Facts"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "steam_concurrent_players",
+      "status": "pending",
+      "title": "Steam concurrent players"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "smithsonian_global_volcanism_program",
+      "status": "pending",
+      "title": "Smithsonian Global Volcanism Program weekly activity report"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "tor_onionoo",
+      "status": "pending",
+      "title": "Tor Onionoo"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "usaspending_gov",
+      "status": "pending",
+      "title": "USAspending.gov"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "zenodo_figshare",
+      "status": "pending",
+      "title": "Zenodo / Figshare"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "open_library_recent_changes",
+      "status": "pending",
+      "title": "Open Library recent changes"
+    },
+    {
+      "note": "same source as #66 MusicBrainz",
+      "sector": "second sweep",
+      "slug": "musicbrainz",
+      "status": "alias",
+      "title": "MusicBrainz"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "internet_archive_wayback_cdx",
+      "status": "pending",
+      "title": "Internet Archive Wayback CDX API"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "abuse_ch",
+      "status": "pending",
+      "title": "abuse.ch (URLhaus / MalwareBazaar / ThreatFox)"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "lichess",
+      "status": "pending",
+      "title": "Lichess"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "metaculus",
+      "status": "pending",
+      "title": "Metaculus"
+    },
+    {
+      "note": "same source as #84 AniList / MyAnimeList",
+      "sector": "second sweep",
+      "slug": "anilist_graphql",
+      "status": "alias",
+      "title": "AniList GraphQL"
+    },
+    {
+      "note": "same source as #83 BoardGameGeek plays",
+      "sector": "second sweep",
+      "slug": "boardgamegeek_xml_api",
+      "status": "alias",
+      "title": "BoardGameGeek XML API"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "gutendex_project_gutenberg",
+      "status": "pending",
+      "title": "Gutendex / Project Gutenberg"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "faa_nas_status",
+      "status": "pending",
+      "title": "FAA NAS Status / airport delay feeds"
+    },
+    {
+      "sector": "second sweep",
+      "slug": "software_heritage_api",
+      "status": "pending",
+      "title": "Software Heritage API"
+    },
+    {
+      "sector": "structural biology",
+      "slug": "rcsb_protein_data_bank",
+      "status": "pending",
+      "title": "RCSB Protein Data Bank"
+    },
+    {
+      "sector": "research funding",
+      "slug": "nih_reporter",
+      "status": "pending",
+      "title": "NIH RePORTER"
+    },
+    {
+      "sector": "internet standards",
+      "slug": "ietf_datatracker",
+      "status": "pending",
+      "title": "IETF Datatracker"
+    },
+    {
+      "sector": "vehicle safety",
+      "slug": "nhtsa",
+      "status": "pending",
+      "title": "NHTSA"
+    },
+    {
+      "sector": "consumer product safety",
+      "slug": "cpsc",
+      "status": "pending",
+      "title": "CPSC"
+    },
+    {
+      "sector": "pure mathematics",
+      "slug": "oeis",
+      "status": "pending",
+      "title": "OEIS"
+    },
+    {
+      "sector": "cryosphere",
+      "slug": "nsidc_sea_ice_index",
+      "status": "pending",
+      "title": "NSIDC sea ice index"
+    },
+    {
+      "sector": "oceanography",
+      "slug": "argo_float_network_ndbc",
+      "status": "pending",
+      "title": "Argo float network / NDBC buoys"
+    },
+    {
+      "sector": "borders/logistics",
+      "slug": "cbp_border_wait_times",
+      "status": "pending",
+      "title": "CBP border wait times"
+    },
+    {
+      "sector": "internet outages",
+      "slug": "ioda",
+      "status": "pending",
+      "title": "IODA (Georgia Tech)"
+    },
+    {
+      "covered_by": "fetch_museum_collections.py",
+      "note": "already reached by fetch_museum_collections.py",
+      "sector": "art history",
+      "slug": "met_museum_cleveland_museum",
+      "status": "prescripted",
+      "title": "Met Museum / Cleveland Museum of Art"
+    },
+    {
+      "sector": "space operations",
+      "slug": "launch_library_2",
+      "status": "pending",
+      "title": "Launch Library 2"
+    },
+    {
+      "sector": "a join dimension, not a source",
+      "slug": "nager_date",
+      "status": "pending",
+      "title": "Nager.Date"
+    },
+    {
+      "sector": "linguistics",
+      "slug": "tatoeba",
+      "status": "pending",
+      "title": "Tatoeba"
+    },
+    {
+      "sector": "chemistry",
+      "slug": "pubchem_pug_rest",
+      "status": "pending",
+      "title": "PubChem PUG-REST"
+    },
+    {
+      "sector": "aviation",
+      "slug": "opensky_network",
+      "status": "pending",
+      "title": "OpenSky Network"
+    },
+    {
+      "sector": "community discussion",
+      "slug": "discourse_forums",
+      "status": "pending",
+      "title": "Discourse forums"
+    },
+    {
+      "sector": "labor relations",
+      "slug": "osha_labor",
+      "status": "pending",
+      "title": "OSHA enforcement / Cornell ILR Labor Action Tracker"
+    },
+    {
+      "sector": "Sports (all keyless official league feeds)",
+      "slug": "nhl",
+      "status": "pending",
+      "title": "NHL"
+    },
+    {
+      "covered_by": "fetch_chess_archives.py",
+      "note": "already reached by fetch_chess_archives.py",
+      "sector": "Sports (all keyless official league feeds)",
+      "slug": "chess_com_public_api",
+      "status": "prescripted",
+      "title": "Chess.com public API"
+    },
+    {
+      "sector": "delightfully niche",
+      "slug": "sumo_api_com",
+      "status": "pending",
+      "title": "sumo-api.com"
+    },
+    {
+      "sector": "German, community-run, fully keyless",
+      "slug": "openligadb",
+      "status": "pending",
+      "title": "OpenLigaDB"
+    },
+    {
+      "sector": "esports",
+      "slug": "liquipedia",
+      "status": "pending",
+      "title": "Liquipedia"
+    },
+    {
+      "sector": "Sports (all keyless official league feeds)",
+      "slug": "thesportsdb",
+      "status": "pending",
+      "title": "TheSportsDB"
+    },
+    {
+      "covered_by": "fetch_listenbrainz.py",
+      "note": "already reached by fetch_listenbrainz.py",
+      "sector": "Music, culture and the arts",
+      "slug": "listenbrainz",
+      "status": "prescripted",
+      "title": "ListenBrainz"
+    },
+    {
+      "sector": "Music, culture and the arts",
+      "slug": "musicbrainz",
+      "status": "pending",
+      "title": "MusicBrainz"
+    },
+    {
+      "sector": "concert setlists",
+      "slug": "setlist_fm",
+      "status": "pending",
+      "title": "Setlist.fm"
+    },
+    {
+      "sector": "Music, culture and the arts",
+      "slug": "apple_itunes_rss_charts",
+      "status": "pending",
+      "title": "Apple/iTunes RSS charts"
+    },
+    {
+      "sector": "Music, culture and the arts",
+      "slug": "deezer_public_api",
+      "status": "pending",
+      "title": "Deezer public API"
+    },
+    {
+      "sector": "Music, culture and the arts",
+      "slug": "jikan",
+      "status": "pending",
+      "title": "Jikan (MyAnimeList)"
+    },
+    {
+      "sector": "Music, culture and the arts",
+      "slug": "internet_archive",
+      "status": "pending",
+      "title": "Internet Archive"
+    },
+    {
+      "sector": "Music, culture and the arts",
+      "slug": "europeana_v_a_rijksmuseum",
+      "status": "pending",
+      "title": "Europeana / V&A / Rijksmuseum"
+    },
+    {
+      "sector": "International and non-English",
+      "slug": "jma",
+      "status": "pending",
+      "title": "JMA (\u6c17\u8c61\u5e81, Japan Meteorological Agency)"
+    },
+    {
+      "sector": "International and non-English",
+      "slug": "intl_transit",
+      "status": "pending",
+      "title": "Live transit APIs outside the US"
+    },
+    {
+      "sector": "International and non-English",
+      "slug": "wikipedia_crosslingual",
+      "status": "pending",
+      "title": "Cross-lingual Wikipedia divergence"
+    },
+    {
+      "sector": "the closest public thing to a raw clickstream that exists",
+      "slug": "gh_archive",
+      "status": "pending",
+      "title": "GH Archive"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "stack_exchange",
+      "status": "pending",
+      "title": "Stack Exchange"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "wikipedia_list_usercontribs",
+      "status": "pending",
+      "title": "Wikipedia `list=usercontribs`"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "openstreetmap_changesets",
+      "status": "pending",
+      "title": "OpenStreetMap changesets"
+    },
+    {
+      "sector": "task-level citizen-science telemetry",
+      "slug": "zooniverse",
+      "status": "pending",
+      "title": "Zooniverse"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "open_humans",
+      "status": "pending",
+      "title": "Open Humans"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "letterboxd_per_user_rss",
+      "status": "pending",
+      "title": "Letterboxd per-user RSS"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "boardgamegeek_plays",
+      "status": "pending",
+      "title": "BoardGameGeek plays"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "anilist_myanimelist",
+      "status": "pending",
+      "title": "AniList / MyAnimeList"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "hugging_face_hub_api",
+      "status": "pending",
+      "title": "Hugging Face Hub API"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "discourse_u_name_activity",
+      "status": "pending",
+      "title": "Discourse `/u/{name}/activity.json`"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "mastodon_nostr",
+      "status": "pending",
+      "title": "Mastodon / Nostr"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "steam_reviews",
+      "status": "pending",
+      "title": "Steam reviews"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "duolingo_learning_traces",
+      "status": "pending",
+      "title": "Duolingo learning traces"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "judges_atcoder_leetcode",
+      "status": "pending",
+      "title": "Codeforces-adjacent judges"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "parkrun",
+      "status": "pending",
+      "title": "Parkrun / marathon results"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "fide_rating_lists",
+      "status": "pending",
+      "title": "FIDE rating lists"
+    },
+    {
+      "covered_by": "fetch_speedrun_runs.py",
+      "note": "already reached by fetch_speedrun_runs.py",
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "speedrun_com",
+      "status": "prescripted",
+      "title": "Speedrun.com"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "inaturalist_observations",
+      "status": "pending",
+      "title": "iNaturalist observations"
+    },
+    {
+      "sector": "Fifth sweep \u2014 more open behavioural telemetry",
+      "slug": "open_food_facts_contributors",
+      "status": "pending",
+      "title": "Open Food Facts contributors"
+    },
+    {
+      "covered_by": "fetch_socrata_civic.py",
+      "note": "already reached by fetch_socrata_civic.py",
+      "sector": "disease detection from sewage",
+      "slug": "cdc_nwss_wastewater_surveillance",
+      "status": "prescripted",
+      "title": "CDC NWSS wastewater surveillance"
+    },
+    {
+      "covered_by": "fetch_nextstrain.py",
+      "note": "already reached by fetch_nextstrain.py",
+      "sector": "live pathogen phylogenetics",
+      "slug": "nextstrain",
+      "status": "prescripted",
+      "title": "Nextstrain"
+    },
+    {
+      "sector": "Public health surveillance",
+      "slug": "fda_drug_shortage_database",
+      "status": "pending",
+      "title": "FDA drug shortage database"
+    },
+    {
+      "sector": "Safety narratives",
+      "slug": "ntsb_accident_database",
+      "status": "pending",
+      "title": "NTSB accident database"
+    },
+    {
+      "covered_by": "fetch_sensor_community.py",
+      "note": "already reached by fetch_sensor_community.py",
+      "sector": "Citizen sensor networks",
+      "slug": "sensor_community",
+      "status": "prescripted",
+      "title": "Sensor.community"
+    },
+    {
+      "sector": "Citizen sensor networks",
+      "slug": "safecast",
+      "status": "pending",
+      "title": "Safecast"
+    },
+    {
+      "sector": "Citizen sensor networks",
+      "slug": "raspberry_shake",
+      "status": "pending",
+      "title": "Raspberry Shake"
+    },
+    {
+      "covered_by": "fetch_avalanche_forecasts.py",
+      "note": "already reached by fetch_avalanche_forecasts.py",
+      "sector": "Radar biology and hazard forecasting",
+      "slug": "avalanche_org_european_eaws",
+      "status": "prescripted",
+      "title": "Avalanche.org / European EAWS"
+    },
+    {
+      "covered_by": "fetch_stac_imagery.py",
+      "note": "already reached by fetch_stac_imagery.py",
+      "sector": "new satellite scenes published continuously",
+      "slug": "stac_catalogs",
+      "status": "prescripted",
+      "title": "STAC catalogs (Earth Search, Planetary Computer)"
+    },
+    {
+      "sector": "Earth observation",
+      "slug": "celestrak_socrates",
+      "status": "pending",
+      "title": "CelesTrak SOCRATES"
+    },
+    {
+      "covered_by": "fetch_reservoir_levels.py",
+      "note": "already reached by fetch_reservoir_levels.py",
+      "sector": "Markets and physical infrastructure",
+      "slug": "reservoir_levels",
+      "status": "prescripted",
+      "title": "Reservoir levels"
+    },
+    {
+      "sector": "Markets and physical infrastructure",
+      "slug": "recreation_gov_nps",
+      "status": "pending",
+      "title": "Recreation.gov / NPS"
+    },
+    {
+      "covered_by": "fetch_ted_procurement.py",
+      "note": "already reached by fetch_ted_procurement.py",
+      "sector": "multilingual public procurement notices",
+      "slug": "ted",
+      "status": "prescripted",
+      "title": "TED (EU tenders)"
+    },
+    {
+      "sector": "Institutions and money",
+      "slug": "us_senate_lda_lobbying",
+      "status": "pending",
+      "title": "US Senate LDA lobbying disclosures"
+    },
+    {
+      "covered_by": "fetch_fcc_uls.py",
+      "note": "already reached by fetch_fcc_uls.py",
+      "sector": "Institutions and money",
+      "slug": "fcc_spectrum_licensing",
+      "status": "prescripted",
+      "title": "FCC spectrum licensing (ULS)"
+    }
+  ],
+  "schema_version": 1,
+  "source": "discovery/possible_sources/out/queue.jsonl snapshot 2026-09-04"
+}

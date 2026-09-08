@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 47572716-e5a8-51b1-9d2f-dffdd65ee406
+    label: 'Fcc uls license observation: License status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_fcc_uls_license_observation_license_status
+      tableName: fct_fcc_uls_license_observation
+    values: []
+  - disabled: true
+    id: 0934296f-00ee-5bf3-b6e2-6ebbd1de1867
+    label: 'Fcc uls license observation: Operator class'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_fcc_uls_license_observation_operator_class
+      tableName: fct_fcc_uls_license_observation
+    values: []
+  - disabled: true
+    id: 2c02904b-abd9-5d14-a6ee-e129ec079b4e
+    label: 'Fcc uls license observation: State'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_fcc_uls_license_observation_state
+      tableName: fct_fcc_uls_license_observation
+    values: []
+  - disabled: true
+    id: d49cded1-c891-5474-98df-426e544021d6
+    label: 'Fcc uls license observation: Entity type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_fcc_uls_license_observation_entity_type
+      tableName: fct_fcc_uls_license_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Fcc Uls
+slug: fcc-uls
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical daily observation fact for FCC Universal Licensing System amateur-radio license
+      records. Each row records one FCC license identifier at one extractor observation timestamp, retaining
+      the published license attributes and raw-load lineage. Repeated copies of the same source license
+      and observation timestamp retain the latest loaded row; personally identifying fields are redacted
+      by the extractor before loading.
+
+
+      **Grain:** source_name, license_id, observed_at
+
+
+      **What changes here:** how FCC license grants accumulate and how their status and operator-class
+      mix changes.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `fcc_uls` — licence: US Government work, public domain; attribution required: False. Source configuration:
+      `extract/sources/fcc_uls.yml`.'
+    hideFrame: false
+    title: Fcc uls license observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Fcc uls license observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Licenses granted per month
+    chartSlug: fct-fcc-uls-license-observation-licenses-granted
+    hideTitle: false
+    title: Licenses granted per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Universal systems granted per month
+    chartSlug: fct-fcc-uls-license-observation-systems-granted
+    hideTitle: false
+    title: Universal systems granted per month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Grants by license status
+    chartSlug: fct-fcc-uls-license-observation-status-by-grant
+    hideTitle: false
+    title: Grants by license status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Effective license actions by operator class
+    chartSlug: fct-fcc-uls-license-observation-operator-class-mix
+    hideTitle: false
+    title: Effective license actions by operator class
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Fcc uls license observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct license by license status
+    chartSlug: fct-fcc-uls-license-observation
+    hideTitle: false
+    title: Distinct license by license status
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Fcc uls license observation — observations
+    chartSlug: fct-fcc-uls-license-observation-details
+    hideTitle: false
+    title: Fcc uls license observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

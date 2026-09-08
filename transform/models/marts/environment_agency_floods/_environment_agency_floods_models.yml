@@ -1,0 +1,393 @@
+version: 2
+models:
+- name: fct_environment_agency_floods
+  description: Twice-hourly physical history of Environment Agency flood-warning snapshots. Each row represents
+    one source flood identifier at one extractor fetch time; repeated insert-only raw copies of that observation
+    are reduced to the latest loaded copy while source and load lineage remain available for audit and
+    replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, flood_id, fetched_at
+      label: Environment agency floods
+      group_label: Environment agency floods
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: environment_agency_flood_key
+      vintage:
+        visualization:
+          dimension: severity
+          metric: distinct_entities
+          time: fetched_at
+          window_days: 30
+          title: Distinct flood by severity
+          description: Distinct `flood_id` values by `severity` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - fetched_at
+          - flood_id
+          - severity
+          - source_loaded_at
+          sources:
+          - '`environment_agency_floods` — licence: OGL 3.0; attribution required: True. Source configuration:
+            `extract/sources/environment_agency_floods.yml`.'
+          analysis:
+            headline: how flood-warning levels and affected areas change through each source event and fetch.
+            event_time: severity_changed_at
+            grain: HOUR
+            controls:
+            - severity
+            - area_name
+            - is_tidal
+            trends:
+            - slug: severity-events
+              kind: total
+              metric: distinct_entities
+              time: severity_changed_at
+              grain: HOUR
+              title: Flood warnings by severity-change hour
+              description: Distinct `flood_id` values whose warning severity changed in each source timestamp hour.
+                This is an event-time flow over the two-day observed history; hours with no source changes are
+                absent rather than zero.
+              width: half
+            - slug: severity-by-hour
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: severity
+              top_n: 3
+              time: severity_changed_at
+              grain: HOUR
+              title: Flood warnings by severity over time
+              description: Distinct `flood_id` values per severity-change hour, split across the three reported
+                severity categories. The three largest categories are all retained; empty hours are absent rather
+                than zero.
+              width: half
+            - slug: area-composition
+              kind: composition
+              metric: distinct_entities
+              breakdown: area_name
+              top_n: 5
+              time: severity_changed_at
+              grain: HOUR
+              title: Flood-warning area mix by severity-change hour
+              description: Distinct `flood_id` values stacked by Environment Agency area for each severity-change
+                hour. The five areas are the complete observed set, and absent source-event hours are not zeros.
+              width: full
+            - slug: fetched-level
+              kind: total
+              metric: average_severity_level
+              time: fetched_at
+              grain: HOUR
+              title: Mean warning severity at each fetch hour
+              description: Average numeric `severity_level` across retained flood rows at each extractor fetch
+                hour. This is a snapshot level rather than a flow, so movement reflects the published feed state;
+                fetch hours with no extract are absent rather than zero.
+              width: half
+  columns:
+  - name: environment_agency_flood_key
+    description: Stable hash of the source name, flood identifier, and fetch timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Environment agency flood key
+          hidden: true
+  - name: source_name
+    description: Source-system product label that supplied the flood record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: flood_id
+    description: Environment Agency URI identifying the flood-warning record.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct flood
+            description: Distinct `flood_id` values by `severity` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Flood id
+          hidden: false
+  - name: fetched_at
+    description: Timestamp when the extractor fetched the upstream flood-warning snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: description
+    description: Human-readable description of the affected river, coast, or location.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Description
+          hidden: true
+  - name: area_name
+    description: Environment Agency area name associated with the flood warning.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Area name
+          hidden: false
+  - name: region_name
+    description: Environment Agency region name associated with the flood warning.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Region name
+          hidden: false
+  - name: flood_area_id
+    description: Stable identifier for the flood area referenced by the warning.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Flood area id
+          hidden: false
+  - name: flood_area
+    description: Structured flood-area attributes supplied by the upstream API.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Flood area
+          hidden: true
+          sql: CAST(${TABLE}.flood_area AS VARCHAR)
+  - name: is_tidal
+    description: Whether the flood area is reported as tidal by the source.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is tidal
+          hidden: false
+  - name: message
+    description: Current warning message supplied for the flood record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Message
+          hidden: false
+  - name: severity
+    description: Human-readable warning severity reported by the Environment Agency.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Severity
+          hidden: false
+  - name: severity_level
+    description: Numeric warning severity level reported by the Environment Agency.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_severity_level:
+            type: average
+            label: Mean severity level
+            description: Average numeric `severity_level` across retained flood rows in each fetch or event-time
+              group. This is a reported snapshot level and is not additive.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Severity level
+          hidden: false
+          format: '#,##0'
+  - name: message_changed_at
+    description: Source timestamp when the warning message last changed.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Message changed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: raised_at
+    description: Source timestamp when the flood warning was raised.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Raised at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: severity_changed_at
+    description: Source timestamp when the warning severity last changed.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Severity changed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _row_id
+    description: Raw loader row identifier retained for lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: _dt
+    description: Load-layer partition date associated with the retained observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: Timestamp when the extract job that produced the retained observation started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer content hash of the retained raw observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

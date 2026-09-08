@@ -1,0 +1,57 @@
+chartConfig:
+  config:
+    columnLimit: 5
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_job_feed_themuse_posted_at_month
+          yRef:
+            field: fct_job_feed_themuse_distinct_companies
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Month)
+      yAxis:
+      - name: Distinct hiring company
+    layout:
+      stack: true
+      xField: fct_job_feed_themuse_posted_at_month
+      yField:
+      - fct_job_feed_themuse_distinct_companies
+  type: cartesian
+description: Distinct non-null `company` values per publisher posted month, stacked by the five experience
+  levels. The remainder is excluded rather than aggregated; repeated listings can recur, so this shows
+  observed hiring mix rather than unique organizations over the full history. Months without matching
+  records are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_job_feed_themuse_posted_at_month
+  - fct_job_feed_themuse_experience_level
+  exploreName: fct_job_feed_themuse
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_feed_themuse_distinct_companies
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_themuse_distinct_companies
+  - descending: false
+    fieldId: fct_job_feed_themuse_posted_at_month
+  tableCalculations: []
+name: Hiring-company mix by posted month and experience level
+pivotConfig:
+  columns:
+  - fct_job_feed_themuse_experience_level
+slug: fct-job-feed-themuse-experience-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_feed_themuse_posted_at_month
+  - fct_job_feed_themuse_experience_level
+  - fct_job_feed_themuse_distinct_companies
+tableName: fct_job_feed_themuse
+version: 1

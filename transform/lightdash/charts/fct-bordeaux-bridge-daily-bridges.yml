@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_bordeaux_bridge_observed_at_day
+          yRef:
+            field: fct_bordeaux_bridge_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct bridge
+    layout:
+      xField: fct_bordeaux_bridge_observed_at_day
+      yField:
+      - fct_bordeaux_bridge_distinct_entities
+  type: cartesian
+description: Distinct `bridge_id` values present in each extractor observation day. This is a published-catalogue
+  level for this feed, so a flat line means the bridge roster is unchanged; days with no successful extract
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_bordeaux_bridge_observed_at_day
+  exploreName: fct_bordeaux_bridge
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_bordeaux_bridge_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_bordeaux_bridge_observed_at_day
+  tableCalculations: []
+name: Distinct bridges present per observation day
+slug: fct-bordeaux-bridge-daily-bridges
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_bordeaux_bridge_observed_at_day
+  - fct_bordeaux_bridge_distinct_entities
+tableName: fct_bordeaux_bridge
+version: 1

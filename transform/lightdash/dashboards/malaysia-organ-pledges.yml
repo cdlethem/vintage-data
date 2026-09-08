@@ -1,0 +1,145 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 1d1e1008-15b9-5d19-b8d6-0461ef4c6803
+    label: 'Malaysia organ pledges: State'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_malaysia_organ_pledges_state
+      tableName: fct_malaysia_organ_pledges
+    values: []
+  - disabled: true
+    id: 5fff6d11-2ae7-50bf-8299-9717c614076e
+    label: 'Malaysia organ pledges: Publisher updated at'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_malaysia_organ_pledges_publisher_updated_at
+      tableName: fct_malaysia_organ_pledges
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Malaysia Organ Pledges
+slug: malaysia-organ-pledges
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical observation fact for Malaysia''s daily organ-donor pledge counts by state. Each
+      row records one state and pledge-date observation from one extractor snapshot, preserving repeated
+      snapshots so historical withdrawals and other publisher revisions remain visible. Duplicate copies
+      of the same source, pledge identifier, and observation timestamp are reduced to the latest loaded
+      record.
+
+
+      **Grain:** source_name, pledge_id, observed_at
+
+
+      **What changes here:** how reported organ-donor pledge volume changes by pledge date across the
+      published feed.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `malaysia_organ_pledges` — licence: CC BY 4.0; attribution required: True. Source configuration:
+      `extract/sources/malaysia_organ_pledges.yml`.'
+    hideFrame: false
+    title: Malaysia organ pledges
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Malaysia organ pledges — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct pledge observations per day
+    chartSlug: fct-malaysia-organ-pledges-pledge-observations
+    hideTitle: false
+    title: Distinct pledge observations per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported pledges per day
+    chartSlug: fct-malaysia-organ-pledges-pledge-level
+    hideTitle: false
+    title: Mean reported pledges per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Pledge observations by state
+    chartSlug: fct-malaysia-organ-pledges-pledges-by-state
+    hideTitle: false
+    title: Pledge observations by state
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Pledge observations by state
+    chartSlug: fct-malaysia-organ-pledges-pledge-mix-by-state
+    hideTitle: false
+    title: Pledge observations by state
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Malaysia organ pledges — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed pledge count by state
+    chartSlug: fct-malaysia-organ-pledges
+    hideTitle: false
+    title: Mean observed pledge count by state
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Malaysia organ pledges — observations
+    chartSlug: fct-malaysia-organ-pledges-details
+    hideTitle: false
+    title: Malaysia organ pledges — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

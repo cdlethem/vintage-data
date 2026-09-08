@@ -1,0 +1,165 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 8b84ca65-85f8-52de-9857-969001ef1e01
+    label: 'Uk police crime observation: Category'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_police_crime_observation_category
+      tableName: fct_uk_police_crime_observation
+    values: []
+  - disabled: true
+    id: 2a6d2fc4-beb0-5b28-9ac7-d2c51ccd46d1
+    label: 'Uk police crime observation: Location type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_police_crime_observation_location_type
+      tableName: fct_uk_police_crime_observation
+    values: []
+  - disabled: true
+    id: 8627d3b1-7b0e-5535-9e92-27594021eafc
+    label: 'Uk police crime observation: Outcome'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_police_crime_observation_outcome
+      tableName: fct_uk_police_crime_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Uk Police
+slug: uk-police
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily incremental physical fact of UK Police street-level crime snapshots for the Leicester-area
+      API extract. Each row records one crime identifier from one publishing source at one extractor fetch
+      timestamp, preserving the source''s monthly crime period and outcome status. The append-only raw
+      loads are deduplicated by this observation grain, retaining the latest loaded copy and complete
+      load lineage so later outcome revisions remain queryable as observations rather than overwriting
+      history. Coordinates are anonymised nearby map points supplied by the publisher, not precise crime
+      addresses.
+
+
+      **Grain:** source, crime_id, observed_at
+
+
+      **What changes here:** how recorded crime volume and outcome mix change across source crime months.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `uk_police` — licence: Open Government Licence — attribution required; attribution required: True.
+      Source configuration: `extract/sources/uk_police.yml`.'
+    hideFrame: false
+    title: Uk police crime observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Uk police crime observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Recorded crimes per source month
+    chartSlug: fct-uk-police-crime-observation-monthly-crime-volume
+    hideTitle: false
+    title: Recorded crimes per source month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Street labels represented per source month
+    chartSlug: fct-uk-police-crime-observation-monthly-street-coverage
+    hideTitle: false
+    title: Street labels represented per source month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Crime trajectories by leading category
+    chartSlug: fct-uk-police-crime-observation-category-trajectories
+    hideTitle: false
+    title: Crime trajectories by leading category
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Crime outcomes by source month
+    chartSlug: fct-uk-police-crime-observation-outcome-mix
+    hideTitle: false
+    title: Crime outcomes by source month
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Crime mix by location type
+    chartSlug: fct-uk-police-crime-observation-location-type-mix
+    hideTitle: false
+    title: Crime mix by location type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Uk police crime observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct crime by category
+    chartSlug: fct-uk-police-crime-observation
+    hideTitle: false
+    title: Distinct crime by category
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Uk police crime observation — observations
+    chartSlug: fct-uk-police-crime-observation-details
+    hideTitle: false
+    title: Uk police crime observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

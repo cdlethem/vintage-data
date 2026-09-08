@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_open_library_change_event_timestamp_day
+          yRef:
+            field: fct_open_library_change_average_change_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event timestamp (Day)
+      yAxis:
+      - name: Mean changed keys
+    layout:
+      xField: fct_open_library_change_event_timestamp_day
+      yField:
+      - fct_open_library_change_average_change_count
+  type: cartesian
+description: Mean `change_count` reported on each source event day. This measures event size rather than
+  event volume, and sparse or missing event days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_open_library_change_event_timestamp_day
+  exploreName: fct_open_library_change
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_open_library_change_average_change_count
+  sorts:
+  - descending: false
+    fieldId: fct_open_library_change_event_timestamp_day
+  tableCalculations: []
+name: Mean changed keys per event day
+slug: fct-open-library-change-changed-keys-by-event-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_open_library_change_event_timestamp_day
+  - fct_open_library_change_average_change_count
+tableName: fct_open_library_change
+version: 1

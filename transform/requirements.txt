@@ -1,0 +1,5 @@
+# dbt runtime and project tooling. Keep DuckDB aligned with load/requirements.txt.
+dbt-core==1.12.3
+dbt-duckdb==1.11.0
+duckdb==1.5.5
+PyYAML==6.0.3

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_hk_cremation_sessions_observed_at_day
+          yRef:
+            field: fct_hk_cremation_sessions_distinct_sessions
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct cremation session
+    layout:
+      xField: fct_hk_cremation_sessions_observed_at_day
+      yField:
+      - fct_hk_cremation_sessions_distinct_sessions
+  type: cartesian
+description: Distinct `session_id` values in each extractor observation day. This is a collection-level
+  level over four days, not the number of cremations performed; days without a successful extract are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_hk_cremation_sessions_observed_at_day
+  exploreName: fct_hk_cremation_sessions
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_hk_cremation_sessions_distinct_sessions
+  sorts:
+  - descending: false
+    fieldId: fct_hk_cremation_sessions_observed_at_day
+  tableCalculations: []
+name: Distinct sessions observed per fetch day
+slug: fct-hk-cremation-sessions-sessions-by-observation-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hk_cremation_sessions_observed_at_day
+  - fct_hk_cremation_sessions_distinct_sessions
+tableName: fct_hk_cremation_sessions
+version: 1

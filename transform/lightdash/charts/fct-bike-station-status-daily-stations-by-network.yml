@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_bike_station_status_daily_observation_date_day
+          yRef:
+            field: fct_bike_station_status_daily_distinct_stations
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observation date (Day)
+      yAxis:
+      - name: Distinct stations
+    layout:
+      xField: fct_bike_station_status_daily_observation_date_day
+      yField:
+      - fct_bike_station_status_daily_distinct_stations
+  type: cartesian
+description: Distinct `station_id` values represented in each daily aggregate, pivoted by the two GBFS
+  networks. This is roster coverage rather than trip volume; a network with no daily rows is absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_bike_station_status_daily_observation_date_day
+  - fct_bike_station_status_daily_network
+  exploreName: fct_bike_station_status_daily
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_bike_station_status_daily_distinct_stations
+  sorts:
+  - descending: true
+    fieldId: fct_bike_station_status_daily_distinct_stations
+  - descending: false
+    fieldId: fct_bike_station_status_daily_observation_date_day
+  tableCalculations: []
+name: Reporting stations by network and day
+pivotConfig:
+  columns:
+  - fct_bike_station_status_daily_network
+slug: fct-bike-station-status-daily-stations-by-network
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_bike_station_status_daily_observation_date_day
+  - fct_bike_station_status_daily_network
+  - fct_bike_station_status_daily_distinct_stations
+tableName: fct_bike_station_status_daily
+version: 1

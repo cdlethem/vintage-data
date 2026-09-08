@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_imdb_rating_observation_observed_at_day
+          yRef:
+            field: fct_imdb_rating_observation_average_average_rating
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed average rating
+    layout:
+      xField: fct_imdb_rating_observation_observed_at_day
+      yField:
+      - fct_imdb_rating_observation_average_average_rating
+  type: cartesian
+description: Mean `average_rating` across retained title observations on each observation day. Each row
+  has equal weight, so polling frequency and repeated snapshots can bias the mean; this is a reported
+  rating level rather than an additive total.
+metricQuery:
+  dimensions:
+  - fct_imdb_rating_observation_observed_at_day
+  exploreName: fct_imdb_rating_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_imdb_rating_observation_average_average_rating
+  sorts:
+  - descending: false
+    fieldId: fct_imdb_rating_observation_observed_at_day
+  tableCalculations: []
+name: Mean title rating per observation day
+slug: fct-imdb-rating-observation-rating-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_imdb_rating_observation_observed_at_day
+  - fct_imdb_rating_observation_average_average_rating
+tableName: fct_imdb_rating_observation
+version: 1

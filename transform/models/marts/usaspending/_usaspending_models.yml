@@ -1,0 +1,294 @@
+version: 2
+models:
+- name: fct_usaspending_award_observations
+  description: Daily physical history of USAspending contract and grant award observations. Each row is
+    one award identifier observed in one extractor response at an observation timestamp; repeated raw
+    copies of that award observation are reduced to the latest loaded row while load lineage remains available
+    for audit and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: award_id, observed_at
+      label: Usaspending award observations
+      group_label: Usaspending
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: usaspending_award_obs_5bfa0b
+      vintage:
+        visualization:
+          dimension: awarding_agency
+          metric: average_award_amount
+          time: observed_at
+          window_days: 30
+          title: Mean observed award amount by awarding agency
+          description: Mean observed award amount by `awarding_agency` in the selected observation window.
+            Award amount in US dollars, represented with two decimal places. Each retained observation
+            has equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+            a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - award_record_id
+          - awarding_agency
+          - award_amount
+          - source_loaded_at
+          sources:
+          - '`usaspending` — licence: US Government work, public domain; attribution required: False.
+            Source configuration: `extract/sources/usaspending.yml`.'
+          analysis:
+            headline: how award counts and reported dollar amounts shift across performance-start months
+              and awarding agencies.
+            event_time: performance_start_date
+            grain: MONTH
+            controls:
+            - awarding_agency
+            - recipient_name
+            trends:
+            - slug: awards-by-month
+              kind: total
+              metric: distinct_awards
+              time: performance_start_date
+              grain: MONTH
+              title: Distinct awards by performance-start month
+              description: Distinct `award_id` values by `performance_start_date` month across the
+                published award history. Months with no award starts are absent rather than zero, so recent
+                bursts should not be read as a continuous monthly flow.
+              width: half
+            - slug: average-award-value
+              kind: total
+              metric: average_award_amount
+              time: performance_start_date
+              grain: MONTH
+              title: Average award amount by performance-start month
+              description: Average reported `award_amount` for awards whose performance starts in each month.
+                Amounts are US dollars and are not additive; sparse months are absent rather than zero, and
+                each retained observation has equal weight.
+              width: half
+            - slug: agency-awards
+              kind: breakdown
+              metric: distinct_awards
+              breakdown: awarding_agency
+              top_n: 6
+              time: performance_start_date
+              grain: MONTH
+              title: Award starts by awarding agency
+              description: Distinct `award_id` values by performance-start month and `awarding_agency`,
+                retaining the six largest agency series. Remaining agencies are excluded rather than
+                aggregated, and months with no starts are absent rather than zero.
+              width: full
+            - slug: agency-average-values
+              kind: breakdown
+              metric: average_award_amount
+              breakdown: awarding_agency
+              top_n: 6
+              time: performance_start_date
+              grain: MONTH
+              title: Average award amount by agency
+              description: Average reported `award_amount` by performance-start month and `awarding_agency`,
+                limited to six agency series. Each observation has equal weight, amounts are not additive,
+                and the remainder is excluded rather than aggregated.
+              width: full
+  columns:
+  - name: usaspending_award_observation_key
+    description: Stable hash of the USAspending award identifier and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Usaspending award observation key
+          hidden: true
+          name: usaspending_award_obs_5bfa0b
+  - name: source_name
+    description: Upstream source label carried by the USAspending response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: award_record_id
+    description: USAspending generated internal record identifier for this award response row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Award record id
+          hidden: false
+  - name: award_id
+    description: Public USAspending identifier for the observed contract or grant award.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Award id
+          hidden: false
+        metrics:
+          distinct_awards:
+            type: count_distinct
+            label: Distinct award
+            description: Distinct `award_id` values by performance-start month and agency. Repeated
+              observations of an award are counted once within each chart grouping.
+            format: '#,##0'
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this award observation from USAspending.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: recipient_name
+    description: Recipient organization or individual named on the award.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Recipient name
+          hidden: false
+  - name: performance_start_date
+    description: Start date of the award's period of performance.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Performance start date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: performance_s_d0c671
+  - name: last_modified_at
+    description: UTC timestamp when USAspending last modified the award record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Last modified at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: award_amount
+    description: Award amount in US dollars, represented with two decimal places.
+    data_type: decimal(20,2)
+    config:
+      meta:
+        metrics:
+          average_award_amount:
+            type: average
+            label: Mean observed award amount
+            description: Mean observed award amount by `awarding_agency` in the selected observation window.
+              Award amount in US dollars, represented with two decimal places. Each retained observation
+              has equal weight; polling frequency and repeated snapshots can affect the mean. This is
+              not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Award amount
+          hidden: false
+          format: '#,##0.00'
+  - name: awarding_agency
+    description: Federal agency identified by USAspending as awarding the record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Awarding agency
+          hidden: false
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained raw award observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained raw award observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained award observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained award observation in its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained award observation into the raw
+      warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the retained raw award observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

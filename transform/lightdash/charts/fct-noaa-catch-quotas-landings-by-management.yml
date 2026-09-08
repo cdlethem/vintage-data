@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_noaa_catch_quotas_observed_at_day
+          yRef:
+            field: fct_noaa_catch_quotas_average_landings_value
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed landings value
+    layout:
+      xField: fct_noaa_catch_quotas_observed_at_day
+      yField:
+      - fct_noaa_catch_quotas_average_landings_value
+  type: cartesian
+description: Observation-weighted mean typed `landings_value` by management system and collection day.
+  This is a snapshot level, not cumulative landings across polls.
+metricQuery:
+  dimensions:
+  - fct_noaa_catch_quotas_observed_at_day
+  - fct_noaa_catch_quotas_management_system
+  exploreName: fct_noaa_catch_quotas
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_noaa_catch_quotas_average_landings_value
+  sorts:
+  - descending: true
+    fieldId: fct_noaa_catch_quotas_average_landings_value
+  - descending: false
+    fieldId: fct_noaa_catch_quotas_observed_at_day
+  tableCalculations: []
+name: Mean landings by management system
+pivotConfig:
+  columns:
+  - fct_noaa_catch_quotas_management_system
+slug: fct-noaa-catch-quotas-landings-by-management
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_noaa_catch_quotas_observed_at_day
+  - fct_noaa_catch_quotas_management_system
+  - fct_noaa_catch_quotas_average_landings_value
+tableName: fct_noaa_catch_quotas
+version: 1

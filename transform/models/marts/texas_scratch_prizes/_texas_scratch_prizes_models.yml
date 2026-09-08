@@ -1,0 +1,399 @@
+version: 2
+models:
+- name: fct_texas_scratch_prize_observation
+  description: Physical observation fact for the Texas Lottery scratch-ticket prize inventory feed. Each
+    row is the latest retained raw record for one prize record at one feed observation timestamp, preserving
+    the game, prize level, claim counts, publisher date, and raw load lineage. The model does not estimate
+    remaining prizes or infer ticket sales.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_system, prize_id, observed_at
+      label: Texas scratch prize observation
+      group_label: Texas scratch prizes
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: texas_scratch_prize__88d7e9
+      vintage:
+        visualization:
+          dimension: game_name
+          metric: max_prizes_claimed
+          time: observed_at
+          window_days: 30
+          title: Maximum observed prizes claimed by game name
+          description: Maximum observed prizes claimed by `game_name` in the selected observation window.
+            Number of prizes claimed for this level at observation time. Uses the largest retained value
+            within each group and window, not the latest value or a sum of snapshots.
+          detail_fields:
+          - observed_at
+          - prize_id
+          - game_name
+          - prizes_claimed
+          - source_loaded_at
+          sources:
+          - '`texas_scratch_prizes` — licence: Texas Lottery terms; attribution required: True. Source
+            configuration: `extract/sources/texas_scratch_prizes.yml`.'
+          analysis:
+            headline: how claimed-prize levels change across publisher updates and which games and ticket
+              prices carry the inventory.
+            event_time: publisher_updated_at
+            grain: DAY
+            controls:
+            - game_name
+            - ticket_price
+            - prize_level_label
+            - is_total_prize_level
+            trends:
+            - slug: claimed-levels
+              kind: total
+              metric: average_prizes_claimed
+              time: publisher_updated_at
+              grain: DAY
+              title: Mean prizes claimed per publisher update
+              description: Average non-null `prizes_claimed` across retained prize levels on each publisher
+                update date. This is an observation-weighted snapshot level, not a count of tickets sold;
+                dates with no published update are absent rather than zero.
+              width: half
+            - slug: inventory-level
+              kind: total
+              metric: average_total_prizes
+              time: publisher_updated_at
+              grain: DAY
+              title: Mean original prizes per level
+              description: Average `total_prizes_in_level` across retained prize levels on each publisher
+                update date. The feed republishes inventory snapshots, so this is a level and must not be
+                summed across dates; missing update dates are absent rather than zero.
+              width: half
+            - slug: claimed-by-game
+              kind: breakdown
+              metric: average_prizes_claimed
+              breakdown: game_name
+              top_n: 6
+              time: publisher_updated_at
+              grain: DAY
+              title: Mean prizes claimed by game
+              description: Average non-null `prizes_claimed` per publisher update date, split by game.
+                Only the six largest game series are shown; the remaining games are excluded rather than
+                aggregated, and each line remains a snapshot level rather than a sales flow.
+              width: full
+            - slug: inventory-by-price
+              kind: composition
+              metric: average_total_prizes
+              breakdown: ticket_price
+              top_n: 8
+              time: publisher_updated_at
+              grain: DAY
+              title: Prize inventory mix by ticket price
+              description: Average `total_prizes_in_level` per publisher update date stacked by ticket
+                price. Bars show the inventory mix across the eight most common price bands; smaller bands
+                are excluded rather than aggregated and repeated snapshots are not additive.
+              width: full
+            - slug: closing-schedule
+              kind: composition
+              metric: distinct_entities
+              breakdown: ticket_price
+              top_n: 8
+              time: game_close_date
+              grain: DAY
+              title: Prize levels by scheduled game close date
+              description: Distinct `prize_id` values with a non-null scheduled close date, stacked by
+                ticket price. This is a sparse five-date schedule view rather than a historical flow;
+                dates with no scheduled closes and rows without a close date are absent.
+              width: full
+  columns:
+  - name: texas_scratch_prize_observation_key
+    description: Stable hash of the source system, prize record identifier, and feed observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Texas scratch prize observation key
+          hidden: true
+          name: texas_scratch_prize__88d7e9
+  - name: source_system
+    description: Upstream source identifier reported by the raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source system
+          hidden: false
+  - name: prize_id
+    description: Source identifier for the scratch-ticket game and prize-level record.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct prize records
+            description: Distinct `prize_id` values present in the feed on each date. Repeated publisher
+              observations count once per time and breakdown group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Prize id
+          hidden: false
+  - name: observed_at
+    description: Timestamp with time zone when the feed was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: game_number
+    description: Texas Lottery game number reported by the feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Game number
+          hidden: false
+  - name: game_name
+    description: Scratch-ticket game name reported by the feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Game name
+          hidden: false
+  - name: game_close_date
+    description: Scheduled game close date parsed from the feed when supplied.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Game close date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: ticket_price
+    description: Ticket price in whole currency units reported by the feed.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Ticket price
+          hidden: false
+          format: '#,##0'
+  - name: prize_level_label
+    description: Prize level label as reported by the feed, including the TOTAL summary level.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Prize level label
+          hidden: false
+  - name: prize_level_number
+    description: Numeric prize amount for a prize level; null for the TOTAL summary level or an unparseable
+      value.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Prize level number
+          hidden: false
+          format: '#,##0'
+  - name: is_total_prize_level
+    description: Whether the record is the feed's TOTAL summary level rather than an individual prize
+      amount.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is total prize level
+          hidden: false
+  - name: total_prizes_in_level
+    description: Total number of prizes originally assigned to this prize level.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_total_prizes:
+            type: average
+            label: Mean original prizes per level
+            description: Average `total_prizes_in_level` across retained prize levels on each publisher
+              update date. The feed republishes inventory snapshots, so this is a level rather than an
+              additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Total prizes in level
+          hidden: false
+          format: '#,##0'
+  - name: prizes_claimed
+    description: Number of prizes claimed for this level at observation time.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          max_prizes_claimed:
+            type: max
+            label: Maximum observed prizes claimed
+            description: Maximum observed prizes claimed by `game_name` in the selected observation window.
+              Number of prizes claimed for this level at observation time. Uses the largest retained value
+              within each group and window, not the latest value or a sum of snapshots.
+            format: '#,##0.00'
+          average_prizes_claimed:
+            type: average
+            label: Mean observed prizes claimed
+            description: Average non-null `prizes_claimed` across retained prize levels on each publisher
+              update date. This observation-weighted snapshot level is not a count of tickets sold.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Prizes claimed
+          hidden: false
+          format: '#,##0'
+  - name: publisher_updated_at
+    description: Date when the publisher last updated the source record.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Publisher updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: publisher_up_0d8a22
+  - name: source_row_id
+    description: Raw load row identifier for this source record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: load_id
+    description: Identifier of the load job that inserted the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the source record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: Row position of the source record within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: Timestamp with time zone when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_loaded_at
+    description: Timestamp with time zone when the load layer inserted the source row.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

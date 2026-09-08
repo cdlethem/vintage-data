@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 5
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_environment_agency_floods_severity_changed_at_hour
+          yRef:
+            field: fct_environment_agency_floods_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Severity changed at (Hour)
+      yAxis:
+      - name: Distinct flood
+    layout:
+      stack: true
+      xField: fct_environment_agency_floods_severity_changed_at_hour
+      yField:
+      - fct_environment_agency_floods_distinct_entities
+  type: cartesian
+description: Distinct `flood_id` values stacked by Environment Agency area for each severity-change hour.
+  The five areas are the complete observed set, and absent source-event hours are not zeros.
+metricQuery:
+  dimensions:
+  - fct_environment_agency_floods_severity_changed_at_hour
+  - fct_environment_agency_floods_area_name
+  exploreName: fct_environment_agency_floods
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_environment_agency_floods_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_environment_agency_floods_distinct_entities
+  - descending: false
+    fieldId: fct_environment_agency_floods_severity_changed_at_hour
+  tableCalculations: []
+name: Flood-warning area mix by severity-change hour
+pivotConfig:
+  columns:
+  - fct_environment_agency_floods_area_name
+slug: fct-environment-agency-floods-area-composition
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_environment_agency_floods_severity_changed_at_hour
+  - fct_environment_agency_floods_area_name
+  - fct_environment_agency_floods_distinct_entities
+tableName: fct_environment_agency_floods
+version: 1

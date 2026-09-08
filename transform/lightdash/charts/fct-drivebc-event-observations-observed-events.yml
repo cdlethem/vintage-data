@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_drivebc_event_observations_observed_at_day
+          yRef:
+            field: fct_drivebc_event_observations_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct event
+    layout:
+      xField: fct_drivebc_event_observations_observed_at_day
+      yField:
+      - fct_drivebc_event_observations_distinct_entities
+  type: cartesian
+description: Distinct `event_id` values present in each extractor observation day. This is a current-feed
+  level because the feed republishes active events; movement reflects coverage or withdrawals, and days
+  without a successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_drivebc_event_observations_observed_at_day
+  exploreName: fct_drivebc_event_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_drivebc_event_observations_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_drivebc_event_observations_observed_at_day
+  tableCalculations: []
+name: Distinct events observed per day
+slug: fct-drivebc-event-observations-observed-events
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_drivebc_event_observations_observed_at_day
+  - fct_drivebc_event_observations_distinct_entities
+tableName: fct_drivebc_event_observations
+version: 1

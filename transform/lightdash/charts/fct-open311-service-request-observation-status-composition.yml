@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_open311_service_request_observation_requested_at_week
+          yRef:
+            field: fct_open311_service_request_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Requested at (Week)
+      yAxis:
+      - name: Distinct request
+    layout:
+      stack: true
+      xField: fct_open311_service_request_observation_requested_at_week
+      yField:
+      - fct_open311_service_request_observation_distinct_entities
+  type: cartesian
+description: Distinct requests per request week stacked by the two observed statuses. The bars show how
+  open and closed requests make up each week's submitted demand; empty weeks are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_open311_service_request_observation_requested_at_week
+  - fct_open311_service_request_observation_status
+  exploreName: fct_open311_service_request_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_open311_service_request_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_open311_service_request_observation_distinct_entities
+  - descending: false
+    fieldId: fct_open311_service_request_observation_requested_at_week
+  tableCalculations: []
+name: Request status composition by week
+pivotConfig:
+  columns:
+  - fct_open311_service_request_observation_status
+slug: fct-open311-service-request-observation-status-composition
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_open311_service_request_observation_requested_at_week
+  - fct_open311_service_request_observation_status
+  - fct_open311_service_request_observation_distinct_entities
+tableName: fct_open311_service_request_observation
+version: 1

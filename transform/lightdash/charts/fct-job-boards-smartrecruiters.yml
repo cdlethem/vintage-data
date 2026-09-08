@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_job_boards_smartrecruiters_company
+          yRef:
+            field: fct_job_boards_smartrecruiters_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_job_boards_smartrecruiters_company
+      yField:
+      - fct_job_boards_smartrecruiters_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values by `company` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_job_boards_smartrecruiters_company
+  exploreName: fct_job_boards_smartrecruiters
+  filters:
+    dimensions:
+      and:
+      - id: 6d71fbd8-76d0-5ead-9604-1e7573457952
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_boards_smartrecruiters_observed_at
+        values:
+        - 30
+      id: f4a67177-6050-57d1-8532-060f0b721859
+  limit: 20
+  metrics:
+  - fct_job_boards_smartrecruiters_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_boards_smartrecruiters_distinct_entities
+  tableCalculations: []
+name: Distinct job by company
+slug: fct-job-boards-smartrecruiters
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_boards_smartrecruiters_company
+  - fct_job_boards_smartrecruiters_distinct_entities
+tableName: fct_job_boards_smartrecruiters
+version: 1

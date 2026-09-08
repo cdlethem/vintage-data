@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_digitraffic_rail_train_observation_accepted_month
+          yRef:
+            field: fct_digitraffic_rail_train_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Timetable acceptance at (Month)
+      yAxis:
+      - name: Distinct train
+    layout:
+      stack: true
+      xField: fct_digitraffic_rail_train_observation_accepted_month
+      yField:
+      - fct_digitraffic_rail_train_observation_distinct_entities
+  type: cartesian
+description: Distinct `train_id` values by `train_category` and timetable-acceptance month. Stacked bars
+  show the mix of accepted timetable records; the four observed categories are all included and months
+  without accepted records are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_digitraffic_rail_train_observation_accepted_month
+  - fct_digitraffic_rail_train_observation_train_category
+  exploreName: fct_digitraffic_rail_train_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_digitraffic_rail_train_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_digitraffic_rail_train_observation_distinct_entities
+  - descending: false
+    fieldId: fct_digitraffic_rail_train_observation_accepted_month
+  tableCalculations: []
+name: Accepted trains by category each month
+pivotConfig:
+  columns:
+  - fct_digitraffic_rail_train_observation_train_category
+slug: fct-digitraffic-rail-train-observation-accepted-by-category
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_digitraffic_rail_train_observation_accepted_month
+  - fct_digitraffic_rail_train_observation_train_category
+  - fct_digitraffic_rail_train_observation_distinct_entities
+tableName: fct_digitraffic_rail_train_observation
+version: 1

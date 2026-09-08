@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_crossref_new_doi_observation_created_at_day
+          yRef:
+            field: fct_crossref_new_doi_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct doi
+    layout:
+      xField: fct_crossref_new_doi_observation_created_at_day
+      yField:
+      - fct_crossref_new_doi_observation_distinct_entities
+  type: cartesian
+description: Distinct `doi_id` values per `created_at` day, pivoted by the six largest observed `work_type`
+  values. Smaller work types are excluded rather than aggregated, so this compares the leading registration
+  trajectories rather than a complete mix.
+metricQuery:
+  dimensions:
+  - fct_crossref_new_doi_observation_created_at_day
+  - fct_crossref_new_doi_observation_work_type
+  exploreName: fct_crossref_new_doi_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_crossref_new_doi_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_crossref_new_doi_observation_distinct_entities
+  - descending: false
+    fieldId: fct_crossref_new_doi_observation_created_at_day
+  tableCalculations: []
+name: DOI registrations by work type
+pivotConfig:
+  columns:
+  - fct_crossref_new_doi_observation_work_type
+slug: fct-crossref-new-doi-observation-work-type-trajectories
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_crossref_new_doi_observation_created_at_day
+  - fct_crossref_new_doi_observation_work_type
+  - fct_crossref_new_doi_observation_distinct_entities
+tableName: fct_crossref_new_doi_observation
+version: 1

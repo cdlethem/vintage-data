@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 7
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_job_feed_himalayas_observed_at_day
+          yRef:
+            field: fct_job_feed_himalayas_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct job
+    layout:
+      xField: fct_job_feed_himalayas_observed_at_day
+      yField:
+      - fct_job_feed_himalayas_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values per observation day split across the seven supplied `employment_type`
+  values. No category is excluded, and the lines show catalogue levels rather than new postings.
+metricQuery:
+  dimensions:
+  - fct_job_feed_himalayas_observed_at_day
+  - fct_job_feed_himalayas_employment_type
+  exploreName: fct_job_feed_himalayas
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_feed_himalayas_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_himalayas_distinct_entities
+  - descending: false
+    fieldId: fct_job_feed_himalayas_observed_at_day
+  tableCalculations: []
+name: Distinct jobs by employment type
+pivotConfig:
+  columns:
+  - fct_job_feed_himalayas_employment_type
+slug: fct-job-feed-himalayas-jobs-by-employment
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_feed_himalayas_observed_at_day
+  - fct_job_feed_himalayas_employment_type
+  - fct_job_feed_himalayas_distinct_entities
+tableName: fct_job_feed_himalayas
+version: 1

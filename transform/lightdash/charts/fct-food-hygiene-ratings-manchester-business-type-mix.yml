@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_food_hygiene_ratings_manchester_rating_at_month
+          yRef:
+            field: fct_food_hygiene_ratings_manchester_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Rating at (Month)
+      yAxis:
+      - name: Distinct business
+    layout:
+      stack: true
+      xField: fct_food_hygiene_ratings_manchester_rating_at_month
+      yField:
+      - fct_food_hygiene_ratings_manchester_distinct_entities
+  type: cartesian
+description: Distinct businesses per rating month stacked by `business_type`. The eight largest business
+  types by this metric are shown; the remainder is excluded rather than aggregated, and empty months are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_food_hygiene_ratings_manchester_rating_at_month
+  - fct_food_hygiene_ratings_manchester_business_type
+  exploreName: fct_food_hygiene_ratings_manchester
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_food_hygiene_ratings_manchester_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_food_hygiene_ratings_manchester_distinct_entities
+  - descending: false
+    fieldId: fct_food_hygiene_ratings_manchester_rating_at_month
+  tableCalculations: []
+name: Rated businesses by business type
+pivotConfig:
+  columns:
+  - fct_food_hygiene_ratings_manchester_business_type
+slug: fct-food-hygiene-ratings-manchester-business-type-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_food_hygiene_ratings_manchester_rating_at_month
+  - fct_food_hygiene_ratings_manchester_business_type
+  - fct_food_hygiene_ratings_manchester_distinct_entities
+tableName: fct_food_hygiene_ratings_manchester
+version: 1

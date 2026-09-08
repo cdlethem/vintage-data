@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_itunes_charts_fetched_at_day
+          yRef:
+            field: fct_itunes_charts_average_rank
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Mean observed rank
+    layout:
+      xField: fct_itunes_charts_fetched_at_day
+      yField:
+      - fct_itunes_charts_average_rank
+  type: cartesian
+description: Average one-based `rank` across each fetched chart snapshot. Lower values mean better chart
+  position; each retained observation has equal weight, so repeated polling can affect the average and
+  missing fetch days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_itunes_charts_fetched_at_day
+  exploreName: fct_itunes_charts
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_itunes_charts_average_rank
+  sorts:
+  - descending: false
+    fieldId: fct_itunes_charts_fetched_at_day
+  tableCalculations: []
+name: Mean chart rank by day
+slug: fct-itunes-charts-mean-rank
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_itunes_charts_fetched_at_day
+  - fct_itunes_charts_average_rank
+tableName: fct_itunes_charts
+version: 1

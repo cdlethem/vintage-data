@@ -1,0 +1,172 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 8ebb93ad-8726-5406-8bf7-716aedf65c9a
+    label: 'Openfema declaration observation: Incident type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openfema_declaration_observation_incident_type
+      tableName: fct_openfema_declaration_observation
+    values: []
+  - disabled: true
+    id: 5de276be-ddda-5980-86d4-b0158733ddc0
+    label: 'Openfema declaration observation: State code'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openfema_declaration_observation_state_code
+      tableName: fct_openfema_declaration_observation
+    values: []
+  - disabled: true
+    id: b0d9cb86-164c-5491-a952-313aeab7b57f
+    label: 'Openfema declaration observation: Declaration type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openfema_declaration_observation_declaration_type
+      tableName: fct_openfema_declaration_observation
+    values: []
+  - disabled: true
+    id: 9361c3e1-2545-5c5b-8acf-48ada7e94e1b
+    label: 'Openfema declaration observation: Is public assistance program'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openfema_declaration_observation_is_public_assistanc_81e6a5
+      tableName: fct_openfema_declaration_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Openfema Declarations
+slug: openfema-declarations
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical observation fact for Federal Emergency Management Agency disaster declarations.
+      Each row is one FEMA declaration identifier at one extractor observation timestamp. Insert-only
+      copies are deduplicated by that observation grain using the latest load lineage, while declaration
+      attributes and source lineage remain available for audit and replay.
+
+
+      **Grain:** source_name, declaration_id, observed_at
+
+
+      **What changes here:** how declaration activity and affected incidents shift across FEMA incident
+      types and states over the incident timeline.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `openfema_declarations` — licence: US federal public data; attribution required: False. Source
+      configuration: `extract/sources/openfema_declarations.yml`.'
+    hideFrame: false
+    title: Openfema declaration observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Openfema declaration observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Declarations present in each observation day
+    chartSlug: fct-openfema-declaration-observation-observed-declarations
+    hideTitle: false
+    title: Declarations present in each observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Incidents beginning on each day
+    chartSlug: fct-openfema-declaration-observation-incidents-by-start-day
+    hideTitle: false
+    title: Incidents beginning on each day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Declaration mix by incident start day and type
+    chartSlug: fct-openfema-declaration-observation-declarations-by-incident-type
+    hideTitle: false
+    title: Declaration mix by incident start day and type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Leading states by declaration start day
+    chartSlug: fct-openfema-declaration-observation-declarations-by-state
+    hideTitle: false
+    title: Leading states by declaration start day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Requested declarations by day and type
+    chartSlug: fct-openfema-declaration-observation-declarations-by-request-day
+    hideTitle: false
+    title: Requested declarations by day and type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Openfema declaration observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct declaration by incident type
+    chartSlug: fct-openfema-declaration-observation
+    hideTitle: false
+    title: Distinct declaration by incident type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Openfema declaration observation — observations
+    chartSlug: fct-openfema-declaration-observation-details
+    hideTitle: false
+    title: Openfema declaration observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

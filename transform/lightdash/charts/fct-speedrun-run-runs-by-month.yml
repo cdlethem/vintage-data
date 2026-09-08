@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_speedrun_run_run_date_month
+          yRef:
+            field: fct_speedrun_run_distinct_runs
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Run date (Month)
+      yAxis:
+      - name: Distinct runs
+    layout:
+      xField: fct_speedrun_run_run_date_month
+      yField:
+      - fct_speedrun_run_distinct_runs
+  type: cartesian
+description: Distinct `run_id` values whose published `run_date` falls in each month. This is a sparse
+  submission flow rather than a catalogue level — months with no recorded runs are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_speedrun_run_run_date_month
+  exploreName: fct_speedrun_run
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_speedrun_run_distinct_runs
+  sorts:
+  - descending: false
+    fieldId: fct_speedrun_run_run_date_month
+  tableCalculations: []
+name: Distinct runs by run month
+slug: fct-speedrun-run-runs-by-month
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_speedrun_run_run_date_month
+  - fct_speedrun_run_distinct_runs
+tableName: fct_speedrun_run
+version: 1

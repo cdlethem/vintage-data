@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 7
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_digitraffic_marine_aton_fault_observation_entered_at_month
+          yRef:
+            field: fct_digitraffic_marine_aton_fault_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Entered at (Month)
+      yAxis:
+      - name: Distinct fault
+    layout:
+      stack: true
+      xField: fct_digitraffic_marine_aton_fault_observation_entered_at_month
+      yField:
+      - fct_digitraffic_marine_aton_fault_observation_distinct_entities
+  type: cartesian
+description: Distinct `fault_id` values per `entered_at` month, stacked by the seven observed `fault_type`
+  values. All observed types are retained, and the stack describes entry cohorts using the latest reported
+  labels rather than reconstructing status changes.
+metricQuery:
+  dimensions:
+  - fct_digitraffic_marine_aton_fault_observation_entered_at_month
+  - fct_digitraffic_marine_aton_fault_observation_fault_type
+  exploreName: fct_digitraffic_marine_aton_fault_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_digitraffic_marine_aton_fault_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_digitraffic_marine_aton_fault_observation_distinct_entities
+  - descending: false
+    fieldId: fct_digitraffic_marine_aton_fault_observation_entered_at_month
+  tableCalculations: []
+name: Entered faults by fault type
+pivotConfig:
+  columns:
+  - fct_digitraffic_marine_aton_fault_observation_fault_type
+slug: fct-digitraffic-marine-aton-fault-observation-fault-type-composition
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_digitraffic_marine_aton_fault_observation_entered_at_month
+  - fct_digitraffic_marine_aton_fault_observation_fault_type
+  - fct_digitraffic_marine_aton_fault_observation_distinct_entities
+tableName: fct_digitraffic_marine_aton_fault_observation
+version: 1

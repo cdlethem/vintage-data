@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of MusicBrainz release-search observations. Each row represents one
+  source release identifier at one extractor observation timestamp, retaining release metadata and loader
+  lineage. The source has a small observed hourly payload (25 rows per load), so a table rebuild is preferred
+  over incremental state while preserving the complete history. Repeated copies of the same source, release,
+  and observation timestamp retain the latest loaded row.
+metricQuery:
+  dimensions: &id001
+  - fct_musicbrainz_release_observation_observed_at
+  - fct_musicbrainz_release_observation_release_id
+  - fct_musicbrainz_release_observation_release_group_type
+  - fct_musicbrainz_release_observation_source_loaded_at
+  exploreName: fct_musicbrainz_release_observation
+  filters:
+    dimensions:
+      and:
+      - id: caed5237-4189-5e46-b913-723addbf5c87
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_musicbrainz_release_observation_observed_at
+        values:
+        - 30
+      id: 789ef8a6-d566-5202-abc6-5216da975da0
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_musicbrainz_release_observation_observed_at
+  tableCalculations: []
+name: Musicbrainz release observation — observations
+slug: fct-musicbrainz-release-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_musicbrainz_release_observation
+version: 1

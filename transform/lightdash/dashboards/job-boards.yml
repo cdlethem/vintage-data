@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 6adfddb9-ac8f-5537-a840-116d4e93faec
+    label: 'Job boards: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_source
+      tableName: fct_job_boards
+    values: []
+  - disabled: true
+    id: bf167c28-487e-50c3-bdf8-e58c81687bf8
+    label: 'Job boards: Company'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_company
+      tableName: fct_job_boards
+    values: []
+  - disabled: true
+    id: 65a4eda7-01e9-575f-a5ae-486cf6695e10
+    label: 'Job boards: Department'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_department
+      tableName: fct_job_boards
+    values: []
+  - disabled: true
+    id: 715957f9-d251-59b3-b68b-38f9df837b2b
+    label: 'Job boards: Location'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_location
+      tableName: fct_job_boards
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Boards
+slug: job-boards
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of job-listing observations collected from the combined Greenhouse,
+      Ashby, and Lever job-board feeds. The table is materialized as a physical relation so the append-only
+      source history can be queried repeatedly without rescanning the raw payloads. Each row represents
+      one source, job identifier, and extractor observation timestamp; repeated raw copies of that observation
+      are reduced to the latest loaded lineage record while listing attributes and load metadata remain
+      available for audit and replay.
+
+
+      **Grain:** source, job_id, observed_at
+
+
+      **What changes here:** how posted job volume and company coverage change across job-board feeds.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_boards` — see dbt raw-source lineage.'
+    hideFrame: false
+    title: Job boards
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Jobs posted per month
+    chartSlug: fct-job-boards-posted-jobs
+    hideTitle: false
+    title: Jobs posted per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Hiring companies posting per month
+    chartSlug: fct-job-boards-posting-companies
+    hideTitle: false
+    title: Hiring companies posting per month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Monthly postings by leading company
+    chartSlug: fct-job-boards-jobs-by-company
+    hideTitle: false
+    title: Monthly postings by leading company
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Observed job catalogue by feed
+    chartSlug: fct-job-boards-catalogue-by-source
+    hideTitle: false
+    title: Observed job catalogue by feed
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-boards
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Job boards — observations
+    chartSlug: fct-job-boards-details
+    hideTitle: false
+    title: Job boards — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

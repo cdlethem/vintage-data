@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_faa_nas_status_observation_observed_at_hour
+          yRef:
+            field: fct_faa_nas_status_observation_distinct_airports
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct airports
+    layout:
+      xField: fct_faa_nas_status_observation_observed_at_hour
+      yField:
+      - fct_faa_nas_status_observation_distinct_airports
+  type: cartesian
+description: Distinct `airport_id` values present in each extractor observation hour. This is a snapshot
+  coverage level rather than a flow; hours with no successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_faa_nas_status_observation_observed_at_hour
+  exploreName: fct_faa_nas_status_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_faa_nas_status_observation_distinct_airports
+  sorts:
+  - descending: false
+    fieldId: fct_faa_nas_status_observation_observed_at_hour
+  tableCalculations: []
+name: Airports reporting per observation hour
+slug: fct-faa-nas-status-observation-observed-airports
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_faa_nas_status_observation_observed_at_hour
+  - fct_faa_nas_status_observation_distinct_airports
+tableName: fct_faa_nas_status_observation
+version: 1

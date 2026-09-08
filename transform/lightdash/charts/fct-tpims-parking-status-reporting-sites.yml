@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_tpims_parking_status_observed_at_day
+          yRef:
+            field: fct_tpims_parking_status_distinct_sites
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct parking sites
+    layout:
+      xField: fct_tpims_parking_status_observed_at_day
+      yField:
+      - fct_tpims_parking_status_distinct_sites
+  type: cartesian
+description: Distinct `parking_id` values present in each extractor observation day. This is a catalogue
+  level over four collection days, not a flow of new sites; days with no successful extract are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_tpims_parking_status_observed_at_day
+  exploreName: fct_tpims_parking_status
+  filters:
+    dimensions:
+      and:
+      - id: 13f61ecb-5090-5611-9d44-799c71b1dba8
+        operator: equals
+        target:
+          fieldId: fct_tpims_parking_status_trusts_data
+        values:
+        - true
+      id: 6f03301b-8dcf-54a4-9c76-c018295c19ee
+  limit: 5000
+  metrics:
+  - fct_tpims_parking_status_distinct_sites
+  sorts:
+  - descending: false
+    fieldId: fct_tpims_parking_status_observed_at_day
+  tableCalculations: []
+name: Parking sites reporting per day
+slug: fct-tpims-parking-status-reporting-sites
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_tpims_parking_status_observed_at_day
+  - fct_tpims_parking_status_distinct_sites
+tableName: fct_tpims_parking_status
+version: 1

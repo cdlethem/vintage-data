@@ -1,0 +1,338 @@
+version: 2
+models:
+- name: fct_federal_register_rule_publication_observation
+  description: Physical observation fact for Federal Register rule and publication records. Each row records
+    one document identifier at one extractor observation timestamp, preserving publication metadata, public-inspection
+    state, and raw-load lineage. Repeated copies of the same source, document, and observation timestamp
+    retain the latest loaded row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: document_id, observed_at
+      label: Federal register rule publication observation
+      group_label: Federal register
+      default_time_dimension:
+        field: da6ee
+        interval: DAY
+      primary_key: federa_8bf9c6
+      vintage:
+        visualization:
+          dimension: document_type
+          metric: m_a6e4e251
+          time: observed_at
+          window_days: 30
+          title: Distinct document by document type
+          description: Distinct `document_id` values by `document_type` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - document_id
+          - document_type
+          - source_loaded_at
+          sources:
+          - '`federal_register` — licence: US Government work, public domain; attribution required: False.
+            Source configuration: `extract/sources/federal_register.yml`.'
+          analysis:
+            headline: how Federal Register publication volume and agency mix change across publication and fetch time.
+            event_time: publication_date
+            grain: DAY
+            controls:
+            - document_type
+            - title
+            - public_inspection
+            trends:
+            - slug: published-documents
+              kind: total
+              metric: m_a6e4e251
+              time: publication_date
+              time_dimension: pub
+              grain: DAY
+              title: Documents published per day
+              description: Distinct `document_id` values on each Federal Register `publication_date`. This is a
+                publication-time flow over three observed dates; dates without publications are absent rather than
+                zero.
+              width: half
+            - slug: type-volume
+              kind: breakdown
+              metric: m_a6e4e251
+              breakdown: document_type
+              top_n: 4
+              time: publication_date
+              time_dimension: pub
+              grain: DAY
+              title: Published documents by document type
+              description: Distinct `document_id` values per publication date, split across the four observed
+                document types. All observed types are retained; dates without publications are absent rather than
+                zero.
+              width: half
+            - slug: agency-composition
+              kind: composition
+              metric: agency_count
+              breakdown: agencies
+              top_n: 8
+              time: publication_date
+              time_dimension: pub
+              grain: DAY
+              title: Publication agency mix by day
+              description: Distinct `document_id` values stacked by the eight most common published agency values
+                on each publication date. Less common agencies and null values are excluded rather than aggregated,
+                so the stack is not the full publication count.
+              width: full
+            - slug: observed-catalogue
+              kind: total
+              metric: m_a6e4e251
+              time: observed_at
+              time_dimension: obs
+              grain: HOUR
+              title: Documents present in each fetch hour
+              description: Distinct `document_id` values present in each extractor observation hour. This is a
+                snapshot catalogue level, not a publication flow; hours without a successful extract are absent
+                rather than zero.
+              width: half
+  columns:
+  - name: federal_register_rule_publication_observation_key
+    description: Stable hash of the source name, document identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Federal register rule publication observation key
+          hidden: true
+          name: federa_8bf9c6
+  - name: source_name
+    description: Source label supplied by the Federal Register extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: document_id
+    description: Federal Register document number identifying the observed publication.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          m_a6e4e251:
+            type: count_distinct
+            label: Distinct document
+            description: Distinct `document_id` values by `document_type` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Document id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this Federal Register observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: da6ee
+        additional_dimensions:
+          obs:
+            type: timestamp
+            label: Fetched at
+            description: Extractor observation timestamp, exposed under a short dimension key so its
+              date-truncated variants stay inside Postgres's 63-byte identifier limit.
+            sql: ${TABLE}.observed_at
+            time_intervals:
+            - HOUR
+            - DAY
+            - WEEK
+            - MONTH
+            - YEAR
+  - name: publication_date
+    description: Date on which the Federal Register publication was published or filed.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Publication date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: df5d9
+        additional_dimensions:
+          pub:
+            type: date
+            label: Published on
+            description: Federal Register publication date, exposed under a short dimension key so its
+              date-truncated variants stay inside Postgres's 63-byte identifier limit.
+            sql: ${TABLE}.publication_date
+            time_intervals:
+            - DAY
+            - WEEK
+            - MONTH
+            - YEAR
+  - name: document_type
+    description: Federal Register document type, such as Rule, Proposed Rule, or Notice.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Document type
+          hidden: false
+  - name: title
+    description: Title of the Federal Register publication.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: abstract
+    description: Abstract or summary text supplied for the Federal Register publication.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Abstract
+          hidden: true
+  - name: agencies
+    description: JSON array of agency slugs or names associated with the publication.
+    data_type: json
+    config:
+      meta:
+        metrics:
+          agency_count:
+            type: count_distinct
+            label: Distinct agency values
+            description: Distinct agency-array values associated with observed documents in each publication or
+              observation-time group. This is a categorical coverage measure rather than a count of individual
+              agencies inside each JSON array.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Agencies
+          hidden: true
+          sql: CAST(${TABLE}.agencies AS VARCHAR)
+  - name: document_url
+    description: Canonical HTML URL for the Federal Register publication.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Document url
+          hidden: false
+  - name: text_url
+    description: URL for the Federal Register publication's full text.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Text url
+          hidden: false
+  - name: public_inspection
+    description: Whether the observed record is currently in the public-inspection queue.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Public inspection
+          hidden: false
+          name: public_c818fe
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: d2059
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the retained raw observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

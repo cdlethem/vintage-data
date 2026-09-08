@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Incremental physical observation fact for IETF Datatracker activity events. Each row represents
+  one Datatracker event identifier from the source stream at one extractor observation timestamp, retaining
+  event classification, draft and revision context, event text and timing, and raw-load lineage. The twice-hourly
+  incremental merge replays the latest atomic load and reduces repeated copies of the same source event
+  observation to its latest loaded record.
+metricQuery:
+  dimensions: &id001
+  - fct_ietf_datatracker_event_observation_observed_at
+  - fct_ietf_datatracker_event_observation_event_id
+  - fct_ietf_datatracker_event_observation_event_type
+  - fct_ietf_datatracker_event_observation_source_loaded_at
+  exploreName: fct_ietf_datatracker_event_observation
+  filters:
+    dimensions:
+      and:
+      - id: 0e089650-8f70-56b2-90e4-f151b30eadaa
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_ietf_datatracker_event_observation_observed_at
+        values:
+        - 30
+      id: 5925dba8-698b-5543-89d1-fb12b979c729
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_ietf_datatracker_event_observation_observed_at
+  tableCalculations: []
+name: Ietf datatracker event observation — observations
+slug: fct-ietf-datatracker-event-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_ietf_datatracker_event_observation
+version: 1

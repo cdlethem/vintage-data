@@ -1,142 +1,64 @@
 #!/usr/bin/env python3
-"""Melbourne — minute-level pedestrian counts for every sensor in the recent window.
-
-The publisher refreshes roughly every 15 minutes and exposes a rolling window only, so
-polling builds the durable history. Pages arrive newest-first, so this walks them and
-stops as soon as it reaches minutes it has already collected, keeping the publisher's
-presence/absence signal (a missing minute is left missing rather than emitted as zero).
-Verified live 2026-09-04 through the City of Melbourne OpenDataSoft API; city open-data
-terms apply.
-
-``sensing_datetime`` is a natural high-water mark, so the newest one emitted is
-checkpointed and the next run stops there instead of re-emitting an arbitrary overlap
-window. That makes successive runs fetch only genuinely new minutes: no duplicates and
-no gaps, whatever the cron interval. ``--minutes`` only bounds the very first (cold)
-run, where there is no watermark yet, and acts as a floor if the feed's rolling window
-has moved past our watermark. The watermark is written only after every record is
-printed, so an aborted run re-fetches rather than skipping (at-least-once).
-
-Stdlib only.
-"""
-
-import argparse
-import json
-import os
-import pathlib
-import urllib.parse
-import urllib.request
+"""Fetch Melbourne's past-hour pedestrian-count snapshot with an atomic watermark."""
+from __future__ import annotations
+import argparse, json, os, pathlib, sys, urllib.request
 from datetime import datetime, timedelta, timezone
 
-SOURCE = "melbourne_pedestrian_counts"
-URL = "https://data.melbourne.vic.gov.au/api/explore/v2.1/catalog/datasets/pedestrian-counting-system-past-hour-counts-per-minute/records"
+SOURCE = "melbourne_pedestrians"
+URL = "https://data.melbourne.vic.gov.au/explore/dataset/pedestrian-counting-system-past-hour-counts-per-minute/download?format=json"
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
-PAGE_SIZE = 100
-OFFSET_CEILING = 9900  # OpenDataSoft rejects offset + limit beyond 10000
 DEFAULT_DATA_ROOT = "~/.local/share/vintage-data/extract"
+SUMMARY_PREFIX = "VINTAGE_RUN_SUMMARY\t"
+COUNT_FIELDS = {"direction_1", "direction_2", "total_of_directions"}
 
 
 def state_path(explicit: str | None = None) -> pathlib.Path:
-    """Where the watermark lives: outside the repo, beside the raw data."""
-    if explicit:
-        return pathlib.Path(explicit).expanduser()
-    root = os.environ.get("EXTRACT_DATA_ROOT") or DEFAULT_DATA_ROOT
-    return pathlib.Path(root).expanduser() / "state" / f"{SOURCE}.json"
-
+    if explicit: return pathlib.Path(explicit).expanduser()
+    return pathlib.Path(os.environ.get("EXTRACT_DATA_ROOT") or DEFAULT_DATA_ROOT).expanduser() / "state" / f"{SOURCE}.json"
 
 def load_watermark(path: pathlib.Path) -> str:
-    try:
-        state = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return ""
-    watermark = state.get("sensing_datetime", "")
-    if not isinstance(watermark, str):
-        raise ValueError(f"malformed watermark state in {path}")
-    return watermark
+    try: data = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError: return ""
+    value = data.get("sensing_datetime", "")
+    if not isinstance(value, str): raise ValueError(f"malformed watermark state in {path}")
+    return value
 
+def save_watermark(path: pathlib.Path, watermark: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True); staged = path.with_name(path.name + ".tmp")
+    staged.write_text(json.dumps({"sensing_datetime": watermark}) + "\n", encoding="utf-8"); os.replace(staged, path)
 
-def save_watermark(path: pathlib.Path, watermark: str):
-    """Publish the watermark atomically so a crash can't leave it half-written."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    staged = path.with_name(path.name + ".tmp")
-    staged.write_text(json.dumps({"sensing_datetime": watermark}, indent=2) + "\n",
-                      encoding="utf-8")
-    os.replace(staged, path)
-
-
-def _page(offset: int, timeout: int):
-    query = urllib.parse.urlencode(
-        {"limit": PAGE_SIZE, "offset": offset, "order_by": "sensing_datetime desc"}
-    )
-    request = urllib.request.Request(f"{URL}?{query}", headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        document = json.load(response)
-    rows = document.get("results")
-    if not isinstance(rows, list):
-        raise TypeError("Melbourne response is missing results")
-    return rows
-
+def _download(timeout: int) -> list[dict]:
+    req = urllib.request.Request(URL, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=timeout) as response: document = json.load(response)
+    if not isinstance(document, list): raise TypeError("Melbourne download is not a JSON record list")
+    for item in document:
+        if not isinstance(item, dict) or not isinstance(item.get("fields"), dict) or not item.get("recordid"):
+            raise ValueError("Melbourne download contains malformed record envelope")
+    return document
 
 def fetch_counts(minutes: int = 90, timeout: int = 30, watermark: str = "", progress=None):
-    """Yield rows newer than ``watermark``, newest first.
+    if minutes <= 0: return
+    fetched_at = datetime.now(timezone.utc); cutoff = max(watermark, (fetched_at - timedelta(minutes=minutes)).isoformat()) if watermark else (fetched_at - timedelta(minutes=minutes)).isoformat()
+    rows = _download(timeout)
+    normalized = []
+    for item in rows:
+        fields = item["fields"]; sensed_at = fields.get("sensing_datetime"); location = fields.get("location_id")
+        if not sensed_at or location is None or not COUNT_FIELDS.intersection(fields):
+            raise ValueError("Melbourne record lacks sensing_datetime, location_id, or pedestrian count fields")
+        if sensed_at <= cutoff: continue
+        normalized.append((sensed_at, {**fields, "source": SOURCE, "fetched_at": fetched_at.isoformat(), "id": item["recordid"], "record_timestamp": item.get("record_timestamp")}))
+    for sensed_at, record in sorted(normalized, key=lambda pair: pair[0], reverse=True):
+        if progress is not None and sensed_at > progress.get("sensing_datetime", ""): progress["sensing_datetime"] = sensed_at
+        yield record
 
-    ``minutes`` bounds the cold start and floors the walk if the publisher's rolling
-    window has already moved past our watermark. ``progress`` receives the newest
-    ``sensing_datetime`` seen so the caller can checkpoint it.
-    """
-    if minutes <= 0:
-        return
-    fetched_at = datetime.now(timezone.utc)
-    floor = (fetched_at - timedelta(minutes=minutes)).isoformat()
-    # Resume exactly where we stopped, unless the rolling window has outrun us.
-    cutoff = max(watermark, floor) if watermark else floor
-    stamp = fetched_at.isoformat()
-    offset = 0
-    while offset <= OFFSET_CEILING:
-        rows = _page(offset, timeout)
-        if not rows:
-            return
-        for row in rows:
-            location_id = row.get("location_id")
-            sensed_at = row.get("sensing_datetime")
-            if location_id is None or not sensed_at:
-                raise ValueError("pedestrian row is missing location_id or sensing_datetime")
-            if sensed_at <= cutoff:
-                return
-            record = dict(row)
-            record.update(
-                {
-                    "source": SOURCE,
-                    "fetched_at": stamp,
-                    "id": f"{location_id}:{sensed_at}",
-                }
-            )
-            if progress is not None and sensed_at > progress.get("sensing_datetime", ""):
-                progress["sensing_datetime"] = sensed_at
-            yield record
-        if len(rows) < PAGE_SIZE:
-            return
-        offset += PAGE_SIZE
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--minutes", type=int, default=90,
-                        help="cold-start lookback, and floor if the rolling window outran us")
-    parser.add_argument("--state-file", help="watermark file; defaults under $EXTRACT_DATA_ROOT/state")
-    parser.add_argument("--no-state", action="store_true",
-                        help="ignore and do not write the watermark (one-off window pull)")
-    parser.add_argument("--timeout", type=int, default=30)
-    args = parser.parse_args()
-
-    path = state_path(args.state_file)
-    watermark = "" if args.no_state else load_watermark(path)
-    progress = {"sensing_datetime": watermark}
-    for record in fetch_counts(args.minutes, args.timeout, watermark, progress):
-        print(json.dumps(record, ensure_ascii=False))
-    # Only after every record is written: an aborted run re-fetches instead of skipping.
-    if not args.no_state and progress["sensing_datetime"] > watermark:
-        save_watermark(path, progress["sensing_datetime"])
-
-
-if __name__ == "__main__":
-    main()
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(); parser.add_argument("--minutes", type=int, default=90); parser.add_argument("--state-file"); parser.add_argument("--no-state", action="store_true"); parser.add_argument("--timeout", type=int, default=30)
+    args = parser.parse_args(argv); path = state_path(args.state_file); watermark = "" if args.no_state else load_watermark(path); progress = {"sensing_datetime": watermark}; records = 0
+    try:
+        for record in fetch_counts(args.minutes, args.timeout, watermark, progress): print(json.dumps(record, ensure_ascii=False)); records += 1
+    except Exception as exc:
+        print(SUMMARY_PREFIX + json.dumps({"health":"failed", "completeness":"failed", "records":records, "error":str(exc)}), file=sys.stderr); return 1
+    if not args.no_state and progress["sensing_datetime"] > watermark: save_watermark(path, progress["sensing_datetime"])
+    print(SUMMARY_PREFIX + json.dumps({"health":"healthy", "completeness":"complete", "records":records, "coverage":{"watermark_before":watermark, "watermark_after":progress["sensing_datetime"]}, "requests":{"attempted":1}}), file=sys.stderr)
+    return 0
+if __name__ == "__main__": raise SystemExit(main())

@@ -1,0 +1,270 @@
+version: 2
+models:
+- name: fct_uk_legal_aid_processing
+  description: Daily observations of UK legal-aid processing backlogs by processing item. Each row represents
+    one processing item in one published feed snapshot, preserving the source percentage text alongside
+    its normalized proportion and the dates reported by the publisher.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, processing_stream, processing_item, observed_at
+      label: Uk legal aid processing
+      group_label: Uk legal aid processing
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: legal_aid_processing_key
+      vintage:
+        visualization:
+          dimension: processing_stream
+          metric: m_1e33419f
+          time: observed_at
+          window_days: 30
+          title: Mean observed backlog older than current processing date pct by processing stream
+          description: Mean observed backlog older than current processing date pct by `processing_stream`
+            in the selected observation window. Backlog older than the current processing date as a proportion
+            between zero and one, parsed from the publisher percentage. Each retained observation has
+            equal weight; polling frequency and repeated snapshots can affect the mean. This is not a
+            latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - legal_aid_processing_key
+          - processing_stream
+          - backlog_older_than_current_processing_date_pct
+          - source_loaded_at
+          sources:
+          - '`uk_legal_aid_processing` — licence: Open Government Licence; attribution required: True.
+            Source configuration: `extract/sources/uk_legal_aid_processing.yml`.'
+          analysis:
+            headline: backlog proportions move across processing streams as the publisher advances its current date.
+            event_time: current_processing_date
+            grain: DAY
+            controls:
+            - processing_stream
+            - processing_item
+            - publisher_updated_date
+            trends:
+            - slug: backlog-proportion-daily
+              kind: total
+              metric: m_1e33419f
+              time: current_processing_date
+              grain: DAY
+              title: Mean backlog proportion by current processing date
+              description: Mean non-null `backlog_older_than_current_processing_date_pct` by publisher
+                `current_processing_date`. The proportion is observation-weighted and only 40 of 100 rows
+                report it, so null dates are absent rather than zero and polling frequency can affect the
+                mean; this is a level, not an additive backlog count.
+              width: half
+            - slug: processing-items-daily
+              kind: total
+              metric: distinct_processing_items
+              time: current_processing_date
+              grain: DAY
+              title: Processing items represented by current date
+              description: Distinct `processing_item` values reported for each `current_processing_date`.
+                This shows the breadth of published work types, not the number of cases; sparse dates are
+                absent rather than zero.
+              width: half
+            - slug: backlog-by-stream
+              kind: breakdown
+              metric: m_1e33419f
+              breakdown: processing_stream
+              top_n: 3
+              time: current_processing_date
+              grain: DAY
+              title: Backlog proportion by processing stream
+              description: Mean non-null backlog proportion by current processing date, split across the
+                three processing streams. The percentage is not summed across streams and missing stream
+                dates are absent rather than zero.
+              width: full
+            - slug: items-by-stream
+              kind: composition
+              metric: distinct_processing_items
+              breakdown: processing_stream
+              top_n: 3
+              time: current_processing_date
+              grain: DAY
+              title: Processing-item mix by stream and current date
+              description: Distinct processing items per current-processing date stacked by stream. The
+                three streams cover this mart's published categories; absent dates mean no source rows, not
+                zero work.
+              width: full
+  columns:
+  - name: legal_aid_processing_key
+    description: Stable hash of source, processing stream, processing item, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '3 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '3 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Legal aid processing key
+          hidden: true
+  - name: source
+    description: Source identifier reported by the legal-aid processing feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: processing_stream
+    description: Processing category represented by the row, derived from the populated work-type column.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Processing stream
+          hidden: false
+  - name: processing_item
+    description: Published processing work-type label identified by the feed.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_processing_items:
+            type: count_distinct
+            label: Distinct processing items
+            description: Distinct `processing_item` values represented in each current-processing-date
+              period. This counts published work-type breadth without treating rows as case totals.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Processing item
+          hidden: false
+  - name: observed_at
+    description: Timestamp when the upstream legal-aid processing feed snapshot was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: current_processing_date
+    description: Publisher-reported date through which the processing stream was current.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Current processing date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: publisher_updated_date
+    description: Publisher-reported date on which the feed content was updated.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Publisher updated date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: backlog_older_than_current_processing_date_text
+    description: Original percentage text reporting backlog older than the current processing date, when
+      supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Backlog older than current processing date text
+          hidden: false
+          name: backlog_older_than_current_p_cf8cce
+  - name: backlog_older_than_current_processing_date_pct
+    description: Backlog older than the current processing date as a proportion between zero and one,
+      parsed from the publisher percentage.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          m_1e33419f:
+            type: average
+            label: Mean observed backlog older than current processing date pct
+            description: Mean observed backlog older than current processing date pct by `processing_stream`
+              in the selected observation window. Backlog older than the current processing date as a
+              proportion between zero and one, parsed from the publisher percentage. Each retained observation
+              has equal weight; polling frequency and repeated snapshots can affect the mean. This is
+              not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Backlog older than current processing date pct
+          hidden: false
+          format: '#,##0.00'
+          name: backlog_older_than_current_p_6cb2a0
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position in the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted the raw observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

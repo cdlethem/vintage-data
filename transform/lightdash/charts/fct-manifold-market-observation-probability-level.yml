@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_manifold_market_observation_observed_at_day
+          yRef:
+            field: fct_manifold_market_observation_average_probability
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed probability
+    layout:
+      xField: fct_manifold_market_observation_observed_at_day
+      yField:
+      - fct_manifold_market_observation_average_probability
+  type: cartesian
+description: Average non-null `probability` across retained observations on each observation day. Each
+  snapshot has equal weight, so irregular polling and repeated market states can influence the mean. This
+  is a level, not a probability sum; days without non-null probabilities are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_manifold_market_observation_observed_at_day
+  exploreName: fct_manifold_market_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_manifold_market_observation_average_probability
+  sorts:
+  - descending: false
+    fieldId: fct_manifold_market_observation_observed_at_day
+  tableCalculations: []
+name: Mean market-implied probability per day
+slug: fct-manifold-market-observation-probability-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_manifold_market_observation_observed_at_day
+  - fct_manifold_market_observation_average_probability
+tableName: fct_manifold_market_observation
+version: 1

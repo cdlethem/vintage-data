@@ -1,0 +1,342 @@
+version: 2
+models:
+- name: fct_crossref_new_doi_observation
+  description: Hourly physical observation fact for newly registered Crossref DOI records. Each row records
+    one DOI identifier at one extractor observation timestamp, preserving publication metadata and raw-load
+    lineage. Repeated copies of the same source, DOI, and observation timestamp retain the latest loaded
+    row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, doi_id, observed_at
+      label: Crossref new doi observation
+      group_label: Crossref new dois
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: crossref_new_doi_observ_0363d4
+      vintage:
+        visualization:
+          dimension: work_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct doi by work type
+          description: Distinct `doi_id` values by `work_type` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - doi_id
+          - work_type
+          - source_loaded_at
+          sources:
+          - '`crossref_new_dois` — licence: CrossRef metadata — free reuse; attribution required: False.
+            Source configuration: `extract/sources/crossref_new_dois.yml`.'
+          analysis:
+            headline: how newly registered DOI volume, work-type mix, publisher breadth, and author counts move in the Crossref feed.
+            event_time: created_at
+            grain: DAY
+            controls:
+            - source_name
+            - work_type
+            - publisher
+            - has_abstract
+            trends:
+            - slug: daily-dois
+              kind: total
+              metric: distinct_entities
+              time: created_at
+              grain: DAY
+              title: DOIs created per day
+              description: Distinct `doi_id` values by the Crossref-reported `created_at` day. This is a
+                registration flow rather than a catalogue level; days with no registered DOIs are absent
+                rather than zero.
+              width: half
+            - slug: daily-author-count
+              kind: total
+              metric: average_author_count
+              time: created_at
+              grain: DAY
+              title: Average authors per DOI by day
+              description: Average reported `author_count` for DOI records by their `created_at` day. Repeated
+                observations make this observation-weighted and can overweight records polled more often;
+                missing days are absent rather than zero.
+              width: half
+            - slug: work-type-trajectories
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: work_type
+              top_n: 6
+              time: created_at
+              grain: DAY
+              title: DOI registrations by work type
+              description: Distinct `doi_id` values per `created_at` day, pivoted by the six largest observed
+                `work_type` values. Smaller work types are excluded rather than aggregated, so this compares
+                the leading registration trajectories rather than a complete mix.
+              width: full
+            - slug: publisher-breadth
+              kind: total
+              metric: distinct_publishers
+              time: created_at
+              grain: DAY
+              title: Publishers registering DOIs per day
+              description: Distinct non-null `publisher` values among DOI records by `created_at` day. This
+                measures publisher breadth, not DOI volume, and absent days indicate no retained registrations.
+              width: half
+            - slug: abstract-coverage
+              kind: composition
+              metric: distinct_entities
+              breakdown: has_abstract
+              top_n: 2
+              time: created_at
+              grain: DAY
+              title: DOI registrations by abstract coverage
+              description: Distinct `doi_id` values per `created_at` day, stacked by the two `has_abstract`
+                values. The stack shows metadata coverage and repeated observations, not abstract quality;
+                days without registrations are absent rather than zero.
+              width: full
+            - slug: publisher-trajectories
+              kind: composition
+              metric: distinct_entities
+              breakdown: publisher
+              top_n: 8
+              time: created_at
+              grain: DAY
+              title: DOI registrations by leading publisher
+              description: Distinct `doi_id` values per `created_at` day, stacked by the eight publishers with
+                the largest observed DOI volume. All other publishers are excluded rather than aggregated;
+                this highlights the leading publisher mix without implying a complete total.
+              width: full
+  columns:
+  - name: crossref_new_doi_observation_key
+    description: Stable hash of the source name, DOI identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Crossref new doi observation key
+          hidden: true
+          name: crossref_new_doi_observ_0363d4
+  - name: source_name
+    description: Source label supplied by the Crossref extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: doi_id
+    description: Digital Object Identifier identifying the newly registered scholarly work.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct doi
+            description: Distinct `doi_id` values by `work_type` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Doi id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this Crossref DOI observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: created_at
+    description: Timestamp when Crossref reports that the DOI record was created.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Created at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: work_type
+    description: Crossref work type assigned to the DOI record, such as journal-article or dataset.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Work type
+          hidden: false
+  - name: title
+    description: Title of the work reported by Crossref.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: journal
+    description: Journal or publication container reported by Crossref, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Journal
+          hidden: false
+  - name: publisher
+    description: Publisher reported by Crossref.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_publishers:
+            type: count_distinct
+            label: Distinct publishers
+            description: Distinct non-null `publisher` values among DOI records in the selected window. Repeated
+              observations of one publisher count once within each time and filter group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Publisher
+          hidden: false
+  - name: subjects
+    description: JSON array of subject classifications reported by Crossref.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Subjects
+          hidden: true
+          sql: CAST(${TABLE}.subjects AS VARCHAR)
+  - name: author_count
+    description: Number of authors reported by Crossref.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_author_count:
+            type: average
+            label: Average authors per DOI
+            description: Average reported `author_count` among DOI records in the selected window. Repeated
+              observations make this observation-weighted and can overweight records polled more often.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Author count
+          hidden: false
+          format: '#,##0'
+  - name: has_abstract
+    description: Whether Crossref supplied an abstract for the DOI record.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Has abstract
+          hidden: false
+  - name: abstract
+    description: Abstract text reported by Crossref, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Abstract
+          hidden: true
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the retained raw observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

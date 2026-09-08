@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical observation fact for the Texas Lottery scratch-ticket prize inventory feed. Each
+  row is the latest retained raw record for one prize record at one feed observation timestamp, preserving
+  the game, prize level, claim counts, publisher date, and raw load lineage. The model does not estimate
+  remaining prizes or infer ticket sales.
+metricQuery:
+  dimensions: &id001
+  - fct_texas_scratch_prize_observation_observed_at
+  - fct_texas_scratch_prize_observation_prize_id
+  - fct_texas_scratch_prize_observation_game_name
+  - fct_texas_scratch_prize_observation_prizes_claimed
+  - fct_texas_scratch_prize_observation_source_loaded_at
+  exploreName: fct_texas_scratch_prize_observation
+  filters:
+    dimensions:
+      and:
+      - id: 7544dd9a-9170-554d-83b0-5c72fdf996a2
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_texas_scratch_prize_observation_observed_at
+        values:
+        - 30
+      id: 781b7e95-3c01-5839-bb12-c27210d09be0
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_texas_scratch_prize_observation_observed_at
+  tableCalculations: []
+name: Texas scratch prize observation — observations
+slug: fct-texas-scratch-prize-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_texas_scratch_prize_observation
+version: 1

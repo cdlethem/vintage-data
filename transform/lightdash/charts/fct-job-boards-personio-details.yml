@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of job observations returned by Personio applicant-tracking system
+  boards. Each row represents one upstream source, job identifier, and extractor observation timestamp;
+  repeated raw copies of an observation are reduced to the latest loaded lineage record while listing
+  attributes and load metadata remain available for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_job_boards_personio_observed_at
+  - fct_job_boards_personio_job_id
+  - fct_job_boards_personio_company
+  - fct_job_boards_personio_source_loaded_at
+  exploreName: fct_job_boards_personio
+  filters:
+    dimensions:
+      and:
+      - id: 5fe44286-60d1-589e-a54a-5afc957a36ed
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_boards_personio_observed_at
+        values:
+        - 30
+      id: d9ec5b6c-067b-59c1-8351-ee821c1de14f
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_job_boards_personio_observed_at
+  tableCalculations: []
+name: Job boards personio — observations
+slug: fct-job-boards-personio-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_job_boards_personio
+version: 1

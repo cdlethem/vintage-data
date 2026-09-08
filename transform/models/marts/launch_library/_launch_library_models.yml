@@ -1,0 +1,337 @@
+version: 2
+models:
+- name: fct_launch_library
+  description: Physical daily snapshot fact for Launch Library launch records. Each row represents one
+    launch identifier from one upstream feed at one fetched_at observation timestamp. Repeated observations
+    preserve changing launch status, schedule, and source-update attributes, while duplicate raw rows
+    for the same source, launch, and observation timestamp are reduced to the latest loaded record and
+    load lineage is retained.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, launch_id, fetched_at
+      label: Launch library
+      group_label: Launch library
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: launch_event_key
+      vintage:
+        visualization:
+          dimension: status_name
+          metric: distinct_entities
+          time: fetched_at
+          window_days: 30
+          title: Distinct launch by status name
+          description: Distinct `launch_id` values by `status_name` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - fetched_at
+          - launch_id
+          - status_name
+          - source_loaded_at
+          sources:
+          - '`launch_library` — licence: unstated; attribution required: False. Source configuration:
+            `extract/sources/launch_library.yml`.'
+          analysis:
+            headline: how the launch catalogue's status mix and publisher revisions change over time.
+            event_time: last_updated
+            grain: DAY
+            controls:
+            - status_name
+            - status
+            - net_precision
+            trends:
+            - slug: launches-updated
+              kind: total
+              metric: distinct_entities
+              time: last_updated
+              grain: DAY
+              title: Distinct launches updated per day
+              description: Distinct `launch_id` values on the upstream `last_updated` day. This is a revision
+                flow rather than a catalogue census — days without a source update are absent rather than
+                zero, and repeated records for one launch count once per day.
+              width: half
+            - slug: launch-names-updated
+              kind: total
+              metric: distinct_names
+              time: last_updated
+              grain: DAY
+              title: Distinct launch names updated per day
+              description: Distinct non-null `name` values on each upstream `last_updated` day. This shows
+                the naming footprint of revisions, not the number of launches scheduled — quiet days are
+                absent rather than zero and one launch name can recur across observations.
+              width: half
+            - slug: status-updates
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: status_name
+              top_n: 4
+              time: last_updated
+              grain: DAY
+              title: Updated launches by status
+              description: Distinct launches whose upstream `last_updated` falls on each day, split by
+                `status_name`. All four observed statuses are retained; absent update days are absent rather
+                than zero, and status groups are not additive when a launch changes status.
+              width: full
+            - slug: precision-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: net_precision
+              top_n: 6
+              time: last_updated
+              grain: DAY
+              title: Updated launches by schedule precision
+              description: Distinct launches updated on each upstream `last_updated` day, stacked by the
+                feed's `net_precision`. Bars show the mix of scheduling certainty among revisions — empty
+                days are absent rather than zero and the six observed precision categories are not a total
+                catalogue count.
+              width: full
+  columns:
+  - name: launch_event_key
+    description: Stable hash of the upstream source, launch identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Launch event key
+          hidden: true
+  - name: source
+    description: Upstream feed identifier that supplied the launch record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: launch_id
+    description: Launch identifier assigned by the upstream Launch Library feed.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct launch
+            description: Distinct `launch_id` values by `status_name` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Launch id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp when the upstream feed snapshot was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: name
+    description: Launch name supplied by the upstream feed.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_names:
+            type: count_distinct
+            label: Distinct launch names
+            description: Distinct non-null `name` values among matching launch observations. This counts
+              names rather than launch identifiers and is not additive across status groups when a launch
+              changes status.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Name
+          hidden: false
+  - name: status
+    description: Compact launch status code supplied by the upstream feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status
+          hidden: false
+  - name: status_name
+    description: Human-readable launch status supplied by the upstream feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status name
+          hidden: false
+  - name: net
+    description: UTC target launch time supplied by the upstream feed.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Net
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: net_precision
+    description: Precision of the upstream target launch time, such as day, month, or second.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Net precision
+          hidden: false
+  - name: window_start
+    description: UTC beginning of the upstream launch window.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Window start
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: window_end
+    description: UTC end of the upstream launch window.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Window end
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: last_updated
+    description: UTC timestamp at which the upstream launch record was last updated.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Last updated
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_date
+    description: Raw partition date associated with this launch observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: batch_id
+    description: Identifier of the raw load batch that inserted this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Batch id
+          hidden: true
+  - name: load_id
+    description: Identifier of the raw load operation that inserted this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing this launch observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: file_row_num
+    description: One-based row position within the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: File row num
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw launch record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

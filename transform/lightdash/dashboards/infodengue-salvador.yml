@@ -1,0 +1,172 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Week
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: f465b9f4-b184-5915-b93c-33b94a1238be
+    label: 'Infodengue salvador: Alert level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_salvador_alert_level
+      tableName: fct_infodengue_salvador
+    values: []
+  - disabled: true
+    id: f9114fee-3479-5a9a-a9f5-fb850f1ce832
+    label: 'Infodengue salvador: Receptive status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_salvador_receptive_status
+      tableName: fct_infodengue_salvador
+    values: []
+  - disabled: true
+    id: bda19ff2-2cd3-5ef7-a75d-c283f27fd976
+    label: 'Infodengue salvador: Transmission status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_salvador_transmission_status
+      tableName: fct_infodengue_salvador
+    values: []
+  - disabled: true
+    id: 7447224e-52e5-5e9d-ad80-b3a8b5f5a4d4
+    label: 'Infodengue salvador: Incidence level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_salvador_incidence_level
+      tableName: fct_infodengue_salvador
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Infodengue Salvador
+slug: infodengue-salvador
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of InfoDengue epidemiological observations for Salvador. Each row
+      represents the latest loaded copy of one provider record from the Salvador city-alerts feed at the
+      source relation and record identifier grain; typed surveillance measures and raw-load lineage are
+      retained. The source is refreshed daily and revises prior epidemiological weeks, so repeated records
+      are reduced to the latest loaded copy during each table build.
+
+
+      **Grain:** source_relation, record_id
+
+
+      **What changes here:** Weekly epidemiological estimates show how Salvador''s burden changes, while
+      alert and transmission statuses explain the shifts.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `infodengue_salvador` — see dbt raw-source lineage.'
+    hideFrame: false
+    title: Infodengue salvador
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Infodengue salvador — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct epidemiological observations per week
+    chartSlug: fct-infodengue-salvador-weekly-observations
+    hideTitle: false
+    title: Distinct epidemiological observations per week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean estimated cases by epidemiological week
+    chartSlug: fct-infodengue-salvador-weekly-cases-estimate
+    hideTitle: false
+    title: Mean estimated cases by epidemiological week
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean incidence per 100k by epidemiological week
+    chartSlug: fct-infodengue-salvador-weekly-incidence
+    hideTitle: false
+    title: Mean incidence per 100k by epidemiological week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean estimated cases by alert level
+    chartSlug: fct-infodengue-salvador-cases-by-alert-level
+    hideTitle: false
+    title: Mean estimated cases by alert level
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Mean estimated cases by transmission status
+    chartSlug: fct-infodengue-salvador-cases-by-transmission
+    hideTitle: false
+    title: Mean estimated cases by transmission status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Infodengue salvador — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed incidence per 100k by municipality name
+    chartSlug: fct-infodengue-salvador
+    hideTitle: false
+    title: Mean observed incidence per 100k by municipality name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Infodengue salvador — observations
+    chartSlug: fct-infodengue-salvador-details
+    hideTitle: false
+    title: Infodengue salvador — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

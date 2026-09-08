@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_tsa_throughput_throughput_date
+          yRef:
+            field: fct_tsa_throughput_average_passengers
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_tsa_throughput_throughput_date
+      yField:
+      - fct_tsa_throughput_average_passengers
+  type: cartesian
+description: Mean observed passengers by `throughput_date` in the selected observation window. Number
+  of passengers reported by TSA for the throughput date. Each retained observation has equal weight; polling
+  frequency and repeated snapshots can affect the mean. This is not a latest-value measure or an additive
+  total.
+metricQuery:
+  dimensions:
+  - fct_tsa_throughput_throughput_date
+  exploreName: fct_tsa_throughput
+  filters:
+    dimensions:
+      and:
+      - id: 1a18ef7b-3d3a-5e80-800a-30b61033d00e
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_tsa_throughput_observed_at
+        values:
+        - 30
+      id: fb828385-5660-5eb7-acfa-d5f96a851278
+  limit: 20
+  metrics:
+  - fct_tsa_throughput_average_passengers
+  sorts:
+  - descending: true
+    fieldId: fct_tsa_throughput_average_passengers
+  tableCalculations: []
+name: Mean observed passengers by throughput date
+slug: fct-tsa-throughput
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_tsa_throughput_throughput_date
+  - fct_tsa_throughput_average_passengers
+tableName: fct_tsa_throughput
+version: 1

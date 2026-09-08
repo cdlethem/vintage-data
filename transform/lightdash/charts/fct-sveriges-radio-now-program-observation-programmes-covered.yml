@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sveriges_radio_now_program_observation_observed_at_day
+          yRef:
+            field: fct_sveriges_radio_now_program_observation_distinct_programs
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct programmes
+    layout:
+      xField: fct_sveriges_radio_now_program_observation_observed_at_day
+      yField:
+      - fct_sveriges_radio_now_program_observation_distinct_programs
+  type: cartesian
+description: Distinct non-null `program_id` values in the schedule snapshot on each observation day. This
+  is catalogue coverage at fetch time, not broadcasts over a day; absent observation days are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_sveriges_radio_now_program_observation_observed_at_day
+  exploreName: fct_sveriges_radio_now_program_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sveriges_radio_now_program_observation_distinct_programs
+  sorts:
+  - descending: false
+    fieldId: fct_sveriges_radio_now_program_observation_observed_at_day
+  tableCalculations: []
+name: Distinct programmes covered by day
+slug: fct-sveriges-radio-now-program-observation-programmes-covered
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sveriges_radio_now_program_observation_observed_at_day
+  - fct_sveriges_radio_now_program_observation_distinct_programs
+tableName: fct_sveriges_radio_now_program_observation
+version: 1

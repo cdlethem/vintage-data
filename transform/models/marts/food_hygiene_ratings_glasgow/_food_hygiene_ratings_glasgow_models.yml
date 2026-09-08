@@ -1,0 +1,504 @@
+version: 2
+models:
+- name: fct_food_hygiene_ratings_glasgow
+  description: Daily physical snapshot of Glasgow food-hygiene ratings. Each row is one food business
+    from one publisher snapshot, identified by source, business_id, and observed_at. Source business attributes
+    and the three nested FHRS scores are exposed as typed columns while loader lineage is retained; duplicate
+    source rows are reduced deterministically by load lineage.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, business_id, observed_at
+      label: Food hygiene ratings glasgow
+      group_label: Food hygiene ratings glasgow
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: food_hygiene_observation_key
+      vintage:
+        visualization:
+          dimension: business_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct business by business type
+          description: Distinct `business_id` values by `business_type` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - business_id
+          - business_type
+          - source_loaded_at
+          sources:
+          - '`food_hygiene_ratings_glasgow` — see dbt raw-source lineage.'
+          analysis:
+            headline: how Glasgow rating activity and the variety of published rating labels shift across business types.
+            event_time: rating_date
+            grain: MONTH
+            controls:
+            - business_type
+            - rating_value
+            - new_rating_pending
+            - scheme_type
+            trends:
+            - slug: rating-volume
+              kind: total
+              metric: distinct_entities
+              time: rating_date
+              grain: MONTH
+              title: Businesses rated per month
+              description: Distinct `business_id` values whose published rating date falls in each month.
+                This is an event flow rather than a current catalogue level — months with no rated records
+                are absent rather than zero.
+              width: half
+            - slug: rating-label-variety
+              kind: total
+              metric: distinct_rating_values
+              time: rating_date
+              grain: MONTH
+              title: Rating labels used per month
+              description: Distinct publisher `rating_value` labels present in each rating month. This is a
+                label-variety measure rather than a business count — it can remain at two while business
+                volume changes, and months without ratings are absent rather than zero.
+              width: half
+            - slug: business-type-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: business_type
+              top_n: 8
+              time: rating_date
+              grain: MONTH
+              title: Rated businesses by business type
+              description: Distinct businesses per rating month stacked by `business_type`. The eight largest
+                business types by this metric are shown; the remainder is excluded rather than aggregated,
+                and empty months are absent rather than zero.
+              width: full
+            - slug: label-variety-by-business-type
+              kind: breakdown
+              metric: distinct_rating_values
+              breakdown: business_type
+              top_n: 8
+              time: rating_date
+              grain: MONTH
+              title: Rating-label variety by business type
+              description: Distinct publisher rating labels per month for the eight largest business types.
+                This compares label variety, not inspection volume — the remainder is excluded rather than
+                aggregated and months without labels are absent rather than zero.
+              width: full
+  columns:
+  - name: food_hygiene_observation_key
+    description: Stable hash of source, business identifier, and snapshot timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Food hygiene observation key
+          hidden: true
+  - name: source
+    description: Source-system identifier supplied by the Food Hygiene Ratings Service.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: business_id
+    description: Publisher business identifier supplied in the source id field.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct business
+            description: Distinct `business_id` values by `business_type` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Business id
+          hidden: false
+  - name: observed_at
+    description: Timestamp when the publisher snapshot was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: address_line_1
+    description: First address line for the rated food business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Address line 1
+          hidden: false
+  - name: address_line_2
+    description: Second address line for the rated food business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Address line 2
+          hidden: false
+  - name: address_line_3
+    description: Third address line for the rated food business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Address line 3
+          hidden: false
+  - name: address_line_4
+    description: Fourth address line for the rated food business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Address line 4
+          hidden: false
+  - name: business_name
+    description: Trading name of the rated food business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Business name
+          hidden: false
+  - name: business_type
+    description: Publisher category for the food business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Business type
+          hidden: false
+  - name: business_type_id
+    description: Publisher numeric identifier for the business category.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Business type id
+          hidden: false
+          format: '#,##0'
+  - name: changes_by_server_id
+    description: Publisher server identifier associated with the latest source change.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Changes by server id
+          hidden: false
+          format: '#,##0'
+  - name: fhrs_id
+    description: Food Hygiene Rating Scheme numeric business identifier.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Fhrs id
+          hidden: false
+          format: '#,##0'
+  - name: local_authority_business_id
+    description: Local authority identifier for the business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local authority business id
+          hidden: false
+  - name: local_authority_code
+    description: Code of the local authority responsible for the business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local authority code
+          hidden: false
+  - name: local_authority_email_address
+    description: Published email address for the responsible local authority.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local authority email address
+          hidden: false
+  - name: local_authority_name
+    description: Name of the responsible local authority.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local authority name
+          hidden: false
+  - name: local_authority_website
+    description: Published website for the responsible local authority.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local authority website
+          hidden: false
+  - name: new_rating_pending
+    description: Whether the publisher marks a new rating as pending.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: New rating pending
+          hidden: false
+  - name: phone
+    description: Published telephone number for the food business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Phone
+          hidden: false
+  - name: postcode
+    description: Postal code for the food business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Postcode
+          hidden: false
+  - name: rating_date
+    description: Timestamp of the food hygiene rating.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Rating date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: rating_key
+    description: Publisher rating scheme key, such as fhis_pass_en-gb.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Rating key
+          hidden: true
+  - name: rating_value
+    description: Publisher text value for the overall food hygiene rating.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_rating_values:
+            type: count_distinct
+            label: Distinct rating labels
+            description: Distinct non-null publisher `rating_value` labels present in each rating period.
+              This measures label variety rather than the number of rated businesses.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Rating value
+          hidden: false
+  - name: right_to_reply
+    description: Publisher text for the business right-to-reply response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Right to reply
+          hidden: false
+  - name: scheme_type
+    description: Publisher food hygiene rating scheme type.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Scheme type
+          hidden: false
+  - name: latitude
+    description: Parsed latitude from the publisher geocode object.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: longitude
+    description: Parsed longitude from the publisher geocode object.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: hygiene_score
+    description: Numeric hygiene component score from the publisher scores object.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Hygiene score
+          hidden: false
+          format: '#,##0'
+  - name: structural_score
+    description: Numeric structural component score from the publisher scores object.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Structural score
+          hidden: false
+          format: '#,##0'
+  - name: confidence_in_management_score
+    description: Numeric confidence-in-management component score from the publisher scores object.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Confidence in management score
+          hidden: false
+          format: '#,##0'
+  - name: publisher_updated_at
+    description: Timestamp when the publisher last updated the business record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Publisher updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _batch_id
+    description: Raw loader batch identifier for this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Raw loader job identifier for this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _row_id
+    description: Raw loader row identifier retained for lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position of this observation in the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted this observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

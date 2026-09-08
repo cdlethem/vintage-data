@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_discourse_meta_topic_observation_created_at_day
+          yRef:
+            field: fct_discourse_meta_topic_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct topic
+    layout:
+      stack: true
+      xField: fct_discourse_meta_topic_observation_created_at_day
+      yField:
+      - fct_discourse_meta_topic_observation_distinct_entities
+  type: cartesian
+description: Distinct `topic_id` values by source `created_at` day stacked for the six authors with the
+  largest topic metric. Remaining authors are excluded rather than aggregated, and days without represented
+  topics are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_discourse_meta_topic_observation_created_at_day
+  - fct_discourse_meta_topic_observation_author
+  exploreName: fct_discourse_meta_topic_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_discourse_meta_topic_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_discourse_meta_topic_observation_distinct_entities
+  - descending: false
+    fieldId: fct_discourse_meta_topic_observation_created_at_day
+  tableCalculations: []
+name: Topics created by author each day
+pivotConfig:
+  columns:
+  - fct_discourse_meta_topic_observation_author
+slug: fct-discourse-meta-topic-observation-topics-by-author
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_discourse_meta_topic_observation_created_at_day
+  - fct_discourse_meta_topic_observation_author
+  - fct_discourse_meta_topic_observation_distinct_entities
+tableName: fct_discourse_meta_topic_observation
+version: 1

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_internet_archive_item_observation_added_at_day
+          yRef:
+            field: fct_internet_archive_item_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Added at (Day)
+      yAxis:
+      - name: Distinct item
+    layout:
+      stack: true
+      xField: fct_internet_archive_item_observation_added_at_day
+      yField:
+      - fct_internet_archive_item_observation_distinct_entities
+  type: cartesian
+description: Distinct `item_id` values stacked by creator on the source-reported `added_at` day. The bars
+  show the sparse five-day event history; null creators and the remainder are excluded rather than aggregated,
+  and absent days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_internet_archive_item_observation_added_at_day
+  - fct_internet_archive_item_observation_creator
+  exploreName: fct_internet_archive_item_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_internet_archive_item_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_internet_archive_item_observation_distinct_entities
+  - descending: false
+    fieldId: fct_internet_archive_item_observation_added_at_day
+  tableCalculations: []
+name: Items by credited creator on reported addition day
+pivotConfig:
+  columns:
+  - fct_internet_archive_item_observation_creator
+slug: fct-internet-archive-item-observation-added-items-by-creator
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_internet_archive_item_observation_added_at_day
+  - fct_internet_archive_item_observation_creator
+  - fct_internet_archive_item_observation_distinct_entities
+tableName: fct_internet_archive_item_observation
+version: 1

@@ -1,0 +1,152 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: c99436a7-7a62-5a22-aca3-3bed39858278
+    label: 'Bordeaux bridge: Status code'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_bordeaux_bridge_status_code
+      tableName: fct_bordeaux_bridge
+    values: []
+  - disabled: true
+    id: 99a59d4e-77a0-524c-b939-c28d3bde011c
+    label: 'Bordeaux bridge: Is closed'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_bordeaux_bridge_is_closed
+      tableName: fct_bordeaux_bridge
+    values: []
+  - disabled: true
+    id: 06fe08b8-eb78-508a-b024-77d227e4489a
+    label: 'Bordeaux bridge: Bridge name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_bordeaux_bridge_bridge_name
+      tableName: fct_bordeaux_bridge
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Bordeaux Bridge
+slug: bordeaux-bridge
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical history of Bordeaux bridge status observations. Each row is one bridge returned
+      by the source at one observation timestamp; repeated raw deliveries of the same observation retain
+      only the latest loaded copy while preserving source-file lineage.
+
+
+      **Grain:** source, bridge_id, observed_at
+
+
+      **What changes here:** how the single bridge''s reported status and observation cadence change day
+      by day.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `bordeaux_bridge` — licence: Bordeaux Metropole open-data terms; attribution required: True. Source
+      configuration: `extract/sources/bordeaux_bridge.yml`.'
+    hideFrame: false
+    title: Bordeaux bridge
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Bordeaux bridge — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Bridge observations updated per day
+    chartSlug: fct-bordeaux-bridge-daily-observations
+    hideTitle: false
+    title: Bridge observations updated per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct bridges present per observation day
+    chartSlug: fct-bordeaux-bridge-daily-bridges
+    hideTitle: false
+    title: Distinct bridges present per observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Bridge status observations by source status
+    chartSlug: fct-bordeaux-bridge-status-by-day
+    hideTitle: false
+    title: Bridge status observations by source status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Closed and open observations by day
+    chartSlug: fct-bordeaux-bridge-closure-by-day
+    hideTitle: false
+    title: Closed and open observations by day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Bordeaux bridge — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct bridge by bridge name
+    chartSlug: fct-bordeaux-bridge
+    hideTitle: false
+    title: Distinct bridge by bridge name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Bordeaux bridge — observations
+    chartSlug: fct-bordeaux-bridge-details
+    hideTitle: false
+    title: Bordeaux bridge — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

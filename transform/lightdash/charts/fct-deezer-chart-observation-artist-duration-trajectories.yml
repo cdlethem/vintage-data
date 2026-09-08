@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_deezer_chart_observation_observed_at_day
+          yRef:
+            field: fct_deezer_chart_observation_average_duration_seconds
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Average track duration seconds
+    layout:
+      xField: fct_deezer_chart_observation_observed_at_day
+      yField:
+      - fct_deezer_chart_observation_average_duration_seconds
+  type: cartesian
+description: Average reported `duration_seconds` per `observed_at` day, pivoted by the six artists with
+  the most retained observations. Other artists are excluded rather than aggregated, and repeated snapshots
+  receive equal observation weight.
+metricQuery:
+  dimensions:
+  - fct_deezer_chart_observation_observed_at_day
+  - fct_deezer_chart_observation_artist_name
+  exploreName: fct_deezer_chart_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_deezer_chart_observation_average_duration_seconds
+  sorts:
+  - descending: true
+    fieldId: fct_deezer_chart_observation_average_duration_seconds
+  - descending: false
+    fieldId: fct_deezer_chart_observation_observed_at_day
+  tableCalculations: []
+name: Mean track duration by leading artist
+pivotConfig:
+  columns:
+  - fct_deezer_chart_observation_artist_name
+slug: fct-deezer-chart-observation-artist-duration-trajectories
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_deezer_chart_observation_observed_at_day
+  - fct_deezer_chart_observation_artist_name
+  - fct_deezer_chart_observation_average_duration_seconds
+tableName: fct_deezer_chart_observation
+version: 1

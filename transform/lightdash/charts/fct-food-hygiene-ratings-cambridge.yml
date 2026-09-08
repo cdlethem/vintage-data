@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_food_hygiene_ratings_cambridge_business_type
+          yRef:
+            field: fct_food_hygiene_ratings_cambridge_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_food_hygiene_ratings_cambridge_business_type
+      yField:
+      - fct_food_hygiene_ratings_cambridge_distinct_entities
+  type: cartesian
+description: Distinct `establishment_id` values by `business_type` among observations in the selected
+  window. Repeated observations of an entity count once within each group. An entity that changed category
+  can appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_food_hygiene_ratings_cambridge_business_type
+  exploreName: fct_food_hygiene_ratings_cambridge
+  filters:
+    dimensions:
+      and:
+      - id: 56438800-8de1-5e8a-ac66-5edbe94c8c79
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_food_hygiene_ratings_cambridge_observed_at
+        values:
+        - 30
+      id: 6b4bbd5a-0bcc-5a93-a74e-d0c6aa80a690
+  limit: 20
+  metrics:
+  - fct_food_hygiene_ratings_cambridge_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_food_hygiene_ratings_cambridge_distinct_entities
+  tableCalculations: []
+name: Distinct establishment by business type
+slug: fct-food-hygiene-ratings-cambridge
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_food_hygiene_ratings_cambridge_business_type
+  - fct_food_hygiene_ratings_cambridge_distinct_entities
+tableName: fct_food_hygiene_ratings_cambridge
+version: 1

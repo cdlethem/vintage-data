@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_lichess_game_observation_observed_at_hour
+          yRef:
+            field: fct_lichess_game_observation_distinct_games
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct games observed
+    layout:
+      xField: fct_lichess_game_observation_observed_at_hour
+      yField:
+      - fct_lichess_game_observation_distinct_games
+  type: cartesian
+description: Distinct games per observed hour, pivoted to the eight largest `variant` series by the selected
+  metric. The remaining eight variants are excluded rather than aggregated; this compares feed coverage,
+  not unique games newly created in the hour.
+metricQuery:
+  dimensions:
+  - fct_lichess_game_observation_observed_at_hour
+  - fct_lichess_game_observation_variant
+  exploreName: fct_lichess_game_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_lichess_game_observation_distinct_games
+  sorts:
+  - descending: true
+    fieldId: fct_lichess_game_observation_distinct_games
+  - descending: false
+    fieldId: fct_lichess_game_observation_observed_at_hour
+  tableCalculations: []
+name: Observed games by variant
+pivotConfig:
+  columns:
+  - fct_lichess_game_observation_variant
+slug: fct-lichess-game-observation-games-by-variant
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_lichess_game_observation_observed_at_hour
+  - fct_lichess_game_observation_variant
+  - fct_lichess_game_observation_distinct_games
+tableName: fct_lichess_game_observation
+version: 1

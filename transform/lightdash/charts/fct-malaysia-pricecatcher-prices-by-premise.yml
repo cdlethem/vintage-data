@@ -1,0 +1,68 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_malaysia_pricecatcher_price_date_day
+          yRef:
+            field: fct_malaysia_pricecatcher_average_price_amount
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Price date (Day)
+      yAxis:
+      - name: Mean observed price amount
+    layout:
+      stack: true
+      xField: fct_malaysia_pricecatcher_price_date_day
+      yField:
+      - fct_malaysia_pricecatcher_average_price_amount
+  type: cartesian
+description: Mean reported price stacked by the eight premises with the largest recent observation counts
+  on each publisher `price_date`. Remaining premises are excluded rather than aggregated; stacked bars
+  show the mix of reported levels, not a total market value.
+metricQuery:
+  dimensions:
+  - fct_malaysia_pricecatcher_price_date_day
+  - fct_malaysia_pricecatcher_premise_code
+  exploreName: fct_malaysia_pricecatcher
+  filters:
+    dimensions:
+      and:
+      - id: 70e7282f-ae31-5bad-b498-e2bda23b37da
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_malaysia_pricecatcher_price_date
+        values:
+        - 14
+      id: 4bc3b0bd-589a-5bbc-85e4-5088e5fa7e6a
+  limit: 5000
+  metrics:
+  - fct_malaysia_pricecatcher_average_price_amount
+  sorts:
+  - descending: true
+    fieldId: fct_malaysia_pricecatcher_average_price_amount
+  - descending: false
+    fieldId: fct_malaysia_pricecatcher_price_date_day
+  tableCalculations: []
+name: Price mix across leading premises
+pivotConfig:
+  columns:
+  - fct_malaysia_pricecatcher_premise_code
+slug: fct-malaysia-pricecatcher-prices-by-premise
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_malaysia_pricecatcher_price_date_day
+  - fct_malaysia_pricecatcher_premise_code
+  - fct_malaysia_pricecatcher_average_price_amount
+tableName: fct_malaysia_pricecatcher
+version: 1

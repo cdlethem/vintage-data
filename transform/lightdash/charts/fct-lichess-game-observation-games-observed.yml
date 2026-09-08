@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_lichess_game_observation_observed_at_hour
+          yRef:
+            field: fct_lichess_game_observation_distinct_games
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct games observed
+    layout:
+      xField: fct_lichess_game_observation_observed_at_hour
+      yField:
+      - fct_lichess_game_observation_distinct_games
+  type: cartesian
+description: Distinct `game_id` values in each observed hour. This is a feed level rather than a count
+  of newly played games — repeated TV snapshots can show the same game again, and hours without a successful
+  poll are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_lichess_game_observation_observed_at_hour
+  exploreName: fct_lichess_game_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_lichess_game_observation_distinct_games
+  sorts:
+  - descending: false
+    fieldId: fct_lichess_game_observation_observed_at_hour
+  tableCalculations: []
+name: Distinct games observed each hour
+slug: fct-lichess-game-observation-games-observed
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_lichess_game_observation_observed_at_hour
+  - fct_lichess_game_observation_distinct_games
+tableName: fct_lichess_game_observation
+version: 1

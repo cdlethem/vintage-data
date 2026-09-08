@@ -1,0 +1,397 @@
+version: 2
+models:
+- name: fct_tpims_parking_status
+  description: Twice-hourly physical observation fact for truck-parking status snapshots published by
+    TPIMS. Each row represents one parking site at one extractor observation time, with reported availability,
+    operational flags, publisher timestamps, and raw load lineage. Repeated copies of the same observation
+    grain retain the latest loaded row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, site_id, observed_at
+      label: Tpims parking status
+      group_label: Tpims parking
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: tpims_parking_status_key
+      vintage:
+        visualization:
+          dimension: region
+          metric: average_reported_available_count
+          time: observed_at
+          window_days: 30
+          title: Mean observed reported available count by region
+          description: Mean observed reported available count by `region` in the selected observation
+            window. Numeric available-space value parsed from the publisher field; null for categorical
+            or unparseable values. Each retained observation has equal weight; polling frequency and repeated
+            snapshots can affect the mean. This is not a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - parking_id
+          - region
+          - reported_available_count
+          - source_loaded_at
+          sources:
+          - '`tpims_parking` — licence: State DOT terms; attribution required: True. Source configuration:
+            `extract/sources/tpims_parking.yml`.'
+          filters:
+          - field: trusts_data
+            values:
+            - true
+          analysis:
+            headline: how many parking sites report, how much availability they show, and how static site
+              updates differ by region.
+            event_time: status_static_updated_at
+            grain: DAY
+            controls:
+            - region
+            - availability_trend
+            - is_open
+            - trusts_data
+            trends:
+            - slug: reporting-sites
+              kind: total
+              metric: distinct_sites
+              time: observed_at
+              grain: DAY
+              title: Parking sites reporting per day
+              description: Distinct `parking_id` values present in each extractor observation day. This
+                is a catalogue level over four collection days, not a flow of new sites; days with no
+                successful extract are absent rather than zero.
+              width: half
+            - slug: available-level
+              kind: total
+              metric: average_reported_available_count
+              time: observed_at
+              grain: DAY
+              title: Mean reported available spaces per day
+              description: Average numeric `reported_available_count` across retained status snapshots on
+                each observation day. Categorical or unparseable availability is null, and equal-weight
+                snapshots can reflect polling frequency; this is not an additive site total.
+              width: half
+            - slug: availability-by-region
+              kind: breakdown
+              metric: average_reported_available_count
+              breakdown: region
+              top_n: 2
+              time: observed_at
+              grain: DAY
+              title: Mean available spaces by region
+              description: Average numeric reported availability per observation day split by region. Both
+                regions are shown; null or categorical values are excluded from the mean and absent days
+                are not zero-filled.
+              width: full
+            - slug: static-capacity-history
+              kind: composition
+              metric: average_capacity
+              breakdown: region
+              top_n: 2
+              time: status_static_updated_at
+              grain: DAY
+              title: Mean capacity at static-status update dates
+              description: Average `capacity` per static-status update day stacked by region. These dates
+                represent publisher site-metadata revisions rather than occupancy events; repeated
+                observations weight the mean, and dates without a static update are absent.
+              width: full
+            - slug: status-updates-by-region
+              kind: breakdown
+              metric: average_reported_available_count
+              breakdown: region
+              top_n: 2
+              time: status_updated_at
+              grain: DAY
+              title: Mean availability by publisher status-update day
+              description: Average numeric reported availability on each publisher status-update day split
+                by region. This short five-day update history is sparse; null values and days without a
+                publisher update are absent rather than zero.
+              width: full
+  columns:
+  - name: tpims_parking_status_key
+    description: Stable hash of the publisher source, parking site, and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Tpims parking status key
+          hidden: true
+  - name: source
+    description: Publisher feed identifier for the parking status record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: parking_id
+    description: Upstream identifier for the parking status record.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_sites:
+            type: count_distinct
+            label: Distinct parking sites
+            description: Distinct `parking_id` values present on each extractor observation day. This
+              measures reporting coverage rather than newly opened sites.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Parking id
+          hidden: false
+  - name: site_id
+    description: Upstream identifier for the truck-parking site.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Site id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the TPIMS parking status snapshot was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: status_updated_at
+    description: UTC timestamp supplied by the publisher for the current parking status.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Status updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: status_static_updated_at
+    description: UTC timestamp supplied by the publisher for the static parking-site status.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Status static updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: reported_available_text
+    description: Verbatim publisher value for available spaces, including categorical values such as LOW
+      and Unknown.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Reported available text
+          hidden: false
+  - name: reported_available_count
+    description: Numeric available-space value parsed from the publisher field; null for categorical or
+      unparseable values.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_reported_available_count:
+            type: average
+            label: Mean observed reported available count
+            description: Mean observed reported available count by `region` in the selected observation
+              window. Numeric available-space value parsed from the publisher field; null for categorical
+              or unparseable values. Each retained observation has equal weight; polling frequency and
+              repeated snapshots can affect the mean. This is not a latest-value measure or an additive
+              total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Reported available count
+          hidden: false
+          format: '#,##0'
+  - name: availability_trend
+    description: Publisher trend classification for reported parking availability.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Availability trend
+          hidden: false
+  - name: is_open
+    description: Whether the publisher reports the parking site as open; null when the feed does not provide
+      the flag.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is open
+          hidden: false
+  - name: trusts_data
+    description: Publisher indicator that the reported status data is trusted.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Trusts data
+          hidden: false
+  - name: capacity
+    description: Total parking capacity reported by the publisher for the site.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_capacity:
+            type: average
+            label: Mean parking capacity
+            description: Average publisher-reported `capacity` by status update date. Capacity is a site
+              level repeated in snapshots, so this metric is not additive; repeated observations can weight
+              the mean.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Capacity
+          hidden: false
+          format: '#,##0'
+  - name: region
+    description: Geographic region reported by the publisher for the parking site.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Region
+          hidden: false
+  - name: _row_id
+    description: Raw loader row identifier retained for lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Load batch identifier that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: UTC calendar date assigned by the load layer to the source record.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source file began.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _load_id
+    description: Load job identifier that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content for lineage and replay.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

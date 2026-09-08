@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_statuspage_incident_observation_created_at_day
+          yRef:
+            field: fct_statuspage_incident_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct incident
+    layout:
+      xField: fct_statuspage_incident_observation_created_at_day
+      yField:
+      - fct_statuspage_incident_observation_distinct_entities
+  type: cartesian
+description: Distinct `incident_id` values whose source `created_at` falls on each day. This is the incident-intake
+  flow across the available three-month history; days with no reported creations are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_statuspage_incident_observation_created_at_day
+  exploreName: fct_statuspage_incident_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_statuspage_incident_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_statuspage_incident_observation_created_at_day
+  tableCalculations: []
+name: Incidents created per source day
+slug: fct-statuspage-incident-observation-incidents-created-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_statuspage_incident_observation_created_at_day
+  - fct_statuspage_incident_observation_distinct_entities
+tableName: fct_statuspage_incident_observation
+version: 1

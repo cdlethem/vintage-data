@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 5
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_digitraffic_rail_train_observation_accepted_month
+          yRef:
+            field: fct_digitraffic_rail_train_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Timetable acceptance at (Month)
+      yAxis:
+      - name: Distinct train
+    layout:
+      stack: true
+      xField: fct_digitraffic_rail_train_observation_accepted_month
+      yField:
+      - fct_digitraffic_rail_train_observation_distinct_entities
+  type: cartesian
+description: Distinct `train_id` values by operator and timetable-acceptance month. Stacked bars show
+  how the accepted roster mix changes; all five operators are retained and unobserved months are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_digitraffic_rail_train_observation_accepted_month
+  - fct_digitraffic_rail_train_observation_operator_short_code
+  exploreName: fct_digitraffic_rail_train_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_digitraffic_rail_train_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_digitraffic_rail_train_observation_distinct_entities
+  - descending: false
+    fieldId: fct_digitraffic_rail_train_observation_accepted_month
+  tableCalculations: []
+name: Accepted trains by operator each month
+pivotConfig:
+  columns:
+  - fct_digitraffic_rail_train_observation_operator_short_code
+slug: fct-digitraffic-rail-train-observation-accepted-by-operator
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_digitraffic_rail_train_observation_accepted_month
+  - fct_digitraffic_rail_train_observation_operator_short_code
+  - fct_digitraffic_rail_train_observation_distinct_entities
+tableName: fct_digitraffic_rail_train_observation
+version: 1

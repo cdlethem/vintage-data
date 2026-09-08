@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_jolpica_f1_driver_name
+          yRef:
+            field: fct_jolpica_f1_max_championship_points
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_jolpica_f1_driver_name
+      yField:
+      - fct_jolpica_f1_max_championship_points
+  type: cartesian
+description: Maximum observed championship points by `driver_name` in the selected observation window.
+  Driver's accumulated championship points at the observed round. Uses the largest retained value within
+  each group and window, not the latest value or a sum of snapshots.
+metricQuery:
+  dimensions:
+  - fct_jolpica_f1_driver_name
+  exploreName: fct_jolpica_f1
+  filters:
+    dimensions:
+      and:
+      - id: 9ad4b256-9e6d-5a19-a093-6aaf5a6b5407
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_jolpica_f1_observed_at
+        values:
+        - 30
+      id: 480047d9-19ff-5cbd-bb14-2f62868254b0
+  limit: 20
+  metrics:
+  - fct_jolpica_f1_max_championship_points
+  sorts:
+  - descending: true
+    fieldId: fct_jolpica_f1_max_championship_points
+  tableCalculations: []
+name: Maximum observed championship points by driver name
+slug: fct-jolpica-f1
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_jolpica_f1_driver_name
+  - fct_jolpica_f1_max_championship_points
+tableName: fct_jolpica_f1
+version: 1

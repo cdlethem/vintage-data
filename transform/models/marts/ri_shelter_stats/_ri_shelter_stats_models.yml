@@ -1,0 +1,500 @@
+version: 2
+models:
+- name: fct_ri_shelter_stats
+  description: Incremental physical history of Rhode Island shelter statistics. Each row is one shelter-species
+    record at one publisher observation timestamp, retaining intake, outcome, population-status metrics,
+    and raw-load lineage from the insert-only source.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, record_id, observed_at
+      label: Ri shelter stats
+      group_label: Ri shelter stats
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: ri_shelter_stats_observation_key
+      vintage:
+        visualization:
+          dimension: species
+          metric: average_intake_count
+          time: observed_at
+          window_days: 30
+          title: Mean observed intake count by species
+          description: Mean observed intake count by `species` in the selected observation window. Total
+            animals reported in the publisher's intake category. Each retained observation has equal weight;
+            polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure
+            or an additive total.
+          detail_fields:
+          - observed_at
+          - record_id
+          - species
+          - intake_count
+          - source_loaded_at
+          sources:
+          - '`ri_shelter_stats` — licence: Rhode Island terms; attribution required: True. Source configuration:
+            `extract/sources/ri_shelter_stats.yml`.'
+          analysis:
+            headline: how reported shelter intake and outcome levels change across species and shelter-status
+              records in the four-day collection history.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - species
+            - status
+            - entity_name
+            trends:
+            - slug: records-observed
+              kind: total
+              metric: distinct_records
+              time: observed_at
+              grain: DAY
+              title: Shelter records represented per observation day
+              description: Distinct non-null `record_id` values present in each publisher observation day.
+                This is a four-day snapshot level rather than a flow; repeated records are not new shelter
+                activity, and days without a successful extract are absent rather than zero.
+              width: half
+            - slug: intake-level
+              kind: total
+              metric: average_intake_count
+              time: observed_at
+              grain: DAY
+              title: Mean reported intake level per observation day
+              description: Mean `intake_count` reported across shelter-species records in each observation
+                day. This is a snapshot level with equal weight per retained row, not a count of new intakes;
+                repeated records and polling frequency can affect it, and absent days are not zero.
+              width: half
+            - slug: outcome-level
+              kind: total
+              metric: average_outcome_count
+              time: observed_at
+              grain: DAY
+              title: Mean reported outcome level per observation day
+              description: Mean `outcome_count` reported across shelter-species records in each observation
+                day. This is a snapshot level with equal weight per retained row, not a count of new
+                outcomes; repeated records and polling frequency can affect it, and absent days are absent.
+              width: half
+            - slug: species-intake
+              kind: composition
+              metric: average_intake_count
+              breakdown: species
+              top_n: 5
+              time: observed_at
+              grain: DAY
+              title: Intake level mix by species
+              description: Mean reported `intake_count` per observation day stacked by the five published
+                species groups. All five groups are retained here; each bar shows snapshot mix rather than
+                additive intake events, and a missing species-day is absent rather than zero.
+              width: full
+            - slug: status-outcome
+              kind: composition
+              metric: average_outcome_count
+              breakdown: status
+              top_n: 2
+              time: observed_at
+              grain: DAY
+              title: Outcome level mix by shelter status
+              description: Mean reported `outcome_count` per observation day stacked by the two publisher
+                status codes. The stack compares snapshot levels and is not an additive event total; absent
+                status-days are absent rather than zero.
+              width: full
+  columns:
+  - name: ri_shelter_stats_observation_key
+    description: Stable hash of the source name, source record identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Ri shelter stats observation key
+          hidden: true
+  - name: source_name
+    description: Publisher source label for the shelter statistics feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: record_id
+    description: Source record identifier for the shelter and species grouping.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Record id
+          hidden: false
+        metrics:
+          distinct_records:
+            type: count_distinct
+            label: Distinct shelter records
+            description: Distinct non-null `record_id` values represented in each publisher observation
+              time and dimension group. Repeated shelter-species snapshots count once and this measures
+              published record coverage rather than intake or outcome events.
+            format: '#,##0'
+  - name: observed_at
+    description: UTC timestamp at which the publisher snapshot was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: entity_name
+    description: Human-readable shelter or rescue entity name reported by the publisher.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Entity name
+          hidden: false
+  - name: status
+    description: Publisher status code for the entity record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status
+          hidden: false
+  - name: species
+    description: Animal grouping represented by the record, such as animals, dogs, or cats.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Species
+          hidden: false
+  - name: abandoned_count
+    description: Number of abandoned animals reported in the observed snapshot.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Abandoned count
+          hidden: false
+          format: '#,##0'
+  - name: born_in_facility_count
+    description: Number of animals born in the facility reported in the observed snapshot.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Born in facility count
+          hidden: false
+          format: '#,##0'
+  - name: pickup_stray_count
+    description: Number of stray-animal pickups reported in the observed snapshot.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Pickup stray count
+          hidden: false
+          format: '#,##0'
+  - name: owner_surrendered_count
+    description: Number of owner-surrendered animals reported in the observed snapshot.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Owner surrendered count
+          hidden: false
+          format: '#,##0'
+  - name: known_entity_count
+    description: Number of animals classified as known entities by the publisher.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Known entity count
+          hidden: false
+          format: '#,##0'
+  - name: transfer_in_count
+    description: Number of animals transferred into the entity in the observed snapshot.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Transfer in count
+          hidden: false
+          format: '#,##0'
+  - name: other_in_count
+    description: Number of animals in the publisher's other-in category.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Other in count
+          hidden: false
+          format: '#,##0'
+  - name: returned_to_owner_count
+    description: Number of animals returned to their owners in the observed snapshot.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Returned to owner count
+          hidden: false
+          format: '#,##0'
+  - name: euthanized_count
+    description: Number of animals euthanized in the observed snapshot.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Euthanized count
+          hidden: false
+          format: '#,##0'
+  - name: adopted_count
+    description: Number of animals adopted in the observed snapshot.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Adopted count
+          hidden: false
+          format: '#,##0'
+  - name: escaped_count
+    description: Number of animals reported as escaped in the observed snapshot.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Escaped count
+          hidden: false
+          format: '#,##0'
+  - name: stolen_count
+    description: Number of animals reported as stolen in the observed snapshot.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Stolen count
+          hidden: false
+          format: '#,##0'
+  - name: dead_on_arrival_count
+    description: Number of animals reported dead on arrival in the observed snapshot.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Dead on arrival count
+          hidden: false
+          format: '#,##0'
+  - name: died_count
+    description: Number of animals reported to have died in the observed snapshot.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Died count
+          hidden: false
+          format: '#,##0'
+  - name: transfer_out_count
+    description: Number of animals transferred out of the entity in the observed snapshot.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Transfer out count
+          hidden: false
+          format: '#,##0'
+  - name: other_out_count
+    description: Number of animals in the publisher's other-out category.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Other out count
+          hidden: false
+          format: '#,##0'
+  - name: intake_count
+    description: Total animals reported in the publisher's intake category.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_intake_count:
+            type: average
+            label: Mean observed intake count
+            description: Mean observed intake count by `species` in the selected observation window. Total
+              animals reported in the publisher's intake category. Each retained observation has equal
+              weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+              measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Intake count
+          hidden: false
+          format: '#,##0'
+  - name: outcome_count
+    description: Total animals reported in the publisher's outcome category.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_outcome_count:
+            type: average
+            label: Mean observed outcome count
+            description: Mean observed `outcome_count` across shelter-species records in each observation
+              time and dimension group. This is a snapshot level rather than a count of outcome events;
+              repeated records and polling frequency can affect the equal-weight average.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Outcome count
+          hidden: false
+          format: '#,##0'
+  - name: publisher_updated_at
+    description: Publisher-supplied update time text, retained without parsing because its source format
+      is not stable.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publisher updated at
+          hidden: false
+  - name: source_row_id
+    description: Load-layer row identifier for the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained source observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date for the retained source observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction began for the retained source observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Load operation identifier that inserted the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained source observation into the raw
+      warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

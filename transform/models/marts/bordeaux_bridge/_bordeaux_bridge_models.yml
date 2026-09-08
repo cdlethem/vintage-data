@@ -1,0 +1,327 @@
+version: 2
+models:
+- name: fct_bordeaux_bridge
+  description: Physical history of Bordeaux bridge status observations. Each row is one bridge returned
+    by the source at one observation timestamp; repeated raw deliveries of the same observation retain
+    only the latest loaded copy while preserving source-file lineage.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, bridge_id, observed_at
+      label: Bordeaux bridge
+      group_label: Bordeaux bridge
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: bridge_status_observation_key
+      vintage:
+        visualization:
+          dimension: bridge_name
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct bridge by bridge name
+          description: Distinct `bridge_id` values by `bridge_name` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - bridge_id
+          - bridge_name
+          - source_loaded_at
+          sources:
+          - '`bordeaux_bridge` — licence: Bordeaux Metropole open-data terms; attribution required: True.
+            Source configuration: `extract/sources/bordeaux_bridge.yml`.'
+          analysis:
+            headline: how the single bridge's reported status and observation cadence change day by day.
+            event_time: updated_at
+            grain: DAY
+            controls:
+            - status_code
+            - is_closed
+            - bridge_name
+            trends:
+            - slug: daily-observations
+              kind: total
+              metric: observations
+              time: updated_at
+              grain: DAY
+              title: Bridge observations updated per day
+              description: Distinct retained observation keys grouped by the publisher's `updated_at` day.
+                This is the number of status records reported, not a count of bridges or a flow of new
+                bridges; days with no source updates are absent rather than zero.
+              width: half
+            - slug: daily-bridges
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct bridges present per observation day
+              description: Distinct `bridge_id` values present in each extractor observation day. This is
+                a published-catalogue level for this feed, so a flat line means the bridge roster is
+                unchanged; days with no successful extract are absent rather than zero.
+              width: half
+            - slug: status-by-day
+              kind: breakdown
+              metric: observations
+              breakdown: status_code
+              top_n: 4
+              time: updated_at
+              grain: DAY
+              title: Bridge status observations by source status
+              description: Distinct retained observation keys per `updated_at` day, split by the source
+                `status_code`. The four observed statuses are kept; missing days mean no source updates,
+                not zero observations.
+              width: full
+            - slug: closure-by-day
+              kind: composition
+              metric: observations
+              breakdown: is_closed
+              top_n: 2
+              time: updated_at
+              grain: DAY
+              title: Closed and open observations by day
+              description: Distinct retained observation keys per `updated_at` day stacked by `is_closed`.
+                The stack shows the reported status mix, not unique bridges or duration closed; absent days
+                are absent rather than zero.
+              width: full
+  columns:
+  - name: bridge_status_observation_key
+    description: Stable hash of the source, bridge identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Bridge status observation key
+          hidden: true
+        metrics:
+          observations:
+            type: count_distinct
+            label: Bridge observations
+            description: Distinct retained bridge status observation keys in each time and dimension
+              group. This counts reported status records, including repeated observations of the same
+              bridge, rather than unique bridges.
+            format: '#,##0'
+  - name: source
+    description: Source identifier that supplied the bridge observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: bridge_id
+    description: Stable bridge identifier supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct bridge
+            description: Distinct `bridge_id` values by `bridge_name` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Bridge id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the source observed and returned the bridge status.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: geo_point_2d
+    description: Source point geometry represented as a JSON object with longitude and latitude.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Geo point 2d
+          hidden: true
+          sql: CAST(${TABLE}.geo_point_2d AS VARCHAR)
+  - name: geo_shape
+    description: Source GeoJSON feature geometry for the bridge location.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Geo shape
+          hidden: true
+          sql: CAST(${TABLE}.geo_shape AS VARCHAR)
+  - name: gid
+    description: Source geographic feature identifier.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Gid
+          hidden: false
+  - name: geom_o
+    description: Source geometry-origin marker.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Geom o
+          hidden: false
+  - name: bridge_identifier
+    description: Secondary bridge identifier reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Bridge identifier
+          hidden: false
+  - name: bridge_name
+    description: Human-readable bridge name reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Bridge name
+          hidden: false
+  - name: status_code
+    description: Source status code describing the bridge state.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status code
+          hidden: false
+  - name: is_closed
+    description: Whether the source reports the bridge as closed.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is closed
+          hidden: false
+  - name: created_at
+    description: Timestamp when the bridge record was created in the source system.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Created at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: updated_at
+    description: Timestamp when the bridge status record was last updated in the source system.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _row_id
+    description: Raw row identifier for the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Extract batch identifier that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw bridge record for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

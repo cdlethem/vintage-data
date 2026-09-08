@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+          yRef:
+            field: fct_infodengue_belohorizonte_epidemiology_avg_cases
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Week start date (Week)
+      yAxis:
+      - name: Mean estimated cases
+    layout:
+      xField: fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+      yField:
+      - fct_infodengue_belohorizonte_epidemiology_avg_cases
+  type: cartesian
+description: Mean estimated cases per epidemiological week split across the three observed alert levels.
+  These are separate snapshot levels rather than additive totals; absent weeks or levels are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+  - fct_infodengue_belohorizonte_epidemiology_alert_level
+  exploreName: fct_infodengue_belohorizonte_epidemiology
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_infodengue_belohorizonte_epidemiology_avg_cases
+  sorts:
+  - descending: true
+    fieldId: fct_infodengue_belohorizonte_epidemiology_avg_cases
+  - descending: false
+    fieldId: fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+  tableCalculations: []
+name: Mean estimated cases by alert level
+pivotConfig:
+  columns:
+  - fct_infodengue_belohorizonte_epidemiology_alert_level
+slug: fct-infodengue-belohorizonte-epidemiology-cases-by-alert
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+  - fct_infodengue_belohorizonte_epidemiology_alert_level
+  - fct_infodengue_belohorizonte_epidemiology_avg_cases
+tableName: fct_infodengue_belohorizonte_epidemiology
+version: 1

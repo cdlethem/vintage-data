@@ -1,0 +1,154 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 6702be3d-c44b-5605-bfa6-c62f980f764d
+    label: 'Wikimedia change observation: Change type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_wikimedia_change_observation_change_type
+      tableName: fct_wikimedia_change_observation
+    values: []
+  - disabled: true
+    id: 8e0613be-0e32-52b5-8888-6543b1839539
+    label: 'Wikimedia change observation: Is bot'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_wikimedia_change_observation_is_bot
+      tableName: fct_wikimedia_change_observation
+    values: []
+  - disabled: true
+    id: d02a4889-ca44-5266-861a-eaec261cce3d
+    label: 'Wikimedia change observation: Is minor'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_wikimedia_change_observation_is_minor
+      tableName: fct_wikimedia_change_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Wikimedia Changes
+slug: wikimedia-changes
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical observation fact for Wikimedia recent changes. Each row is one Wikimedia
+      source, change identifier, and extractor observation timestamp, retaining the event payload and
+      raw-load lineage. Replayed copies of the same observation are reduced to the latest loaded row;
+      this model preserves the source feed''s event history and does not infer later edits or repair omitted
+      API fields.
+
+
+      **Grain:** source_name, change_id, observed_at
+
+
+      **What changes here:** how Wikimedia change volume and edit size shift by operation, bot status,
+      and minor flag across the five-day event feed window.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `wikimedia_changes` — licence: Wikimedia — CC-BY-SA / GFDL; attribution required: False. Source
+      configuration: `extract/sources/wikimedia_changes.yml`.'
+    hideFrame: false
+    title: Wikimedia change observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Wikimedia change observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Wikimedia changes by event day
+    chartSlug: fct-wikimedia-change-observation-changes-by-event-day
+    hideTitle: false
+    title: Wikimedia changes by event day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean byte change by event day
+    chartSlug: fct-wikimedia-change-observation-bytes-by-event-day
+    hideTitle: false
+    title: Mean byte change by event day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Changes by operation type and event day
+    chartSlug: fct-wikimedia-change-observation-change-type-volume
+    hideTitle: false
+    title: Changes by operation type and event day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Bot and human changes by event day
+    chartSlug: fct-wikimedia-change-observation-bot-mix
+    hideTitle: false
+    title: Bot and human changes by event day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Wikimedia change observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct change by change type
+    chartSlug: fct-wikimedia-change-observation
+    hideTitle: false
+    title: Distinct change by change type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Wikimedia change observation — observations
+    chartSlug: fct-wikimedia-change-observation-details
+    hideTitle: false
+    title: Wikimedia change observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

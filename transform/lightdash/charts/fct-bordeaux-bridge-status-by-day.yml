@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_bordeaux_bridge_updated_at_day
+          yRef:
+            field: fct_bordeaux_bridge_observations
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Updated at (Day)
+      yAxis:
+      - name: Bridge observations
+    layout:
+      xField: fct_bordeaux_bridge_updated_at_day
+      yField:
+      - fct_bordeaux_bridge_observations
+  type: cartesian
+description: Distinct retained observation keys per `updated_at` day, split by the source `status_code`.
+  The four observed statuses are kept; missing days mean no source updates, not zero observations.
+metricQuery:
+  dimensions:
+  - fct_bordeaux_bridge_updated_at_day
+  - fct_bordeaux_bridge_status_code
+  exploreName: fct_bordeaux_bridge
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_bordeaux_bridge_observations
+  sorts:
+  - descending: true
+    fieldId: fct_bordeaux_bridge_observations
+  - descending: false
+    fieldId: fct_bordeaux_bridge_updated_at_day
+  tableCalculations: []
+name: Bridge status observations by source status
+pivotConfig:
+  columns:
+  - fct_bordeaux_bridge_status_code
+slug: fct-bordeaux-bridge-status-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_bordeaux_bridge_updated_at_day
+  - fct_bordeaux_bridge_status_code
+  - fct_bordeaux_bridge_observations
+tableName: fct_bordeaux_bridge
+version: 1

@@ -1,0 +1,499 @@
+version: 2
+models:
+- name: fct_fcc_uls_license_observation
+  description: Physical daily observation fact for FCC Universal Licensing System amateur-radio license
+    records. Each row records one FCC license identifier at one extractor observation timestamp, retaining
+    the published license attributes and raw-load lineage. Repeated copies of the same source license
+    and observation timestamp retain the latest loaded row; personally identifying fields are redacted
+    by the extractor before loading.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, license_id, observed_at
+      label: Fcc uls license observation
+      group_label: Fcc uls
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: fcc_uls_license_observation_key
+      vintage:
+        visualization:
+          dimension: license_status
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct license by license status
+          description: Distinct `license_id` values by `license_status` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - license_id
+          - license_status
+          - source_loaded_at
+          sources:
+          - '`fcc_uls` — licence: US Government work, public domain; attribution required: False. Source
+            configuration: `extract/sources/fcc_uls.yml`.'
+          analysis:
+            headline: how FCC license grants accumulate and how their status and operator-class mix changes.
+            event_time: grant_date
+            grain: MONTH
+            controls:
+            - license_status
+            - operator_class
+            - state
+            - entity_type
+            trends:
+            - slug: licenses-granted
+              kind: total
+              metric: distinct_entities
+              time: grant_date
+              grain: MONTH
+              title: Licenses granted per month
+              description: Distinct `license_id` values by FCC `grant_date` month across the published
+                history. This is a grant-event flow rather than a current active-license level; months with
+                no grants are absent, and repeated observations do not count twice within a month.
+              width: half
+            - slug: systems-granted
+              kind: total
+              metric: distinct_systems
+              time: grant_date
+              grain: MONTH
+              title: Universal systems granted per month
+              description: Distinct `universal_system_identifier` values by FCC `grant_date` month across
+                the published history. A system can hold multiple licenses, so this is not interchangeable
+                with license count; absent months are not zero.
+              width: half
+            - slug: status-by-grant
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: license_status
+              top_n: 3
+              time: grant_date
+              grain: MONTH
+              title: Grants by license status
+              description: Distinct `license_id` values by FCC `grant_date` month, pivoted across the three
+                observed `license_status` codes. All three codes are shown; this event view is not a
+                snapshot of current status and empty months remain absent.
+              width: full
+            - slug: operator-class-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: operator_class
+              top_n: 6
+              time: effective_date
+              grain: MONTH
+              title: Effective license actions by operator class
+              description: Distinct `license_id` values by `effective_date` month, stacked across the six
+                operator classes. Null or smaller classes are excluded rather than aggregated; the bars
+                describe action-event mix, not the number of currently valid licenses.
+              width: full
+  columns:
+  - name: fcc_uls_license_observation_key
+    description: Stable hash of the source name, license identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Fcc uls license observation key
+          hidden: true
+  - name: source_name
+    description: Source-system identifier supplied by the FCC ULS extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: license_id
+    description: FCC ULS identifier for the observed license record.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct license
+            description: Distinct `license_id` values by `license_status` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: License id
+          hidden: false
+  - name: observed_at
+    description: Timestamp when the FCC ULS source was fetched by the extractor.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: universal_system_identifier
+    description: FCC Universal System Identifier associated with the observed license.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_systems:
+            type: count_distinct
+            label: Distinct universal systems
+            description: Distinct `universal_system_identifier` values by FCC `grant_date` month in the
+              selected history. A system may hold multiple licenses, so this measure describes systems
+              rather than license records.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Universal system identifier
+          hidden: false
+  - name: call_sign
+    description: Amateur-radio call sign assigned to the observed license.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Call sign
+          hidden: false
+  - name: service
+    description: FCC service family requested by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Service
+          hidden: false
+  - name: radio_service_code
+    description: FCC radio-service code for the observed license.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Radio service code
+          hidden: false
+  - name: license_status
+    description: FCC status code for the observed license.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: License status
+          hidden: false
+  - name: license_status_text
+    description: Human-readable FCC status label for the observed license status code.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: License status text
+          hidden: false
+  - name: grant_date
+    description: Date on which the FCC granted the license, when supplied.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Grant date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: expired_date
+    description: Date on which the license expires, when supplied.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Expired date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: cancellation_date
+    description: Date on which the license was cancelled, when supplied.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Cancellation date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: effective_date
+    description: Effective date of the latest license action, when supplied.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Effective date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: last_action_date
+    description: Date of the latest FCC action on the license, when supplied.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Last action date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: entity_type
+    description: FCC entity type associated with the license, with identifying details redacted upstream.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Entity type
+          hidden: false
+  - name: city
+    description: City associated with the license, when retained by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: City
+          hidden: false
+  - name: state
+    description: State associated with the license, when retained by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: State
+          hidden: false
+  - name: zip_code
+    description: ZIP code associated with the license, when retained by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Zip code
+          hidden: false
+  - name: frn
+    description: FCC Registration Number associated with the license, when retained by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Frn
+          hidden: false
+  - name: operator_class
+    description: Amateur operator-class code associated with the license.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Operator class
+          hidden: false
+  - name: operator_class_text
+    description: Human-readable amateur operator-class label.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Operator class text
+          hidden: false
+  - name: previous_call_sign
+    description: Previous call sign associated with the license, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Previous call sign
+          hidden: false
+  - name: previous_operator_class
+    description: Previous amateur operator-class code, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Previous operator class
+          hidden: false
+  - name: vanity_relationship
+    description: FCC vanity-call-sign relationship code, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Vanity relationship
+          hidden: false
+  - name: is_vanity
+    description: Whether the observed license has a vanity-call-sign relationship.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is vanity
+          hidden: false
+  - name: is_upgrade
+    description: Whether the observed operator class differs from the previous operator class.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is upgrade
+          hidden: false
+  - name: source_file
+    description: FCC source archive URL or file identifier supplied in the observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: file_modified
+    description: FCC source archive modification marker supplied in the observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: File modified
+          hidden: false
+  - name: pii_redacted
+    description: Whether the extractor redacted identifying fields from this observation.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Pii redacted
+          hidden: false
+  - name: _row_id
+    description: Raw loader row identifier retained for lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted the observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted the observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the original raw observation for replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

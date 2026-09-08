@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical observation fact for UK Gazette insolvency notices. Each row records one
+  notice identifier at one source fetch timestamp, retaining the notice publication fields, feed metadata,
+  and raw-load lineage. Repeated copies of the same source, notice, and observation timestamp retain the
+  latest loaded row.
+metricQuery:
+  dimensions: &id001
+  - fct_gazette_insolvency_notice_observation_observed_at
+  - fct_gazette_insolvency_notice_observation_notice_id
+  - fct_gazette_insolvency_notice_observation_notice_code
+  - fct_gazette_insolvency_notice_observation_source_2059e1
+  exploreName: fct_gazette_insolvency_notice_observation
+  filters:
+    dimensions:
+      and:
+      - id: 6721fd7e-a27f-555d-9813-028e1fe50788
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_gazette_insolvency_notice_observation_observed_at
+        values:
+        - 30
+      id: 4fec5088-8170-56d8-967a-f23f885d5e31
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_gazette_insolvency_notice_observation_observed_at
+  tableCalculations: []
+name: Gazette insolvency notice observation — observations
+slug: fct-gazette-insolvency-notice-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_gazette_insolvency_notice_observation
+version: 1

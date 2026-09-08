@@ -1,0 +1,345 @@
+version: 2
+models:
+- name: fct_hk_cremation_sessions
+  description: Hourly physical observation fact for the Hong Kong Food and Environmental Hygiene Department
+    cremation-session availability page. Each row records one crematorium and service date in one extractor
+    snapshot, retaining the published availability state, daily total, publisher update time, and raw
+    load lineage. Repeated copies of the same source, session identifier, and observation timestamp retain
+    the latest loaded row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, session_id, observed_at
+      label: Hk cremation sessions
+      group_label: Hk cremation sessions
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: cremation_session_observation_key
+      vintage:
+        visualization:
+          dimension: crematorium
+          metric: average_available_sessions
+          time: observed_at
+          window_days: 30
+          title: Mean observed available sessions by crematorium
+          description: Mean observed available sessions by `crematorium` in the selected observation window.
+            Number of sessions currently available for booking; null when the publisher reports a nonnumeric
+            state. Each retained observation has equal weight; polling frequency and repeated snapshots
+            can affect the mean. This is not a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - session_id
+          - crematorium
+          - available_sessions
+          - source_loaded_at
+          sources:
+          - '`hk_cremation_sessions` — licence: FEHD terms; attribution required: True. Source configuration:
+            `extract/sources/hk_cremation_sessions.yml`.'
+          analysis:
+            headline: how published cremation availability and daily capacity vary across service dates and
+              crematoria.
+            event_time: session_date
+            grain: DAY
+            controls:
+            - crematorium
+            - service_state
+            - raw_value
+            - source
+            trends:
+            - slug: availability-by-service-day
+              kind: total
+              metric: average_available_sessions
+              time: session_date
+              grain: DAY
+              title: Mean available sessions by service date
+              description: Average numeric `available_sessions` across observations for each published
+                service date. Null nonnumeric states are excluded and repeated snapshots are equally weighted;
+                absent service dates are absent rather than zero.
+              width: half
+            - slug: sessions-by-observation-day
+              kind: total
+              metric: distinct_sessions
+              time: observed_at
+              grain: DAY
+              title: Distinct sessions observed per fetch day
+              description: Distinct `session_id` values in each extractor observation day. This is a
+                collection-level level over four days, not the number of cremations performed; days without a
+                successful extract are absent rather than zero.
+              width: half
+            - slug: availability-by-crematorium
+              kind: breakdown
+              metric: average_available_sessions
+              breakdown: crematorium
+              top_n: 6
+              time: session_date
+              grain: DAY
+              title: Mean availability by crematorium and service date
+              description: Average numeric `available_sessions` per service date pivoted by `crematorium`.
+                All six observed crematoria are retained, and null states are excluded rather than treated as
+                zero; no remainder is aggregated.
+              width: full
+            - slug: daily-capacity-composition
+              kind: composition
+              metric: average_day_total
+              breakdown: crematorium
+              top_n: 6
+              time: session_date
+              grain: DAY
+              title: Published daily capacity by crematorium
+              description: Average publisher-reported `day_total_sessions` per service date stacked by
+                `crematorium`. The value is republished on each row, so stacked bars show the schedule mix,
+                not a sum of independent capacity; all six crematoria are included without a remainder.
+              width: full
+            - slug: availability-by-publisher-update
+              kind: total
+              metric: average_available_sessions
+              time: publisher_updated_at
+              grain: DAY
+              title: Mean availability by publisher update day
+              description: Average numeric `available_sessions` by the day the publisher says the schedule was
+                updated. This four-day update-time view describes refresh timing rather than service history;
+                null states and absent update days are omitted, not zero-filled.
+              width: half
+  columns:
+  - name: cremation_session_observation_key
+    description: Stable hash of the source, extractor session identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '12 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '12 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Cremation session observation key
+          hidden: true
+  - name: source
+    description: Source-system identifier supplied by the cremation-session extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: session_id
+    description: Extractor identifier combining the published service date and crematorium name.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Session id
+          hidden: false
+        metrics:
+          distinct_sessions:
+            type: count_distinct
+            label: Distinct cremation session
+            description: Distinct publisher `session_id` values matching the selected service date,
+              crematorium, and observation filters. Repeated snapshots of a session count once within each
+              group and do not represent completed cremations.
+            format: '#,##0'
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the cremation availability page.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: session_date
+    description: Published cremation service date parsed from the source day/month/year value.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Session date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: crematorium
+    description: Crematorium named by the Hong Kong publisher for the service row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Crematorium
+          hidden: false
+  - name: raw_value
+    description: Verbatim availability value published for the crematorium and service date, including
+      N/A states.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Raw value
+          hidden: false
+  - name: available_sessions
+    description: Number of sessions currently available for booking; null when the publisher reports a
+      nonnumeric state.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_available_sessions:
+            type: average
+            label: Mean observed available sessions
+            description: Mean observed available sessions by `crematorium` in the selected observation
+              window. Number of sessions currently available for booking; null when the publisher reports
+              a nonnumeric state. Each retained observation has equal weight; polling frequency and repeated
+              snapshots can affect the mean. This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Available sessions
+          hidden: false
+          format: '#,##0'
+  - name: sessions_under_booking
+    description: Number of sessions temporarily held under booking; null when the publisher reports a
+      nonnumeric state.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Sessions under booking
+          hidden: false
+          format: '#,##0'
+  - name: service_state
+    description: Publisher service state, such as in_service or the original nonnumeric state marker.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Service state
+          hidden: false
+  - name: day_total_sessions
+    description: Total cremation sessions published for the service date across the day.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Day total sessions
+          hidden: false
+          format: '#,##0'
+        metrics:
+          average_day_total:
+            type: average
+            label: Mean daily published capacity
+            description: Average publisher-reported `day_total_sessions` among matching rows. The same daily
+              total is repeated on each crematorium row, so observation-weighted averages describe the
+              published schedule and must not be summed across rows.
+            format: '#,##0.00'
+  - name: publisher_updated_at
+    description: Publisher update timestamp parsed from Hong Kong local time and normalized to UTC.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Publisher updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _row_id
+    description: Raw loader row identifier retained for lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Load batch identifier that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Load job identifier that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content for lineage and replay.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

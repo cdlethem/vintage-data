@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily station-level GBFS availability aggregates rebuilt for the latest two observed UTC
+  dates so late observations repair recent history.
+metricQuery:
+  dimensions: &id001
+  - fct_bike_station_status_daily_observation_date
+  - fct_bike_station_status_daily_station_id
+  - fct_bike_station_status_daily_network
+  - fct_bike_station_status_daily_avg_bikes_available
+  - fct_bike_station_status_daily_source_loaded_at
+  exploreName: fct_bike_station_status_daily
+  filters:
+    dimensions:
+      and:
+      - id: c554a390-c5f9-5a93-8c89-74c5eb711784
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_bike_station_status_daily_observation_date
+        values:
+        - 30
+      id: cff98c20-6a26-5a8c-901b-af108599c8fa
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_bike_station_status_daily_observation_date
+  tableCalculations: []
+name: Bike station availability — observations
+slug: fct-bike-station-status-daily-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_bike_station_status_daily
+version: 1

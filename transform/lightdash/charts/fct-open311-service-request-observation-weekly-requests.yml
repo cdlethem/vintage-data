@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_open311_service_request_observation_requested_at_week
+          yRef:
+            field: fct_open311_service_request_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Requested at (Week)
+      yAxis:
+      - name: Distinct request
+    layout:
+      xField: fct_open311_service_request_observation_requested_at_week
+      yField:
+      - fct_open311_service_request_observation_distinct_entities
+  type: cartesian
+description: Distinct `request_id` values by the week when requests were submitted across the full source
+  history. This is an event flow rather than a polling volume; weeks with no submitted requests are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_open311_service_request_observation_requested_at_week
+  exploreName: fct_open311_service_request_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_open311_service_request_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_open311_service_request_observation_requested_at_week
+  tableCalculations: []
+name: Distinct requests by request week
+slug: fct-open311-service-request-observation-weekly-requests
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_open311_service_request_observation_requested_at_week
+  - fct_open311_service_request_observation_distinct_entities
+tableName: fct_open311_service_request_observation
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_open_library_change_event_timestamp_day
+          yRef:
+            field: fct_open_library_change_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event timestamp (Day)
+      yAxis:
+      - name: Distinct change
+    layout:
+      xField: fct_open_library_change_event_timestamp_day
+      yField:
+      - fct_open_library_change_distinct_entities
+  type: cartesian
+description: Distinct `change_id` values by the Open Library `event_timestamp` day. This is the source
+  event flow and can include repeated observations of one change only once per group; absent event days
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_open_library_change_event_timestamp_day
+  exploreName: fct_open_library_change
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_open_library_change_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_open_library_change_event_timestamp_day
+  tableCalculations: []
+name: Distinct changes by source event day
+slug: fct-open-library-change-changes-by-event-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_open_library_change_event_timestamp_day
+  - fct_open_library_change_distinct_entities
+tableName: fct_open_library_change
+version: 1

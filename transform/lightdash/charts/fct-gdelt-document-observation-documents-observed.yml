@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_gdelt_document_observation_observed_at_day
+          yRef:
+            field: fct_gdelt_document_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct document
+    layout:
+      xField: fct_gdelt_document_observation_observed_at_day
+      yField:
+      - fct_gdelt_document_observation_distinct_entities
+  type: cartesian
+description: Distinct `document_id` values returned by the extractor on each observation day. This is
+  a two-day snapshot level rather than a long-run publication flow; changes can reflect the feed result
+  set and missing observation days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_gdelt_document_observation_observed_at_day
+  exploreName: fct_gdelt_document_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gdelt_document_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_gdelt_document_observation_observed_at_day
+  tableCalculations: []
+name: Distinct documents observed per day
+slug: fct-gdelt-document-observation-documents-observed
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gdelt_document_observation_observed_at_day
+  - fct_gdelt_document_observation_distinct_entities
+tableName: fct_gdelt_document_observation
+version: 1

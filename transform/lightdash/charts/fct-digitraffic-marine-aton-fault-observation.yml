@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_digitraffic_marine_aton_fault_observation_fault_type
+          yRef:
+            field: fct_digitraffic_marine_aton_fault_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_digitraffic_marine_aton_fault_observation_fault_type
+      yField:
+      - fct_digitraffic_marine_aton_fault_observation_distinct_entities
+  type: cartesian
+description: Distinct `fault_id` values by `fault_type` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_digitraffic_marine_aton_fault_observation_fault_type
+  exploreName: fct_digitraffic_marine_aton_fault_observation
+  filters:
+    dimensions:
+      and:
+      - id: 4b6ab292-0dc6-5b22-a2eb-13dce8d0cbe8
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_digitraffic_marine_aton_fault_observation_ob_a6ee05
+        values:
+        - 30
+      id: b4d05244-4a83-59f6-a33e-3f877b3473fc
+  limit: 20
+  metrics:
+  - fct_digitraffic_marine_aton_fault_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_digitraffic_marine_aton_fault_observation_distinct_entities
+  tableCalculations: []
+name: Distinct fault by fault type
+slug: fct-digitraffic-marine-aton-fault-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_digitraffic_marine_aton_fault_observation_fault_type
+  - fct_digitraffic_marine_aton_fault_observation_distinct_entities
+tableName: fct_digitraffic_marine_aton_fault_observation
+version: 1

@@ -1,0 +1,320 @@
+version: 2
+models:
+- name: fct_ietf_datatracker_event_observation
+  description: Incremental physical observation fact for IETF Datatracker activity events. Each row represents
+    one Datatracker event identifier from the source stream at one extractor observation timestamp, retaining
+    event classification, draft and revision context, event text and timing, and raw-load lineage. The
+    twice-hourly incremental merge replays the latest atomic load and reduces repeated copies of the same
+    source event observation to its latest loaded record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_system, event_id, observed_at
+      label: Ietf datatracker event observation
+      group_label: Ietf datatracker
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: ietf_datatracker__cbac22
+      vintage:
+        visualization:
+          dimension: event_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct event by event type
+          description: Distinct `event_id` values by `event_type` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - event_id
+          - event_type
+          - source_loaded_at
+          sources:
+          - '`ietf_datatracker` — licence: IETF Datatracker — public; attribution required: False. Source
+            configuration: `extract/sources/ietf_datatracker.yml`.'
+          analysis:
+            headline: how Datatracker event volume and draft coverage shift across event and observation days.
+            event_time: event_time
+            grain: DAY
+            controls:
+            - event_type
+            - revision
+            - draft_name
+            trends:
+            - slug: event-volume
+              kind: total
+              metric: distinct_entities
+              time: event_time
+              grain: DAY
+              title: Events recorded per day
+              description: Distinct `event_id` values by the day the Datatracker reports the event occurred. This
+                five-day window is a recent activity slice rather than a long historical series; absent days are
+                absent rather than zero.
+              width: half
+            - slug: draft-coverage
+              kind: total
+              metric: distinct_drafts
+              time: observed_at
+              grain: DAY
+              title: Drafts represented per observation day
+              description: Distinct non-null `draft_name` values in each extractor observation day. This is a
+                coverage level of the feed snapshot, not a count of new drafts; days without a successful
+                observation are absent rather than zero.
+              width: half
+            - slug: by-event-type
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: event_type
+              top_n: 6
+              time: event_time
+              grain: DAY
+              title: Events per day by event type
+              description: Distinct `event_id` values by event day for the six event types with the largest
+                recent totals. Remaining event types are excluded rather than aggregated; absent days are
+                absent rather than zero.
+              width: full
+            - slug: revision-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: revision
+              top_n: 8
+              time: event_time
+              grain: DAY
+              title: Event mix per day by revision
+              description: Distinct `event_id` values per event day stacked by revision for the eight revisions
+                with the largest recent totals. Remaining revisions are excluded rather than aggregated, and
+                the stack shows observed event mix rather than cumulative draft state.
+              width: full
+  columns:
+  - name: ietf_datatracker_event_observation_key
+    description: Stable hash of the source system, Datatracker event identifier, and extractor observation
+      timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Ietf datatracker event observation key
+          hidden: true
+          name: ietf_datatracker__cbac22
+  - name: source_system
+    description: Raw source stream identifier supplied by the IETF Datatracker extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source system
+          hidden: false
+  - name: event_id
+    description: IETF Datatracker identifier for the observed activity event.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct event
+            description: Distinct `event_id` values by `event_type` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Event id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the Datatracker event.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: event_type
+    description: Datatracker activity type describing the event, such as a submission, revision, review,
+      or state change.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Event type
+          hidden: false
+  - name: draft_name
+    description: Internet-Draft, review, or other Datatracker object name associated with the event.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_drafts:
+            type: count_distinct
+            label: Distinct draft
+            description: Distinct non-null `draft_name` values represented in each time and dimension group.
+              This measures draft coverage in the feed; repeated events for one draft count once and drafts
+              can appear in multiple event types.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Draft name
+          hidden: false
+  - name: event_description
+    description: Human-readable event description supplied by the Datatracker activity feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Event description
+          hidden: false
+  - name: revision
+    description: Revision label of the associated Datatracker draft or object, preserving source formatting
+      such as leading zeroes.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Revision
+          hidden: false
+  - name: event_time
+    description: UTC timestamp at which the Datatracker reports that the event occurred.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Event time
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_row_id
+    description: Load-layer row identifier retained for the source event lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained source event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained Datatracker event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained event within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned to the retained event by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the retained source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: extract_s_51074f
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained source event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained source event into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw Datatracker event content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

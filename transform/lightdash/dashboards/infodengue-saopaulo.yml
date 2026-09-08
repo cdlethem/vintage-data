@@ -1,0 +1,170 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Week
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 6e8fe2b0-6e62-507a-8823-84ab9b896534
+    label: 'Infodengue saopaulo epidemiology: Alert level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_saopaulo_epidemiology_alert_level
+      tableName: fct_infodengue_saopaulo_epidemiology
+    values: []
+  - disabled: true
+    id: f52060ca-4f31-561a-8af7-05bedb0881d7
+    label: 'Infodengue saopaulo epidemiology: Receptive status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_saopaulo_epidemiology_receptive_status
+      tableName: fct_infodengue_saopaulo_epidemiology
+    values: []
+  - disabled: true
+    id: a0900be5-8b1b-5ec5-80ed-10fea97e1fdc
+    label: 'Infodengue saopaulo epidemiology: Transmission status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_saopaulo_epidemiology_transmission_status
+      tableName: fct_infodengue_saopaulo_epidemiology
+    values: []
+  - disabled: true
+    id: 1a660ed9-06c7-5c95-a6a9-93e55c040d34
+    label: 'Infodengue saopaulo epidemiology: Incidence level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_saopaulo_epidemiology_incidence_level
+      tableName: fct_infodengue_saopaulo_epidemiology
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Infodengue Saopaulo
+slug: infodengue-saopaulo
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly typed epidemiological surveillance observations for São Paulo from the Infodengue
+      city-alerts feed. This physical incremental fact is at the source relation and provider record identifier
+      grain, retaining the latest loaded replay and raw-load lineage for auditability.
+
+
+      **Grain:** source_relation, record_id
+
+
+      **What changes here:** Weekly epidemiological estimates show how São Paulo''s burden changes, while
+      alert and transmission statuses explain the shifts.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `infodengue_saopaulo` — see dbt raw-source lineage.'
+    hideFrame: false
+    title: Infodengue saopaulo epidemiology
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Infodengue saopaulo epidemiology — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct epidemiological observations per week
+    chartSlug: fct-infodengue-saopaulo-epidemiology-weekly-observations
+    hideTitle: false
+    title: Distinct epidemiological observations per week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean estimated cases by epidemiological week
+    chartSlug: fct-infodengue-saopaulo-epidemiology-weekly-cases-estimate
+    hideTitle: false
+    title: Mean estimated cases by epidemiological week
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean incidence per 100k by epidemiological week
+    chartSlug: fct-infodengue-saopaulo-epidemiology-weekly-incidence
+    hideTitle: false
+    title: Mean incidence per 100k by epidemiological week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean estimated cases by alert level
+    chartSlug: fct-infodengue-saopaulo-epidemiology-cases-by-alert-level
+    hideTitle: false
+    title: Mean estimated cases by alert level
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Mean estimated cases by transmission status
+    chartSlug: fct-infodengue-saopaulo-epidemiology-cases-by-transmission
+    hideTitle: false
+    title: Mean estimated cases by transmission status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Infodengue saopaulo epidemiology — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed incidence per 100k by municipality name
+    chartSlug: fct-infodengue-saopaulo-epidemiology
+    hideTitle: false
+    title: Mean observed incidence per 100k by municipality name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Infodengue saopaulo epidemiology — observations
+    chartSlug: fct-infodengue-saopaulo-epidemiology-details
+    hideTitle: false
+    title: Infodengue saopaulo epidemiology — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

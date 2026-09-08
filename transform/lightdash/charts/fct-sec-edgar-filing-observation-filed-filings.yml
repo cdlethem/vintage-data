@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sec_edgar_filing_observation_filed_date_day
+          yRef:
+            field: fct_sec_edgar_filing_observation_distinct_filings
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Filed date (Day)
+      yAxis:
+      - name: Distinct filings
+    layout:
+      xField: fct_sec_edgar_filing_observation_filed_date_day
+      yField:
+      - fct_sec_edgar_filing_observation_distinct_filings
+  type: cartesian
+description: Distinct `accession_number` values whose `filed_date` falls on each calendar day. This is
+  a filing flow over six populated dates, not a collection-time level; dates with no source filings are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_sec_edgar_filing_observation_filed_date_day
+  exploreName: fct_sec_edgar_filing_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sec_edgar_filing_observation_distinct_filings
+  sorts:
+  - descending: false
+    fieldId: fct_sec_edgar_filing_observation_filed_date_day
+  tableCalculations: []
+name: Distinct filings by filed day
+slug: fct-sec-edgar-filing-observation-filed-filings
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sec_edgar_filing_observation_filed_date_day
+  - fct_sec_edgar_filing_observation_distinct_filings
+tableName: fct_sec_edgar_filing_observation
+version: 1

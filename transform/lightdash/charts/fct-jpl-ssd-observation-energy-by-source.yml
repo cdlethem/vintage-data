@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_jpl_ssd_observation_observed_at_day
+          yRef:
+            field: fct_jpl_ssd_observation_max_impact_energy_kt
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Maximum observed impact energy kt
+    layout:
+      xField: fct_jpl_ssd_observation_observed_at_day
+      yField:
+      - fct_jpl_ssd_observation_max_impact_energy_kt
+  type: cartesian
+description: Maximum reported impact energy per observation day for each available feed source. The source
+  dimension currently has one value, so this is a one-series diagnostic rather than a comparison; absent
+  snapshot days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_jpl_ssd_observation_observed_at_day
+  - fct_jpl_ssd_observation_source_name
+  exploreName: fct_jpl_ssd_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_jpl_ssd_observation_max_impact_energy_kt
+  sorts:
+  - descending: true
+    fieldId: fct_jpl_ssd_observation_max_impact_energy_kt
+  - descending: false
+    fieldId: fct_jpl_ssd_observation_observed_at_day
+  tableCalculations: []
+name: Peak impact energy by feed source
+pivotConfig:
+  columns:
+  - fct_jpl_ssd_observation_source_name
+slug: fct-jpl-ssd-observation-energy-by-source
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_jpl_ssd_observation_observed_at_day
+  - fct_jpl_ssd_observation_source_name
+  - fct_jpl_ssd_observation_max_impact_energy_kt
+tableName: fct_jpl_ssd_observation
+version: 1

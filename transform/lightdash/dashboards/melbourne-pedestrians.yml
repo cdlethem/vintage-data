@@ -1,0 +1,145 @@
+config:
+  dateZoomGranularities:
+  - Hour
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Hour
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 2a912bd1-67e0-5561-bb9e-55a059c22bae
+    label: 'Melbourne pedestrian observations: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_melbourne_pedestrian_observations_source
+      tableName: fct_melbourne_pedestrian_observations
+    values: []
+  - disabled: true
+    id: fc4951f3-ac5b-5b94-ad63-aec03af951ee
+    label: 'Melbourne pedestrian observations: Sensing time'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_melbourne_pedestrian_observations_sensing_time
+      tableName: fct_melbourne_pedestrian_observations
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Melbourne Pedestrians
+slug: melbourne-pedestrians
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical history of Melbourne pedestrian counter observations. Each row is
+      one source feed, counter location, sensing timestamp, and feed fetch timestamp, with directional
+      counts and complete raw-load lineage. Duplicate records for that observation grain are retained
+      by the latest loader file position so replayed source files cannot multiply the fact.
+
+
+      **Grain:** source, location_id, sensing_datetime, observed_at
+
+
+      **What changes here:** how pedestrian measurement volume and reported counts vary by hour, feed,
+      and counter location.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `melbourne_pedestrians` — licence: City of Melbourne open-data terms; attribution required: True.
+      Source configuration: `extract/sources/melbourne_pedestrians.yml`.'
+    hideFrame: false
+    title: Melbourne pedestrian observations
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Melbourne pedestrian observations — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct pedestrian records sensed per hour
+    chartSlug: fct-melbourne-pedestrian-observations-pedestrian-observations
+    hideTitle: false
+    title: Distinct pedestrian records sensed per hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported pedestrians per sensing hour
+    chartSlug: fct-melbourne-pedestrian-observations-mean-count
+    hideTitle: false
+    title: Mean reported pedestrians per sensing hour
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Pedestrian records by source feed per hour
+    chartSlug: fct-melbourne-pedestrian-observations-feed-comparison
+    hideTitle: false
+    title: Pedestrian records by source feed per hour
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean reported count across busiest locations
+    chartSlug: fct-melbourne-pedestrian-observations-busiest-locations
+    hideTitle: false
+    title: Mean reported count across busiest locations
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Melbourne pedestrian observations — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed total of directions by location id
+    chartSlug: fct-melbourne-pedestrian-observations
+    hideTitle: false
+    title: Mean observed total of directions by location id
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Melbourne pedestrian observations — observations
+    chartSlug: fct-melbourne-pedestrian-observations-details
+    hideTitle: false
+    title: Melbourne pedestrian observations — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

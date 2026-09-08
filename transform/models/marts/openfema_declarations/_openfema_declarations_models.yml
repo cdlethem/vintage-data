@@ -1,0 +1,579 @@
+version: 2
+models:
+- name: fct_openfema_declaration_observation
+  description: Physical observation fact for Federal Emergency Management Agency disaster declarations.
+    Each row is one FEMA declaration identifier at one extractor observation timestamp. Insert-only copies
+    are deduplicated by that observation grain using the latest load lineage, while declaration attributes
+    and source lineage remain available for audit and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, declaration_id, observed_at
+      label: Openfema declaration observation
+      group_label: Openfema declarations
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: openfema_declaratio_f088e2
+      vintage:
+        visualization:
+          dimension: incident_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct declaration by incident type
+          description: Distinct `declaration_id` values by `incident_type` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - declaration_id
+          - incident_type
+          - source_loaded_at
+          sources:
+          - '`openfema_declarations` — licence: US federal public data; attribution required: False. Source
+            configuration: `extract/sources/openfema_declarations.yml`.'
+          analysis:
+            headline: how declaration activity and affected incidents shift across FEMA incident types and
+              states over the incident timeline.
+            event_time: incident_begin_at
+            grain: DAY
+            controls:
+            - incident_type
+            - state_code
+            - declaration_type
+            - is_public_assistance_program
+            trends:
+            - slug: observed-declarations
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Declarations present in each observation day
+              description: Distinct `declaration_id` values present in each extractor observation day. This
+                is a catalogue level rather than a declaration-flow count because FEMA republishes records;
+                days without a successful extract are absent rather than zero.
+              width: half
+            - slug: incidents-by-start-day
+              kind: total
+              metric: distinct_incidents
+              time: incident_begin_at
+              grain: DAY
+              title: Incidents beginning on each day
+              description: Distinct `incident_id` values whose FEMA incident begins on each day. This is a
+                source-event flow over the four-month extract, not a count of extractor observations;
+                dates with no declarations are absent rather than zero.
+              width: half
+            - slug: declarations-by-incident-type
+              kind: composition
+              metric: distinct_entities
+              breakdown: incident_type
+              top_n: 4
+              time: incident_begin_at
+              grain: DAY
+              title: Declaration mix by incident start day and type
+              description: Distinct `declaration_id` values by FEMA `incident_type` on the incident start
+                day. The four incident types are all retained; stacked bars show mix rather than a
+                continuous flow, and days without declarations are absent rather than zero.
+              width: full
+            - slug: declarations-by-state
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: state_code
+              top_n: 6
+              time: incident_begin_at
+              grain: DAY
+              title: Leading states by declaration start day
+              description: Distinct `declaration_id` values by `state_code` on the incident start day. The
+                six states with the largest declaration counts over the selected history are shown and
+                the remainder is excluded rather than aggregated; empty dates are absent rather than zero.
+              width: full
+            - slug: declarations-by-request-day
+              kind: composition
+              metric: distinct_entities
+              breakdown: declaration_type
+              top_n: 2
+              time: declaration_requested_at
+              time_dimension: requested
+              grain: DAY
+              title: Requested declarations by day and type
+              description: Distinct `declaration_id` values by `declaration_type` on FEMA request day.
+                Both declaration types are retained, while null or empty days are absent rather than
+                interpreted as zero.
+              width: full
+  columns:
+  - name: openfema_declaration_observation_key
+    description: Stable hash of the FEMA source name, declaration identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Openfema declaration observation key
+          hidden: true
+          name: openfema_declaratio_f088e2
+  - name: source_name
+    description: Source label supplied by the FEMA declarations extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: declaration_id
+    description: FEMA UUID identifying the declared disaster record.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct declaration
+            description: Distinct `declaration_id` values by `incident_type` among observations in the
+              selected window. Repeated observations of an entity count once within each group. An entity
+              that changed category can appear in multiple groups; these groups are not additive and do
+              not represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Declaration id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this FEMA declaration observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: fema_declaration_string
+    description: FEMA compact declaration label combining declaration type, disaster number, and state.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Fema declaration string
+          hidden: false
+  - name: disaster_number
+    description: FEMA numeric disaster number associated with the declaration.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Disaster number
+          hidden: false
+          format: '#,##0'
+  - name: state_code
+    description: U.S. state or territory code for the declared disaster area.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: State code
+          hidden: false
+  - name: declaration_type
+    description: FEMA declaration type, such as disaster or fire management assistance.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Declaration type
+          hidden: false
+  - name: declaration_at
+    description: Timestamp when FEMA issued the disaster declaration.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Declaration at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: fiscal_year_declared
+    description: Federal fiscal year in which FEMA recorded the declaration.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Fiscal year declared
+          hidden: false
+          format: '#,##0'
+  - name: incident_type
+    description: FEMA classification of the incident, such as flood, fire, or severe storm.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Incident type
+          hidden: false
+  - name: declaration_title
+    description: Human-readable title FEMA assigned to the declaration.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Declaration title
+          hidden: false
+  - name: is_individual_household_program
+    description: Whether the Individual and Households Program was declared for this record.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is individual household program
+          hidden: false
+          name: is_individual_house_a9c09f
+  - name: is_individual_assistance_program
+    description: Whether Individual Assistance was declared for this record.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is individual assistance program
+          hidden: false
+          name: is_individual_assis_8074df
+  - name: is_public_assistance_program
+    description: Whether Public Assistance was declared for this record.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is public assistance program
+          hidden: false
+          name: is_public_assistanc_81e6a5
+  - name: is_hazard_mitigation_program
+    description: Whether the Hazard Mitigation Grant Program was declared for this record.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is hazard mitigation program
+          hidden: false
+          name: is_hazard_mitigatio_738a65
+  - name: incident_begin_at
+    description: Timestamp when the declared incident began.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Incident begin at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: incident_end_at
+    description: Timestamp when the declared incident ended, when FEMA has supplied one.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Incident end at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: is_tribal_request
+    description: Whether the declaration was requested by a tribal government.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is tribal request
+          hidden: false
+  - name: fips_state_code
+    description: FIPS code for the state associated with the declared area.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Fips state code
+          hidden: false
+  - name: fips_county_code
+    description: FIPS code for the county associated with the declared area.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Fips county code
+          hidden: false
+  - name: place_code
+    description: FEMA place code identifying the declared area.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Place code
+          hidden: false
+  - name: designated_area
+    description: FEMA name of the county, parish, independent city, or other designated area.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Designated area
+          hidden: false
+  - name: declaration_request_number
+    description: FEMA request number associated with the declaration.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Declaration request number
+          hidden: false
+  - name: declaration_requested_at
+    description: Timestamp when FEMA received the declaration request.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Declaration requested at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: declaration_c4315c
+        additional_dimensions:
+          requested:
+            type: timestamp
+            label: Requested at
+            description: Declaration request timestamp, exposed under a short dimension key so its
+              date-truncated variants stay inside Postgres's 63-byte identifier limit.
+            sql: ${TABLE}.declaration_requested_at
+            time_intervals:
+            - DAY
+            - WEEK
+            - MONTH
+            - YEAR
+  - name: last_ia_filing_at
+    description: Timestamp of the latest Individual Assistance filing associated with the declaration.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Last ia filing at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: incident_id
+    description: FEMA incident identifier associated with the declaration.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_incidents:
+            type: count_distinct
+            label: Distinct incident
+            description: Distinct `incident_id` values by incident start date and selected dimensions.
+              Repeated observations of a declaration count once per group; this measures source incidents,
+              not extractor rows.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Incident id
+          hidden: false
+  - name: region_code
+    description: FEMA administrative region code for the declaration.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Region code
+          hidden: false
+          format: '#,##0'
+  - name: designated_incident_types
+    description: FEMA incident type codes designated for the declaration.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Designated incident types
+          hidden: false
+  - name: source_last_refreshed_at
+    description: Timestamp FEMA reported that its source record was last refreshed.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source last refreshed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: source_last_8a38c2
+  - name: source_record_hash
+    description: FEMA-provided hash identifying the source declaration record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source record hash
+          hidden: false
+  - name: source_row_id
+    description: Load-layer row identifier of the retained declaration observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained declaration observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained declaration observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date associated with the retained raw observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: Timestamp when the extraction job that produced the retained observation started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_load_id
+    description: Identifier of the load job that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained declaration observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

@@ -1,0 +1,244 @@
+version: 2
+models:
+- name: fct_steam_player_observation
+  description: Twice-hourly physical history of concurrent Steam player counts. Each row represents one
+    game at one Steam feed observation timestamp for the source, retaining the request status, player
+    count, and raw-load lineage. Repeated insert-only raw records for the same source, game, and observation
+    time are reduced to the latest loaded copy.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, game_id, observed_at
+      label: Steam player observation
+      group_label: Steam players
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: steam_player_observation_key
+      vintage:
+        visualization:
+          dimension: game_id
+          metric: average_concurrent_player_count
+          time: observed_at
+          window_days: 30
+          title: Mean observed concurrent player count by game id
+          description: Mean observed concurrent player count by `game_id` in the selected observation
+            window. Number of concurrent players reported by Steam for the game at observation time. Each
+            retained observation has equal weight; polling frequency and repeated snapshots can affect
+            the mean. This is not a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - game_id
+          - concurrent_player_count
+          - source_loaded_at
+          sources:
+          - '`steam_players` — licence: unstated; attribution required: False. Source configuration: `extract/sources/steam_players.yml`.'
+          filters:
+          - field: request_succeeded
+            values:
+            - true
+          analysis:
+            headline: how the monitored Steam games' player levels rise and fall across each observation day.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - source
+            - request_succeeded
+            - concurrent_player_count
+            trends:
+            - slug: player-level
+              kind: total
+              metric: average_concurrent_player_count
+              time: observed_at
+              grain: DAY
+              title: Mean concurrent players by observation day
+              description: Mean `concurrent_player_count` across retained game snapshots on each observation
+                day. This is a level, not an additive audience total — polling frequency gives frequently
+                sampled games more weight, and days without a successful extract are absent rather than zero.
+              width: half
+            - slug: monitored-games
+              kind: total
+              metric: distinct_games
+              time: observed_at
+              grain: DAY
+              title: Monitored game count by observation day
+              description: Distinct non-null `game_id` values present on each observation day. This is the
+                breadth of the monitored roster, not a player total; absent observation days are absent rather
+                than zero.
+              width: half
+            - slug: game-player-levels
+              kind: breakdown
+              metric: average_concurrent_player_count
+              breakdown: game_id
+              top_n: 8
+              time: observed_at
+              grain: DAY
+              title: Mean concurrent players by game
+              description: Mean concurrent players for the eight games with the largest observed averages,
+                shown by observation day. Remaining monitored games are excluded rather than aggregated; each
+                line is a snapshot level and polling frequency can affect its mean.
+              width: full
+  columns:
+  - name: steam_player_observation_key
+    description: Stable hash of source, game identifier, and observation timestamp defining the row grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Steam player observation key
+          hidden: true
+  - name: source
+    description: Upstream Steam player-count feed identifier.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: source_id
+    description: Source-provided identifier for the observed Steam game.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source id
+          hidden: false
+  - name: game_id
+    description: Numeric Steam application identifier for the observed game.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          distinct_games:
+            type: count_distinct
+            label: Distinct monitored games
+            description: Distinct non-null `game_id` values present in each observation time bucket. This
+              counts monitored titles rather than player volume, and repeated snapshots count once within
+              each time and filter group.
+            format: '#,##0'
+        dimension:
+          type: number
+          label: Game id
+          hidden: false
+          format: '#,##0'
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the Steam player count.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: request_succeeded
+    description: Whether the Steam response for this game was reported as successful.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Request succeeded
+          hidden: false
+  - name: concurrent_player_count
+    description: Number of concurrent players reported by Steam for the game at observation time.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_concurrent_player_count:
+            type: average
+            label: Mean observed concurrent player count
+            description: Mean observed concurrent player count by `game_id` in the selected observation
+              window. Number of concurrent players reported by Steam for the game at observation time.
+              Each retained observation has equal weight; polling frequency and repeated snapshots can
+              affect the mean. This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Concurrent player count
+          hidden: false
+          format: '#,##0'
+  - name: source_batch_id
+    description: Identifier of the raw extract batch that supplied this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_load_id
+    description: Identifier of the load operation that inserted this observation into the raw warehouse.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source load id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of this observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw observation content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

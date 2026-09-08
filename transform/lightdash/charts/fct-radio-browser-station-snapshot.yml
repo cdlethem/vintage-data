@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_radio_browser_station_snapshot_country_code
+          yRef:
+            field: fct_radio_browser_station_snapshot_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_radio_browser_station_snapshot_country_code
+      yField:
+      - fct_radio_browser_station_snapshot_distinct_entities
+  type: cartesian
+description: Distinct `station_id` values by `country_code` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_radio_browser_station_snapshot_country_code
+  exploreName: fct_radio_browser_station_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: 36dd10aa-6f40-5bd9-adcb-cc3d86416b01
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_radio_browser_station_snapshot_observed_at
+        values:
+        - 30
+      id: 01f0cc66-18f6-5849-9163-e0bf836fb6c2
+  limit: 20
+  metrics:
+  - fct_radio_browser_station_snapshot_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_radio_browser_station_snapshot_distinct_entities
+  tableCalculations: []
+name: Distinct station by country code
+slug: fct-radio-browser-station-snapshot
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_radio_browser_station_snapshot_country_code
+  - fct_radio_browser_station_snapshot_distinct_entities
+tableName: fct_radio_browser_station_snapshot
+version: 1

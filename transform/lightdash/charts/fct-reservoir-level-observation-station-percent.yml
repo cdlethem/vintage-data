@@ -1,0 +1,64 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_reservoir_level_observation_observation_start_at_day
+          yRef:
+            field: fct_reservoir_level_observation_average_pct_of_capacity
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observation start at (Day)
+      yAxis:
+      - name: Mean observed pct of capacity
+    layout:
+      xField: fct_reservoir_level_observation_observation_start_at_day
+      yField:
+      - fct_reservoir_level_observation_average_pct_of_capacity
+  type: cartesian
+description: Mean non-null `pct_of_capacity` per source observation day for the eight stations with the
+  largest values in the selected window. The remaining six stations are excluded rather than aggregated;
+  sparse station-days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_reservoir_level_observation_observation_start_at_day
+  - fct_reservoir_level_observation_station
+  exploreName: fct_reservoir_level_observation
+  filters:
+    dimensions:
+      and:
+      - id: 94707087-e3b0-59f4-9fef-268f58823c4e
+        operator: equals
+        target:
+          fieldId: fct_reservoir_level_observation_is_missing
+        values:
+        - false
+      id: c90e461a-f14e-5412-ab79-0f7077516dfc
+  limit: 5000
+  metrics:
+  - fct_reservoir_level_observation_average_pct_of_capacity
+  sorts:
+  - descending: true
+    fieldId: fct_reservoir_level_observation_average_pct_of_capacity
+  - descending: false
+    fieldId: fct_reservoir_level_observation_observation_start_at_day
+  tableCalculations: []
+name: Storage percentage trajectories for leading stations
+pivotConfig:
+  columns:
+  - fct_reservoir_level_observation_station
+slug: fct-reservoir-level-observation-station-percent
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_reservoir_level_observation_observation_start_at_day
+  - fct_reservoir_level_observation_station
+  - fct_reservoir_level_observation_average_pct_of_capacity
+tableName: fct_reservoir_level_observation
+version: 1

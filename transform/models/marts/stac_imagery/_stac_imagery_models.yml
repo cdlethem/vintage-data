@@ -1,0 +1,408 @@
+version: 2
+models:
+- name: fct_stac_imagery
+  description: Hourly physical history of STAC imagery items returned by the imagery discovery feed. Each
+    row is one imagery item observed at one fetch timestamp; repeated ingestion of the same item snapshot
+    is reduced to the latest loaded copy while the item attributes and raw-load lineage remain available.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, item_id, observed_at
+      label: Stac imagery
+      group_label: Stac imagery
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: stac_imagery_snapshot_key
+      vintage:
+        visualization:
+          dimension: collection
+          metric: average_cloud_cover
+          time: observed_at
+          window_days: 30
+          title: Mean observed cloud cover by collection
+          description: Mean observed cloud cover by `collection` in the selected observation window. Cloud-cover
+            percentage reported by the STAC item. Each retained observation has equal weight; polling
+            frequency and repeated snapshots can affect the mean. This is not a latest-value measure or
+            an additive total.
+          detail_fields:
+          - observed_at
+          - item_id
+          - collection
+          - cloud_cover
+          - source_loaded_at
+          sources:
+          - '`stac_imagery` — licence: varies per collection (naip/landsat public domain; Sentinel proprietary
+            notice); attribution required: True. Source configuration: `extract/sources/stac_imagery.yml`.'
+          analysis:
+            headline: how the five-day observed imagery catalogue changes in size, cloudiness, and platform mix
+              while captured-scene history remains shallow.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - collection
+            - platform
+            - epsg
+            - grid
+            trends:
+            - slug: observed-items-by-day
+              kind: total
+              metric: distinct_items
+              time: observed_at
+              grain: DAY
+              title: Distinct imagery items observed per day
+              description: Distinct `item_id` values present at each extractor observation day. This is a
+                catalogue level rather than a new-imagery flow because items are repeatedly observed; days
+                with no successful extract are absent rather than zero.
+              width: half
+            - slug: cloud-cover-by-day
+              kind: total
+              metric: average_cloud_cover
+              time: observed_at
+              grain: DAY
+              title: Mean cloud cover of observed items per day
+              description: Mean reported `cloud_cover` percentage for retained items at each observation day.
+                Each item observation has equal weight and the measure is not additive; absent observation
+                days are absent rather than zero.
+              width: half
+            - slug: age-by-day
+              kind: total
+              metric: average_age_hours
+              time: observed_at
+              grain: DAY
+              title: Mean imagery age at observation
+              description: Mean reported `age_hours` for items at each extractor observation day. This is
+                an observation-weighted level rather than a flow or cumulative age; days with no extract are
+                absent rather than zero.
+              width: half
+            - slug: platform-capture-mix
+              kind: composition
+              metric: distinct_items
+              breakdown: platform
+              top_n: 3
+              time: captured_at
+              grain: DAY
+              title: Captured imagery mix by platform
+              description: Distinct `item_id` values by source `captured_at` day stacked by platform. All
+                three observed platforms are shown; this event-time slice covers only four capture days, not
+                a long historical flow, and missing capture days are absent rather than zero.
+              width: full
+  columns:
+  - name: stac_imagery_snapshot_key
+    description: Stable hash of the imagery source, item identifier, and fetch observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Stac imagery snapshot key
+          hidden: true
+  - name: source_name
+    description: STAC source label reported by the extractor for the imagery item.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: item_id
+    description: STAC item identifier for the discovered imagery scene.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_items:
+            type: count_distinct
+            label: Distinct imagery items
+            description: Distinct non-null `item_id` values in each observation and filter group. Repeated
+              snapshots of one imagery item count once within each group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Item id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the imagery item snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: collection
+    description: STAC collection containing the imagery item.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Collection
+          hidden: false
+  - name: captured_at
+    description: UTC timestamp when the imagery scene was captured.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Captured at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: age_hours
+    description: Age of the imagery scene in hours at the fetch observation time, as reported by the extractor.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_age_hours:
+            type: average
+            label: Mean imagery age hours
+            description: Mean reported `age_hours` in each observation and filter group. Each item observation
+              has equal weight; polling frequency can affect this average, which is a level rather than an
+              additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Age hours
+          hidden: false
+          format: '#,##0.00'
+  - name: platform
+    description: Satellite or other platform that acquired the imagery scene.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Platform
+          hidden: false
+  - name: constellation
+    description: Platform constellation associated with the imagery scene.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Constellation
+          hidden: false
+  - name: instruments
+    description: JSON array of instruments reported for the imagery item.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Instruments
+          hidden: true
+          sql: CAST(${TABLE}.instruments AS VARCHAR)
+  - name: cloud_cover
+    description: Cloud-cover percentage reported by the STAC item.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_cloud_cover:
+            type: average
+            label: Mean observed cloud cover
+            description: Mean observed cloud cover by `collection` in the selected observation window.
+              Cloud-cover percentage reported by the STAC item. Each retained observation has equal weight;
+              polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+              measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Cloud cover
+          hidden: false
+          format: '#,##0.00'
+  - name: epsg
+    description: EPSG spatial reference identifier reported for the imagery item.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Epsg
+          hidden: false
+          format: '#,##0'
+  - name: grid
+    description: Spatial grid or tile identifier reported by the STAC item.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Grid
+          hidden: false
+  - name: bbox
+    description: JSON array containing the imagery item's bounding-box coordinates.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Bbox
+          hidden: true
+          sql: CAST(${TABLE}.bbox AS VARCHAR)
+  - name: asset_keys
+    description: JSON array of asset keys published for the imagery item.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Asset keys
+          hidden: true
+          sql: CAST(${TABLE}.asset_keys AS VARCHAR)
+  - name: visual_href
+    description: URL of the imagery item's visual asset.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Visual href
+          hidden: false
+  - name: thumbnail_href
+    description: URL of the imagery item's thumbnail asset.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Thumbnail href
+          hidden: false
+  - name: requester_pays
+    description: Whether access to the imagery assets requires requester-pays billing.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Requester pays
+          hidden: false
+  - name: _row_id
+    description: Load-layer row identifier of the retained imagery snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Identifier of the load batch that supplied the retained imagery snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained imagery snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained imagery snapshot in its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: _dt
+    description: Load-layer partition date associated with the retained imagery snapshot.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: UTC timestamp when the extract job that produced the retained imagery snapshot started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained imagery snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained imagery snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Stable hash of the retained raw imagery record for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

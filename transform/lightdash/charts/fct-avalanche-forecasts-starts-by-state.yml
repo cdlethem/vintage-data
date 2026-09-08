@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_avalanche_forecasts_start_date_day
+          yRef:
+            field: fct_avalanche_forecasts_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Start date (Day)
+      yAxis:
+      - name: Distinct forecast
+    layout:
+      stack: true
+      xField: fct_avalanche_forecasts_start_date_day
+      yField:
+      - fct_avalanche_forecasts_distinct_entities
+  type: cartesian
+description: Distinct `forecast_id` values with a non-null start date, stacked by state and start day.
+  The eight largest states are shown and the remainder is excluded rather than aggregated; sparse dates
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_avalanche_forecasts_start_date_day
+  - fct_avalanche_forecasts_state
+  exploreName: fct_avalanche_forecasts
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_avalanche_forecasts_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_avalanche_forecasts_distinct_entities
+  - descending: false
+    fieldId: fct_avalanche_forecasts_start_date_day
+  tableCalculations: []
+name: Published forecast starts by state
+pivotConfig:
+  columns:
+  - fct_avalanche_forecasts_state
+slug: fct-avalanche-forecasts-starts-by-state
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_avalanche_forecasts_start_date_day
+  - fct_avalanche_forecasts_state
+  - fct_avalanche_forecasts_distinct_entities
+tableName: fct_avalanche_forecasts
+version: 1

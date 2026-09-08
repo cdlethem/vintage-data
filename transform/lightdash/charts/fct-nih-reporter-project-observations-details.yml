@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of NIH Reporter research-project records. Each row is one NIH application
+  observed at an extractor timestamp, retaining grant, project, organization, principal-investigator,
+  and raw-load lineage fields. Repeated raw copies of the same application observation are reduced to
+  the latest loaded row.
+metricQuery:
+  dimensions: &id001
+  - fct_nih_reporter_project_observations_observed_at
+  - fct_nih_reporter_project_observations_project_id
+  - fct_nih_reporter_project_observations_organization_state
+  - fct_nih_reporter_project_observations_award_amount
+  - fct_nih_reporter_project_observations_source_loaded_at
+  exploreName: fct_nih_reporter_project_observations
+  filters:
+    dimensions:
+      and:
+      - id: 85c84a6e-f6f5-56ec-9f9f-0227e6128ca4
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nih_reporter_project_observations_observed_at
+        values:
+        - 30
+      id: 6143a753-0de0-566d-8d8e-5d526916d8fc
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_nih_reporter_project_observations_observed_at
+  tableCalculations: []
+name: Nih reporter project observations — observations
+slug: fct-nih-reporter-project-observations-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_nih_reporter_project_observations
+version: 1

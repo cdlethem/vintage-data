@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ted_procurement_notice_type
+          yRef:
+            field: fct_ted_procurement_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_ted_procurement_notice_type
+      yField:
+      - fct_ted_procurement_distinct_entities
+  type: cartesian
+description: Distinct `notice_id` values by `notice_type` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_ted_procurement_notice_type
+  exploreName: fct_ted_procurement
+  filters:
+    dimensions:
+      and:
+      - id: ae4afb25-86bb-52c1-9379-fa640595102b
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_ted_procurement_observed_at
+        values:
+        - 30
+      id: a4ecb693-d7b3-58db-ae76-302327e0d98e
+  limit: 20
+  metrics:
+  - fct_ted_procurement_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_ted_procurement_distinct_entities
+  tableCalculations: []
+name: Distinct notice by notice type
+slug: fct-ted-procurement
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ted_procurement_notice_type
+  - fct_ted_procurement_distinct_entities
+tableName: fct_ted_procurement
+version: 1

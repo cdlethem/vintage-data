@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_stac_imagery_observed_at_day
+          yRef:
+            field: fct_stac_imagery_distinct_items
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct imagery items
+    layout:
+      xField: fct_stac_imagery_observed_at_day
+      yField:
+      - fct_stac_imagery_distinct_items
+  type: cartesian
+description: Distinct `item_id` values present at each extractor observation day. This is a catalogue
+  level rather than a new-imagery flow because items are repeatedly observed; days with no successful
+  extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_stac_imagery_observed_at_day
+  exploreName: fct_stac_imagery
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_stac_imagery_distinct_items
+  sorts:
+  - descending: false
+    fieldId: fct_stac_imagery_observed_at_day
+  tableCalculations: []
+name: Distinct imagery items observed per day
+slug: fct-stac-imagery-observed-items-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_stac_imagery_observed_at_day
+  - fct_stac_imagery_distinct_items
+tableName: fct_stac_imagery
+version: 1

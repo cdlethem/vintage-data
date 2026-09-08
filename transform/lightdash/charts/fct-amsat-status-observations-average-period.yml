@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_amsat_status_observations_reported_time_hour
+          yRef:
+            field: fct_amsat_status_observations_average_period
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Reported time (Hour)
+      yAxis:
+      - name: Mean report period
+    layout:
+      xField: fct_amsat_status_observations_reported_time_hour
+      yField:
+      - fct_amsat_status_observations_average_period
+  type: cartesian
+description: Average upstream `period` value among reports at each reported hour. This is a reported-measure
+  level, not an additive total; hours without reports are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_amsat_status_observations_reported_time_hour
+  exploreName: fct_amsat_status_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_amsat_status_observations_average_period
+  sorts:
+  - descending: false
+    fieldId: fct_amsat_status_observations_reported_time_hour
+  tableCalculations: []
+name: Mean report period by reported hour
+slug: fct-amsat-status-observations-average-period
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_amsat_status_observations_reported_time_hour
+  - fct_amsat_status_observations_average_period
+tableName: fct_amsat_status_observations
+version: 1

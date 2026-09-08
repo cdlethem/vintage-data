@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "apache-airflow-provider-vintage-bot-dashboard"
+version = "0.2.0"
+description = "Airflow bot activity and manager action queue"
+requires-python = ">=3.10"
+dependencies = [
+  "apache-airflow==3.3.1",
+  "httpx>=0.27,<1",
+]
+
+[project.entry-points.apache_airflow_provider]
+provider_info = "airflow.providers.vintage.bot_dashboard.get_provider_info:get_provider_info"
+
+[project.entry-points."airflow.plugins"]
+VintageBotDashboardPlugin = "airflow.providers.vintage.bot_dashboard.plugin:VintageBotDashboardPlugin"
+
+[project.scripts]
+bot-dashboard = "airflow.providers.vintage.bot_dashboard.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/airflow"]

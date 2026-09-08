@@ -1,0 +1,160 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: eb09b78b-59a3-515f-9149-25602fb7607a
+    label: 'Food hygiene ratings manchester: Business type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_manchester_business_type
+      tableName: fct_food_hygiene_ratings_manchester
+    values: []
+  - disabled: true
+    id: e1e631b9-b7c5-5e83-acf1-93f3984a6bd5
+    label: 'Food hygiene ratings manchester: Rating value'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_manchester_rating_value
+      tableName: fct_food_hygiene_ratings_manchester
+    values: []
+  - disabled: true
+    id: 2df20a3b-cd83-5c0a-b636-3ce18aba914b
+    label: 'Food hygiene ratings manchester: New rating pending'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_manchester_new_rating_pending
+      tableName: fct_food_hygiene_ratings_manchester
+    values: []
+  - disabled: true
+    id: 5cc8e476-c2f4-5ef5-b832-bcfcbb886962
+    label: 'Food hygiene ratings manchester: Scheme type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_manchester_scheme_type
+      tableName: fct_food_hygiene_ratings_manchester
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Food Hygiene Ratings Manchester
+slug: food-hygiene-ratings-manchester
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical snapshot fact of Manchester food-hygiene ratings. Each row is one business
+      returned by the publisher for one fetched snapshot; source values are typed where stable, while
+      the original rating text and loader lineage remain available for audit and replay.
+
+
+      **Grain:** source, business_id, observed_at
+
+
+      **What changes here:** how Manchester rating activity and reported hygiene scores shift across business
+      types over rating history.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `food_hygiene_ratings_manchester` — see dbt raw-source lineage.'
+    hideFrame: false
+    title: Food hygiene ratings manchester
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Food hygiene ratings manchester — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Businesses rated per month
+    chartSlug: fct-food-hygiene-ratings-manchester-rating-volume
+    hideTitle: false
+    title: Businesses rated per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average hygiene component score per month
+    chartSlug: fct-food-hygiene-ratings-manchester-hygiene-score
+    hideTitle: false
+    title: Average hygiene component score per month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Rated businesses by business type
+    chartSlug: fct-food-hygiene-ratings-manchester-business-type-mix
+    hideTitle: false
+    title: Rated businesses by business type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Hygiene score by business type
+    chartSlug: fct-food-hygiene-ratings-manchester-score-by-business-type
+    hideTitle: false
+    title: Hygiene score by business type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Food hygiene ratings manchester — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct business by business type
+    chartSlug: fct-food-hygiene-ratings-manchester
+    hideTitle: false
+    title: Distinct business by business type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Food hygiene ratings manchester — observations
+    chartSlug: fct-food-hygiene-ratings-manchester-details
+    hideTitle: false
+    title: Food hygiene ratings manchester — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

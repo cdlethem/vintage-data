@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_package_registry_release_observation_package_name
+          yRef:
+            field: fct_package_registry_release_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_package_registry_release_observation_package_name
+      yField:
+      - fct_package_registry_release_observation_distinct_entities
+  type: cartesian
+description: Distinct `release_id` values by `package_name` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_package_registry_release_observation_package_name
+  exploreName: fct_package_registry_release_observation
+  filters:
+    dimensions:
+      and:
+      - id: ecc1cdc5-7e17-5ea8-bf3e-186cafc5c223
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_package_registry_release_observation_observed_at
+        values:
+        - 30
+      id: a2007e57-61a7-55b8-94ad-4ca63bf807dc
+  limit: 20
+  metrics:
+  - fct_package_registry_release_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_package_registry_release_observation_distinct_entities
+  tableCalculations: []
+name: Distinct release by package name
+slug: fct-package-registry-release-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_package_registry_release_observation_package_name
+  - fct_package_registry_release_observation_distinct_entities
+tableName: fct_package_registry_release_observation
+version: 1

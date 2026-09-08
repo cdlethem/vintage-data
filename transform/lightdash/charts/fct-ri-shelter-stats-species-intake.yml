@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 5
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_ri_shelter_stats_observed_at_day
+          yRef:
+            field: fct_ri_shelter_stats_average_intake_count
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed intake count
+    layout:
+      stack: true
+      xField: fct_ri_shelter_stats_observed_at_day
+      yField:
+      - fct_ri_shelter_stats_average_intake_count
+  type: cartesian
+description: Mean reported `intake_count` per observation day stacked by the five published species groups.
+  All five groups are retained here; each bar shows snapshot mix rather than additive intake events, and
+  a missing species-day is absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_ri_shelter_stats_observed_at_day
+  - fct_ri_shelter_stats_species
+  exploreName: fct_ri_shelter_stats
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ri_shelter_stats_average_intake_count
+  sorts:
+  - descending: true
+    fieldId: fct_ri_shelter_stats_average_intake_count
+  - descending: false
+    fieldId: fct_ri_shelter_stats_observed_at_day
+  tableCalculations: []
+name: Intake level mix by species
+pivotConfig:
+  columns:
+  - fct_ri_shelter_stats_species
+slug: fct-ri-shelter-stats-species-intake
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ri_shelter_stats_observed_at_day
+  - fct_ri_shelter_stats_species
+  - fct_ri_shelter_stats_average_intake_count
+tableName: fct_ri_shelter_stats
+version: 1

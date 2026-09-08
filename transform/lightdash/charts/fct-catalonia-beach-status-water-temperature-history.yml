@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_catalonia_beach_status_status_updated_at_day
+          yRef:
+            field: fct_catalonia_beach_status_average_water_temperature
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Status updated at (Day)
+      yAxis:
+      - name: Mean observed water temperature
+    layout:
+      xField: fct_catalonia_beach_status_status_updated_at_day
+      yField:
+      - fct_catalonia_beach_status_average_water_temperature
+  type: cartesian
+description: Mean non-null `water_temperature` reported for all beaches on each publisher `status_updated_at`
+  day. Only the 2025 and 2026 snapshots supply this field; earlier dates are absent from this series rather
+  than zero degrees.
+metricQuery:
+  dimensions:
+  - fct_catalonia_beach_status_status_updated_at_day
+  exploreName: fct_catalonia_beach_status
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_catalonia_beach_status_average_water_temperature
+  sorts:
+  - descending: false
+    fieldId: fct_catalonia_beach_status_status_updated_at_day
+  tableCalculations: []
+name: Mean water temperature by status date
+slug: fct-catalonia-beach-status-water-temperature-history
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_catalonia_beach_status_status_updated_at_day
+  - fct_catalonia_beach_status_average_water_temperature
+tableName: fct_catalonia_beach_status
+version: 1

@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_ted_procurement_publication_date_day
+          yRef:
+            field: fct_ted_procurement_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Publication date (Day)
+      yAxis:
+      - name: Distinct notice
+    layout:
+      xField: fct_ted_procurement_publication_date_day
+      yField:
+      - fct_ted_procurement_distinct_entities
+  type: cartesian
+description: Distinct `notice_id` values per publication day split by reported buyer-name language. The
+  extract has only four publication days; the six largest languages are shown and smaller groups are excluded
+  rather than treated as zero.
+metricQuery:
+  dimensions:
+  - fct_ted_procurement_publication_date_day
+  - fct_ted_procurement_buyer_name_lang
+  exploreName: fct_ted_procurement
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ted_procurement_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_ted_procurement_distinct_entities
+  - descending: false
+    fieldId: fct_ted_procurement_publication_date_day
+  tableCalculations: []
+name: Published notices by buyer-name language
+pivotConfig:
+  columns:
+  - fct_ted_procurement_buyer_name_lang
+slug: fct-ted-procurement-buyer-language-trends
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ted_procurement_publication_date_day
+  - fct_ted_procurement_buyer_name_lang
+  - fct_ted_procurement_distinct_entities
+tableName: fct_ted_procurement
+version: 1

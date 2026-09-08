@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical daily snapshot of New Zealand Charities Register organisation observations. Each
+  row is one source, organisation identifier, and fetch timestamp, with the published organisation attributes
+  and nested register details retained alongside load lineage. Repeated copies of the same observation
+  grain are resolved to the latest loaded file row.
+metricQuery:
+  dimensions: &id001
+  - fct_nz_charities_fetched_at
+  - fct_nz_charities_id
+  - fct_nz_charities_registrationstatus
+  - fct_nz_charities_source_loaded_at
+  exploreName: fct_nz_charities
+  filters:
+    dimensions:
+      and:
+      - id: 743af8e8-4959-5fd8-9f17-e2fda81f5655
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nz_charities_fetched_at
+        values:
+        - 30
+      id: 65288477-b660-5cad-9893-0e149da965b0
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_nz_charities_fetched_at
+  tableCalculations: []
+name: Nz charities — observations
+slug: fct-nz-charities-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_nz_charities
+version: 1

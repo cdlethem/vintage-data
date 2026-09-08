@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_melbourne_pedestrian_observations_sensing_datetime_hour
+          yRef:
+            field: fct_melbourne_pedestrian_observations_distinct_pedestrians
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Sensing datetime (Hour)
+      yAxis:
+      - name: Distinct pedestrian records
+    layout:
+      xField: fct_melbourne_pedestrian_observations_sensing_datetime_hour
+      yField:
+      - fct_melbourne_pedestrian_observations_distinct_pedestrians
+  type: cartesian
+description: Distinct `pedestrian_id` values recorded at each sensing hour. This is a count of source
+  measurement records rather than a flow of uniquely tracked people; irregular feed coverage changes the
+  level. Hours with no source rows are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_melbourne_pedestrian_observations_sensing_datetime_hour
+  exploreName: fct_melbourne_pedestrian_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_melbourne_pedestrian_observations_distinct_pedestrians
+  sorts:
+  - descending: false
+    fieldId: fct_melbourne_pedestrian_observations_sensing_datetime_hour
+  tableCalculations: []
+name: Distinct pedestrian records sensed per hour
+slug: fct-melbourne-pedestrian-observations-pedestrian-observations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_melbourne_pedestrian_observations_sensing_datetime_hour
+  - fct_melbourne_pedestrian_observations_distinct_pedestrians
+tableName: fct_melbourne_pedestrian_observations
+version: 1

@@ -1,0 +1,447 @@
+version: 2
+models:
+- name: fct_globe_measurement_observation
+  description: Incremental history of GLOBE Observer protocol measurements. Each row is one distinct source
+    payload identified by measurement id, observation timestamp, and content hash; repeated raw deliveries
+    of an identical payload merge while distinct payload versions remain observable. Raw-load lineage
+    is retained for replay and audit.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: measurement_id, observed_at, content_hash
+      label: Globe measurement observation
+      group_label: Globe measurements
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: globe_measurement_key
+      vintage:
+        visualization:
+          dimension: protocol
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct measurement by protocol
+          description: Distinct `measurement_id` values by `protocol` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - measurement_id
+          - protocol
+          - source_loaded_at
+          sources:
+          - '`globe_measurements` — licence: GLOBE data-use policy; attribution required: True. Source
+            configuration: `extract/sources/globe_measurements.yml`.'
+          analysis:
+            headline: how GLOBE measurement coverage and site elevation patterns change across countries over
+              three decades.
+            event_time: measured_date
+            grain: YEAR
+            controls:
+            - country_name
+            - organization_name
+            - source
+            trends:
+            - slug: annual-measurements
+              kind: total
+              metric: distinct_entities
+              time: measured_date
+              grain: YEAR
+              title: Measurements taken per year
+              description: Distinct `measurement_id` values by calendar year of the source measurement date.
+                This is a flow of recorded measurements rather than a current catalogue level; years with no
+                source rows are absent rather than zero.
+              width: half
+            - slug: annual-elevation
+              kind: total
+              metric: average_elevation
+              time: measured_date
+              grain: YEAR
+              title: Mean measurement-site elevation per year
+              description: Average reported site elevation in each measurement year. The value is
+                observation-weighted and reflects where measurements were taken, not a global elevation
+                estimate; years with no source rows are absent rather than zero.
+              width: half
+            - slug: country-measurements
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: country_name
+              top_n: 8
+              time: measured_date
+              grain: YEAR
+              title: Measurements per year by country
+              description: Distinct `measurement_id` values by measurement year for the eight countries
+                with the largest totals. Remaining countries are excluded rather than aggregated, so line
+                changes compare the leading country series only.
+              width: full
+            - slug: country-elevation
+              kind: breakdown
+              metric: average_elevation
+              breakdown: country_name
+              top_n: 8
+              time: measured_date
+              grain: YEAR
+              title: Mean measurement-site elevation by leading country
+              description: Average reported site elevation per measurement year for the eight countries
+                with the largest measurement totals. Remaining countries are excluded rather than
+                aggregated; this is an observation-weighted mean, not a country-wide terrain statistic.
+              width: full
+  columns:
+  - name: globe_measurement_key
+    description: Stable hash of the measurement identifier, observation timestamp, and raw content hash.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Globe measurement key
+          hidden: true
+  - name: source_row_id
+    description: Stable raw-loader row identifier for the source record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_relation
+    description: Raw relation name that supplied this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source relation
+          hidden: false
+  - name: source
+    description: Upstream GLOBE source endpoint identifier.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: measurement_id
+    description: GLOBE identifier for the measurement record.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct measurement
+            description: Distinct `measurement_id` values by `protocol` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Measurement id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the measurement record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: protocol
+    description: GLOBE protocol used for the measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Protocol
+          hidden: false
+  - name: measured_date
+    description: Calendar date on which the measurement was taken.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Measured date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: created_at
+    description: Source timestamp when the measurement record was created.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Created at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: updated_at
+    description: Source timestamp when the measurement record was last updated.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: published_at
+    description: Source timestamp when the measurement was published.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Published at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: organization_id
+    description: GLOBE organization identifier associated with the measurement.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Organization id
+          hidden: false
+          format: '#,##0'
+  - name: organization_name
+    description: Name of the organization associated with the measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Organization name
+          hidden: false
+  - name: site_id
+    description: GLOBE site identifier where the measurement was made.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Site id
+          hidden: false
+          format: '#,##0'
+  - name: site_name
+    description: Human-readable GLOBE site name.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Site name
+          hidden: false
+  - name: country_name
+    description: Country name associated with the measurement site.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Country name
+          hidden: false
+  - name: country_code
+    description: Country code associated with the measurement site.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Country code
+          hidden: false
+  - name: latitude
+    description: Measurement site latitude in decimal degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: longitude
+    description: Measurement site longitude in decimal degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: elevation
+    description: Measurement site elevation in source units.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_elevation:
+            type: average
+            label: Mean site elevation
+            description: Average reported measurement-site elevation in the selected measurement-date
+              window. This is observation-weighted and describes sampled sites rather than all terrain.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Elevation
+          hidden: false
+          format: '#,##0.00'
+  - name: parent_measurement_id
+    description: Numeric parent or source identifier reported by GLOBE for the measurement.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Parent measurement id
+          hidden: false
+          format: '#,##0'
+  - name: measurement_data
+    description: Protocol-specific measurement attributes retained as structured JSON.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Measurement data
+          hidden: true
+          sql: CAST(${TABLE}.measurement_data AS VARCHAR)
+  - name: source_batch_id
+    description: Identifier of the raw load batch that supplied this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_load_id
+    description: Identifier of the load operation that inserted this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source load id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of this observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Sink partition date for the raw extract file.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when the extract run that produced this observation started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Stable hash of the original raw record content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

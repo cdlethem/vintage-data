@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_food_hygiene_ratings_manchester_rating_at_month
+          yRef:
+            field: fct_food_hygiene_ratings_manchester_avg_hygiene
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Rating at (Month)
+      yAxis:
+      - name: Average hygiene score
+    layout:
+      xField: fct_food_hygiene_ratings_manchester_rating_at_month
+      yField:
+      - fct_food_hygiene_ratings_manchester_avg_hygiene
+  type: cartesian
+description: Average non-null `hygiene_score` among businesses by their rating-event month. This is a
+  reported component score, not a pass rate — months without scored records are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_food_hygiene_ratings_manchester_rating_at_month
+  exploreName: fct_food_hygiene_ratings_manchester
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_food_hygiene_ratings_manchester_avg_hygiene
+  sorts:
+  - descending: false
+    fieldId: fct_food_hygiene_ratings_manchester_rating_at_month
+  tableCalculations: []
+name: Average hygiene component score per month
+slug: fct-food-hygiene-ratings-manchester-hygiene-score
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_food_hygiene_ratings_manchester_rating_at_month
+  - fct_food_hygiene_ratings_manchester_avg_hygiene
+tableName: fct_food_hygiene_ratings_manchester
+version: 1

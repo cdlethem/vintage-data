@@ -1,0 +1,42 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of Catalonia beach-status records. Each row is one beach status update
+  identified by the upstream source, beach id, and publisher status timestamp; repeated copies delivered
+  by later raw loads are reduced to the latest loaded record while source lineage is retained. Source
+  numeric fields are typed, the upstream -9999 wave-height sentinel is represented as null, and the source's
+  N/A UV value remains nullable.
+metricQuery:
+  dimensions: &id001
+  - fct_catalonia_beach_status_observed_at
+  - fct_catalonia_beach_status_beach_id
+  - fct_catalonia_beach_status_municipality_name
+  - fct_catalonia_beach_status_water_temperature
+  - fct_catalonia_beach_status_source_loaded_at
+  exploreName: fct_catalonia_beach_status
+  filters:
+    dimensions:
+      and:
+      - id: f732b62b-e4a0-58db-a04a-90205590bdde
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_catalonia_beach_status_observed_at
+        values:
+        - 30
+      id: 3e99b2b3-ec7b-5efc-ba8c-2a93eb272868
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_catalonia_beach_status_observed_at
+  tableCalculations: []
+name: Catalonia beach status — observations
+slug: fct-catalonia-beach-status-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_catalonia_beach_status
+version: 1

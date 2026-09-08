@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ema_medicine_shortage_first_published_date_month
+          yRef:
+            field: fct_ema_medicine_shortage_distinct_medicines
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: First published date (Month)
+      yAxis:
+      - name: Distinct affected medicines
+    layout:
+      xField: fct_ema_medicine_shortage_first_published_date_month
+      yField:
+      - fct_ema_medicine_shortage_distinct_medicines
+  type: cartesian
+description: Distinct non-null `medicine_affected` values by first-publication month. One medicine can
+  have multiple shortage records, so this line is not additive with the shortage count; months without
+  a publication are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_ema_medicine_shortage_first_published_date_month
+  exploreName: fct_ema_medicine_shortage
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ema_medicine_shortage_distinct_medicines
+  sorts:
+  - descending: false
+    fieldId: fct_ema_medicine_shortage_first_published_date_month
+  tableCalculations: []
+name: Affected medicines first published each month
+slug: fct-ema-medicine-shortage-published-medicines
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ema_medicine_shortage_first_published_date_month
+  - fct_ema_medicine_shortage_distinct_medicines
+tableName: fct_ema_medicine_shortage
+version: 1

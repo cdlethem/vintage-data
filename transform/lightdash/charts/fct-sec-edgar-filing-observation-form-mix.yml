@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_sec_edgar_filing_observation_filed_date_day
+          yRef:
+            field: fct_sec_edgar_filing_observation_distinct_filings
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Filed date (Day)
+      yAxis:
+      - name: Distinct filings
+    layout:
+      stack: true
+      xField: fct_sec_edgar_filing_observation_filed_date_day
+      yField:
+      - fct_sec_edgar_filing_observation_distinct_filings
+  type: cartesian
+description: Distinct accessions per filed day stacked by the eight largest form types. The remaining
+  form types are excluded rather than aggregated; stacked bars show the bursty mix without implying that
+  absent dates are zero.
+metricQuery:
+  dimensions:
+  - fct_sec_edgar_filing_observation_filed_date_day
+  - fct_sec_edgar_filing_observation_form_type
+  exploreName: fct_sec_edgar_filing_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sec_edgar_filing_observation_distinct_filings
+  sorts:
+  - descending: true
+    fieldId: fct_sec_edgar_filing_observation_distinct_filings
+  - descending: false
+    fieldId: fct_sec_edgar_filing_observation_filed_date_day
+  tableCalculations: []
+name: Filing mix by SEC form type and filed day
+pivotConfig:
+  columns:
+  - fct_sec_edgar_filing_observation_form_type
+slug: fct-sec-edgar-filing-observation-form-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sec_edgar_filing_observation_filed_date_day
+  - fct_sec_edgar_filing_observation_form_type
+  - fct_sec_edgar_filing_observation_distinct_filings
+tableName: fct_sec_edgar_filing_observation
+version: 1

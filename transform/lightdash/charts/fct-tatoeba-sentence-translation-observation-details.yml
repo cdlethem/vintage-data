@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical observation fact for Tatoeba sentence and translation records. Each row represents
+  one translation object attached to a source sentence at one extractor observation timestamp; sentence-level
+  attributes are repeated for each attached translation. The stable observation key combines the source,
+  sentence, translation, and observation timestamp, and raw-load lineage is retained for replay and audit.
+  A sentence observation with no translation objects contributes no child row to this fact.
+metricQuery:
+  dimensions: &id001
+  - fct_tatoeba_sentence_translation_observation_obs_a6ee05
+  - fct_tatoeba_sentence_translation_observation_sentence_id
+  - fct_tatoeba_sentence_translation_observation_sentence_language
+  - fct_tatoeba_sentence_translation_observation_sou_2059e1
+  exploreName: fct_tatoeba_sentence_translation_observation
+  filters:
+    dimensions:
+      and:
+      - id: a674b500-57f0-585d-bdb3-42c1e58655f3
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_tatoeba_sentence_translation_observation_obs_a6ee05
+        values:
+        - 30
+      id: 61511f5b-f54c-57b0-a209-1f892d4fb35e
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_tatoeba_sentence_translation_observation_obs_a6ee05
+  tableCalculations: []
+name: Tatoeba sentence translation observation — observations
+slug: fct-tatoeba-sentence-translation-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_tatoeba_sentence_translation_observation
+version: 1

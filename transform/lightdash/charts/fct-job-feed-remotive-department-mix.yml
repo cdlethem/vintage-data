@@ -1,0 +1,57 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_job_feed_remotive_posted_day
+          yRef:
+            field: fct_job_feed_remotive_distinct_companies
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted (Day)
+      yAxis:
+      - name: Distinct hiring company
+    layout:
+      stack: true
+      xField: fct_job_feed_remotive_posted_day
+      yField:
+      - fct_job_feed_remotive_distinct_companies
+  type: cartesian
+description: Distinct non-null `company` values per publisher posted day, stacked by the six largest `department`
+  values. The remainder is excluded rather than aggregated; repeated listings can recur, so this shows
+  observed mix rather than unique organizations over the full history. Posted days with no matching records
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_job_feed_remotive_posted_day
+  - fct_job_feed_remotive_department
+  exploreName: fct_job_feed_remotive
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_feed_remotive_distinct_companies
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_remotive_distinct_companies
+  - descending: false
+    fieldId: fct_job_feed_remotive_posted_day
+  tableCalculations: []
+name: Hiring-company mix by posting day and department
+pivotConfig:
+  columns:
+  - fct_job_feed_remotive_department
+slug: fct-job-feed-remotive-department-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_feed_remotive_posted_day
+  - fct_job_feed_remotive_department
+  - fct_job_feed_remotive_distinct_companies
+tableName: fct_job_feed_remotive
+version: 1

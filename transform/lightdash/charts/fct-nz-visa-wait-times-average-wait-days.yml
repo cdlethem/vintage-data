@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nz_visa_wait_times_observed_at_day
+          yRef:
+            field: fct_nz_visa_wait_times_average_average_wait_days
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed average wait days
+    layout:
+      xField: fct_nz_visa_wait_times_observed_at_day
+      yField:
+      - fct_nz_visa_wait_times_average_average_wait_days
+  type: cartesian
+description: Mean parsed `average_wait_days` by feed observation day. The current 25 rows contain no numeric
+  day or week conversions, so this series is empty rather than zero; the original text remains available
+  for interpretation.
+metricQuery:
+  dimensions:
+  - fct_nz_visa_wait_times_observed_at_day
+  exploreName: fct_nz_visa_wait_times
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nz_visa_wait_times_average_average_wait_days
+  sorts:
+  - descending: false
+    fieldId: fct_nz_visa_wait_times_observed_at_day
+  tableCalculations: []
+name: Average wait duration by observation day
+slug: fct-nz-visa-wait-times-average-wait-days
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nz_visa_wait_times_observed_at_day
+  - fct_nz_visa_wait_times_average_average_wait_days
+tableName: fct_nz_visa_wait_times
+version: 1

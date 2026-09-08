@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_queue_times_observed_at_day
+          yRef:
+            field: fct_queue_times_distinct_rides
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct rides
+    layout:
+      xField: fct_queue_times_observed_at_day
+      yField:
+      - fct_queue_times_distinct_rides
+  type: cartesian
+description: Distinct non-null `ride_id` values present in the feed on each observation day. The feed
+  republishes current ride status, so this is a catalogue level rather than a flow; days with no successful
+  extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_queue_times_observed_at_day
+  exploreName: fct_queue_times
+  filters:
+    dimensions:
+      and:
+      - id: 361815c6-95de-55bf-b5e4-58f6d8bd2eb9
+        operator: equals
+        target:
+          fieldId: fct_queue_times_is_open
+        values:
+        - true
+      id: d94e9c8c-b19f-565d-aae5-3422f7abf359
+  limit: 5000
+  metrics:
+  - fct_queue_times_distinct_rides
+  sorts:
+  - descending: false
+    fieldId: fct_queue_times_observed_at_day
+  tableCalculations: []
+name: Distinct rides reporting each day
+slug: fct-queue-times-rides-observed
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_queue_times_observed_at_day
+  - fct_queue_times_distinct_rides
+tableName: fct_queue_times
+version: 1

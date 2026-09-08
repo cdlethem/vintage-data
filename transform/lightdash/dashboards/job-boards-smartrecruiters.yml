@@ -1,0 +1,172 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 5d1e220a-d0dd-54b2-9705-07f528e30876
+    label: 'Job boards smartrecruiters: Company country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_smartrecruiters_company_country
+      tableName: fct_job_boards_smartrecruiters
+    values: []
+  - disabled: true
+    id: 27b10d6a-dea0-5af6-af42-19f43b46f778
+    label: 'Job boards smartrecruiters: Company industry'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_smartrecruiters_company_industry
+      tableName: fct_job_boards_smartrecruiters
+    values: []
+  - disabled: true
+    id: f92c3929-dde7-5e4a-b101-3f9f1565dcc5
+    label: 'Job boards smartrecruiters: Employment type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_smartrecruiters_employment_type
+      tableName: fct_job_boards_smartrecruiters
+    values: []
+  - disabled: true
+    id: 53ebe752-006c-57b7-acc4-53793cf626f8
+    label: 'Job boards smartrecruiters: Experience level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_smartrecruiters_experience_level
+      tableName: fct_job_boards_smartrecruiters
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Boards Smartrecruiters
+slug: job-boards-smartrecruiters
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of job observations returned by SmartRecruiters applicant-tracking-system
+      boards. Each row represents one upstream source, job identifier, and extractor observation timestamp;
+      repeated raw copies of an observation are reduced to the latest loaded lineage record while listing
+      attributes and load metadata remain available for audit and replay.
+
+
+      **Grain:** source, job_id, observed_at
+
+
+      **What changes here:** how the published SmartRecruiters catalogue and posting mix change across
+      companies and work arrangements.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_boards_smartrecruiters` — licence: public ATS board endpoints; attribution required: False.
+      Source configuration: `extract/sources/job_boards_smartrecruiters.yml`.'
+    hideFrame: false
+    title: Job boards smartrecruiters
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards smartrecruiters — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Jobs present in the catalogue per observation day
+    chartSlug: fct-job-boards-smartrecruiters-observed-jobs
+    hideTitle: false
+    title: Jobs present in the catalogue per observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Jobs posted per month
+    chartSlug: fct-job-boards-smartrecruiters-posted-jobs
+    hideTitle: false
+    title: Jobs posted per month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Hiring companies posting per month
+    chartSlug: fct-job-boards-smartrecruiters-posted-companies
+    hideTitle: false
+    title: Hiring companies posting per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Jobs posted per month by company country
+    chartSlug: fct-job-boards-smartrecruiters-postings-by-country
+    hideTitle: false
+    title: Jobs posted per month by company country
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Monthly posting mix by employment type
+    chartSlug: fct-job-boards-smartrecruiters-posting-mix-by-employment
+    hideTitle: false
+    title: Monthly posting mix by employment type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards smartrecruiters — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-boards-smartrecruiters
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Job boards smartrecruiters — observations
+    chartSlug: fct-job-boards-smartrecruiters-details
+    hideTitle: false
+    title: Job boards smartrecruiters — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

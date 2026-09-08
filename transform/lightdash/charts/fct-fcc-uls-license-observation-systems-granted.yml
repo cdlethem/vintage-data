@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_fcc_uls_license_observation_grant_date_month
+          yRef:
+            field: fct_fcc_uls_license_observation_distinct_systems
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Grant date (Month)
+      yAxis:
+      - name: Distinct universal systems
+    layout:
+      xField: fct_fcc_uls_license_observation_grant_date_month
+      yField:
+      - fct_fcc_uls_license_observation_distinct_systems
+  type: cartesian
+description: Distinct `universal_system_identifier` values by FCC `grant_date` month across the published
+  history. A system can hold multiple licenses, so this is not interchangeable with license count; absent
+  months are not zero.
+metricQuery:
+  dimensions:
+  - fct_fcc_uls_license_observation_grant_date_month
+  exploreName: fct_fcc_uls_license_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_fcc_uls_license_observation_distinct_systems
+  sorts:
+  - descending: false
+    fieldId: fct_fcc_uls_license_observation_grant_date_month
+  tableCalculations: []
+name: Universal systems granted per month
+slug: fct-fcc-uls-license-observation-systems-granted
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_fcc_uls_license_observation_grant_date_month
+  - fct_fcc_uls_license_observation_distinct_systems
+tableName: fct_fcc_uls_license_observation
+version: 1

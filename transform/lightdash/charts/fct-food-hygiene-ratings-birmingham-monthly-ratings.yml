@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_food_hygiene_ratings_birmingham_rating_date_month
+          yRef:
+            field: fct_food_hygiene_ratings_birmingham_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Rating date (Month)
+      yAxis:
+      - name: Distinct business
+    layout:
+      xField: fct_food_hygiene_ratings_birmingham_rating_date_month
+      yField:
+      - fct_food_hygiene_ratings_birmingham_distinct_entities
+  type: cartesian
+description: Distinct `business_id` values by publisher `rating_date` month across the full observed history.
+  This is a rating-event flow; months without a rating are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_food_hygiene_ratings_birmingham_rating_date_month
+  exploreName: fct_food_hygiene_ratings_birmingham
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_food_hygiene_ratings_birmingham_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_food_hygiene_ratings_birmingham_rating_date_month
+  tableCalculations: []
+name: Businesses rated per month
+slug: fct-food-hygiene-ratings-birmingham-monthly-ratings
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_food_hygiene_ratings_birmingham_rating_date_month
+  - fct_food_hygiene_ratings_birmingham_distinct_entities
+tableName: fct_food_hygiene_ratings_birmingham
+version: 1

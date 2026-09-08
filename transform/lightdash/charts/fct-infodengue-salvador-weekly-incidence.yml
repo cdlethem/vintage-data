@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_infodengue_salvador_week_start_date_week
+          yRef:
+            field: fct_infodengue_salvador_average_incidence_per_100k
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Week start date (Week)
+      yAxis:
+      - name: Mean observed incidence per 100k
+    layout:
+      xField: fct_infodengue_salvador_week_start_date_week
+      yField:
+      - fct_infodengue_salvador_average_incidence_per_100k
+  type: cartesian
+description: Mean reported `incidence_per_100k` for each epidemiological week across the published history.
+  Equal row weighting can reflect polling and revision patterns, so this is not a population-weighted
+  rate; missing weeks are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_infodengue_salvador_week_start_date_week
+  exploreName: fct_infodengue_salvador
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_infodengue_salvador_average_incidence_per_100k
+  sorts:
+  - descending: false
+    fieldId: fct_infodengue_salvador_week_start_date_week
+  tableCalculations: []
+name: Mean incidence per 100k by epidemiological week
+slug: fct-infodengue-salvador-weekly-incidence
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_infodengue_salvador_week_start_date_week
+  - fct_infodengue_salvador_average_incidence_per_100k
+tableName: fct_infodengue_salvador
+version: 1

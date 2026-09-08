@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ripe_ris_live_bgp_update_bgp_observed_at_day
+          yRef:
+            field: fct_ripe_ris_live_bgp_update_distinct_updates
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Bgp observed at (Day)
+      yAxis:
+      - name: Distinct BGP updates
+    layout:
+      xField: fct_ripe_ris_live_bgp_update_bgp_observed_at_day
+      yField:
+      - fct_ripe_ris_live_bgp_update_distinct_updates
+  type: cartesian
+description: Distinct non-null `update_id` values per day of the source `bgp_observed_at` timestamp. This
+  is an event flow, not a collection level; the two early event dates and any date without source updates
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_ripe_ris_live_bgp_update_bgp_observed_at_day
+  exploreName: fct_ripe_ris_live_bgp_update
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ripe_ris_live_bgp_update_distinct_updates
+  sorts:
+  - descending: false
+    fieldId: fct_ripe_ris_live_bgp_update_bgp_observed_at_day
+  tableCalculations: []
+name: BGP updates per source event day
+slug: fct-ripe-ris-live-bgp-update-updates-by-event-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ripe_ris_live_bgp_update_bgp_observed_at_day
+  - fct_ripe_ris_live_bgp_update_distinct_updates
+tableName: fct_ripe_ris_live_bgp_update
+version: 1

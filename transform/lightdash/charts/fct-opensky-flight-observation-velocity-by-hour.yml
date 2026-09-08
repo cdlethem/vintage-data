@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_opensky_flight_observation_observed_at_hour
+          yRef:
+            field: fct_opensky_flight_observation_average_velocity_m_s
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Mean observed velocity m s
+    layout:
+      xField: fct_opensky_flight_observation_observed_at_hour
+      yField:
+      - fct_opensky_flight_observation_average_velocity_m_s
+  type: cartesian
+description: Observation-weighted mean `velocity_m_s` in metres per second by snapshot hour. Null velocities
+  do not contribute and repeated snapshots can weight aircraft unevenly; this is not an additive traffic
+  total.
+metricQuery:
+  dimensions:
+  - fct_opensky_flight_observation_observed_at_hour
+  exploreName: fct_opensky_flight_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_opensky_flight_observation_average_velocity_m_s
+  sorts:
+  - descending: false
+    fieldId: fct_opensky_flight_observation_observed_at_hour
+  tableCalculations: []
+name: Mean reported velocity by hour
+slug: fct-opensky-flight-observation-velocity-by-hour
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_opensky_flight_observation_observed_at_hour
+  - fct_opensky_flight_observation_average_velocity_m_s
+tableName: fct_opensky_flight_observation
+version: 1

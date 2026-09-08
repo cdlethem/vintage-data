@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_irs_exempt_organizations_publisher_updated_at_day
+          yRef:
+            field: fct_irs_exempt_organizations_average_income
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Publisher updated at (Day)
+      yAxis:
+      - name: Average reported income
+    layout:
+      xField: fct_irs_exempt_organizations_publisher_updated_at_day
+      yField:
+      - fct_irs_exempt_organizations_average_income
+  type: cartesian
+description: Average non-null `income_amount` in US dollars by the eight largest subsection codes on the
+  publisher update day. The publisher timestamp has one observed day, so this compares classifications
+  within a gauge rather than a historical flow; other codes are excluded rather than aggregated.
+metricQuery:
+  dimensions:
+  - fct_irs_exempt_organizations_publisher_updated_at_day
+  - fct_irs_exempt_organizations_subsection_code
+  exploreName: fct_irs_exempt_organizations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_irs_exempt_organizations_average_income
+  sorts:
+  - descending: true
+    fieldId: fct_irs_exempt_organizations_average_income
+  - descending: false
+    fieldId: fct_irs_exempt_organizations_publisher_updated_at_day
+  tableCalculations: []
+name: Average income by subsection
+pivotConfig:
+  columns:
+  - fct_irs_exempt_organizations_subsection_code
+slug: fct-irs-exempt-organizations-organizations-by-subsection
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_irs_exempt_organizations_publisher_updated_at_day
+  - fct_irs_exempt_organizations_subsection_code
+  - fct_irs_exempt_organizations_average_income
+tableName: fct_irs_exempt_organizations
+version: 1

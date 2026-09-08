@@ -1,0 +1,172 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Week
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: b0deac08-e75f-5884-8d88-3482da313d4c
+    label: 'Infodengue riodejaneiro epidemiology: Alert level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_riodejaneiro_epidemiology_alert_level
+      tableName: fct_infodengue_riodejaneiro_epidemiology
+    values: []
+  - disabled: true
+    id: 8783878e-6931-5f95-a0ea-17e3114abd7b
+    label: 'Infodengue riodejaneiro epidemiology: Receptive status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_riodejaneiro_epidemiology_receptive_status
+      tableName: fct_infodengue_riodejaneiro_epidemiology
+    values: []
+  - disabled: true
+    id: f3bbbab2-b937-5036-9dd2-cd5372bf5d82
+    label: 'Infodengue riodejaneiro epidemiology: Transmission status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_riodejaneiro_epidemiology_transmission_status
+      tableName: fct_infodengue_riodejaneiro_epidemiology
+    values: []
+  - disabled: true
+    id: 7c3968ff-1cd9-56e5-9065-e19ed070e5d6
+    label: 'Infodengue riodejaneiro epidemiology: Incidence level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_riodejaneiro_epidemiology_incidence_level
+      tableName: fct_infodengue_riodejaneiro_epidemiology
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Infodengue Riodejaneiro
+slug: infodengue-riodejaneiro
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of Rio de Janeiro epidemiological surveillance observations from
+      the InfoDengue city-alerts feed. The table retains one row at the source relation and provider record
+      identifier grain, chooses the latest loaded replay for each identifier, preserves raw-load lineage,
+      and converts provider measures to stable analytical types. Source values are not imputed or otherwise
+      reinterpreted.
+
+
+      **Grain:** source_relation, record_id
+
+
+      **What changes here:** Weekly epidemiological estimates show how Rio de Janeiro''s burden changes,
+      while alert and transmission statuses explain the shifts.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `infodengue_riodejaneiro` — see dbt raw-source lineage.'
+    hideFrame: false
+    title: Infodengue riodejaneiro epidemiology
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Infodengue riodejaneiro epidemiology — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct epidemiological observations per week
+    chartSlug: fct-infodengue-riodejaneiro-epidemiology-weekly-observations
+    hideTitle: false
+    title: Distinct epidemiological observations per week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean estimated cases by epidemiological week
+    chartSlug: fct-infodengue-riodejaneiro-epidemiology-weekly-cases-estimate
+    hideTitle: false
+    title: Mean estimated cases by epidemiological week
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean incidence per 100k by epidemiological week
+    chartSlug: fct-infodengue-riodejaneiro-epidemiology-weekly-incidence
+    hideTitle: false
+    title: Mean incidence per 100k by epidemiological week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean estimated cases by alert level
+    chartSlug: fct-infodengue-riodejaneiro-epidemiology-cases-by-alert-level
+    hideTitle: false
+    title: Mean estimated cases by alert level
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Mean estimated cases by transmission status
+    chartSlug: fct-infodengue-riodejaneiro-epidemiology-cases-by-transmission
+    hideTitle: false
+    title: Mean estimated cases by transmission status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Infodengue riodejaneiro epidemiology — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed incidence per 100k by municipality name
+    chartSlug: fct-infodengue-riodejaneiro-epidemiology
+    hideTitle: false
+    title: Mean observed incidence per 100k by municipality name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Infodengue riodejaneiro epidemiology — observations
+    chartSlug: fct-infodengue-riodejaneiro-epidemiology-details
+    hideTitle: false
+    title: Infodengue riodejaneiro epidemiology — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

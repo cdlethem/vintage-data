@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_queensland_hospital_observation_observed_at_day
+          yRef:
+            field: fct_queensland_hospital_observation_avg_patients_waiting
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean patients waiting
+    layout:
+      xField: fct_queensland_hospital_observation_observed_at_day
+      yField:
+      - fct_queensland_hospital_observation_avg_patients_waiting
+  type: cartesian
+description: Mean non-null `patients_waiting` across hospital snapshots on each observation day. This
+  is a current-state level rather than an additive count; missing or non-numeric source values and absent
+  observation days are not treated as zero.
+metricQuery:
+  dimensions:
+  - fct_queensland_hospital_observation_observed_at_day
+  exploreName: fct_queensland_hospital_observation
+  filters:
+    dimensions:
+      and:
+      - id: afabdbfe-4de8-501e-9dad-efe57207743f
+        operator: equals
+        target:
+          fieldId: fct_queensland_hospital_observation_live_data_available
+        values:
+        - true
+      id: 7bc31474-e458-5435-8a6f-0f1bdc474feb
+  limit: 5000
+  metrics:
+  - fct_queensland_hospital_observation_avg_patients_waiting
+  sorts:
+  - descending: false
+    fieldId: fct_queensland_hospital_observation_observed_at_day
+  tableCalculations: []
+name: Mean patients waiting per day
+slug: fct-queensland-hospital-observation-patients-waiting
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_queensland_hospital_observation_observed_at_day
+  - fct_queensland_hospital_observation_avg_patients_waiting
+tableName: fct_queensland_hospital_observation
+version: 1

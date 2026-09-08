@@ -1,0 +1,65 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_catsa_wait_times_observed_at_hour
+          yRef:
+            field: fct_catsa_wait_times_observations
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Checkpoint observations
+    layout:
+      stack: true
+      xField: fct_catsa_wait_times_observed_at_hour
+      yField:
+      - fct_catsa_wait_times_observations
+  type: cartesian
+description: Distinct retained observation keys per `observed_at` hour stacked by `wait_time_available`.
+  Bar height is the number of checkpoint reports and segment height shows availability, not minutes waited;
+  hours with no poll are absent.
+metricQuery:
+  dimensions:
+  - fct_catsa_wait_times_observed_at_hour
+  - fct_catsa_wait_times_wait_time_available
+  exploreName: fct_catsa_wait_times
+  filters:
+    dimensions:
+      and:
+      - id: baf183fc-1196-5eda-8f2b-db864c797579
+        operator: equals
+        target:
+          fieldId: fct_catsa_wait_times_wait_time_available
+        values:
+        - true
+      id: 9654500c-922f-5c78-b456-4ede0bdb48cd
+  limit: 5000
+  metrics:
+  - fct_catsa_wait_times_observations
+  sorts:
+  - descending: true
+    fieldId: fct_catsa_wait_times_observations
+  - descending: false
+    fieldId: fct_catsa_wait_times_observed_at_hour
+  tableCalculations: []
+name: Available and unavailable reports by hour
+pivotConfig:
+  columns:
+  - fct_catsa_wait_times_wait_time_available
+slug: fct-catsa-wait-times-availability-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_catsa_wait_times_observed_at_hour
+  - fct_catsa_wait_times_wait_time_available
+  - fct_catsa_wait_times_observations
+tableName: fct_catsa_wait_times
+version: 1

@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_open_library_change_event_timestamp_day
+          yRef:
+            field: fct_open_library_change_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event timestamp (Day)
+      yAxis:
+      - name: Distinct change
+    layout:
+      xField: fct_open_library_change_event_timestamp_day
+      yField:
+      - fct_open_library_change_distinct_entities
+  type: cartesian
+description: Distinct `change_id` values per event day split across the eight most common `change_kind`
+  values. Remaining kinds are excluded rather than aggregated, so the lines compare the dominant operation
+  flows without implying that the remainder is zero.
+metricQuery:
+  dimensions:
+  - fct_open_library_change_event_timestamp_day
+  - fct_open_library_change_change_kind
+  exploreName: fct_open_library_change
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_open_library_change_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_open_library_change_distinct_entities
+  - descending: false
+    fieldId: fct_open_library_change_event_timestamp_day
+  tableCalculations: []
+name: Leading change kinds by event day
+pivotConfig:
+  columns:
+  - fct_open_library_change_change_kind
+slug: fct-open-library-change-changes-by-kind
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_open_library_change_event_timestamp_day
+  - fct_open_library_change_change_kind
+  - fct_open_library_change_distinct_entities
+tableName: fct_open_library_change
+version: 1

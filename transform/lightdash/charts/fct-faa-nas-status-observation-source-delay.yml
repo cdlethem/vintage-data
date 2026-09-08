@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_faa_nas_status_observation_source_timestamp_hour
+          yRef:
+            field: fct_faa_nas_status_observation_average_ground_delay_avg_min
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Source timestamp (Hour)
+      yAxis:
+      - name: Mean observed ground delay avg min
+    layout:
+      xField: fct_faa_nas_status_observation_source_timestamp_hour
+      yField:
+      - fct_faa_nas_status_observation_average_ground_delay_avg_min
+  type: cartesian
+description: Average non-null FAA `ground_delay_avg_min` in each source timestamp hour. This is an observation-weighted
+  reported measure, not an additive total; rows without source timestamps are excluded and absent hours
+  are not zero.
+metricQuery:
+  dimensions:
+  - fct_faa_nas_status_observation_source_timestamp_hour
+  exploreName: fct_faa_nas_status_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_faa_nas_status_observation_average_ground_delay_avg_min
+  sorts:
+  - descending: false
+    fieldId: fct_faa_nas_status_observation_source_timestamp_hour
+  tableCalculations: []
+name: Mean reported ground delay by source hour
+slug: fct-faa-nas-status-observation-source-delay
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_faa_nas_status_observation_source_timestamp_hour
+  - fct_faa_nas_status_observation_average_ground_delay_avg_min
+tableName: fct_faa_nas_status_observation
+version: 1

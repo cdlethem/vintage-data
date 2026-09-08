@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_food_alert_observation_created_date_week
+          yRef:
+            field: fct_uk_food_alert_observation_distinct_reporting_business
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created date (Week)
+      yAxis:
+      - name: Distinct reporting businesses
+    layout:
+      xField: fct_uk_food_alert_observation_created_date_week
+      yField:
+      - fct_uk_food_alert_observation_distinct_reporting_business
+  type: cartesian
+description: Distinct non-null `reporting_business` values among alerts by `created_date` week. This measures
+  the breadth of businesses named in newly created notices, not the number of alerts; weeks with no notices
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_uk_food_alert_observation_created_date_week
+  exploreName: fct_uk_food_alert_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_uk_food_alert_observation_distinct_reporting_business
+  sorts:
+  - descending: false
+    fieldId: fct_uk_food_alert_observation_created_date_week
+  tableCalculations: []
+name: Reporting businesses named each week
+slug: fct-uk-food-alert-observation-businesses-named-weekly
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_food_alert_observation_created_date_week
+  - fct_uk_food_alert_observation_distinct_reporting_business
+tableName: fct_uk_food_alert_observation
+version: 1

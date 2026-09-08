@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_zenodo_record_observation_resource_type
+          yRef:
+            field: fct_zenodo_record_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_zenodo_record_observation_resource_type
+      yField:
+      - fct_zenodo_record_observation_distinct_entities
+  type: cartesian
+description: Distinct `record_id` values by `resource_type` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_zenodo_record_observation_resource_type
+  exploreName: fct_zenodo_record_observation
+  filters:
+    dimensions:
+      and:
+      - id: d7496e75-8f3b-5bb1-9f09-46c7c4e9430f
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_zenodo_record_observation_observed_at
+        values:
+        - 30
+      id: b7f34292-35c4-54f2-8765-beffb4b17482
+  limit: 20
+  metrics:
+  - fct_zenodo_record_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_zenodo_record_observation_distinct_entities
+  tableCalculations: []
+name: Distinct record by resource type
+slug: fct-zenodo-record-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_zenodo_record_observation_resource_type
+  - fct_zenodo_record_observation_distinct_entities
+tableName: fct_zenodo_record_observation
+version: 1

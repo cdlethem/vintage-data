@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_malaysia_blood_donations_state
+          yRef:
+            field: fct_malaysia_blood_donations_average_donation_count
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_malaysia_blood_donations_state
+      yField:
+      - fct_malaysia_blood_donations_average_donation_count
+  type: cartesian
+description: Mean observed donation count by `state` in the selected observation window. Number of donations
+  reported for the state, blood type, and donation date. Each retained observation has equal weight; polling
+  frequency and repeated snapshots can affect the mean. This is not a latest-value measure or an additive
+  total.
+metricQuery:
+  dimensions:
+  - fct_malaysia_blood_donations_state
+  exploreName: fct_malaysia_blood_donations
+  filters:
+    dimensions:
+      and:
+      - id: b4fba286-57f1-5fcd-aac2-644027e04244
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_malaysia_blood_donations_fetched_at
+        values:
+        - 30
+      id: 525176c6-c344-5d33-8a3c-a32708d255ee
+  limit: 20
+  metrics:
+  - fct_malaysia_blood_donations_average_donation_count
+  sorts:
+  - descending: true
+    fieldId: fct_malaysia_blood_donations_average_donation_count
+  tableCalculations: []
+name: Mean observed donation count by state
+slug: fct-malaysia-blood-donations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_malaysia_blood_donations_state
+  - fct_malaysia_blood_donations_average_donation_count
+tableName: fct_malaysia_blood_donations
+version: 1

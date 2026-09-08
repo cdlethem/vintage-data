@@ -1,0 +1,30 @@
+name: analytics_engineer
+description: plan one governed mart, semantic metadata, or visualization implementation
+schedule: "27 */4 * * *"
+runtime_estimate_minutes: 45
+enabled: true
+model: analytics_cli
+prompt: prompt.md
+timeout_minutes: 45
+context_budget_minutes: 10
+model_budget_minutes: 30
+cleanup_margin_seconds: 180
+capacity_policy: skip
+retry_on: [transient]
+freshness_sla_minutes: 1440
+requires_capabilities: [repository_execute]
+context:
+  ANALYTICS_CONTEXT:
+    command: ["orchestration/.venv/bin/python", "bots/agent_context.py", "analytics", "--compact"]
+    cwd: .
+    timeout_s: 600
+triggers: []
+gate:
+  context: ANALYTICS_CONTEXT
+  path: backlog_count
+  operator: equals
+  value: 0
+  reason_code: no_analytics_work
+output:
+  format: json
+  schema: analytics_engineer_v2

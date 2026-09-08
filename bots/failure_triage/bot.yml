@@ -1,0 +1,29 @@
+name: failure_triage
+description: classify non-bot failures and propose bounded work
+schedule: "7 * * * *"
+enabled: true
+model: triage_cli
+prompt: prompt.md
+timeout_minutes: 30
+context_budget_minutes: 5
+model_budget_minutes: 20
+cleanup_margin_seconds: 180
+capacity_policy: skip
+retry_on: [transient]
+freshness_sla_minutes: 90
+requires_capabilities: [repository_execute]
+context:
+  FAILURE_CONTEXT:
+    command: ["orchestration/.venv/bin/python", "bots/agent_context.py", "failures", "--window-hours", "24"]
+    cwd: .
+    timeout_s: 300
+triggers: []
+gate:
+  context: FAILURE_CONTEXT
+  path: failure_count
+  operator: equals
+  value: 0
+  reason_code: no_pipeline_failures
+output:
+  format: json
+  schema: failure_triage_v2

@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_thames_discharge_status_changed_at_month
+          yRef:
+            field: fct_thames_discharge_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Status changed at (Month)
+      yAxis:
+      - name: Distinct discharge
+    layout:
+      xField: fct_thames_discharge_status_changed_at_month
+      yField:
+      - fct_thames_discharge_distinct_entities
+  type: cartesian
+description: Distinct `discharge_id` values by source `status_changed_at` month for the six largest receiving
+  watercourses. Smaller watercourses are excluded rather than aggregated; sparse event months should not
+  be read as zero activity elsewhere.
+metricQuery:
+  dimensions:
+  - fct_thames_discharge_status_changed_at_month
+  - fct_thames_discharge_receiving_watercourse
+  exploreName: fct_thames_discharge
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_thames_discharge_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_thames_discharge_distinct_entities
+  - descending: false
+    fieldId: fct_thames_discharge_status_changed_at_month
+  tableCalculations: []
+name: Status changes by receiving watercourse
+pivotConfig:
+  columns:
+  - fct_thames_discharge_receiving_watercourse
+slug: fct-thames-discharge-watercourse-breakdown
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_thames_discharge_status_changed_at_month
+  - fct_thames_discharge_receiving_watercourse
+  - fct_thames_discharge_distinct_entities
+tableName: fct_thames_discharge
+version: 1

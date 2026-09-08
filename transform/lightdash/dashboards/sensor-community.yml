@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 459da6cc-6292-50cc-9d5b-84e582139520
+    label: 'Sensor community measurement: Country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sensor_community_measurement_country
+      tableName: fct_sensor_community_measurement
+    values: []
+  - disabled: true
+    id: 51b1da47-3515-554c-950a-37ff1f03ea95
+    label: 'Sensor community measurement: Sensor type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sensor_community_measurement_sensor_type
+      tableName: fct_sensor_community_measurement
+    values: []
+  - disabled: true
+    id: 73724864-dbb3-5674-8273-184c6d236ec9
+    label: 'Sensor community measurement: Manufacturer'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sensor_community_measurement_manufacturer
+      tableName: fct_sensor_community_measurement
+    values: []
+  - disabled: true
+    id: b63613d7-8655-527f-adde-03e7e78be4a3
+    label: 'Sensor community measurement: Is indoor'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sensor_community_measurement_is_indoor
+      tableName: fct_sensor_community_measurement
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Sensor Community
+slug: sensor-community
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Incremental physical history of measurements published by Sensor Community. Each row represents
+      one sensor at one measurement timestamp. Repeated snapshots from the insert-only raw feed are reduced
+      to the latest loaded copy for the sensor and timestamp, while the source metadata, typed common
+      measurements, original values, and load lineage remain available for audit and replay.
+
+
+      **Grain:** source_name, sensor_id, observed_at
+
+
+      **What changes here:** how reporting coverage and particulate levels move across daily sensor observations.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `sensor_community` — licence: Sensor.Community — public, attribution via User-Agent contact; attribution
+      required: False. Source configuration: `extract/sources/sensor_community.yml`.'
+    hideFrame: false
+    title: Sensor community measurement
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Sensor community measurement — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct reporting sensors by observation day
+    chartSlug: fct-sensor-community-measurement-sensor-coverage
+    hideTitle: false
+    title: Distinct reporting sensors by observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean observed PM2.5 by observation day
+    chartSlug: fct-sensor-community-measurement-pm25-level
+    hideTitle: false
+    title: Mean observed PM2.5 by observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: PM2.5 mix across the largest countries
+    chartSlug: fct-sensor-community-measurement-country-pm25
+    hideTitle: false
+    title: PM2.5 mix across the largest countries
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Distinct sensors fetched by sensor type
+    chartSlug: fct-sensor-community-measurement-sensor-type-fetches
+    hideTitle: false
+    title: Distinct sensors fetched by sensor type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Sensor community measurement — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed pm25 by country
+    chartSlug: fct-sensor-community-measurement
+    hideTitle: false
+    title: Mean observed pm25 by country
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Sensor community measurement — observations
+    chartSlug: fct-sensor-community-measurement-details
+    hideTitle: false
+    title: Sensor community measurement — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

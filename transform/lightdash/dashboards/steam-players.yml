@@ -1,0 +1,142 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 47aab601-90eb-5d79-8fcb-4a10ceb30ddf
+    label: 'Steam player observation: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_steam_player_observation_source
+      tableName: fct_steam_player_observation
+    values: []
+  - disabled: true
+    id: a1c7b703-2070-52d4-b3f2-c3a08b552fa2
+    label: 'Steam player observation: Request succeeded'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_steam_player_observation_request_succeeded
+      tableName: fct_steam_player_observation
+    values: []
+  - disabled: true
+    id: 2c8502df-a4a6-521a-844e-b3b7602bd9b8
+    label: 'Steam player observation: Concurrent player count'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_steam_player_observation_concurrent_player_count
+      tableName: fct_steam_player_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Steam Players
+slug: steam-players
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical history of concurrent Steam player counts. Each row represents one
+      game at one Steam feed observation timestamp for the source, retaining the request status, player
+      count, and raw-load lineage. Repeated insert-only raw records for the same source, game, and observation
+      time are reduced to the latest loaded copy.
+
+
+      **Grain:** source, game_id, observed_at
+
+
+      **What changes here:** how the monitored Steam games'' player levels rise and fall across each observation
+      day.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `steam_players` — licence: unstated; attribution required: False. Source configuration: `extract/sources/steam_players.yml`.'
+    hideFrame: false
+    title: Steam player observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Steam player observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean concurrent players by observation day
+    chartSlug: fct-steam-player-observation-player-level
+    hideTitle: false
+    title: Mean concurrent players by observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Monitored game count by observation day
+    chartSlug: fct-steam-player-observation-monitored-games
+    hideTitle: false
+    title: Monitored game count by observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean concurrent players by game
+    chartSlug: fct-steam-player-observation-game-player-levels
+    hideTitle: false
+    title: Mean concurrent players by game
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 1
+  properties:
+    showDivider: true
+    text: Steam player observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Mean observed concurrent player count by game id
+    chartSlug: fct-steam-player-observation
+    hideTitle: false
+    title: Mean observed concurrent player count by game id
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 28
+- h: 10
+  properties:
+    chartName: Steam player observation — observations
+    chartSlug: fct-steam-player-observation-details
+    hideTitle: false
+    title: Steam player observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 28
+version: 1

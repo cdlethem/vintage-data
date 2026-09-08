@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 1715f218-290b-57b2-b0dd-dcd51b00d641
+    label: 'Job boards workday: Company country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_workday_company_country
+      tableName: fct_job_boards_workday
+    values: []
+  - disabled: true
+    id: d48c0f44-d881-53b6-98d3-f9691fadcb84
+    label: 'Job boards workday: Company industry'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_workday_company_industry
+      tableName: fct_job_boards_workday
+    values: []
+  - disabled: true
+    id: 0e9ac971-a5a4-5b91-8296-f3820fd7b166
+    label: 'Job boards workday: Location country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_workday_location_country
+      tableName: fct_job_boards_workday
+    values: []
+  - disabled: true
+    id: 076c0d66-9bca-56f3-a831-428f7c082f2b
+    label: 'Job boards workday: Posted'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_workday_posted
+      tableName: fct_job_boards_workday
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Boards Workday
+slug: job-boards-workday
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of job observations returned by Workday-hosted recruiting boards.
+      Each row represents one source, job identifier, and extractor observation timestamp; repeated raw
+      copies of an observation are reduced to the latest loaded lineage record while listing attributes
+      and load metadata remain available for audit and replay. A table is used because the profiled source
+      contains 218,150 rows and is rebuilt daily as a bounded, complete history.
+
+
+      **Grain:** source, job_id, observed_at
+
+
+      **What changes here:** how the Workday catalogue level varies by company geography and industry
+      across observed days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_boards_workday` — licence: public ATS board endpoints; attribution required: False. Source
+      configuration: `extract/sources/job_boards_workday.yml`.'
+    hideFrame: false
+    title: Job boards workday
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards workday — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct jobs observed per day
+    chartSlug: fct-job-boards-workday-jobs-observed
+    hideTitle: false
+    title: Distinct jobs observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Hiring companies observed per day
+    chartSlug: fct-job-boards-workday-companies-observed
+    hideTitle: false
+    title: Hiring companies observed per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct jobs by company country
+    chartSlug: fct-job-boards-workday-jobs-by-country
+    hideTitle: false
+    title: Distinct jobs by company country
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Catalogue mix by company industry
+    chartSlug: fct-job-boards-workday-jobs-by-industry
+    hideTitle: false
+    title: Catalogue mix by company industry
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards workday — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-boards-workday
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Job boards workday — observations
+    chartSlug: fct-job-boards-workday-details
+    hideTitle: false
+    title: Job boards workday — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_imdb_processing_times_processing_type
+          yRef:
+            field: fct_imdb_processing_times_average_queue_age_days
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_imdb_processing_times_processing_type
+      yField:
+      - fct_imdb_processing_times_average_queue_age_days
+  type: cartesian
+description: Mean observed queue age days by `processing_type` in the selected observation window. Calendar
+  days between the oldest waiting item and the observation date. Each retained observation has equal weight;
+  polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure or
+  an additive total.
+metricQuery:
+  dimensions:
+  - fct_imdb_processing_times_processing_type
+  exploreName: fct_imdb_processing_times
+  filters:
+    dimensions:
+      and:
+      - id: b74fb199-7c37-5f47-97f6-2cf2fc30c668
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_imdb_processing_times_observed_at
+        values:
+        - 30
+      id: 065bbd8a-1698-59b5-ba20-7c60667d8d64
+  limit: 20
+  metrics:
+  - fct_imdb_processing_times_average_queue_age_days
+  sorts:
+  - descending: true
+    fieldId: fct_imdb_processing_times_average_queue_age_days
+  tableCalculations: []
+name: Mean observed queue age days by processing type
+slug: fct-imdb-processing-times
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_imdb_processing_times_processing_type
+  - fct_imdb_processing_times_average_queue_age_days
+tableName: fct_imdb_processing_times
+version: 1

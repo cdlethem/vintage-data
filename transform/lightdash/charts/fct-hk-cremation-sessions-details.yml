@@ -1,0 +1,42 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical observation fact for the Hong Kong Food and Environmental Hygiene Department
+  cremation-session availability page. Each row records one crematorium and service date in one extractor
+  snapshot, retaining the published availability state, daily total, publisher update time, and raw load
+  lineage. Repeated copies of the same source, session identifier, and observation timestamp retain the
+  latest loaded row.
+metricQuery:
+  dimensions: &id001
+  - fct_hk_cremation_sessions_observed_at
+  - fct_hk_cremation_sessions_session_id
+  - fct_hk_cremation_sessions_crematorium
+  - fct_hk_cremation_sessions_available_sessions
+  - fct_hk_cremation_sessions_source_loaded_at
+  exploreName: fct_hk_cremation_sessions
+  filters:
+    dimensions:
+      and:
+      - id: ea126f3f-ee47-5110-ad3e-b2f588bfec1f
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_hk_cremation_sessions_observed_at
+        values:
+        - 30
+      id: 2fcf9088-0f97-5aaa-baa0-a243a9d5d604
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_hk_cremation_sessions_observed_at
+  tableCalculations: []
+name: Hk cremation sessions — observations
+slug: fct-hk-cremation-sessions-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_hk_cremation_sessions
+version: 1

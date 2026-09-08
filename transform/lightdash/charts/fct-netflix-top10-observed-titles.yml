@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_netflix_top10_fetched_at_day
+          yRef:
+            field: fct_netflix_top10_distinct_titles
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Distinct titles
+    layout:
+      xField: fct_netflix_top10_fetched_at_day
+      yField:
+      - fct_netflix_top10_distinct_titles
+  type: cartesian
+description: Distinct `title_id` values present in each daily Netflix fetch. This is a snapshot level
+  of the published Top 10 feed, not a flow of new titles; days without a successful fetch are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_netflix_top10_fetched_at_day
+  exploreName: fct_netflix_top10
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_netflix_top10_distinct_titles
+  sorts:
+  - descending: false
+    fieldId: fct_netflix_top10_fetched_at_day
+  tableCalculations: []
+name: Distinct titles per fetch day
+slug: fct-netflix-top10-observed-titles
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_netflix_top10_fetched_at_day
+  - fct_netflix_top10_distinct_titles
+tableName: fct_netflix_top10
+version: 1

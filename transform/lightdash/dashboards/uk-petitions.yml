@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Week
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 96296add-da94-550d-a5b2-837abdc127dc
+    label: 'Uk petitions: State'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_petitions_state
+      tableName: fct_uk_petitions
+    values: []
+  - disabled: true
+    id: cb7aa741-bb97-5c81-b5d9-ef685c826d5b
+    label: 'Uk petitions: Action'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_petitions_action
+      tableName: fct_uk_petitions
+    values: []
+  - disabled: true
+    id: 412ab6ef-1219-5c7d-a3fb-cfa7652b93a1
+    label: 'Uk petitions: Record type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_petitions_record_type
+      tableName: fct_uk_petitions
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Uk Petitions
+slug: uk-petitions
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical observations of UK Parliament petitions. Each row is one petition at one
+      upstream fetch timestamp, retaining the publisher''s scalar petition attributes, nested response
+      metadata, and raw loader lineage. Repeated loads of the same petition and timestamp are reduced
+      to the latest loader row, while distinct fetch timestamps remain historical observations.
+
+
+      **Grain:** source_relation, petition_id, observed_at
+
+
+      **What changes here:** petition creation and signature momentum move alongside threshold events
+      over time.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `uk_petitions` — licence: Parliament reuse terms; attribution required: True. Source configuration:
+      `extract/sources/uk_petitions.yml`.'
+    hideFrame: false
+    title: Uk petitions
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Uk petitions — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct petitions created each week
+    chartSlug: fct-uk-petitions-petitions-created-weekly
+    hideTitle: false
+    title: Distinct petitions created each week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean signatures on petitions created each week
+    chartSlug: fct-uk-petitions-signatures-created-weekly
+    hideTitle: false
+    title: Mean signatures on petitions created each week
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Petitions reaching response threshold each week
+    chartSlug: fct-uk-petitions-petitions-reaching-response-threshold
+    hideTitle: false
+    title: Petitions reaching response threshold each week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Petitions created each week by state
+    chartSlug: fct-uk-petitions-petitions-by-state
+    hideTitle: false
+    title: Petitions created each week by state
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Uk petitions — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct petition by state
+    chartSlug: fct-uk-petitions
+    hideTitle: false
+    title: Distinct petition by state
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Uk petitions — observations
+    chartSlug: fct-uk-petitions-details
+    hideTitle: false
+    title: Uk petitions — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

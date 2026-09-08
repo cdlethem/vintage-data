@@ -1,0 +1,145 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 7e7d88f8-cc69-5330-b2d7-a74c640058fe
+    label: 'Tatoeba sentence translation observation: Sentence language'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_tatoeba_sentence_translation_observation_sentence_language
+      tableName: fct_tatoeba_sentence_translation_observation
+    values: []
+  - disabled: true
+    id: c97bedc0-d6eb-5869-9f3a-b6aec6e299d0
+    label: 'Tatoeba sentence translation observation: Translation language'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_tatoeba_sentence_translation_observation_translation_607b6e
+      tableName: fct_tatoeba_sentence_translation_observation
+    values: []
+  - disabled: true
+    id: dbfb7d9d-17cd-5b31-996e-50d4d68ff987
+    label: 'Tatoeba sentence translation observation: License'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_tatoeba_sentence_translation_observation_license
+      tableName: fct_tatoeba_sentence_translation_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Tatoeba
+slug: tatoeba
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical observation fact for Tatoeba sentence and translation records. Each row
+      represents one translation object attached to a source sentence at one extractor observation timestamp;
+      sentence-level attributes are repeated for each attached translation. The stable observation key
+      combines the source, sentence, translation, and observation timestamp, and raw-load lineage is retained
+      for replay and audit. A sentence observation with no translation objects contributes no child row
+      to this fact.
+
+
+      **Grain:** source_name, sentence_id, translation_id, observed_at
+
+
+      **What changes here:** how the observed English-to-French sentence and translation coverage changes
+      across collection days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `tatoeba` — licence: per-sentence (CC BY 2.0 FR observed) -- check each record, not the dataset
+      as a whole; attribution required: True. Source configuration: `extract/sources/tatoeba.yml`.'
+    hideFrame: false
+    title: Tatoeba sentence translation observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Tatoeba sentence translation observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct source sentences by observation day
+    chartSlug: fct-tatoeba-sentence-translation-observation-sentence-coverage
+    hideTitle: false
+    title: Distinct source sentences by observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct translations by observation day
+    chartSlug: fct-tatoeba-sentence-translation-observation-translation-coverage
+    hideTitle: false
+    title: Distinct translations by observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Translation coverage by language
+    chartSlug: fct-tatoeba-sentence-translation-observation-translations-by-language
+    hideTitle: false
+    title: Translation coverage by language
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 1
+  properties:
+    showDivider: true
+    text: Tatoeba sentence translation observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Distinct sentence by sentence language
+    chartSlug: fct-tatoeba-sentence-translation-observation
+    hideTitle: false
+    title: Distinct sentence by sentence language
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 28
+- h: 10
+  properties:
+    chartName: Tatoeba sentence translation observation — observations
+    chartSlug: fct-tatoeba-sentence-translation-observation-details
+    hideTitle: false
+    title: Tatoeba sentence translation observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 28
+version: 1

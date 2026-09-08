@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_nz_charities_dateregistered_day
+          yRef:
+            field: fct_nz_charities_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Dateregistered (Day)
+      yAxis:
+      - name: Distinct id
+    layout:
+      stack: true
+      xField: fct_nz_charities_dateregistered_day
+      yField:
+      - fct_nz_charities_distinct_entities
+  type: cartesian
+description: Distinct `id` values stacked by postal city on each `dateregistered` day. Bars show the mix
+  among the eight largest cities and exclude the remainder rather than aggregating it; a missing day means
+  no registrations in the mart.
+metricQuery:
+  dimensions:
+  - fct_nz_charities_dateregistered_day
+  - fct_nz_charities_postaladdresscity
+  exploreName: fct_nz_charities
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nz_charities_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_nz_charities_distinct_entities
+  - descending: false
+    fieldId: fct_nz_charities_dateregistered_day
+  tableCalculations: []
+name: Registered charities by city and registration day
+pivotConfig:
+  columns:
+  - fct_nz_charities_postaladdresscity
+slug: fct-nz-charities-registrations-by-city
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nz_charities_dateregistered_day
+  - fct_nz_charities_postaladdresscity
+  - fct_nz_charities_distinct_entities
+tableName: fct_nz_charities
+version: 1

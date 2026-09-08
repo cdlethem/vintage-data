@@ -1,0 +1,415 @@
+version: 2
+models:
+- name: fct_wspr_live_spot
+  description: Twice-hourly physical history of WSPR radio spots returned by the live feed. Each row is
+    one source, spot identifier, and feed observation timestamp; repeated insert-only copies are reduced
+    to the latest raw load while complete source lineage and the radio measurement are retained.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, spot_id, observed_at
+      label: Radio propagation spots
+      group_label: Wspr live
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: wspr_live_spot_key
+      vintage:
+        visualization:
+          dimension: band
+          metric: average_distance_km
+          time: observed_at
+          window_days: 30
+          title: Mean observed distance km by band
+          description: Mean observed distance km by `band` in the selected observation window. Great-circle
+            distance between transmitting and receiving stations in kilometres. Each retained observation
+            has equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+            a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - spot_id
+          - band
+          - distance_km
+          - source_loaded_at
+          sources:
+          - '`wspr_live` — licence: WSPR.live — volunteer amateur-radio community data; attribution required:
+            False. Source configuration: `extract/sources/wspr_live.yml`.'
+          analysis:
+            headline: how radio-spot volume, propagation distance, and signal strength shift by band and station
+              grid across the five-day signal window.
+            event_time: signal_at
+            grain: DAY
+            controls:
+            - band
+            - transmit_grid
+            - receive_grid
+            - transmit_power_dbm
+            trends:
+            - slug: spots-by-signal-day
+              kind: total
+              metric: distinct_spots
+              time: signal_at
+              grain: DAY
+              title: WSPR spots by signal day
+              description: Distinct `spot_id` values whose transmission signal falls on each UTC day. This
+                is a short five-day event-time slice rather than a long historical trend; absent signal days
+                are absent rather than zero.
+              width: half
+            - slug: distance-by-signal-day
+              kind: total
+              metric: average_distance_km
+              time: signal_at
+              grain: DAY
+              title: Mean propagation distance by signal day
+              description: Mean reported `distance_km` for spots on each UTC signal day. Each retained
+                observation has equal weight, so irregular polling and repeated snapshots can affect the mean;
+                absent signal days are absent rather than zero.
+              width: half
+            - slug: spots-by-band
+              kind: breakdown
+              metric: distinct_spots
+              breakdown: band
+              top_n: 8
+              time: signal_at
+              grain: DAY
+              title: WSPR spots by band and signal day
+              description: Distinct `spot_id` values per UTC signal day split by the eight busiest observed
+                radio bands. The remaining bands are excluded rather than aggregated, so the plotted series
+                are not a complete total.
+              width: full
+            - slug: spot-mix-by-band
+              kind: composition
+              metric: distinct_spots
+              breakdown: band
+              top_n: 8
+              time: signal_at
+              grain: DAY
+              title: Spot mix by band and signal day
+              description: Distinct `spot_id` values per UTC signal day stacked by the eight busiest observed
+                bands. Each spot belongs to one reported band, so the stack shows the mix among displayed
+                bands; remaining bands are excluded rather than aggregated.
+              width: full
+  columns:
+  - name: wspr_live_spot_key
+    description: Stable hash of source, spot identifier, and feed observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Wspr live spot key
+          hidden: true
+  - name: source
+    description: Upstream feed identifier that supplied the WSPR spot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: spot_id
+    description: Upstream WSPR spot identifier, including transmission time, callsigns, and band.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_spots:
+            type: count_distinct
+            label: Distinct WSPR spots
+            description: Distinct `spot_id` values by UTC signal day. Repeated snapshots of a spot count once
+              within each grouped slice, so this is a spot-event count rather than an additive row total.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Spot id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the live feed returned the WSPR spot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: signal_at
+    description: UTC timestamp at which the WSPR transmission occurred.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Signal at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: band
+    description: Amateur-radio band number reported by the feed in metres.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Band
+          hidden: false
+          format: '#,##0'
+  - name: frequency_hz
+    description: Transmission frequency reported by the feed in hertz.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Frequency hz
+          hidden: false
+          format: '#,##0'
+  - name: transmit_call
+    description: Callsign of the transmitting WSPR station.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Transmit call
+          hidden: false
+  - name: transmit_grid
+    description: Maidenhead grid square of the transmitting station.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Transmit grid
+          hidden: false
+  - name: transmit_latitude
+    description: Latitude of the transmitting station in decimal degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Transmit latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: transmit_longitude
+    description: Longitude of the transmitting station in decimal degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Transmit longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: receive_call
+    description: Callsign of the receiving WSPR station.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Receive call
+          hidden: false
+  - name: receive_grid
+    description: Maidenhead grid square of the receiving station.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Receive grid
+          hidden: false
+  - name: receive_latitude
+    description: Latitude of the receiving station in decimal degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Receive latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: receive_longitude
+    description: Longitude of the receiving station in decimal degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Receive longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: distance_km
+    description: Great-circle distance between transmitting and receiving stations in kilometres.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_distance_km:
+            type: average
+            label: Mean observed distance km
+            description: Mean observed distance km by `band` in the selected observation window. Great-circle
+              distance between transmitting and receiving stations in kilometres. Each retained observation
+              has equal weight; polling frequency and repeated snapshots can affect the mean. This is
+              not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Distance km
+          hidden: false
+          format: '#,##0'
+  - name: azimuth_degrees
+    description: Bearing from the receiving station toward the transmitting station in degrees.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Azimuth degrees
+          hidden: false
+          format: '#,##0'
+  - name: snr_db
+    description: Reported signal-to-noise ratio in decibels.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Snr db
+          hidden: false
+          format: '#,##0'
+  - name: transmit_power_dbm
+    description: Reported transmitter power in dBm.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Transmit power dbm
+          hidden: false
+          format: '#,##0'
+  - name: source_row_id
+    description: Raw loader row identifier for the retained WSPR spot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained WSPR spot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained WSPR spot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained WSPR spot in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Raw load partition date for the retained WSPR spot.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source file began.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained WSPR spot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained WSPR spot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained WSPR spot content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

@@ -1,11 +1,13 @@
 name: sensor_community
 script: fetch_sensor_community.py
-args: ["all"]
+args: []
 schedule: "1-56/5 * * * *"  # UTC
 enabled: true
 retries: 1
 timeout_minutes: 10
 sink: local
+run_summary:
+  required: true
 
 # Vetting metadata (documentation only, not read by the DAG factory)
 cadence_note: "global air-quality/noise readings refresh every ~5 minutes"

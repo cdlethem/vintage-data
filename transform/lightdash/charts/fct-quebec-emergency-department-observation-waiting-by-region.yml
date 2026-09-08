@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_quebec_emergency_department_observation_observed_at_hour
+          yRef:
+            field: fct_quebec_emergency_department_observation_m_cc9d5e94
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Mean observed patients waiting for care count
+    layout:
+      xField: fct_quebec_emergency_department_observation_observed_at_hour
+      yField:
+      - fct_quebec_emergency_department_observation_m_cc9d5e94
+  type: cartesian
+description: Mean non-null `patients_waiting_for_care_count` per observed hour for the eight largest `health_region`
+  series. Remaining regions are excluded rather than aggregated; facility and regional-total records remain
+  distinct reporting rows.
+metricQuery:
+  dimensions:
+  - fct_quebec_emergency_department_observation_observed_at_hour
+  - fct_quebec_emergency_department_observation_health_region
+  exploreName: fct_quebec_emergency_department_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_quebec_emergency_department_observation_m_cc9d5e94
+  sorts:
+  - descending: true
+    fieldId: fct_quebec_emergency_department_observation_m_cc9d5e94
+  - descending: false
+    fieldId: fct_quebec_emergency_department_observation_observed_at_hour
+  tableCalculations: []
+name: Patients waiting by health region
+pivotConfig:
+  columns:
+  - fct_quebec_emergency_department_observation_health_region
+slug: fct-quebec-emergency-department-observation-waiting-by-region
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_quebec_emergency_department_observation_observed_at_hour
+  - fct_quebec_emergency_department_observation_health_region
+  - fct_quebec_emergency_department_observation_m_cc9d5e94
+tableName: fct_quebec_emergency_department_observation
+version: 1

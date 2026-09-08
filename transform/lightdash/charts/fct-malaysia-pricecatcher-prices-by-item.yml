@@ -1,0 +1,67 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_malaysia_pricecatcher_price_date_day
+          yRef:
+            field: fct_malaysia_pricecatcher_average_price_amount
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Price date (Day)
+      yAxis:
+      - name: Mean observed price amount
+    layout:
+      xField: fct_malaysia_pricecatcher_price_date_day
+      yField:
+      - fct_malaysia_pricecatcher_average_price_amount
+  type: cartesian
+description: Mean reported price per item code on each publisher `price_date` in the recent 14-day window.
+  The six largest item series by observed rows are shown and the remainder is excluded; averages avoid
+  summing prices across premises or currencies.
+metricQuery:
+  dimensions:
+  - fct_malaysia_pricecatcher_price_date_day
+  - fct_malaysia_pricecatcher_item_code
+  exploreName: fct_malaysia_pricecatcher
+  filters:
+    dimensions:
+      and:
+      - id: 934d9a68-3ace-5a13-a2a5-05b323803316
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_malaysia_pricecatcher_price_date
+        values:
+        - 14
+      id: f1f7194a-4754-53df-988a-e4a526453b7b
+  limit: 5000
+  metrics:
+  - fct_malaysia_pricecatcher_average_price_amount
+  sorts:
+  - descending: true
+    fieldId: fct_malaysia_pricecatcher_average_price_amount
+  - descending: false
+    fieldId: fct_malaysia_pricecatcher_price_date_day
+  tableCalculations: []
+name: Mean price by item and source price day
+pivotConfig:
+  columns:
+  - fct_malaysia_pricecatcher_item_code
+slug: fct-malaysia-pricecatcher-prices-by-item
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_malaysia_pricecatcher_price_date_day
+  - fct_malaysia_pricecatcher_item_code
+  - fct_malaysia_pricecatcher_average_price_amount
+tableName: fct_malaysia_pricecatcher
+version: 1

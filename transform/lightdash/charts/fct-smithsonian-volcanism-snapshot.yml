@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_smithsonian_volcanism_snapshot_volcano_name
+          yRef:
+            field: fct_smithsonian_volcanism_snapshot_max_explosivity_index_max
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_smithsonian_volcanism_snapshot_volcano_name
+      yField:
+      - fct_smithsonian_volcanism_snapshot_max_explosivity_index_max
+  type: cartesian
+description: Maximum observed explosivity index max by `volcano_name` in the selected observation window.
+  Maximum volcanic explosivity index reported for the eruption event. Uses the largest retained value
+  within each group and window, not the latest value or a sum of snapshots.
+metricQuery:
+  dimensions:
+  - fct_smithsonian_volcanism_snapshot_volcano_name
+  exploreName: fct_smithsonian_volcanism_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: 4297972d-cbf2-5583-a3c9-37428b393b67
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_smithsonian_volcanism_snapshot_observed_at
+        values:
+        - 30
+      id: 9df69ff8-f2e8-59f7-bcb4-ce00045a4757
+  limit: 20
+  metrics:
+  - fct_smithsonian_volcanism_snapshot_max_explosivity_index_max
+  sorts:
+  - descending: true
+    fieldId: fct_smithsonian_volcanism_snapshot_max_explosivity_index_max
+  tableCalculations: []
+name: Maximum observed explosivity index max by volcano name
+slug: fct-smithsonian-volcanism-snapshot
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_smithsonian_volcanism_snapshot_volcano_name
+  - fct_smithsonian_volcanism_snapshot_max_explosivity_index_max
+tableName: fct_smithsonian_volcanism_snapshot
+version: 1

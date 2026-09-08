@@ -1,0 +1,65 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_queue_times_last_updated_at_day
+          yRef:
+            field: fct_queue_times_distinct_rides
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Last updated at (Day)
+      yAxis:
+      - name: Distinct rides
+    layout:
+      stack: true
+      xField: fct_queue_times_last_updated_at_day
+      yField:
+      - fct_queue_times_distinct_rides
+  type: cartesian
+description: Distinct `ride_id` values by source `last_updated_at` day, stacked by land. This event-time
+  view shows when the publisher reported ride updates, not when this project collected them; all eight
+  lands are shown and days with no updates are absent.
+metricQuery:
+  dimensions:
+  - fct_queue_times_last_updated_at_day
+  - fct_queue_times_land
+  exploreName: fct_queue_times
+  filters:
+    dimensions:
+      and:
+      - id: 8403dccd-7c59-587b-ab0c-59a9d0c381ca
+        operator: equals
+        target:
+          fieldId: fct_queue_times_is_open
+        values:
+        - true
+      id: 3748676a-5869-5c53-9a87-fa72a1480e1f
+  limit: 5000
+  metrics:
+  - fct_queue_times_distinct_rides
+  sorts:
+  - descending: true
+    fieldId: fct_queue_times_distinct_rides
+  - descending: false
+    fieldId: fct_queue_times_last_updated_at_day
+  tableCalculations: []
+name: Rides with source updates by land
+pivotConfig:
+  columns:
+  - fct_queue_times_land
+slug: fct-queue-times-updates-by-land
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_queue_times_last_updated_at_day
+  - fct_queue_times_land
+  - fct_queue_times_distinct_rides
+tableName: fct_queue_times
+version: 1

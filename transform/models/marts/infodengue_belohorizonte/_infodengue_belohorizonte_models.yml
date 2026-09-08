@@ -1,0 +1,621 @@
+version: 2
+models:
+- name: fct_infodengue_belohorizonte_epidemiology
+  description: Hourly physical history of epidemiological surveillance observations for Belo Horizonte
+    from the Infodengue city-alerts feed. Each row is one provider source relation and record identifier;
+    insert-only replays are reduced to the latest loaded copy while typed measures and raw-load lineage
+    remain available for audit and reproducible downstream analysis.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_relation, record_id
+      label: Infodengue belohorizonte epidemiology
+      group_label: Infodengue belohorizonte
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: infodengue_bel_1fa952
+      vintage:
+        visualization:
+          dimension: municipality_name
+          metric: m_13c38800
+          time: fetched_at
+          window_days: 30
+          title: Mean observed incidence per 100k by municipality name
+          description: Mean observed incidence per 100k by `municipality_name` in the selected observation
+            window. Estimated incidence per 100,000 population. Each retained observation has equal weight;
+            polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure
+            or an additive total.
+          detail_fields:
+          - fetched_at
+          - record_id
+          - municipality_name
+          - incidence_per_100k
+          - source_loaded_at
+          sources:
+          - '`infodengue_belohorizonte` — see dbt raw-source lineage.'
+          analysis:
+            headline: how weekly Belo Horizonte dengue burden and transmission indicators rise and fall across
+              epidemiological weeks.
+            event_time: week_start_date
+            grain: WEEK
+            controls:
+            - disease
+            - alert_level
+            - receptive_status
+            - transmission_status
+            trends:
+            - slug: weekly-case-estimates
+              kind: total
+              metric: avg_cases
+              time: week_start_date
+              grain: WEEK
+              title: Mean estimated cases per epidemiological week
+              description: Mean `cases_estimate` for each epidemiological week in the published Belo Horizonte
+                series. One row currently represents each week, so this is the reported weekly level rather
+                than a sum; absent weeks are absent rather than zero.
+              width: half
+            - slug: weekly-incidence
+              kind: total
+              metric: m_13c38800
+              time: week_start_date
+              grain: WEEK
+              title: Mean incidence per 100k by epidemiological week
+              description: Mean `incidence_per_100k` for each epidemiological week. This rate is a reported
+                population-normalized level and must not be summed; the 34 observed weeks span January
+                through August, and absent weeks are absent rather than zero.
+              width: half
+            - slug: weekly-reproduction
+              kind: total
+              metric: avg_rt
+              time: week_start_date
+              grain: WEEK
+              title: Mean reproduction number per epidemiological week
+              description: Mean provider `reproduction_number` for each epidemiological week. This is a
+                reported rate-like indicator, not a case total; absent weeks are absent rather than zero.
+              width: half
+            - slug: cases-by-alert
+              kind: breakdown
+              metric: avg_cases
+              breakdown: alert_level
+              top_n: 3
+              time: week_start_date
+              grain: WEEK
+              title: Mean estimated cases by alert level
+              description: Mean estimated cases per epidemiological week split across the three observed
+                alert levels. These are separate snapshot levels rather than additive totals; absent weeks
+                or levels are absent rather than zero.
+              width: full
+            - slug: weekly-alert-mix
+              kind: composition
+              metric: distinct_records
+              breakdown: alert_level
+              top_n: 3
+              time: week_start_date
+              grain: WEEK
+              title: Weekly observation mix by alert level
+              description: Distinct provider `record_id` observations per epidemiological week stacked by
+                the three alert levels. The stack shows which alert level labels the published row; absent
+                weeks are absent rather than zero.
+              width: full
+  columns:
+  - name: infodengue_belohorizonte_observation_key
+    description: Stable hash of the source relation and provider record identifier defining the observation
+      grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Infodengue belohorizonte observation key
+          hidden: true
+          name: infodengue_bel_1fa952
+  - name: source_relation
+    description: Raw relation identifier supplied by the load layer.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source relation
+          hidden: false
+  - name: source_endpoint
+    description: Upstream endpoint label that produced the source record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source endpoint
+          hidden: false
+  - name: record_id
+    description: Provider record identifier defining the epidemiological observation grain.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_records:
+            type: count_distinct
+            label: Distinct epidemiological record
+            description: Distinct non-null provider `record_id` values in each epidemiological-week and
+              dimension group. This counts published observations without treating reported rates or case
+              estimates as additive quantities.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Record id
+          hidden: false
+  - name: source_row_id
+    description: Load-layer row identifier of the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extraction batch that produced the retained raw row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation within its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+          name: source_file_ro_36bd5c
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: Timestamp when extraction of the source batch began.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: extrac_51074f
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained raw row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted the retained raw row.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: source_2059e1
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw record content for replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true
+  - name: fetched_at
+    description: Timestamp when the upstream endpoint returned the source record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: week_start_date
+    description: Start date of the epidemiological week represented by the record.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Week start date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: week_s_9e2b62
+  - name: epidemiological_week
+    description: Provider epidemiological-week label.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Epidemiological week
+          hidden: false
+  - name: disease
+    description: Disease represented by the surveillance observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Disease
+          hidden: false
+  - name: cases_estimate
+    description: Estimated case count reported by the provider.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          avg_cases:
+            type: average
+            label: Mean estimated cases
+            description: Mean provider `cases_estimate` in each epidemiological-week and dimension group.
+              This is a reported estimate level and is not a sum of cases; each retained row has equal
+              weight, and absent weeks are absent rather than zero.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Cases estimate
+          hidden: false
+          format: '#,##0.00'
+  - name: cases_estimate_min
+    description: Lower bound of the provider case estimate.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Cases estimate min
+          hidden: false
+          format: '#,##0.00'
+  - name: cases_estimate_max
+    description: Upper bound of the provider case estimate.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Cases estimate max
+          hidden: false
+          format: '#,##0.00'
+  - name: cases_reported
+    description: Reported case count supplied by the provider.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Cases reported
+          hidden: false
+          format: '#,##0.00'
+  - name: rt_probability
+    description: Provider probability associated with the reproduction-number estimate.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Rt probability
+          hidden: false
+          format: '#,##0.00'
+  - name: incidence_per_100k
+    description: Estimated incidence per 100,000 population.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          m_13c38800:
+            type: average
+            label: Mean observed incidence per 100k
+            description: Mean observed incidence per 100k by `municipality_name` in the selected observation
+              window. Estimated incidence per 100,000 population. Each retained observation has equal
+              weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+              measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Incidence per 100k
+          hidden: false
+          format: '#,##0.00'
+  - name: locality_id
+    description: Provider locality identifier.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Locality id
+          hidden: false
+  - name: alert_level
+    description: Provider alert-level label.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Alert level
+          hidden: false
+  - name: model_version_date
+    description: Date of the provider epidemiological model version.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Model version date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: model__2c271d
+  - name: municipality_name
+    description: Municipality name published by the provider.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Municipality name
+          hidden: false
+  - name: reproduction_number
+    description: Estimated effective reproduction number.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          avg_rt:
+            type: average
+            label: Mean reproduction number
+            description: Mean provider `reproduction_number` in each epidemiological-week and dimension
+              group. This is a reported transmission indicator rather than an additive count; each row has
+              equal weight.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Reproduction number
+          hidden: false
+          format: '#,##0.00'
+  - name: population
+    description: Population used by the provider for epidemiological estimates.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Population
+          hidden: false
+          format: '#,##0.00'
+  - name: temperature_min
+    description: Minimum temperature measure supplied by the provider.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Temperature min
+          hidden: false
+          format: '#,##0.00'
+  - name: humidity_max
+    description: Maximum humidity measure supplied by the provider.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Humidity max
+          hidden: false
+          format: '#,##0.00'
+  - name: receptive_status
+    description: Provider receptivity status label.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Receptive status
+          hidden: false
+  - name: transmission_status
+    description: Provider transmission status label.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Transmission status
+          hidden: false
+  - name: incidence_level
+    description: Provider incidence-level label.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Incidence level
+          hidden: false
+  - name: humidity_mean
+    description: Mean humidity measure supplied by the provider.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Humidity mean
+          hidden: false
+          format: '#,##0.00'
+  - name: humidity_min
+    description: Minimum humidity measure supplied by the provider.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Humidity min
+          hidden: false
+          format: '#,##0.00'
+  - name: temperature_mean
+    description: Mean temperature measure supplied by the provider.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Temperature mean
+          hidden: false
+          format: '#,##0.00'
+  - name: temperature_max
+    description: Maximum temperature measure supplied by the provider.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Temperature max
+          hidden: false
+          format: '#,##0.00'
+  - name: probable_cases
+    description: Probable case count supplied by the provider.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Probable cases
+          hidden: false
+          format: '#,##0.00'
+  - name: probable_cases_estimate
+    description: Estimated probable case count supplied by the provider.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Probable cases estimate
+          hidden: false
+          format: '#,##0.00'
+          name: probable_cases_d549d9
+  - name: probable_cases_estimate_min
+    description: Lower bound of the probable-case estimate.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Probable cases estimate min
+          hidden: false
+          format: '#,##0.00'
+          name: probable_cases_abecc3
+  - name: probable_cases_estimate_max
+    description: Upper bound of the probable-case estimate.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Probable cases estimate max
+          hidden: false
+          format: '#,##0.00'
+          name: probable_cases_dba0ea
+  - name: confirmed_cases
+    description: Confirmed case count supplied by the provider.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Confirmed cases
+          hidden: false
+          format: '#,##0.00'
+  - name: notifications_accumulated_year
+    description: Notifications accumulated during the year according to the provider.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Notifications accumulated year
+          hidden: false
+          format: '#,##0.00'
+          name: notifications__ff4416
+  - name: geocode
+    description: Geographic code published by the provider.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Geocode
+          hidden: false

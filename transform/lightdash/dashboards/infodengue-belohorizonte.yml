@@ -1,0 +1,171 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Week
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: f10292f3-f36e-57e7-87ef-9b2e2e141d7f
+    label: 'Infodengue belohorizonte epidemiology: Disease'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_belohorizonte_epidemiology_disease
+      tableName: fct_infodengue_belohorizonte_epidemiology
+    values: []
+  - disabled: true
+    id: 700ea8fe-7d59-55a1-8314-692e50354ac5
+    label: 'Infodengue belohorizonte epidemiology: Alert level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_belohorizonte_epidemiology_alert_level
+      tableName: fct_infodengue_belohorizonte_epidemiology
+    values: []
+  - disabled: true
+    id: d62b1ef9-303a-5931-a079-a97120384fb4
+    label: 'Infodengue belohorizonte epidemiology: Receptive status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_belohorizonte_epidemiology_receptive_status
+      tableName: fct_infodengue_belohorizonte_epidemiology
+    values: []
+  - disabled: true
+    id: ca22d5a0-e1a9-534b-bd84-9ea3c2e74e07
+    label: 'Infodengue belohorizonte epidemiology: Transmission status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_belohorizonte_epidemiology_transmission_status
+      tableName: fct_infodengue_belohorizonte_epidemiology
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Infodengue Belohorizonte
+slug: infodengue-belohorizonte
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of epidemiological surveillance observations for Belo Horizonte
+      from the Infodengue city-alerts feed. Each row is one provider source relation and record identifier;
+      insert-only replays are reduced to the latest loaded copy while typed measures and raw-load lineage
+      remain available for audit and reproducible downstream analysis.
+
+
+      **Grain:** source_relation, record_id
+
+
+      **What changes here:** how weekly Belo Horizonte dengue burden and transmission indicators rise
+      and fall across epidemiological weeks.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `infodengue_belohorizonte` — see dbt raw-source lineage.'
+    hideFrame: false
+    title: Infodengue belohorizonte epidemiology
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Infodengue belohorizonte epidemiology — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean estimated cases per epidemiological week
+    chartSlug: fct-infodengue-belohorizonte-epidemiology-weekly-case-estimates
+    hideTitle: false
+    title: Mean estimated cases per epidemiological week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean incidence per 100k by epidemiological week
+    chartSlug: fct-infodengue-belohorizonte-epidemiology-weekly-incidence
+    hideTitle: false
+    title: Mean incidence per 100k by epidemiological week
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reproduction number per epidemiological week
+    chartSlug: fct-infodengue-belohorizonte-epidemiology-weekly-reproduction
+    hideTitle: false
+    title: Mean reproduction number per epidemiological week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean estimated cases by alert level
+    chartSlug: fct-infodengue-belohorizonte-epidemiology-cases-by-alert
+    hideTitle: false
+    title: Mean estimated cases by alert level
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Weekly observation mix by alert level
+    chartSlug: fct-infodengue-belohorizonte-epidemiology-weekly-alert-mix
+    hideTitle: false
+    title: Weekly observation mix by alert level
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Infodengue belohorizonte epidemiology — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed incidence per 100k by municipality name
+    chartSlug: fct-infodengue-belohorizonte-epidemiology
+    hideTitle: false
+    title: Mean observed incidence per 100k by municipality name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Infodengue belohorizonte epidemiology — observations
+    chartSlug: fct-infodengue-belohorizonte-epidemiology-details
+    hideTitle: false
+    title: Infodengue belohorizonte epidemiology — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_hk_cremation_sessions_crematorium
+          yRef:
+            field: fct_hk_cremation_sessions_average_available_sessions
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_hk_cremation_sessions_crematorium
+      yField:
+      - fct_hk_cremation_sessions_average_available_sessions
+  type: cartesian
+description: Mean observed available sessions by `crematorium` in the selected observation window. Number
+  of sessions currently available for booking; null when the publisher reports a nonnumeric state. Each
+  retained observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+  This is not a latest-value measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_hk_cremation_sessions_crematorium
+  exploreName: fct_hk_cremation_sessions
+  filters:
+    dimensions:
+      and:
+      - id: ea126f3f-ee47-5110-ad3e-b2f588bfec1f
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_hk_cremation_sessions_observed_at
+        values:
+        - 30
+      id: 2fcf9088-0f97-5aaa-baa0-a243a9d5d604
+  limit: 20
+  metrics:
+  - fct_hk_cremation_sessions_average_available_sessions
+  sorts:
+  - descending: true
+    fieldId: fct_hk_cremation_sessions_average_available_sessions
+  tableCalculations: []
+name: Mean observed available sessions by crematorium
+slug: fct-hk-cremation-sessions
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hk_cremation_sessions_crematorium
+  - fct_hk_cremation_sessions_average_available_sessions
+tableName: fct_hk_cremation_sessions
+version: 1

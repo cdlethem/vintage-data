@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 4ad80baf-cde6-5913-8b03-8180e7899a5a
+    label: 'Food hygiene ratings birmingham: Business type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_birmingham_business_type
+      tableName: fct_food_hygiene_ratings_birmingham
+    values: []
+  - disabled: true
+    id: 219f86ff-b102-51d1-9251-cfae67f9d927
+    label: 'Food hygiene ratings birmingham: Postcode'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_birmingham_postcode
+      tableName: fct_food_hygiene_ratings_birmingham
+    values: []
+  - disabled: true
+    id: aec3194c-486a-529d-93af-047ebf1a8cbc
+    label: 'Food hygiene ratings birmingham: New rating pending'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_birmingham_new_rating_pending
+      tableName: fct_food_hygiene_ratings_birmingham
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Food Hygiene Ratings Birmingham
+slug: food-hygiene-ratings-birmingham
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical snapshot of Birmingham food-hygiene ratings. Each row is one food business
+      from one publisher snapshot, identified by source, business_id, and observed_at. The six duplicate
+      source rows observed in the initial load are reduced deterministically by source load lineage; source
+      business attributes and the three nested FHRS scores are exposed as typed columns while loader lineage
+      is retained.
+
+
+      **Grain:** source, business_id, observed_at
+
+
+      **What changes here:** how Birmingham food-business inspection volume and component scores change
+      across rating history.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `food_hygiene_ratings_birmingham` — see dbt raw-source lineage.'
+    hideFrame: false
+    title: Food hygiene ratings birmingham
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Food hygiene ratings birmingham — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Businesses rated per month
+    chartSlug: fct-food-hygiene-ratings-birmingham-monthly-ratings
+    hideTitle: false
+    title: Businesses rated per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean hygiene component score by month
+    chartSlug: fct-food-hygiene-ratings-birmingham-hygiene-score
+    hideTitle: false
+    title: Mean hygiene component score by month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Hygiene scores for leading business types
+    chartSlug: fct-food-hygiene-ratings-birmingham-hygiene-by-type
+    hideTitle: false
+    title: Hygiene scores for leading business types
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Monthly rating mix by business type
+    chartSlug: fct-food-hygiene-ratings-birmingham-type-composition
+    hideTitle: false
+    title: Monthly rating mix by business type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Food hygiene ratings birmingham — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct business by business type
+    chartSlug: fct-food-hygiene-ratings-birmingham
+    hideTitle: false
+    title: Distinct business by business type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Food hygiene ratings birmingham — observations
+    chartSlug: fct-food-hygiene-ratings-birmingham-details
+    hideTitle: false
+    title: Food hygiene ratings birmingham — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_open_collective_account_observation_currency_code
+          yRef:
+            field: fct_open_collective_account_observation_average_balance_amount
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_open_collective_account_observation_currency_code
+      yField:
+      - fct_open_collective_account_observation_average_balance_amount
+  type: cartesian
+description: Mean observed balance amount by `currency_code` in the selected observation window. Current
+  account balance in the account currency. Each retained observation has equal weight; polling frequency
+  and repeated snapshots can affect the mean. This is not a latest-value measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_open_collective_account_observation_currency_code
+  exploreName: fct_open_collective_account_observation
+  filters:
+    dimensions:
+      and:
+      - id: 567c5471-5255-5060-8195-96c3542cb5c1
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_open_collective_account_observation_observed_at
+        values:
+        - 30
+      id: d7e45ca5-cf53-5ab6-be7b-429651c8cffc
+  limit: 20
+  metrics:
+  - fct_open_collective_account_observation_average_balance_amount
+  sorts:
+  - descending: true
+    fieldId: fct_open_collective_account_observation_average_balance_amount
+  tableCalculations: []
+name: Mean observed balance amount by currency code
+slug: fct-open-collective-account-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_open_collective_account_observation_currency_code
+  - fct_open_collective_account_observation_average_balance_amount
+tableName: fct_open_collective_account_observation
+version: 1

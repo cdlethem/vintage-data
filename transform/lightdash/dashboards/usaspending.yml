@@ -1,0 +1,144 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: d6c83639-b52b-5a1c-85b7-dc6c789a1e4d
+    label: 'Usaspending award observations: Awarding agency'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_usaspending_award_observations_awarding_agency
+      tableName: fct_usaspending_award_observations
+    values: []
+  - disabled: true
+    id: 36b82529-803d-5c8b-881a-484907fc43dd
+    label: 'Usaspending award observations: Recipient name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_usaspending_award_observations_recipient_name
+      tableName: fct_usaspending_award_observations
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Usaspending
+slug: usaspending
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of USAspending contract and grant award observations. Each row is
+      one award identifier observed in one extractor response at an observation timestamp; repeated raw
+      copies of that award observation are reduced to the latest loaded row while load lineage remains
+      available for audit and replay.
+
+
+      **Grain:** award_id, observed_at
+
+
+      **What changes here:** how award counts and reported dollar amounts shift across performance-start
+      months and awarding agencies.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `usaspending` — licence: US Government work, public domain; attribution required: False. Source
+      configuration: `extract/sources/usaspending.yml`.'
+    hideFrame: false
+    title: Usaspending award observations
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Usaspending award observations — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct awards by performance-start month
+    chartSlug: fct-usaspending-award-observations-awards-by-month
+    hideTitle: false
+    title: Distinct awards by performance-start month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average award amount by performance-start month
+    chartSlug: fct-usaspending-award-observations-average-award-value
+    hideTitle: false
+    title: Average award amount by performance-start month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Award starts by awarding agency
+    chartSlug: fct-usaspending-award-observations-agency-awards
+    hideTitle: false
+    title: Award starts by awarding agency
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Average award amount by agency
+    chartSlug: fct-usaspending-award-observations-agency-average-values
+    hideTitle: false
+    title: Average award amount by agency
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Usaspending award observations — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed award amount by awarding agency
+    chartSlug: fct-usaspending-award-observations
+    hideTitle: false
+    title: Mean observed award amount by awarding agency
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Usaspending award observations — observations
+    chartSlug: fct-usaspending-award-observations-details
+    hideTitle: false
+    title: Usaspending award observations — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

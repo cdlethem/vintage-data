@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of San Diego Superior Court telephone-standby instructions by courthouse
+  and service date. Each row preserves one fetched publisher state and its raw lineage for replay and
+  audit.
+metricQuery:
+  dimensions: &id001
+  - fct_sd_juror_standby_observed_at
+  - fct_sd_juror_standby_standby_id
+  - fct_sd_juror_standby_courthouse
+  - fct_sd_juror_standby_group_range_count
+  - fct_sd_juror_standby_source_loaded_at
+  exploreName: fct_sd_juror_standby
+  filters:
+    dimensions:
+      and:
+      - id: af56ddb8-0d63-5b69-bc0f-beffa3d8086d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sd_juror_standby_observed_at
+        values:
+        - 30
+      id: 585b3f8b-83ec-570e-9a75-7785e08ba62e
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_sd_juror_standby_observed_at
+  tableCalculations: []
+name: Sd juror standby — observations
+slug: fct-sd-juror-standby-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_sd_juror_standby
+version: 1

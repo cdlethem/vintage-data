@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_deezer_chart_observation_observed_at_day
+          yRef:
+            field: fct_deezer_chart_observation_average_chart_position
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed chart position
+    layout:
+      xField: fct_deezer_chart_observation_observed_at_day
+      yField:
+      - fct_deezer_chart_observation_average_chart_position
+  type: cartesian
+description: Average one-based `chart_position` across retained chart observations on each `observed_at`
+  day. This is a short collection-time level, not a flow; repeated polling gives observations equal weight
+  and days without a successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_deezer_chart_observation_observed_at_day
+  exploreName: fct_deezer_chart_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_deezer_chart_observation_average_chart_position
+  sorts:
+  - descending: false
+    fieldId: fct_deezer_chart_observation_observed_at_day
+  tableCalculations: []
+name: Mean chart position per day
+slug: fct-deezer-chart-observation-daily-chart-position
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_deezer_chart_observation_observed_at_day
+  - fct_deezer_chart_observation_average_chart_position
+tableName: fct_deezer_chart_observation
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_public_art_arcgis_observed_at_day
+          yRef:
+            field: fct_public_art_arcgis_distinct_artists
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Artists represented
+    layout:
+      xField: fct_public_art_arcgis_observed_at_day
+      yField:
+      - fct_public_art_arcgis_distinct_artists
+  type: cartesian
+description: Distinct non-null `artist` values present in the feed on each observation day. Only the Tempe
+  feed names artists, so this level tracks that feed's catalogue; a flat line means the roster of credited
+  artists is unchanged.
+metricQuery:
+  dimensions:
+  - fct_public_art_arcgis_observed_at_day
+  exploreName: fct_public_art_arcgis
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_public_art_arcgis_distinct_artists
+  sorts:
+  - descending: false
+    fieldId: fct_public_art_arcgis_observed_at_day
+  tableCalculations: []
+name: Artists represented per day
+slug: fct-public-art-arcgis-artists-per-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_public_art_arcgis_observed_at_day
+  - fct_public_art_arcgis_distinct_artists
+tableName: fct_public_art_arcgis
+version: 1

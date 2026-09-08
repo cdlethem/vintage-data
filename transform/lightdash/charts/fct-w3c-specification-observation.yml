@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_w3c_specification_observation_specification_title
+          yRef:
+            field: fct_w3c_specification_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_w3c_specification_observation_specification_title
+      yField:
+      - fct_w3c_specification_observation_distinct_entities
+  type: cartesian
+description: Distinct `specification_id` values by `specification_title` among observations in the selected
+  window. Repeated observations of an entity count once within each group. An entity that changed category
+  can appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_w3c_specification_observation_specification_title
+  exploreName: fct_w3c_specification_observation
+  filters:
+    dimensions:
+      and:
+      - id: 569686f1-c76e-5573-8f04-1cfeea5720fe
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_w3c_specification_observation_observed_at
+        values:
+        - 30
+      id: f55d8417-93af-535b-9295-e1890ca921c9
+  limit: 20
+  metrics:
+  - fct_w3c_specification_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_w3c_specification_observation_distinct_entities
+  tableCalculations: []
+name: Distinct specification by specification title
+slug: fct-w3c-specification-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_w3c_specification_observation_specification_title
+  - fct_w3c_specification_observation_distinct_entities
+tableName: fct_w3c_specification_observation
+version: 1

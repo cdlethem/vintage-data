@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_smithsonian_volcanism_snapshot_event_start_date_day
+          yRef:
+            field: fct_smithsonian_volcanism_snapshot_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event start date (Day)
+      yAxis:
+      - name: Distinct eruption events
+    layout:
+      xField: fct_smithsonian_volcanism_snapshot_event_start_date_day
+      yField:
+      - fct_smithsonian_volcanism_snapshot_distinct_entities
+  type: cartesian
+description: Distinct `event_id` values by reported `event_start_date` day. This is a sparse event history
+  rather than a daily flow — dates with no reported starts are absent rather than zero, and repeated snapshots
+  do not increase the count.
+metricQuery:
+  dimensions:
+  - fct_smithsonian_volcanism_snapshot_event_start_date_day
+  exploreName: fct_smithsonian_volcanism_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_smithsonian_volcanism_snapshot_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_smithsonian_volcanism_snapshot_event_start_date_day
+  tableCalculations: []
+name: Eruption events by reported start date
+slug: fct-smithsonian-volcanism-snapshot-event-starts
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_smithsonian_volcanism_snapshot_event_start_date_day
+  - fct_smithsonian_volcanism_snapshot_distinct_entities
+tableName: fct_smithsonian_volcanism_snapshot
+version: 1

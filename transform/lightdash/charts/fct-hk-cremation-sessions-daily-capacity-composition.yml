@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_hk_cremation_sessions_session_date_day
+          yRef:
+            field: fct_hk_cremation_sessions_average_day_total
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Session date (Day)
+      yAxis:
+      - name: Mean daily published capacity
+    layout:
+      stack: true
+      xField: fct_hk_cremation_sessions_session_date_day
+      yField:
+      - fct_hk_cremation_sessions_average_day_total
+  type: cartesian
+description: Average publisher-reported `day_total_sessions` per service date stacked by `crematorium`.
+  The value is republished on each row, so stacked bars show the schedule mix, not a sum of independent
+  capacity; all six crematoria are included without a remainder.
+metricQuery:
+  dimensions:
+  - fct_hk_cremation_sessions_session_date_day
+  - fct_hk_cremation_sessions_crematorium
+  exploreName: fct_hk_cremation_sessions
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_hk_cremation_sessions_average_day_total
+  sorts:
+  - descending: true
+    fieldId: fct_hk_cremation_sessions_average_day_total
+  - descending: false
+    fieldId: fct_hk_cremation_sessions_session_date_day
+  tableCalculations: []
+name: Published daily capacity by crematorium
+pivotConfig:
+  columns:
+  - fct_hk_cremation_sessions_crematorium
+slug: fct-hk-cremation-sessions-daily-capacity-composition
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hk_cremation_sessions_session_date_day
+  - fct_hk_cremation_sessions_crematorium
+  - fct_hk_cremation_sessions_average_day_total
+tableName: fct_hk_cremation_sessions
+version: 1

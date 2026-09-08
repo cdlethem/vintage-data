@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_openfema_declaration_observation_observed_at_day
+          yRef:
+            field: fct_openfema_declaration_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct declaration
+    layout:
+      xField: fct_openfema_declaration_observation_observed_at_day
+      yField:
+      - fct_openfema_declaration_observation_distinct_entities
+  type: cartesian
+description: Distinct `declaration_id` values present in each extractor observation day. This is a catalogue
+  level rather than a declaration-flow count because FEMA republishes records; days without a successful
+  extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_openfema_declaration_observation_observed_at_day
+  exploreName: fct_openfema_declaration_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_openfema_declaration_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_openfema_declaration_observation_observed_at_day
+  tableCalculations: []
+name: Declarations present in each observation day
+slug: fct-openfema-declaration-observation-observed-declarations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openfema_declaration_observation_observed_at_day
+  - fct_openfema_declaration_observation_distinct_entities
+tableName: fct_openfema_declaration_observation
+version: 1

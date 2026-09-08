@@ -6,6 +6,8 @@ enabled: true
 retries: 1
 timeout_minutes: 15
 sink: local
+run_summary:
+  required: true
 
 # Vetting metadata (documentation only, not read by the DAG factory)
 cadence_note: "minute-level pedestrian counts; publisher refreshes ~15 min and exposes a rolling window only. Checkpoints the newest sensing_datetime, so each run emits only genuinely new minutes (verified: 2596 records cold, 0 on immediate re-run). --minutes only bounds the cold start."

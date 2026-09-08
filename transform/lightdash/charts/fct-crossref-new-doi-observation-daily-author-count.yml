@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_crossref_new_doi_observation_created_at_day
+          yRef:
+            field: fct_crossref_new_doi_observation_average_author_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Average authors per DOI
+    layout:
+      xField: fct_crossref_new_doi_observation_created_at_day
+      yField:
+      - fct_crossref_new_doi_observation_average_author_count
+  type: cartesian
+description: Average reported `author_count` for DOI records by their `created_at` day. Repeated observations
+  make this observation-weighted and can overweight records polled more often; missing days are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_crossref_new_doi_observation_created_at_day
+  exploreName: fct_crossref_new_doi_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_crossref_new_doi_observation_average_author_count
+  sorts:
+  - descending: false
+    fieldId: fct_crossref_new_doi_observation_created_at_day
+  tableCalculations: []
+name: Average authors per DOI by day
+slug: fct-crossref-new-doi-observation-daily-author-count
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_crossref_new_doi_observation_created_at_day
+  - fct_crossref_new_doi_observation_average_author_count
+tableName: fct_crossref_new_doi_observation
+version: 1

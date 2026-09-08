@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_bordeaux_bridge_bridge_name
+          yRef:
+            field: fct_bordeaux_bridge_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_bordeaux_bridge_bridge_name
+      yField:
+      - fct_bordeaux_bridge_distinct_entities
+  type: cartesian
+description: Distinct `bridge_id` values by `bridge_name` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_bordeaux_bridge_bridge_name
+  exploreName: fct_bordeaux_bridge
+  filters:
+    dimensions:
+      and:
+      - id: 941cabac-f5c7-5f94-a449-32efb2730a52
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_bordeaux_bridge_observed_at
+        values:
+        - 30
+      id: c2c8b9ba-b3a8-51aa-9916-9297a46096da
+  limit: 20
+  metrics:
+  - fct_bordeaux_bridge_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_bordeaux_bridge_distinct_entities
+  tableCalculations: []
+name: Distinct bridge by bridge name
+slug: fct-bordeaux-bridge
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_bordeaux_bridge_bridge_name
+  - fct_bordeaux_bridge_distinct_entities
+tableName: fct_bordeaux_bridge
+version: 1

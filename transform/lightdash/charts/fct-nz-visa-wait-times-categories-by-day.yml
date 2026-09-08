@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_nz_visa_wait_times_observed_at_day
+          yRef:
+            field: fct_nz_visa_wait_times_distinct_visa_types
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct visa types
+    layout:
+      xField: fct_nz_visa_wait_times_observed_at_day
+      yField:
+      - fct_nz_visa_wait_times_distinct_visa_types
+  type: cartesian
+description: Distinct canonical visa types per observation day, compared across the six published labels.
+  All six labels are retained because the feed has six visible values; this is catalogue coverage, not
+  application volume.
+metricQuery:
+  dimensions:
+  - fct_nz_visa_wait_times_observed_at_day
+  - fct_nz_visa_wait_times_visa_type
+  exploreName: fct_nz_visa_wait_times
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nz_visa_wait_times_distinct_visa_types
+  sorts:
+  - descending: true
+    fieldId: fct_nz_visa_wait_times_distinct_visa_types
+  - descending: false
+    fieldId: fct_nz_visa_wait_times_observed_at_day
+  tableCalculations: []
+name: Visa categories reported by day
+pivotConfig:
+  columns:
+  - fct_nz_visa_wait_times_visa_type
+slug: fct-nz-visa-wait-times-categories-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nz_visa_wait_times_observed_at_day
+  - fct_nz_visa_wait_times_visa_type
+  - fct_nz_visa_wait_times_distinct_visa_types
+tableName: fct_nz_visa_wait_times
+version: 1

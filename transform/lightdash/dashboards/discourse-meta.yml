@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: bdee5976-ce13-5213-b923-a273945934fc
+    label: 'Discourse meta topic observation: Author'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_discourse_meta_topic_observation_author
+      tableName: fct_discourse_meta_topic_observation
+    values: []
+  - disabled: true
+    id: 34456096-f181-5ae7-b0a5-717d85e90555
+    label: 'Discourse meta topic observation: Title'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_discourse_meta_topic_observation_title
+      tableName: fct_discourse_meta_topic_observation
+    values: []
+  - disabled: true
+    id: 93d9e009-953c-57a6-8078-9d18a7cc1f9f
+    label: 'Discourse meta topic observation: Reply count'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_discourse_meta_topic_observation_reply_count
+      tableName: fct_discourse_meta_topic_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Discourse Meta
+slug: discourse-meta
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical observation fact for topics published on the Discourse Meta community.
+      Each row records one topic at one extractor observation timestamp, retaining the topic metadata,
+      engagement counters, tags, and raw load lineage. Repeated copies of the same source, topic identifier,
+      and observation timestamp retain the latest loaded row.
+
+
+      **Grain:** source_name, topic_id, observed_at
+
+
+      **What changes here:** how topic creation and engagement levels move across the forum''s short observed
+      history.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `discourse_meta` — licence: unstated; varies per forum; attribution required: False. Source configuration:
+      `extract/sources/discourse_meta.yml`.'
+    hideFrame: false
+    title: Discourse meta topic observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Discourse meta topic observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct topics by creation day
+    chartSlug: fct-discourse-meta-topic-observation-topics-created
+    hideTitle: false
+    title: Distinct topics by creation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean observed views per day
+    chartSlug: fct-discourse-meta-topic-observation-observed-views
+    hideTitle: false
+    title: Mean observed views per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean replies for topics by creation day
+    chartSlug: fct-discourse-meta-topic-observation-created-replies
+    hideTitle: false
+    title: Mean replies for topics by creation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean observed views by author
+    chartSlug: fct-discourse-meta-topic-observation-views-by-author
+    hideTitle: false
+    title: Mean observed views by author
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Topics created by author each day
+    chartSlug: fct-discourse-meta-topic-observation-topics-by-author
+    hideTitle: false
+    title: Topics created by author each day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Discourse meta topic observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed views by title
+    chartSlug: fct-discourse-meta-topic-observation
+    hideTitle: false
+    title: Mean observed views by title
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Discourse meta topic observation — observations
+    chartSlug: fct-discourse-meta-topic-observation-details
+    hideTitle: false
+    title: Discourse meta topic observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

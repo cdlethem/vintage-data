@@ -1,0 +1,327 @@
+version: 2
+models:
+- name: fct_internet_archive_item_observation
+  description: Physical hourly observation fact for Internet Archive items. Each row records one archive
+    source, item identifier, and extractor observation timestamp, retaining item metadata and raw-load
+    lineage for auditability. Repeated copies of the same source, item, and observation timestamp retain
+    the latest loaded record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: archive_source, item_id, observed_at
+      label: Internet archive item observation
+      group_label: Internet archive
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: internet_archive_i_574d61
+      vintage:
+        visualization:
+          dimension: media_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct item by media type
+          description: Distinct `item_id` values by `media_type` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - item_id
+          - media_type
+          - source_loaded_at
+          sources:
+          - '`internet_archive` — licence: per-item (varies by collection); attribution required: True.
+            Source configuration: `extract/sources/internet_archive.yml`.'
+          analysis:
+            headline: how the observed Internet Archive catalogue and credited-creator mix change across
+              five daily snapshots.
+            event_time: added_at
+            grain: DAY
+            controls:
+            - archive_source
+            - media_type
+            - creator
+            trends:
+            - slug: observed-items
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Items observed each day
+              description: Distinct `item_id` values present in the feed on each observation day. This is
+                a level rather than a flow because the feed republishes its catalogue; days with no
+                successful extract are absent rather than zero.
+              width: half
+            - slug: observed-creators
+              kind: total
+              metric: distinct_creators
+              time: observed_at
+              grain: DAY
+              title: Creators represented each day
+              description: Distinct non-null `creator` values present in the feed on each observation day.
+                This is a catalogue level rather than a count of new creators; days with no successful
+                extract are absent rather than zero.
+              width: half
+            - slug: items-by-creator
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: creator
+              top_n: 6
+              time: observed_at
+              grain: DAY
+              title: Observed items by creator
+              description: Distinct `item_id` values per observation day for the six largest creator values.
+                Null creators and the remainder are excluded rather than aggregated, and absent days are
+                absent rather than zero.
+              width: full
+            - slug: added-items-by-creator
+              kind: composition
+              metric: distinct_entities
+              breakdown: creator
+              top_n: 6
+              time: added_at
+              grain: DAY
+              title: Items by credited creator on reported addition day
+              description: Distinct `item_id` values stacked by creator on the source-reported `added_at`
+                day. The bars show the sparse five-day event history; null creators and the remainder are
+                excluded rather than aggregated, and absent days are absent rather than zero.
+              width: full
+  columns:
+  - name: internet_archive_item_observation_key
+    description: Stable hash of the archive source, item identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Internet archive item observation key
+          hidden: true
+          name: internet_archive_i_574d61
+  - name: archive_source
+    description: Internet Archive source identifier supplied by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Archive source
+          hidden: false
+  - name: item_id
+    description: Canonical Internet Archive item identifier.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct item
+            description: Distinct `item_id` values by `media_type` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Item id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp at which the Internet Archive item was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: title
+    description: Item title supplied by Internet Archive.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: media_type
+    description: Internet Archive media type classification for the item.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Media type
+          hidden: false
+  - name: collections
+    description: JSON array of Internet Archive collection identifiers containing the item.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Collections
+          hidden: true
+          sql: CAST(${TABLE}.collections AS VARCHAR)
+  - name: creator
+    description: Creator value supplied by Internet Archive, when reported.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_creators:
+            type: count_distinct
+            label: Distinct creator
+            description: Distinct non-null `creator` values represented in the feed on each observation
+              day. This is a catalogue-level measure and repeated observations do not represent new
+              creators.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Creator
+          hidden: false
+  - name: added_at
+    description: UTC timestamp when Internet Archive reports that the item was added.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Added at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: item_url
+    description: Canonical Internet Archive URL for the item.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Item url
+          hidden: false
+  - name: source_row_id
+    description: Raw load row identifier for the retained item observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that supplied the retained item observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained item observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: extract_st_51074f
+  - name: load_id
+    description: Identifier of the load job that inserted the item observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the item observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw item content used for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

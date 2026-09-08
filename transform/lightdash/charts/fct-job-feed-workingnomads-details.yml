@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of Working Nomads job-listing observations. Each row is one job identifier
+  as observed by the extractor at a fetched timestamp, with listing attributes and raw-load lineage retained
+  for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_job_feed_workingnomads_observed_at
+  - fct_job_feed_workingnomads_job_id
+  - fct_job_feed_workingnomads_company
+  - fct_job_feed_workingnomads_source_loaded_at
+  exploreName: fct_job_feed_workingnomads
+  filters:
+    dimensions:
+      and:
+      - id: db92e775-7594-53f6-a82c-e58c2489e778
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_feed_workingnomads_observed_at
+        values:
+        - 30
+      id: b2297540-b28a-5575-b9e7-335dfdc43264
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_workingnomads_observed_at
+  tableCalculations: []
+name: Job feed workingnomads — observations
+slug: fct-job-feed-workingnomads-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_job_feed_workingnomads
+version: 1

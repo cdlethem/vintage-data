@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_usaspending_award_observations_performance_start_date_month
+          yRef:
+            field: fct_usaspending_award_observations_distinct_awards
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Performance start date (Month)
+      yAxis:
+      - name: Distinct award
+    layout:
+      xField: fct_usaspending_award_observations_performance_start_date_month
+      yField:
+      - fct_usaspending_award_observations_distinct_awards
+  type: cartesian
+description: Distinct `award_id` values by performance-start month and `awarding_agency`, retaining the
+  six largest agency series. Remaining agencies are excluded rather than aggregated, and months with no
+  starts are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_usaspending_award_observations_performance_start_date_month
+  - fct_usaspending_award_observations_awarding_agency
+  exploreName: fct_usaspending_award_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_usaspending_award_observations_distinct_awards
+  sorts:
+  - descending: true
+    fieldId: fct_usaspending_award_observations_distinct_awards
+  - descending: false
+    fieldId: fct_usaspending_award_observations_performance_start_date_month
+  tableCalculations: []
+name: Award starts by awarding agency
+pivotConfig:
+  columns:
+  - fct_usaspending_award_observations_awarding_agency
+slug: fct-usaspending-award-observations-agency-awards
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_usaspending_award_observations_performance_start_date_month
+  - fct_usaspending_award_observations_awarding_agency
+  - fct_usaspending_award_observations_distinct_awards
+tableName: fct_usaspending_award_observations
+version: 1

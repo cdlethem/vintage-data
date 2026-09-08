@@ -1,0 +1,160 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 4ef62a98-7df9-52a2-96a6-deff2db10071
+    label: 'Food hygiene ratings cambridge: Business type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_cambridge_business_type
+      tableName: fct_food_hygiene_ratings_cambridge
+    values: []
+  - disabled: true
+    id: 76019f00-83be-5b86-9b76-dd579dd73681
+    label: 'Food hygiene ratings cambridge: Rating value'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_cambridge_rating_value
+      tableName: fct_food_hygiene_ratings_cambridge
+    values: []
+  - disabled: true
+    id: 0c2d451a-1383-5eaf-88e6-f9f77de8bac8
+    label: 'Food hygiene ratings cambridge: New rating pending'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_cambridge_new_rating_pending
+      tableName: fct_food_hygiene_ratings_cambridge
+    values: []
+  - disabled: true
+    id: 267b8e14-e23c-52fa-8c4d-510965b50125
+    label: 'Food hygiene ratings cambridge: Scheme type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_cambridge_scheme_type
+      tableName: fct_food_hygiene_ratings_cambridge
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Food Hygiene Ratings Cambridge
+slug: food-hygiene-ratings-cambridge
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of food hygiene ratings returned for Cambridge establishments. Each
+      row is one establishment in one publisher snapshot, keyed by establishment_id and observed_at. Re-ingestion
+      of the same snapshot retains only the latest loaded copy while preserving load lineage.
+
+
+      **Grain:** establishment_id, observed_at
+
+
+      **What changes here:** how published Cambridge ratings and their component scores shift across business
+      types over rating history.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `food_hygiene_ratings_cambridge` — see dbt raw-source lineage.'
+    hideFrame: false
+    title: Food hygiene ratings cambridge
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Food hygiene ratings cambridge — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Establishments rated per month
+    chartSlug: fct-food-hygiene-ratings-cambridge-rating-volume
+    hideTitle: false
+    title: Establishments rated per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average hygiene component score per month
+    chartSlug: fct-food-hygiene-ratings-cambridge-hygiene-score
+    hideTitle: false
+    title: Average hygiene component score per month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Rated establishments by business type
+    chartSlug: fct-food-hygiene-ratings-cambridge-business-type-mix
+    hideTitle: false
+    title: Rated establishments by business type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Hygiene score by business type
+    chartSlug: fct-food-hygiene-ratings-cambridge-score-by-business-type
+    hideTitle: false
+    title: Hygiene score by business type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Food hygiene ratings cambridge — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct establishment by business type
+    chartSlug: fct-food-hygiene-ratings-cambridge
+    hideTitle: false
+    title: Distinct establishment by business type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Food hygiene ratings cambridge — observations
+    chartSlug: fct-food-hygiene-ratings-cambridge-details
+    hideTitle: false
+    title: Food hygiene ratings cambridge — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

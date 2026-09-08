@@ -1,0 +1,154 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 6a5fb291-fcaf-5cbe-b0bd-89a60d602881
+    label: 'Catalonia beach status: Municipality name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_catalonia_beach_status_municipality_name
+      tableName: fct_catalonia_beach_status
+    values: []
+  - disabled: true
+    id: 1b43dfd7-609c-5a73-a5af-f17b8e5884f1
+    label: 'Catalonia beach status: Coast name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_catalonia_beach_status_coast_name
+      tableName: fct_catalonia_beach_status
+    values: []
+  - disabled: true
+    id: 1514acba-5098-51df-8189-1d25c56c4a2d
+    label: 'Catalonia beach status: Beach flag'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_catalonia_beach_status_beach_flag
+      tableName: fct_catalonia_beach_status
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Catalonia Beaches
+slug: catalonia-beaches
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of Catalonia beach-status records. Each row is one beach status
+      update identified by the upstream source, beach id, and publisher status timestamp; repeated copies
+      delivered by later raw loads are reduced to the latest loaded record while source lineage is retained.
+      Source numeric fields are typed, the upstream -9999 wave-height sentinel is represented as null,
+      and the source''s N/A UV value remains nullable.
+
+
+      **Grain:** source_name, beach_id, status_updated_at
+
+
+      **What changes here:** how the beach roster and reported conditions differ across four sparse annual
+      status snapshots.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `catalonia_beaches` — licence: Catalonia open-data terms; attribution required: True. Source configuration:
+      `extract/sources/catalonia_beaches.yml`.'
+    hideFrame: false
+    title: Catalonia beach status
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Catalonia beach status — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean water temperature by status date
+    chartSlug: fct-catalonia-beach-status-water-temperature-history
+    hideTitle: false
+    title: Mean water temperature by status date
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct beaches reported by status date
+    chartSlug: fct-catalonia-beach-status-beach-roster-history
+    hideTitle: false
+    title: Distinct beaches reported by status date
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Water temperature by coast and status date
+    chartSlug: fct-catalonia-beach-status-temperature-by-coast
+    hideTitle: false
+    title: Water temperature by coast and status date
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Distinct beaches by flag and status date
+    chartSlug: fct-catalonia-beach-status-beach-flag-mix
+    hideTitle: false
+    title: Distinct beaches by flag and status date
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Catalonia beach status — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed water temperature by municipality name
+    chartSlug: fct-catalonia-beach-status
+    hideTitle: false
+    title: Mean observed water temperature by municipality name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Catalonia beach status — observations
+    chartSlug: fct-catalonia-beach-status-details
+    hideTitle: false
+    title: Catalonia beach status — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

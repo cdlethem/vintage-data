@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_ema_medicine_shortage_last_updated_date_month
+          yRef:
+            field: fct_ema_medicine_shortage_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Last updated date (Month)
+      yAxis:
+      - name: Distinct shortage
+    layout:
+      stack: true
+      xField: fct_ema_medicine_shortage_last_updated_date_month
+      yField:
+      - fct_ema_medicine_shortage_distinct_entities
+  type: cartesian
+description: Distinct `shortage_id` values by EMA `last_updated_date` month stacked by status. Only the
+  69 rows with a parsed last-updated date appear; null dates and months with no updates are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_ema_medicine_shortage_last_updated_date_month
+  - fct_ema_medicine_shortage_supply_shortage_status
+  exploreName: fct_ema_medicine_shortage
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ema_medicine_shortage_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_ema_medicine_shortage_distinct_entities
+  - descending: false
+    fieldId: fct_ema_medicine_shortage_last_updated_date_month
+  tableCalculations: []
+name: Updated shortages by status each month
+pivotConfig:
+  columns:
+  - fct_ema_medicine_shortage_supply_shortage_status
+slug: fct-ema-medicine-shortage-updated-status
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ema_medicine_shortage_last_updated_date_month
+  - fct_ema_medicine_shortage_supply_shortage_status
+  - fct_ema_medicine_shortage_distinct_entities
+tableName: fct_ema_medicine_shortage
+version: 1

@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of incidents reported by the Statuspage API. Each row represents
+  one upstream status page incident at one extractor observation timestamp, retaining incident lifecycle,
+  impact, nested update and component details, page context, and complete load lineage. Repeated insert-only
+  copies of the same source, incident, and observation timestamp are reduced to the latest loaded copy.
+metricQuery:
+  dimensions: &id001
+  - fct_statuspage_incident_observation_observed_at
+  - fct_statuspage_incident_observation_incident_id
+  - fct_statuspage_incident_observation_impact
+  - fct_statuspage_incident_observation_source_loaded_at
+  exploreName: fct_statuspage_incident_observation
+  filters:
+    dimensions:
+      and:
+      - id: 7c3b510f-1df4-5fc0-bceb-6c5a44264aa9
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_statuspage_incident_observation_observed_at
+        values:
+        - 30
+      id: 23499ab2-ae89-54c9-a38a-4510bbfd6a53
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_statuspage_incident_observation_observed_at
+  tableCalculations: []
+name: Statuspage incident observation — observations
+slug: fct-statuspage-incident-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_statuspage_incident_observation
+version: 1

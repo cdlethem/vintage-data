@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of GetOnBoard job observations. Each row represents one GetOnBoard
+  job identifier from one extractor observation timestamp; repeated ingestion of the same observation
+  is reduced to the latest loaded copy while load-layer lineage remains available for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_job_feed_getonboard_observed_at
+  - fct_job_feed_getonboard_job_id
+  - fct_job_feed_getonboard_department
+  - fct_job_feed_getonboard_source_loaded_at
+  exploreName: fct_job_feed_getonboard
+  filters:
+    dimensions:
+      and:
+      - id: 8b829abf-ac5f-5033-82a4-2d6d89479c10
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_feed_getonboard_observed_at
+        values:
+        - 30
+      id: 28c0d547-1503-55a7-83ce-6fd64051af71
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_getonboard_observed_at
+  tableCalculations: []
+name: Job feed getonboard — observations
+slug: fct-job-feed-getonboard-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_job_feed_getonboard
+version: 1

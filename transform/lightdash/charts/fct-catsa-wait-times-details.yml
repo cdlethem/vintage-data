@@ -1,0 +1,46 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical history of Canadian Air Transport Security Authority checkpoint wait-time
+  observations by airport and checkpoint. Each row preserves the published wait-time text, parsed minute
+  bounds where present, and raw load lineage for replay and audit.
+metricQuery:
+  dimensions: &id001
+  - fct_catsa_wait_times_observed_at
+  - fct_catsa_wait_times_checkpoint_id
+  - fct_catsa_wait_times_airport_slug
+  - fct_catsa_wait_times_wait_time_max_minutes
+  - fct_catsa_wait_times_source_loaded_at
+  exploreName: fct_catsa_wait_times
+  filters:
+    dimensions:
+      and:
+      - id: 8e5403df-0bc1-5fda-a854-8f92891f47bf
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_catsa_wait_times_observed_at
+        values:
+        - 30
+      - id: 26b83bb9-2368-5c67-a1ee-b170fdf673bd
+        operator: equals
+        target:
+          fieldId: fct_catsa_wait_times_wait_time_available
+        values:
+        - true
+      id: 0c254d6e-6a95-5321-a60d-dfcf7903bd40
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_catsa_wait_times_observed_at
+  tableCalculations: []
+name: Airport screening waits — observations
+slug: fct-catsa-wait-times-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_catsa_wait_times
+version: 1

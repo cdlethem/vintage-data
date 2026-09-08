@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_melbourne_pedestrian_observations_sensing_datetime_hour
+          yRef:
+            field: fct_melbourne_pedestrian_observations_m_07ead95e
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Sensing datetime (Hour)
+      yAxis:
+      - name: Mean observed total of directions
+    layout:
+      xField: fct_melbourne_pedestrian_observations_sensing_datetime_hour
+      yField:
+      - fct_melbourne_pedestrian_observations_m_07ead95e
+  type: cartesian
+description: Average `total_of_directions` across retained measurements at each sensing hour. Each observation
+  has equal weight, so differing location coverage and feed polling can affect the mean. This is a reported
+  level, not an additive citywide count; empty hours are absent.
+metricQuery:
+  dimensions:
+  - fct_melbourne_pedestrian_observations_sensing_datetime_hour
+  exploreName: fct_melbourne_pedestrian_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_melbourne_pedestrian_observations_m_07ead95e
+  sorts:
+  - descending: false
+    fieldId: fct_melbourne_pedestrian_observations_sensing_datetime_hour
+  tableCalculations: []
+name: Mean reported pedestrians per sensing hour
+slug: fct-melbourne-pedestrian-observations-mean-count
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_melbourne_pedestrian_observations_sensing_datetime_hour
+  - fct_melbourne_pedestrian_observations_m_07ead95e
+tableName: fct_melbourne_pedestrian_observations
+version: 1

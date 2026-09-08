@@ -1,0 +1,42 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily incremental physical fact of UK Police street-level crime snapshots for the Leicester-area
+  API extract. Each row records one crime identifier from one publishing source at one extractor fetch
+  timestamp, preserving the source's monthly crime period and outcome status. The append-only raw loads
+  are deduplicated by this observation grain, retaining the latest loaded copy and complete load lineage
+  so later outcome revisions remain queryable as observations rather than overwriting history. Coordinates
+  are anonymised nearby map points supplied by the publisher, not precise crime addresses.
+metricQuery:
+  dimensions: &id001
+  - fct_uk_police_crime_observation_observed_at
+  - fct_uk_police_crime_observation_crime_id
+  - fct_uk_police_crime_observation_category
+  - fct_uk_police_crime_observation_source_loaded_at
+  exploreName: fct_uk_police_crime_observation
+  filters:
+    dimensions:
+      and:
+      - id: aef3e331-89b1-54b4-b939-eb865d4f6ed0
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_police_crime_observation_observed_at
+        values:
+        - 30
+      id: 65398f83-fa20-523b-a037-684d7cb0305c
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_uk_police_crime_observation_observed_at
+  tableCalculations: []
+name: Uk police crime observation — observations
+slug: fct-uk-police-crime-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_uk_police_crime_observation
+version: 1

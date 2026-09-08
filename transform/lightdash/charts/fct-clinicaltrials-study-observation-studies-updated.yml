@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_clinicaltrials_study_observation_last_update_day
+          yRef:
+            field: fct_clinicaltrials_study_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Last update (Day)
+      yAxis:
+      - name: Distinct study
+    layout:
+      xField: fct_clinicaltrials_study_observation_last_update_day
+      yField:
+      - fct_clinicaltrials_study_observation_distinct_entities
+  type: cartesian
+description: Distinct `study_id` values grouped by the source-reported `last_update` date. This is a two-day
+  source-time level rather than a historical flow, and dates without records are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_clinicaltrials_study_observation_last_update_day
+  exploreName: fct_clinicaltrials_study_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_clinicaltrials_study_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_clinicaltrials_study_observation_last_update_day
+  tableCalculations: []
+name: Distinct studies by source update date
+slug: fct-clinicaltrials-study-observation-studies-updated
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_clinicaltrials_study_observation_last_update_day
+  - fct_clinicaltrials_study_observation_distinct_entities
+tableName: fct_clinicaltrials_study_observation
+version: 1

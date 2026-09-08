@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_gracedb_superevents_observed_at_day
+          yRef:
+            field: fct_gracedb_superevents_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct superevent
+    layout:
+      xField: fct_gracedb_superevents_observed_at_day
+      yField:
+      - fct_gracedb_superevents_distinct_entities
+  type: cartesian
+description: Distinct `superevent_id` values in each extractor observation day. This is a collection-level
+  level over five days, not the event history; days without a successful extract are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_gracedb_superevents_observed_at_day
+  exploreName: fct_gracedb_superevents
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gracedb_superevents_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_gracedb_superevents_observed_at_day
+  tableCalculations: []
+name: Distinct superevents observed per fetch day
+slug: fct-gracedb-superevents-observations-by-fetch-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gracedb_superevents_observed_at_day
+  - fct_gracedb_superevents_distinct_entities
+tableName: fct_gracedb_superevents
+version: 1

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_nih_reporter_project_observations_project_start_at_month
+          yRef:
+            field: fct_nih_reporter_project_observations_average_award_amount
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Project start at (Month)
+      yAxis:
+      - name: Mean observed award amount
+    layout:
+      stack: true
+      xField: fct_nih_reporter_project_observations_project_start_at_month
+      yField:
+      - fct_nih_reporter_project_observations_average_award_amount
+  type: cartesian
+description: Mean non-null `award_amount` stacked by the six organizations with the most projects and
+  project-start month. Other organizations are excluded rather than aggregated, and sparse months have
+  no bar.
+metricQuery:
+  dimensions:
+  - fct_nih_reporter_project_observations_project_start_at_month
+  - fct_nih_reporter_project_observations_organization_name
+  exploreName: fct_nih_reporter_project_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nih_reporter_project_observations_average_award_amount
+  sorts:
+  - descending: true
+    fieldId: fct_nih_reporter_project_observations_average_award_amount
+  - descending: false
+    fieldId: fct_nih_reporter_project_observations_project_start_at_month
+  tableCalculations: []
+name: Mean award level by recipient organization
+pivotConfig:
+  columns:
+  - fct_nih_reporter_project_observations_organization_name
+slug: fct-nih-reporter-project-observations-award-mix-by-organization
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nih_reporter_project_observations_project_start_at_month
+  - fct_nih_reporter_project_observations_organization_name
+  - fct_nih_reporter_project_observations_average_award_amount
+tableName: fct_nih_reporter_project_observations
+version: 1

@@ -1,76 +1,69 @@
 # monitoring
 
-Deterministic health analysis of the extract pipeline's output. The expensive
-judgment — *is this flag real?* — belongs to the `pipeline_check` bot
-(`bots/pipeline_check/`); everything objective happens here, in ordinary code,
-first.
+Deterministic health analysis of extract output. `digest.py` reads
+`$EXTRACT_DATA_ROOT`, source ymls, the effective cadence plan, and
+`source_types.json`; it computes evidence before any model is involved.
 
-## Two stages
+## Evidence produced
 
-1. **`digest.py` — deterministic triage (this directory).** Reads the landed
-   data (`$EXTRACT_DATA_ROOT`), the source ymls, and `source_types.json`. For
-   every source it derives the expected gap from the yml's five-field UTC cron
-   schedule, computes staleness, run/failure counts, id-novelty (feeds),
-   value-drift (status sources), and record-count trends, then classifies the
-   source as `OK` / `WATCH` / `PROBLEM`. No model involved. `--triage` prints
-   just the verdict line plus the flagged sources.
+For every source the digest derives the effective expected gap, staleness,
+success/failure streaks, record-count trends, and the last-two-run signal:
 
-2. **`bot__pipeline_check` — model only on the flags.** The bot takes the
-   triage output as its context. If triage says `OK` it writes an OK report and
-   **calls no model at all**. Otherwise it sends only the flagged sources and a
-   focused prompt (`bots/pipeline_check/prompt.md`) to whichever model alias
-   this machine configures, asking for DISMISS / WARN / INVESTIGATE per source.
+- **feed** — fraction of ids in the latest run absent from the previous run;
+- **status** — fraction of common ids whose configured values changed;
+- **snapshot** — staleness and record-count stability.
+
+Known-normal behavior belongs in `source_types.json`: weekends, release
+calendars, quiet communities, and small periodic batches. These notes prevent a
+model from treating expected silence as an incident.
 
 ```
-../orchestration/.venv/bin/python digest.py           # full per-source digest
-../orchestration/.venv/bin/python digest.py --triage  # verdict + flags only
-../orchestration/.venv/bin/python ../bots/bin/run_bot pipeline_check --dry-run
-../orchestration/.venv/bin/python ../bots/bin/run_bot pipeline_check
+../orchestration/.venv/bin/python digest.py
+../orchestration/.venv/bin/python digest.py --json
+../orchestration/.venv/bin/python digest.py --triage
 ```
 
+`--triage` prints only `WATCH`/`PROBLEM` rows. `--json` provides the compact
+per-source objects used by `bots/agent_context.py cadence`.
 
-## What "healthy" means per source
+## Consumers
 
-`source_types.json` encodes each source's behavioral `type` and known quirks;
-the source yml `schedule` is the sole cadence authority:
+Monitoring judgment is split by responsibility rather than duplicated:
 
-- **feed** — new ids should appear across a real interval; `id_novelty` ~0 on a
-  fast feed is the warning (but quiet hours/weekends are normal — see `notes`).
-- **status** — same ids each run, values drift; a frozen `value_change_fraction`
-  on a source that should move is the warning.
-- **snapshot** — periodic full snapshot; only staleness and record-count
-  stability matter.
+1. **`bot__cadence_review`** runs at `37 */4 * * *`. Its compact context
+   contains every flagged source plus a bounded rotating sample. It is
+   read-only and emits cadence recommendations or strict task proposals; it
+   never changes source configuration.
+2. **`bot__failure_triage`** runs at minute 7 hourly and calls a model only for
+   bounded, normalized, previously unreviewed non-bot failure groups. Bot
+   workflow failures stay in deterministic dashboard health cards. Triage is
+   read-only and proposes admitted work instead of repairing the checkout.
+3. **`bot__manager`** reads the latest useful provider-stored reports daily.
+   Missing, stale, or failed specialist evidence is explicit and forces a
+   `degraded_evidence` plan whose actions remain human approval pending.
 
-`notes` records behavior that looks alarming but is normal (weekend markets,
-hourly publish cycles, weekly release batches, small quiet projects). The model
-leans on these to dismiss false alarms. **Keep them updated as you learn each
-source** — they are the institutional memory that lets a small model reason
-correctly.
+Report submission stores typed outcomes, retry classes, durations, deadline
+consumption, token usage, and normalized failure fingerprints in the dashboard
+database. Payload-free skips do not replace useful evidence. The dashboard
+shows freshness and missing-evidence status, execution queue stages, and
+provider cache age without expanding model prompts or XCom.
 
-## Triage rules (why a flag fires)
+The former `bot__pipeline_check` and package-promoting `bot__reviewer` are
+removed. `task_executor` is the only writer and runs only after human
+admission in external confinement; `pr_reviewer` is the sole read-only
+reviewer. Neither monitoring consumer mutates the shared checkout.
 
-- `PROBLEM`: invalid or missing cron schedule (`schedule_error`), `stale`,
-  `consecutive_failures >= 3` (down now), `value_keys_missing` (the drift
-  check is misconfigured), or a fast source that has never produced
-  (`no_data_yet` with a sub-daily cron-derived gap).
-- `WATCH`: isolated failures that already recovered (`failed_runs >= 1` but
-  `consecutive_failures = 0`), or a fast feed/status source showing no
-  novelty/drift this cycle.
-- Note the distinction: **consecutive** trailing failures mean an outage;
-  scattered failures among successes are transient upstream flakiness and only
-  warrant a WATCH — a source polling every 10 min will collect a few timeouts a
-  day at zero real cost.
+## Triage rules
 
-## Scheduling
+- `PROBLEM`: invalid/missing cron, stale output, three or more consecutive
+  failures, missing configured value keys, or a fast source that has never
+  produced.
+- `WATCH`: isolated recovered failures or a fast feed/status source with no
+  novelty/drift in the current comparison.
+- A failure streak is different from scattered upstream timeouts. The former
+  is an outage; the latter is evidence for observation unless it materially
+  loses data.
 
-The check runs as an Airflow DAG (`bot__pipeline_check`, every 30 minutes) like
-every other recurring job in this repo — no separate timer. It is cheap when
-healthy: the model is invoked only on a flag, and a busy local model server
-makes the run skip rather than queue.
-
-Which model answers is not this directory's business: the bot names a *model
-alias* and `bots/models.yml` (gitignored, per-machine) maps that alias to
-OpenRouter, an Anthropic key, a local llama-server, or a CLI agent. See
-[`bots/README.md`](../bots/README.md).
-
-Reports land in `bots/runs/pipeline_check/` (gitignored).
+Monitoring reads the cadence plan as well as the declared yml. A source slowed
+to twelve hours is not incorrectly marked stale against its original
+fifteen-minute cron.

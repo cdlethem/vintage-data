@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_reservoir_level_observation_observation_start_at_day
+          yRef:
+            field: fct_reservoir_level_observation_average_pct_of_capacity
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observation start at (Day)
+      yAxis:
+      - name: Mean observed pct of capacity
+    layout:
+      xField: fct_reservoir_level_observation_observation_start_at_day
+      yField:
+      - fct_reservoir_level_observation_average_pct_of_capacity
+  type: cartesian
+description: Mean non-null `pct_of_capacity` reported on each source observation day across the 35-day
+  event history. Each retained observation has equal weight, so irregular polling can bias the mean; days
+  without storage percentages are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_reservoir_level_observation_observation_start_at_day
+  exploreName: fct_reservoir_level_observation
+  filters:
+    dimensions:
+      and:
+      - id: 6d503fa2-ef13-5030-8135-e4f4ef893d29
+        operator: equals
+        target:
+          fieldId: fct_reservoir_level_observation_is_missing
+        values:
+        - false
+      id: bbc04f3a-e669-53a7-b90e-e816e8a5fe31
+  limit: 5000
+  metrics:
+  - fct_reservoir_level_observation_average_pct_of_capacity
+  sorts:
+  - descending: false
+    fieldId: fct_reservoir_level_observation_observation_start_at_day
+  tableCalculations: []
+name: Mean storage percentage by source observation day
+slug: fct-reservoir-level-observation-storage-percent
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_reservoir_level_observation_observation_start_at_day
+  - fct_reservoir_level_observation_average_pct_of_capacity
+tableName: fct_reservoir_level_observation
+version: 1

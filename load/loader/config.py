@@ -15,6 +15,8 @@ from typing import Any
 
 import yaml
 
+from .cadence import CadencePolicy, policy_from_config
+
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG = REPO_ROOT / "load" / "config" / "load.yml"
 
@@ -88,6 +90,7 @@ class LoadConfig:
     dag: DagSettings
     defaults: SourceSettings
     overrides: dict[str, dict[str, Any]]
+    cadence: CadencePolicy
     path: pathlib.Path
 
     def for_source(self, name: str) -> SourceSettings:
@@ -126,5 +129,6 @@ def load_config(path: str | os.PathLike | None = None) -> LoadConfig:
         dag=DagSettings(**(raw.get("dag") or {})),
         defaults=SourceSettings(**(raw.get("defaults") or {})),
         overrides=raw.get("sources") or {},
+        cadence=policy_from_config(raw.get("cadence"), repo_root=REPO_ROOT),
         path=path,
     )

@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of Open Collective account snapshots. Each row is one account observed
+  at one fetch timestamp, with account balances, funding totals, and source-load lineage retained for
+  replay auditing. The source is insert-only and repeated copies of one observation are reduced to the
+  latest loaded record.
+metricQuery:
+  dimensions: &id001
+  - fct_open_collective_account_observation_observed_at
+  - fct_open_collective_account_observation_account_id
+  - fct_open_collective_account_observation_currency_code
+  - fct_open_collective_account_observation_balance_amount
+  - fct_open_collective_account_observation_source_l_2059e1
+  exploreName: fct_open_collective_account_observation
+  filters:
+    dimensions:
+      and:
+      - id: 567c5471-5255-5060-8195-96c3542cb5c1
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_open_collective_account_observation_observed_at
+        values:
+        - 30
+      id: d7e45ca5-cf53-5ab6-be7b-429651c8cffc
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_open_collective_account_observation_observed_at
+  tableCalculations: []
+name: Open collective account observation — observations
+slug: fct-open-collective-account-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_open_collective_account_observation
+version: 1

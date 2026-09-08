@@ -1,0 +1,276 @@
+version: 2
+models:
+- name: fct_sd_juror_standby
+  description: Hourly physical history of San Diego Superior Court telephone-standby instructions by courthouse
+    and service date. Each row preserves one fetched publisher state and its raw lineage for replay and
+    audit.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: standby_id, observed_at
+      label: Sd juror standby
+      group_label: Sd juror standby
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: standby_observation_key
+      vintage:
+        visualization:
+          dimension: courthouse
+          metric: average_group_range_count
+          time: observed_at
+          window_days: 30
+          title: Mean observed group range count by courthouse
+          description: Mean observed group range count by `courthouse` in the selected observation window.
+            Number of entries in the parsed group_ranges array. Each retained observation has equal weight;
+            polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure
+            or an additive total.
+          detail_fields:
+          - observed_at
+          - standby_id
+          - courthouse
+          - group_range_count
+          - source_loaded_at
+          sources:
+          - '`sd_juror_standby` — licence: San Diego Superior Court website terms; attribution required:
+            True. Source configuration: `extract/sources/sd_juror_standby.yml`.'
+          analysis:
+            headline: how courthouse standby coverage and instruction complexity change across daily
+              observations.
+            event_time: service_start_date
+            grain: DAY
+            controls:
+            - courthouse
+            - service_start_date
+            - instruction_length
+            trends:
+            - slug: observed-standbys
+              kind: total
+              metric: distinct_standbys
+              time: observed_at
+              grain: DAY
+              title: Distinct standby services observed each day
+              description: Distinct `standby_id` values present on each extractor observation day. This is a
+                level of the short four-day feed rather than a flow; repeated snapshots count once within
+                each day, and days with no successful extract are absent rather than zero.
+              width: half
+            - slug: instruction-length
+              kind: total
+              metric: average_instruction_length
+              time: observed_at
+              grain: DAY
+              title: Mean instruction length by observation day
+              description: Average character length of retained standby instructions on each observation
+                day. The mean is observation-weighted, so repeated snapshots can affect it; absent days are
+                absent rather than zero.
+              width: half
+            - slug: courthouse-range-mix
+              kind: composition
+              metric: average_group_range_count
+              breakdown: courthouse
+              top_n: 4
+              time: observed_at
+              grain: DAY
+              title: Mean group ranges by courthouse and day
+              description: Average parsed group-range count per observation day, stacked by courthouse. The
+                four courthouses are retained; this is a snapshot level rather than an additive total, and
+                missing courthouse-day observations are absent rather than zero.
+              width: full
+            - slug: service-date-by-courthouse
+              kind: breakdown
+              metric: distinct_standbys
+              breakdown: courthouse
+              top_n: 4
+              time: service_start_date
+              grain: DAY
+              title: Standby services by publisher service date
+              description: Distinct `standby_id` values by publisher `service_start_date`, split by courthouse.
+                Only three service dates are present in this short event-time span; unpopulated dates are
+                absent rather than zero and repeated observations count once per day and courthouse.
+              width: full
+  columns:
+  - name: standby_observation_key
+    description: Stable hash of the source standby identifier and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Standby observation key
+          hidden: true
+  - name: source_name
+    description: Raw source name that produced the standby observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: standby_id
+    description: Extractor identifier combining courthouse and publisher service date.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Standby id
+          hidden: false
+        metrics:
+          distinct_standbys:
+            type: count_distinct
+            label: Distinct standby services
+            description: Distinct `standby_id` values present in each observation group. Repeated snapshots
+              count once within the group and do not form an additive total across days.
+            format: '#,##0'
+  - name: courthouse
+    description: San Diego Superior Court courthouse named by the publisher.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Courthouse
+          hidden: false
+  - name: service_start_date
+    description: Publisher service date parsed from publisher_updated_at.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Service start date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the publisher page.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: instructions
+    description: Verbatim telephone-standby instructions published for the courthouse and service date.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Instructions
+          hidden: false
+  - name: group_ranges
+    description: JSON array of group ranges and phone-number ranges parsed from the instructions.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Group ranges
+          hidden: true
+          sql: CAST(${TABLE}.group_ranges AS VARCHAR)
+  - name: instruction_length
+    description: Character length of the verbatim instruction text.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Instruction length
+          hidden: false
+          format: '#,##0'
+        metrics:
+          average_instruction_length:
+            type: average
+            label: Mean instruction length
+            description: Mean character length of retained standby instructions in each observation group.
+              Each observation has equal weight; repeated snapshots can affect the mean.
+            format: '#,##0.00'
+  - name: group_range_count
+    description: Number of entries in the parsed group_ranges array.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_group_range_count:
+            type: average
+            label: Mean observed group range count
+            description: Mean observed group range count by `courthouse` in the selected observation window.
+              Number of entries in the parsed group_ranges array. Each retained observation has equal
+              weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+              measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Group range count
+          hidden: false
+          format: '#,##0'
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position in the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the raw observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the normalized raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

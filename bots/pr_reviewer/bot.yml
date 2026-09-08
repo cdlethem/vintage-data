@@ -1,0 +1,19 @@
+name: pr_reviewer
+description: review one immutable admitted pull-request artifact
+schedule: manual
+enabled: true
+model: reviewer_cli
+prompt: prompt.md
+timeout_minutes: 45
+context_budget_minutes: 5
+model_budget_minutes: 30
+publication_budget_minutes: 5
+cleanup_margin_seconds: 300
+capacity_policy: retry
+retry_on: [capacity, transient]
+requires_capabilities: [repository_read]
+context: {}
+triggers: []
+output:
+  format: json
+  schema: pr_reviewer_v2

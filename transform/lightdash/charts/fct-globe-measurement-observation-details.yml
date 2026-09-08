@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Incremental history of GLOBE Observer protocol measurements. Each row is one distinct source
+  payload identified by measurement id, observation timestamp, and content hash; repeated raw deliveries
+  of an identical payload merge while distinct payload versions remain observable. Raw-load lineage is
+  retained for replay and audit.
+metricQuery:
+  dimensions: &id001
+  - fct_globe_measurement_observation_observed_at
+  - fct_globe_measurement_observation_measurement_id
+  - fct_globe_measurement_observation_protocol
+  - fct_globe_measurement_observation_source_loaded_at
+  exploreName: fct_globe_measurement_observation
+  filters:
+    dimensions:
+      and:
+      - id: 2920f950-c2c5-5ece-af6c-5460dce64ff7
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_globe_measurement_observation_observed_at
+        values:
+        - 30
+      id: 14bcf1ce-2272-51d1-885c-54d9957d84cd
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_globe_measurement_observation_observed_at
+  tableCalculations: []
+name: Globe measurement observation — observations
+slug: fct-globe-measurement-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_globe_measurement_observation
+version: 1

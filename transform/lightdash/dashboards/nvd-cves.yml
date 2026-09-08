@@ -1,0 +1,164 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 824c13c1-d597-5623-a029-5317e023145c
+    label: 'Nvd cve observation: Cvss severity'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nvd_cve_observation_cvss_severity
+      tableName: fct_nvd_cve_observation
+    values: []
+  - disabled: true
+    id: c1b618c1-1f07-5fb8-925b-daa2f326d5be
+    label: 'Nvd cve observation: Status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nvd_cve_observation_status
+      tableName: fct_nvd_cve_observation
+    values: []
+  - disabled: true
+    id: 2c5bed2a-1a4f-52e8-9c2d-28e1fd9ece94
+    label: 'Nvd cve observation: Cvss version'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nvd_cve_observation_cvss_version
+      tableName: fct_nvd_cve_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Nvd Cves
+slug: nvd-cves
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical observation fact for National Vulnerability Database CVE records.
+      Each row is one NVD source system, CVE identifier, and extractor observation timestamp, retaining
+      the published vulnerability attributes and raw-load lineage. Replayed copies of the same observation
+      are reduced to the latest loaded row; this model preserves source values and does not infer remediation,
+      severity, or vulnerability relationships.
+
+
+      **Grain:** source_system, cve_id, observed_at
+
+
+      **What changes here:** how publication volume, severity, and workflow status shift across NVD release
+      months.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `nvd_cves` — licence: NVD — US Government work, public domain; attribution required: False. Source
+      configuration: `extract/sources/nvd_cves.yml`.'
+    hideFrame: false
+    title: Nvd cve observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Nvd cve observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Vulnerabilities published per month
+    chartSlug: fct-nvd-cve-observation-monthly-publications
+    hideTitle: false
+    title: Vulnerabilities published per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average reported CVSS score by publication month
+    chartSlug: fct-nvd-cve-observation-monthly-average-score
+    hideTitle: false
+    title: Average reported CVSS score by publication month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Published vulnerabilities by CVSS severity
+    chartSlug: fct-nvd-cve-observation-severity-trajectories
+    hideTitle: false
+    title: Published vulnerabilities by CVSS severity
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Published vulnerabilities by workflow status
+    chartSlug: fct-nvd-cve-observation-status-composition
+    hideTitle: false
+    title: Published vulnerabilities by workflow status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Published vulnerabilities by CVSS version
+    chartSlug: fct-nvd-cve-observation-cvss-version-composition
+    hideTitle: false
+    title: Published vulnerabilities by CVSS version
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Nvd cve observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct cve by cvss severity
+    chartSlug: fct-nvd-cve-observation
+    hideTitle: false
+    title: Distinct cve by cvss severity
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Nvd cve observation — observations
+    chartSlug: fct-nvd-cve-observation-details
+    hideTitle: false
+    title: Nvd cve observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

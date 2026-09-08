@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_infodengue_salvador_week_start_date_week
+          yRef:
+            field: fct_infodengue_salvador_average_cases_estimate
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Week start date (Week)
+      yAxis:
+      - name: Mean estimated cases
+    layout:
+      xField: fct_infodengue_salvador_week_start_date_week
+      yField:
+      - fct_infodengue_salvador_average_cases_estimate
+  type: cartesian
+description: Mean provider `cases_estimate` per epidemiological week for each `alert_level`. The four
+  observed alert levels are retained; a line is not a sum of cases across statuses, and missing weeks
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_infodengue_salvador_week_start_date_week
+  - fct_infodengue_salvador_alert_level
+  exploreName: fct_infodengue_salvador
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_infodengue_salvador_average_cases_estimate
+  sorts:
+  - descending: true
+    fieldId: fct_infodengue_salvador_average_cases_estimate
+  - descending: false
+    fieldId: fct_infodengue_salvador_week_start_date_week
+  tableCalculations: []
+name: Mean estimated cases by alert level
+pivotConfig:
+  columns:
+  - fct_infodengue_salvador_alert_level
+slug: fct-infodengue-salvador-cases-by-alert-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_infodengue_salvador_week_start_date_week
+  - fct_infodengue_salvador_alert_level
+  - fct_infodengue_salvador_average_cases_estimate
+tableName: fct_infodengue_salvador
+version: 1

@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 033d0368-9b8f-5ee1-acd8-006a4ca26251
+    label: 'Radio propagation spots: Band'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_wspr_live_spot_band
+      tableName: fct_wspr_live_spot
+    values: []
+  - disabled: true
+    id: 222f81c1-73e6-54cb-874f-42049e4f0fb3
+    label: 'Radio propagation spots: Transmit grid'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_wspr_live_spot_transmit_grid
+      tableName: fct_wspr_live_spot
+    values: []
+  - disabled: true
+    id: f7099170-ea32-51fd-abb9-af15a415a096
+    label: 'Radio propagation spots: Receive grid'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_wspr_live_spot_receive_grid
+      tableName: fct_wspr_live_spot
+    values: []
+  - disabled: true
+    id: 35b7c7a7-95c3-51b3-b990-36aff7b41e54
+    label: 'Radio propagation spots: Transmit power dbm'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_wspr_live_spot_transmit_power_dbm
+      tableName: fct_wspr_live_spot
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Wspr Live
+slug: wspr-live
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical history of WSPR radio spots returned by the live feed. Each row is
+      one source, spot identifier, and feed observation timestamp; repeated insert-only copies are reduced
+      to the latest raw load while complete source lineage and the radio measurement are retained.
+
+
+      **Grain:** source, spot_id, observed_at
+
+
+      **What changes here:** how radio-spot volume, propagation distance, and signal strength shift by
+      band and station grid across the five-day signal window.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `wspr_live` — licence: WSPR.live — volunteer amateur-radio community data; attribution required:
+      False. Source configuration: `extract/sources/wspr_live.yml`.'
+    hideFrame: false
+    title: Radio propagation spots
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Radio propagation spots — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: WSPR spots by signal day
+    chartSlug: fct-wspr-live-spot-spots-by-signal-day
+    hideTitle: false
+    title: WSPR spots by signal day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean propagation distance by signal day
+    chartSlug: fct-wspr-live-spot-distance-by-signal-day
+    hideTitle: false
+    title: Mean propagation distance by signal day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: WSPR spots by band and signal day
+    chartSlug: fct-wspr-live-spot-spots-by-band
+    hideTitle: false
+    title: WSPR spots by band and signal day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Spot mix by band and signal day
+    chartSlug: fct-wspr-live-spot-spot-mix-by-band
+    hideTitle: false
+    title: Spot mix by band and signal day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Radio propagation spots — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed distance km by band
+    chartSlug: fct-wspr-live-spot
+    hideTitle: false
+    title: Mean observed distance km by band
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Radio propagation spots — observations
+    chartSlug: fct-wspr-live-spot-details
+    hideTitle: false
+    title: Radio propagation spots — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

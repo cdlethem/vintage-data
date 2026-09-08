@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 38016beb-7d9c-5838-967e-4fc83cb53c84
+    label: 'Food hygiene ratings glasgow: Business type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_glasgow_business_type
+      tableName: fct_food_hygiene_ratings_glasgow
+    values: []
+  - disabled: true
+    id: aaeabd12-974c-506d-925e-4ad6851e2c06
+    label: 'Food hygiene ratings glasgow: Rating value'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_glasgow_rating_value
+      tableName: fct_food_hygiene_ratings_glasgow
+    values: []
+  - disabled: true
+    id: 4b68bf50-7204-5b15-86bd-1d48f6004010
+    label: 'Food hygiene ratings glasgow: New rating pending'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_glasgow_new_rating_pending
+      tableName: fct_food_hygiene_ratings_glasgow
+    values: []
+  - disabled: true
+    id: 4c6ea9b8-9a54-5630-83de-882b4be5e9b9
+    label: 'Food hygiene ratings glasgow: Scheme type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_glasgow_scheme_type
+      tableName: fct_food_hygiene_ratings_glasgow
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Food Hygiene Ratings Glasgow
+slug: food-hygiene-ratings-glasgow
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical snapshot of Glasgow food-hygiene ratings. Each row is one food business from
+      one publisher snapshot, identified by source, business_id, and observed_at. Source business attributes
+      and the three nested FHRS scores are exposed as typed columns while loader lineage is retained;
+      duplicate source rows are reduced deterministically by load lineage.
+
+
+      **Grain:** source, business_id, observed_at
+
+
+      **What changes here:** how Glasgow rating activity and the variety of published rating labels shift
+      across business types.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `food_hygiene_ratings_glasgow` — see dbt raw-source lineage.'
+    hideFrame: false
+    title: Food hygiene ratings glasgow
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Food hygiene ratings glasgow — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Businesses rated per month
+    chartSlug: fct-food-hygiene-ratings-glasgow-rating-volume
+    hideTitle: false
+    title: Businesses rated per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Rating labels used per month
+    chartSlug: fct-food-hygiene-ratings-glasgow-rating-label-variety
+    hideTitle: false
+    title: Rating labels used per month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Rated businesses by business type
+    chartSlug: fct-food-hygiene-ratings-glasgow-business-type-mix
+    hideTitle: false
+    title: Rated businesses by business type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Rating-label variety by business type
+    chartSlug: fct-food-hygiene-ratings-glasgow-label-variety-by-business-type
+    hideTitle: false
+    title: Rating-label variety by business type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Food hygiene ratings glasgow — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct business by business type
+    chartSlug: fct-food-hygiene-ratings-glasgow
+    hideTitle: false
+    title: Distinct business by business type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Food hygiene ratings glasgow — observations
+    chartSlug: fct-food-hygiene-ratings-glasgow-details
+    hideTitle: false
+    title: Food hygiene ratings glasgow — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

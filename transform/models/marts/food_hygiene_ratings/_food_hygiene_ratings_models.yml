@@ -1,0 +1,569 @@
+version: 2
+models:
+- name: fct_food_hygiene_ratings
+  description: Incremental physical snapshot fact of Food Standards Agency food hygiene ratings. Each
+    row is one source, food-business rating identifier, and fetch timestamp; repeated rows for that grain
+    are resolved to the latest raw load record. Source rating labels and score JSON are retained alongside
+    typed score and geocode fields and raw-load lineage.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, rating_id, observed_at
+      label: Food hygiene ratings
+      group_label: Food hygiene ratings
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: food_hygiene_rating_key
+      vintage:
+        visualization:
+          dimension: business_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct rating by business type
+          description: Distinct `rating_id` values by `business_type` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - rating_id
+          - business_type
+          - source_loaded_at
+          sources:
+          - '`food_hygiene_ratings` — licence: Open Government Licence (FSA); attribution required: True.
+            Source configuration: `extract/sources/food_hygiene_ratings.yml`.'
+          analysis:
+            headline: how the food rating volume and score mix changes across business types and local authorities.
+            event_time: rating_at
+            grain: MONTH
+            controls:
+            - business_type
+            - local_authority_name
+            - rating_value
+            - new_rating_pending
+            trends:
+            - slug: ratings-assigned
+              kind: total
+              metric: distinct_entities
+              time: rating_at
+              grain: MONTH
+              window_days: 3650
+              title: Food ratings assigned per month
+              description: Distinct `rating_id` values by the source `rating_at` month over the last ten
+                years. This is an event flow rather than a current catalogue level; the 1900-01-01 sentinel
+                dates fall outside the bounded window and absent months are not zero.
+              width: half
+            - slug: average-score
+              kind: total
+              metric: average_rating_score
+              time: rating_at
+              grain: MONTH
+              window_days: 3650
+              title: Average numeric rating score by month
+              description: Mean non-null numeric `rating_score` for ratings assigned in each source
+                `rating_at` month over the last ten years. Non-numeric ratings are excluded, and this is
+                not a weighted measure of businesses because repeated source observations can contribute.
+              width: half
+            - slug: business-type-volume
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: business_type
+              top_n: 6
+              time: rating_at
+              grain: MONTH
+              window_days: 3650
+              title: Ratings assigned by business type
+              description: Distinct `rating_id` values per source `rating_at` month over the last ten years,
+                pivoted to the six largest `business_type` groups. Smaller groups are excluded rather than
+                aggregated; repeated observations within a month count once per group.
+              width: full
+            - slug: authority-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: local_authority_name
+              top_n: 8
+              time: rating_at
+              grain: MONTH
+              window_days: 3650
+              title: Ratings assigned by local authority
+              description: Distinct `rating_id` values per source `rating_at` month over the last ten years,
+                stacked for the eight largest local authorities. Remaining authorities are excluded rather
+                than combined; stacked bars show mix, not a national total.
+              width: full
+  columns:
+  - name: food_hygiene_rating_key
+    description: Stable hash of source, rating identifier, and fetch timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Food hygiene rating key
+          hidden: true
+  - name: source
+    description: Source-system identifier that supplied the food hygiene rating.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: rating_id
+    description: Upstream food-business rating identifier.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct rating
+            description: Distinct `rating_id` values by `business_type` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Rating id
+          hidden: false
+  - name: observed_at
+    description: Timestamp when the upstream rating snapshot was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: address_line_1
+    description: First address line published for the rated business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Address line 1
+          hidden: false
+  - name: address_line_2
+    description: Second address line published for the rated business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Address line 2
+          hidden: false
+  - name: address_line_3
+    description: Third address line published for the rated business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Address line 3
+          hidden: false
+  - name: address_line_4
+    description: Fourth address line published for the rated business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Address line 4
+          hidden: false
+  - name: business_name
+    description: Name of the rated food business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Business name
+          hidden: false
+  - name: business_type
+    description: Source business-type label.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Business type
+          hidden: false
+  - name: business_type_id
+    description: Source business-type identifier.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Business type id
+          hidden: false
+          format: '#,##0'
+  - name: changed_by_server_id
+    description: Source server identifier associated with the rating change.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Changed by server id
+          hidden: false
+          format: '#,##0'
+  - name: food_hygiene_rating_id
+    description: Numeric Food Hygiene Rating Scheme identifier.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Food hygiene rating id
+          hidden: false
+          format: '#,##0'
+  - name: local_authority_business_id
+    description: Local authority identifier for the rated business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local authority business id
+          hidden: false
+  - name: local_authority_code
+    description: Code of the local authority responsible for the rating.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local authority code
+          hidden: false
+  - name: local_authority_email
+    description: Published email address for the responsible local authority.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local authority email
+          hidden: false
+  - name: local_authority_name
+    description: Name of the responsible local authority.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local authority name
+          hidden: false
+  - name: local_authority_website
+    description: Published website for the responsible local authority.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local authority website
+          hidden: false
+  - name: new_rating_pending
+    description: Whether the source marks a new rating as pending.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: New rating pending
+          hidden: false
+  - name: phone
+    description: Published telephone number for the rated business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Phone
+          hidden: false
+  - name: postcode
+    description: Published postcode for the rated business.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Postcode
+          hidden: false
+  - name: rating_at
+    description: Date and time assigned to the food hygiene rating by the publisher.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Rating at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: rating_key
+    description: Source rating key or status identifier.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Rating key
+          hidden: true
+  - name: rating_value
+    description: Original source rating label, including nonnumeric statuses such as Pass or Exempt.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Rating value
+          hidden: false
+  - name: rating_score
+    description: Numeric interpretation of rating_value when the source label is an integer; null for
+      nonnumeric labels.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_rating_score:
+            type: average
+            label: Mean rating score
+            description: Mean non-null numeric `rating_score` by source `rating_at` month in the selected
+              window. Nonnumeric source labels are excluded, and repeated observations contribute equal
+              weight rather than representing a deduplicated business average.
+            format: '0.0'
+        dimension:
+          type: number
+          label: Rating score
+          hidden: false
+          format: '#,##0'
+  - name: right_to_reply
+    description: Source right-to-reply status for the rating.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Right to reply
+          hidden: false
+  - name: scheme_type
+    description: Food hygiene rating scheme label published by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Scheme type
+          hidden: false
+  - name: geocode
+    description: Original geocode JSON serialized as text.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Geocode
+          hidden: false
+  - name: latitude
+    description: Numeric latitude extracted from the geocode JSON when valid.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: longitude
+    description: Numeric longitude extracted from the geocode JSON when valid.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: scores
+    description: Original component-score JSON serialized as text.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Scores
+          hidden: false
+  - name: hygiene_score
+    description: Numeric hygiene component score extracted from scores JSON.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Hygiene score
+          hidden: false
+          format: '#,##0'
+  - name: structural_score
+    description: Numeric structural component score extracted from scores JSON.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Structural score
+          hidden: false
+          format: '#,##0'
+  - name: confidence_in_management_score
+    description: Numeric confidence-in-management component score extracted from scores JSON.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Confidence in management score
+          hidden: false
+          format: '#,##0'
+  - name: publisher_updated_at
+    description: Timestamp when the publisher last updated the rating record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Publisher updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _row_id
+    description: Raw loader row identifier retained for lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Identifier of the raw load batch that produced this row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted this row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _dt
+    description: Raw extraction partition date retained for lineage.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: Timestamp when extraction started for the raw batch.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _source_file
+    description: Raw source file containing this rating.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position of this rating in the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted this rating.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_open_library_change_observed_at_day
+          yRef:
+            field: fct_open_library_change_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct change
+    layout:
+      xField: fct_open_library_change_observed_at_day
+      yField:
+      - fct_open_library_change_distinct_entities
+  type: cartesian
+description: Distinct `change_id` values in each extractor observation day. This collection-time level
+  is useful for spotting fetch coverage but should not be read as source activity; missing fetch days
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_open_library_change_observed_at_day
+  exploreName: fct_open_library_change
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_open_library_change_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_open_library_change_observed_at_day
+  tableCalculations: []
+name: Distinct changes present in each fetched batch
+slug: fct-open-library-change-observed-change-catalogue
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_open_library_change_observed_at_day
+  - fct_open_library_change_distinct_entities
+tableName: fct_open_library_change
+version: 1

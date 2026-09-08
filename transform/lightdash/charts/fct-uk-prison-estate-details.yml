@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical fact of UK Ministry of Justice prison-estate observations. Each row records one
+  metric and population group for one source snapshot and reporting period. The source does not expose
+  an individual establishment identifier; observation_id is the extractor's composite period, metric,
+  and group key. Numeric source values are available in measure_value and the original source text is
+  retained in measure_value_text for nonnumeric source markers.
+metricQuery:
+  dimensions: &id001
+  - fct_uk_prison_estate_observed_at
+  - fct_uk_prison_estate_observation_id
+  - fct_uk_prison_estate_metric
+  - fct_uk_prison_estate_source_loaded_at
+  exploreName: fct_uk_prison_estate
+  filters:
+    dimensions:
+      and:
+      - id: da67ab66-9651-5598-8445-490e0faba44c
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_prison_estate_observed_at
+        values:
+        - 30
+      id: 6ab2cc02-c32f-5806-b884-dfc0d757e854
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_uk_prison_estate_observed_at
+  tableCalculations: []
+name: Uk prison estate — observations
+slug: fct-uk-prison-estate-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_uk_prison_estate
+version: 1

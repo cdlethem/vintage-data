@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily certificate transparency observation fact for certificates returned by the watched-domain
+  search. Each row is one certificate identifier at one extractor observation timestamp, retaining certificate
+  validity, subject, issuer, SAN names, and raw-load lineage. Repeated copies of the same source, certificate,
+  and observation timestamp are reduced to the latest loaded record.
+metricQuery:
+  dimensions: &id001
+  - fct_certificate_transparency_certificate_observation_da
+  - fct_certificate_transparency_certificate_observation_cer_469958
+  - fct_certificate_transparency_certificate_observation_issuer
+  - fct_certificate_transparency_certificate_observation_d2
+  exploreName: fct_certificate_transparency_certificate_observation
+  filters:
+    dimensions:
+      and:
+      - id: 21757ff8-14db-514e-97d0-4098d3feba06
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_certificate_transparency_certificate_observation_da
+        values:
+        - 30
+      id: d38965b5-50ea-563a-b3e2-a7a96ee8cb94
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_certificate_transparency_certificate_observation_da
+  tableCalculations: []
+name: Certificate transparency certificate observation — observations
+slug: fct-certificate-transparency-certificate-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_certificate_transparency_certificate_observation
+version: 1

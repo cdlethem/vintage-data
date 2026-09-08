@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of NHTSA vehicle-recall observations. Each row is one recall identifier
+  as observed by the extractor at a fetched timestamp, with report content and raw-load lineage retained
+  for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_nhtsa_recall_observed_at
+  - fct_nhtsa_recall_recall_id
+  - fct_nhtsa_recall_manufacturer
+  - fct_nhtsa_recall_source_loaded_at
+  exploreName: fct_nhtsa_recall
+  filters:
+    dimensions:
+      and:
+      - id: 1b19ae0a-f4c1-5172-ade0-15d9dc109db2
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nhtsa_recall_observed_at
+        values:
+        - 30
+      id: a1deb6ee-a57a-5c4c-9df0-8b25d0f6efbc
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_nhtsa_recall_observed_at
+  tableCalculations: []
+name: Nhtsa recall — observations
+slug: fct-nhtsa-recall-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_nhtsa_recall
+version: 1

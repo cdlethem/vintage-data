@@ -1,0 +1,172 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: d641db99-3310-5bf2-b1b0-e225fb618bd4
+    label: 'Queensland hospital observation: Facility name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_queensland_hospital_observation_facility_name
+      tableName: fct_queensland_hospital_observation
+    values: []
+  - disabled: true
+    id: 2c1f6cd4-e78e-50b0-95f2-4827e36e39da
+    label: 'Queensland hospital observation: Currently closed'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_queensland_hospital_observation_currently_closed
+      tableName: fct_queensland_hospital_observation
+    values: []
+  - disabled: true
+    id: 85162a32-181d-5f53-9142-18431022337d
+    label: 'Queensland hospital observation: Live data available'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_queensland_hospital_observation_live_data_available
+      tableName: fct_queensland_hospital_observation
+    values: []
+  - disabled: true
+    id: 3af3f0c5-b526-5da7-8012-45e5da5b7b9d
+    label: 'Queensland hospital observation: Opening hours'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_queensland_hospital_observation_opening_hours
+      tableName: fct_queensland_hospital_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Queensland Hospital
+slug: queensland-hospital
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical history of Queensland hospital emergency-pressure observations. Each
+      row records one facility snapshot at an extractor fetch time, including source-published wait-time
+      values, normalized minute and count measures, facility metadata, and raw-load lineage. The model
+      grain is source, hospital_id, observed_at.
+
+
+      **Grain:** source, hospital_id, observed_at
+
+
+      **What changes here:** how Queensland hospitals'' emergency wait and capacity levels move across
+      observed days while published space dates remain sparse reference points.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `queensland_hospital` — licence: Queensland Health terms; attribution required: True. Source configuration:
+      `extract/sources/queensland_hospital.yml`.'
+    hideFrame: false
+    title: Queensland hospital observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Queensland hospital observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Hospitals reporting per day
+    chartSlug: fct-queensland-hospital-observation-hospitals-reporting
+    hideTitle: false
+    title: Hospitals reporting per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean all-patient wait per day
+    chartSlug: fct-queensland-hospital-observation-all-patient-wait
+    hideTitle: false
+    title: Mean all-patient wait per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean patients waiting per day
+    chartSlug: fct-queensland-hospital-observation-patients-waiting
+    hideTitle: false
+    title: Mean patients waiting per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: All-patient wait by facility
+    chartSlug: fct-queensland-hospital-observation-wait-by-facility
+    hideTitle: false
+    title: All-patient wait by facility
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Treatment spaces by publisher reference date
+    chartSlug: fct-queensland-hospital-observation-spaces-by-source-date
+    hideTitle: false
+    title: Treatment spaces by publisher reference date
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Queensland hospital observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed wait time all patients minutes by facility name
+    chartSlug: fct-queensland-hospital-observation
+    hideTitle: false
+    title: Mean observed wait time all patients minutes by facility name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Queensland hospital observation — observations
+    chartSlug: fct-queensland-hospital-observation-details
+    hideTitle: false
+    title: Queensland hospital observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

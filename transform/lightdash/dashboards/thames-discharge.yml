@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 9f15c042-c67f-57b6-8a14-2ddb362a1a4a
+    label: 'Thames discharge: Alert status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_thames_discharge_alert_status
+      tableName: fct_thames_discharge
+    values: []
+  - disabled: true
+    id: c1fe7a52-51ef-5157-b94f-163bb7d2e918
+    label: 'Thames discharge: Receiving watercourse'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_thames_discharge_receiving_watercourse
+      tableName: fct_thames_discharge
+    values: []
+  - disabled: true
+    id: 868662c0-7b33-5b59-b47c-10593619003f
+    label: 'Thames discharge: Alert past 48 hours'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_thames_discharge_alert_past_48_hours
+      tableName: fct_thames_discharge
+    values: []
+  - disabled: true
+    id: 3cb10aa1-6416-5a6b-836f-619b533f42ff
+    label: 'Thames discharge: Location name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_thames_discharge_location_name
+      tableName: fct_thames_discharge
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Thames Discharge
+slug: thames-discharge
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly incremental physical history of Thames Water discharge observations. Each row
+      represents one discharge location identifier at one extractor observation timestamp, with the reported
+      status, location and alert timing retained alongside raw-load lineage. Repeated insert-only raw
+      copies of the same observation are reduced to the latest loaded copy.
+
+
+      **Grain:** source_system, discharge_id, observed_at
+
+
+      **What changes here:** how reported discharge-status changes and alert activity move across statuses
+      and watercourses.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `thames_discharge` — licence: Thames Water open-data terms; attribution required: True. Source
+      configuration: `extract/sources/thames_discharge.yml`.'
+    hideFrame: false
+    title: Thames discharge
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Thames discharge — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Discharge status changes per month
+    chartSlug: fct-thames-discharge-status-changes
+    hideTitle: false
+    title: Discharge status changes per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Watercourses with alert starts
+    chartSlug: fct-thames-discharge-alert-watercourses
+    hideTitle: false
+    title: Watercourses with alert starts
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Status-change mix by alert status
+    chartSlug: fct-thames-discharge-status-mix
+    hideTitle: false
+    title: Status-change mix by alert status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Status changes by receiving watercourse
+    chartSlug: fct-thames-discharge-watercourse-breakdown
+    hideTitle: false
+    title: Status changes by receiving watercourse
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Thames discharge — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct discharge by alert status
+    chartSlug: fct-thames-discharge
+    hideTitle: false
+    title: Distinct discharge by alert status
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Thames discharge — observations
+    chartSlug: fct-thames-discharge-details
+    hideTitle: false
+    title: Thames discharge — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

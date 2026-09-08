@@ -1,0 +1,144 @@
+config:
+  dateZoomGranularities:
+  - Hour
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Hour
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: d40a3d87-5469-5797-ac22-4017f285db75
+    label: 'Carbon intensity: Intensity index'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_carbon_intensity_intensity_index
+      tableName: fct_carbon_intensity
+    values: []
+  - disabled: true
+    id: 5a2e010d-c901-5cd1-962d-45fb5a84741f
+    label: 'Carbon intensity: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_carbon_intensity_source
+      tableName: fct_carbon_intensity
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Carbon Intensity
+slug: carbon-intensity
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Incremental history of national carbon-intensity interval forecasts and actual values, retaining
+      one observation per source interval and extractor timestamp. Repeated raw rows for the same observation
+      are reduced to the latest loaded copy while raw-load lineage is preserved for replay and audit.
+
+
+      **Grain:** source, interval_id, observed_at
+
+
+      **What changes here:** how forecast and actual carbon intensity move across the publisher''s recent
+      interval feed.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `carbon_intensity` — licence: CC BY 4.0 + formal Terms of Use; attribution required: True. Source
+      configuration: `extract/sources/carbon_intensity.yml`.'
+    hideFrame: false
+    title: Carbon intensity
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Carbon intensity — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Intervals represented by observation hour
+    chartSlug: fct-carbon-intensity-interval-coverage
+    hideTitle: false
+    title: Intervals represented by observation hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Actual carbon intensity by observation hour
+    chartSlug: fct-carbon-intensity-actual-intensity
+    hideTitle: false
+    title: Actual carbon intensity by observation hour
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Forecast carbon intensity by observation hour
+    chartSlug: fct-carbon-intensity-forecast-intensity
+    hideTitle: false
+    title: Forecast carbon intensity by observation hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Interval coverage mix by intensity band
+    chartSlug: fct-carbon-intensity-intensity-band-mix
+    hideTitle: false
+    title: Interval coverage mix by intensity band
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Carbon intensity — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed actual intensity by intensity index
+    chartSlug: fct-carbon-intensity
+    hideTitle: false
+    title: Mean observed actual intensity by intensity index
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Carbon intensity — observations
+    chartSlug: fct-carbon-intensity-details
+    hideTitle: false
+    title: Carbon intensity — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

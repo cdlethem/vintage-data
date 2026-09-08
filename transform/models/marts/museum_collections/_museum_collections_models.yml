@@ -1,0 +1,352 @@
+version: 2
+models:
+- name: fct_museum_collection_items
+  description: Physical snapshot fact for museum collection records. Each row represents one source item
+    observed at one fetched_at timestamp; repeated item observations preserve changing catalog attributes
+    such as title, classification, display status, gallery, and updated_at while retaining load lineage.
+    Duplicate rows for the same source, item, and observation timestamp are reduced to the latest loaded
+    record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, id, fetched_at
+      label: Museum collection items
+      group_label: Museum collections
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: museum_collection_item_key
+      vintage:
+        visualization:
+          dimension: classification
+          metric: distinct_entities
+          time: fetched_at
+          window_days: 30
+          title: Distinct id by classification
+          description: Distinct `id` values by `classification` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - fetched_at
+          - id
+          - classification
+          - source_loaded_at
+          sources:
+          - '`museum_collections` — licence: AIC/Cleveland — open access (CC0/public domain varies per
+            object, respect is_public_domain); attribution required: False. Source configuration: `extract/sources/museum_collections.yml`.'
+          analysis:
+            headline: how the museum catalogue level and credited-artist mix change across observations, with source revisions visible.
+            event_time: fetched_at
+            grain: DAY
+            controls:
+            - classification
+            - artist
+            - origin
+            - department
+            trends:
+            - slug: catalogue-level
+              kind: total
+              metric: distinct_entities
+              time: fetched_at
+              grain: DAY
+              title: Published catalogue items per observation day
+              description: Distinct `id` values present in the museum feed on each fetched day. This is a
+                catalogue level rather than a flow — the source republishes its collection, so movement
+                indicates additions or withdrawals; days without a successful fetch are absent rather than
+                zero.
+              width: half
+            - slug: credited-artists
+              kind: total
+              metric: distinct_artists
+              time: fetched_at
+              grain: DAY
+              title: Credited artists per observation day
+              description: Distinct non-null `artist` values present on each fetched day. This is a level
+                of credited names in the republished catalogue, not a count of new artists; absent fetch
+                days are absent rather than zero.
+              width: half
+            - slug: classification-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: classification
+              top_n: 5
+              time: fetched_at
+              grain: DAY
+              title: Catalogue composition by classification
+              description: Distinct `id` values per fetched day stacked by museum `classification`. The
+                five observed classifications are all shown here; categories outside the selected top five
+                would be excluded rather than aggregated.
+              width: full
+            - slug: source-revisions
+              kind: composition
+              metric: distinct_entities
+              breakdown: classification
+              top_n: 5
+              time: updated_at
+              grain: DAY
+              title: Source-reported revisions by day
+              description: Distinct `id` values grouped by the source-reported `updated_at` day and stacked
+                by `classification`. This is an event-time view of catalog revisions, not a publication
+                flow; the current extract has one populated day and missing days are absent rather than
+                zero.
+              width: full
+  columns:
+  - name: museum_collection_item_key
+    description: Stable hash of the museum source, collection item identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '35 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '35 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Museum collection item key
+          hidden: true
+  - name: source
+    description: Museum catalog identifier that supplied the collection item.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: id
+    description: Identifier assigned to the collection item by its museum source.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct id
+            description: Distinct `id` values by `classification` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp at which the source extractor observed this collection snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: title
+    description: Title of the collection item at observation time.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: artist
+    description: Artist or creator attribution supplied by the museum source.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_artists:
+            type: count_distinct
+            label: Distinct artists
+            description: Distinct non-null `artist` values present in the museum catalogue on each observation
+              day. This is a republished catalogue level rather than a count of newly appearing artists.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Artist
+          hidden: false
+  - name: origin
+    description: Geographic origin or provenance text supplied by the museum source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Origin
+          hidden: false
+  - name: date_display
+    description: Human-readable date or date range supplied by the museum source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Date display
+          hidden: false
+  - name: date_start
+    description: Earliest numeric year in the source date range when supplied.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Date start
+          hidden: false
+          format: '#,##0'
+  - name: date_end
+    description: Latest numeric year in the source date range when supplied.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Date end
+          hidden: false
+          format: '#,##0'
+  - name: medium
+    description: Material or medium description supplied by the museum source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Medium
+          hidden: false
+  - name: classification
+    description: Museum classification assigned to the collection item.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Classification
+          hidden: false
+  - name: department
+    description: Museum department associated with the collection item.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Department
+          hidden: false
+  - name: public_domain
+    description: Whether the source marks the collection item as public domain.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Public domain
+          hidden: false
+  - name: on_view
+    description: Whether the source marks the collection item as currently on view.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: On view
+          hidden: false
+  - name: gallery
+    description: Gallery location supplied when the item is on view.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Gallery
+          hidden: false
+  - name: updated_at
+    description: Source-reported timestamp of the latest catalog update for the item.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _batch_id
+    description: Load batch identifier assigned by the raw ingestion layer.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Load operation identifier assigned by the raw ingestion layer.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained collection snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position within the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this snapshot into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw collection record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nih_reporter_project_observations_project_start_at_month
+          yRef:
+            field: fct_nih_reporter_project_observations_distinct_projects
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Project start at (Month)
+      yAxis:
+      - name: Distinct projects
+    layout:
+      xField: fct_nih_reporter_project_observations_project_start_at_month
+      yField:
+      - fct_nih_reporter_project_observations_distinct_projects
+  type: cartesian
+description: Distinct `project_id` values by reported project-start month. The historical source is sparse
+  with 26 populated months, so months without starts are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_nih_reporter_project_observations_project_start_at_month
+  exploreName: fct_nih_reporter_project_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nih_reporter_project_observations_distinct_projects
+  sorts:
+  - descending: false
+    fieldId: fct_nih_reporter_project_observations_project_start_at_month
+  tableCalculations: []
+name: Projects starting by month
+slug: fct-nih-reporter-project-observations-project-starts
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nih_reporter_project_observations_project_start_at_month
+  - fct_nih_reporter_project_observations_distinct_projects
+tableName: fct_nih_reporter_project_observations
+version: 1

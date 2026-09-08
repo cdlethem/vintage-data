@@ -1,0 +1,19 @@
+name: task_executor
+description: execute one admitted task in protocol-v2 confinement
+schedule: manual
+enabled: true
+model: agent_cli
+prompt: prompt.md
+timeout_minutes: 60
+context_budget_minutes: 5
+model_budget_minutes: 40
+publication_budget_minutes: 10
+cleanup_margin_seconds: 300
+capacity_policy: retry
+retry_on: [capacity, transient]
+requires_capabilities: [workspace_write]
+context: {}
+triggers: []
+output:
+  format: json
+  schema: task_executor_v2

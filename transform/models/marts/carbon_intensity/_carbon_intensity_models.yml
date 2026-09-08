@@ -1,0 +1,271 @@
+version: 2
+models:
+- name: fct_carbon_intensity
+  description: Incremental history of national carbon-intensity interval forecasts and actual values,
+    retaining one observation per source interval and extractor timestamp. Repeated raw rows for the same
+    observation are reduced to the latest loaded copy while raw-load lineage is preserved for replay and
+    audit.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, interval_id, observed_at
+      label: Carbon intensity
+      group_label: Carbon intensity
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: carbon_intensity_key
+      vintage:
+        visualization:
+          dimension: intensity_index
+          metric: average_actual_intensity
+          time: observed_at
+          window_days: 30
+          title: Mean observed actual intensity by intensity index
+          description: Mean observed actual intensity by `intensity_index` in the selected observation
+            window. Actual carbon intensity reported for the interval, in grams of CO2 per kilowatt-hour,
+            when available. Each retained observation has equal weight; polling frequency and repeated
+            snapshots can affect the mean. This is not a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - interval_id
+          - intensity_index
+          - actual_intensity
+          - source_loaded_at
+          sources:
+          - '`carbon_intensity` — licence: CC BY 4.0 + formal Terms of Use; attribution required: True.
+            Source configuration: `extract/sources/carbon_intensity.yml`.'
+          analysis:
+            headline: how forecast and actual carbon intensity move across the publisher's recent interval feed.
+            event_time: observed_at
+            grain: HOUR
+            controls:
+            - intensity_index
+            - source
+            trends:
+            - slug: interval-coverage
+              kind: total
+              metric: distinct_intervals
+              time: observed_at
+              grain: HOUR
+              title: Intervals represented by observation hour
+              description: Distinct `interval_id` values retained in each extractor observation hour. This
+                is feed coverage rather than energy volume — bursts or missing hours change the line, and
+                an hour with no successful extract is absent rather than zero.
+              width: half
+            - slug: actual-intensity
+              kind: total
+              metric: average_actual_intensity
+              time: observed_at
+              grain: HOUR
+              title: Actual carbon intensity by observation hour
+              description: Observation-weighted average actual intensity in grams of CO2 per kilowatt-hour
+                for each extractor observation hour. Repeated snapshots and unequal polling make this an
+                observation-weighted level, not a generation-weighted total; hours with no actual value
+                are absent from the average.
+              width: half
+            - slug: forecast-intensity
+              kind: total
+              metric: average_forecast_intensity
+              time: observed_at
+              grain: HOUR
+              title: Forecast carbon intensity by observation hour
+              description: Observation-weighted average forecast intensity in grams of CO2 per kilowatt-hour
+                for each extractor observation hour. This is a reported level rather than an additive
+                quantity, and hours without forecast values are absent from the average.
+              width: half
+            - slug: intensity-band-mix
+              kind: composition
+              metric: distinct_intervals
+              breakdown: intensity_index
+              top_n: 5
+              time: observed_at
+              grain: HOUR
+              title: Interval coverage mix by intensity band
+              description: Distinct intervals per observation hour stacked by the publisher's five
+                `intensity_index` bands. Segment heights show which bands make up the feed; missing
+                observations are absent rather than zero and the stack is not an energy total.
+              width: full
+  columns:
+  - name: carbon_intensity_key
+    description: Stable hash of the source, interval identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Carbon intensity key
+          hidden: true
+  - name: source
+    description: Upstream carbon-intensity feed identifier.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: interval_id
+    description: Source identifier for the electricity carbon-intensity interval.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Interval id
+          hidden: false
+        metrics:
+          distinct_intervals:
+            type: count_distinct
+            label: Distinct intervals
+            description: Distinct non-null `interval_id` values represented in each observation time
+              bucket. This measures feed coverage and does not add repeated interval snapshots.
+            format: '#,##0'
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the source response.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: forecast_intensity
+    description: Forecast carbon intensity reported for the interval, in grams of CO2 per kilowatt-hour.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_forecast_intensity:
+            type: average
+            label: Mean observed forecast intensity
+            description: Observation-weighted average forecast intensity in grams of CO2 per kilowatt-hour
+              for each observation time bucket. Repeated snapshots and unequal polling can affect the mean.
+              This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Forecast intensity
+          hidden: false
+          format: '#,##0'
+  - name: actual_intensity
+    description: Actual carbon intensity reported for the interval, in grams of CO2 per kilowatt-hour,
+      when available.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_actual_intensity:
+            type: average
+            label: Mean observed actual intensity
+            description: Mean observed actual intensity by `intensity_index` in the selected observation
+              window. Actual carbon intensity reported for the interval, in grams of CO2 per kilowatt-hour,
+              when available. Each retained observation has equal weight; polling frequency and repeated
+              snapshots can affect the mean. This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Actual intensity
+          hidden: false
+          format: '#,##0'
+  - name: intensity_index
+    description: Qualitative intensity band reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Intensity index
+          hidden: false
+  - name: error_code
+    description: Source-reported error code for the interval, when present.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Error code
+          hidden: false
+          format: '#,##0'
+  - name: _batch_id
+    description: Identifier of the raw load batch that supplied this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load operation that inserted this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of this observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw observation content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

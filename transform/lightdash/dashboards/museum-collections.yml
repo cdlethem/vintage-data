@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 5b18d16e-4eb3-5578-beb0-1e5f3bc86ef3
+    label: 'Museum collection items: Classification'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_museum_collection_items_classification
+      tableName: fct_museum_collection_items
+    values: []
+  - disabled: true
+    id: dfd6e50d-c3e2-5589-b53e-3ff36ed673c9
+    label: 'Museum collection items: Artist'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_museum_collection_items_artist
+      tableName: fct_museum_collection_items
+    values: []
+  - disabled: true
+    id: 81cb7fe1-0614-5c49-a6ed-137ec1158aa0
+    label: 'Museum collection items: Origin'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_museum_collection_items_origin
+      tableName: fct_museum_collection_items
+    values: []
+  - disabled: true
+    id: 0cc2f935-9e29-5dd6-9a7f-aa9cc4d8abab
+    label: 'Museum collection items: Department'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_museum_collection_items_department
+      tableName: fct_museum_collection_items
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Museum Collections
+slug: museum-collections
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical snapshot fact for museum collection records. Each row represents one source item
+      observed at one fetched_at timestamp; repeated item observations preserve changing catalog attributes
+      such as title, classification, display status, gallery, and updated_at while retaining load lineage.
+      Duplicate rows for the same source, item, and observation timestamp are reduced to the latest loaded
+      record.
+
+
+      **Grain:** source, id, fetched_at
+
+
+      **What changes here:** how the museum catalogue level and credited-artist mix change across observations,
+      with source revisions visible.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `museum_collections` — licence: AIC/Cleveland — open access (CC0/public domain varies per object,
+      respect is_public_domain); attribution required: False. Source configuration: `extract/sources/museum_collections.yml`.'
+    hideFrame: false
+    title: Museum collection items
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Museum collection items — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Published catalogue items per observation day
+    chartSlug: fct-museum-collection-items-catalogue-level
+    hideTitle: false
+    title: Published catalogue items per observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Credited artists per observation day
+    chartSlug: fct-museum-collection-items-credited-artists
+    hideTitle: false
+    title: Credited artists per observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Catalogue composition by classification
+    chartSlug: fct-museum-collection-items-classification-mix
+    hideTitle: false
+    title: Catalogue composition by classification
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Source-reported revisions by day
+    chartSlug: fct-museum-collection-items-source-revisions
+    hideTitle: false
+    title: Source-reported revisions by day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Museum collection items — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct id by classification
+    chartSlug: fct-museum-collection-items
+    hideTitle: false
+    title: Distinct id by classification
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Museum collection items — observations
+    chartSlug: fct-museum-collection-items-details
+    hideTitle: false
+    title: Museum collection items — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

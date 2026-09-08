@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly latest epidemiological surveillance observations from the Infodengue city-alerts feed.
+  The physical incremental fact retains one row at the source relation and provider record identifier
+  grain, choosing the latest loaded replay for each identifier while preserving raw-load lineage and typed
+  epidemiological measures.
+metricQuery:
+  dimensions: &id001
+  - fct_infodengue_epidemiology_fetched_at
+  - fct_infodengue_epidemiology_record_id
+  - fct_infodengue_epidemiology_municipality_name
+  - fct_infodengue_epidemiology_incidence_per_100k
+  - fct_infodengue_epidemiology_source_loaded_at
+  exploreName: fct_infodengue_epidemiology
+  filters:
+    dimensions:
+      and:
+      - id: a79a7697-a377-55f6-abca-00d468299856
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_infodengue_epidemiology_fetched_at
+        values:
+        - 30
+      id: 67a4687d-6655-52c5-8849-c5b41fb4c3ec
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_infodengue_epidemiology_fetched_at
+  tableCalculations: []
+name: Infodengue epidemiology — observations
+slug: fct-infodengue-epidemiology-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_infodengue_epidemiology
+version: 1

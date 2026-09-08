@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_job_boards_posted_at_month
+          yRef:
+            field: fct_job_boards_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Month)
+      yAxis:
+      - name: Distinct job
+    layout:
+      xField: fct_job_boards_posted_at_month
+      yField:
+      - fct_job_boards_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values grouped by their upstream `posted_at` month. This is a source-event
+  flow — months with no listed jobs are absent rather than zero, and repeated observations of a job are
+  counted once within its posting month.
+metricQuery:
+  dimensions:
+  - fct_job_boards_posted_at_month
+  exploreName: fct_job_boards
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_boards_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_job_boards_posted_at_month
+  tableCalculations: []
+name: Jobs posted per month
+slug: fct-job-boards-posted-jobs
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_boards_posted_at_month
+  - fct_job_boards_distinct_entities
+tableName: fct_job_boards
+version: 1

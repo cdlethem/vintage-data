@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 26f9ea17-abe1-5958-9425-7c79013057b5
+    label: 'Reservoir level observation: Station'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_reservoir_level_observation_station
+      tableName: fct_reservoir_level_observation
+    values: []
+  - disabled: true
+    id: 91e5fe49-c8ed-5ef3-ba67-ccfb61b73803
+    label: 'Reservoir level observation: Measure'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_reservoir_level_observation_measure
+      tableName: fct_reservoir_level_observation
+    values: []
+  - disabled: true
+    id: ea7895fe-5219-521f-bfe4-f310791c9d7f
+    label: 'Reservoir level observation: Sensor type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_reservoir_level_observation_sensor_type
+      tableName: fct_reservoir_level_observation
+    values: []
+  - disabled: true
+    id: 22ae2e75-5c73-5fc6-9b6c-37e39324dc11
+    label: 'Reservoir level observation: Units'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_reservoir_level_observation_units
+      tableName: fct_reservoir_level_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Reservoir Levels
+slug: reservoir-levels
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of reservoir measurements published by the California Data Exchange
+      Center. Each row is one upstream measurement identifier from one extractor observation timestamp,
+      preserving the station, sensor, measurement interval, reported value, quality flags, capacity context,
+      and raw-load lineage for audit and replay. The model grain is source_name, reservoir_level_id, observed_at.
+
+
+      **Grain:** source_name, reservoir_level_id, observed_at
+
+
+      **What changes here:** how reservoir storage levels and reported flow measures change across stations
+      and their 35-day source observation history.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `reservoir_levels` — licence: California DWR — public domain, attribution requested; attribution
+      required: True. Source configuration: `extract/sources/reservoir_levels.yml`.'
+    hideFrame: false
+    title: Reservoir level observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Reservoir level observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Reservoir levels represented per observation day
+    chartSlug: fct-reservoir-level-observation-levels-observed
+    hideTitle: false
+    title: Reservoir levels represented per observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean storage percentage by source observation day
+    chartSlug: fct-reservoir-level-observation-storage-percent
+    hideTitle: false
+    title: Mean storage percentage by source observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Storage percentage trajectories for leading stations
+    chartSlug: fct-reservoir-level-observation-station-percent
+    hideTitle: false
+    title: Storage percentage trajectories for leading stations
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Reservoir measurements by source measure
+    chartSlug: fct-reservoir-level-observation-measure-coverage
+    hideTitle: false
+    title: Reservoir measurements by source measure
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Reservoir level observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed pct of capacity by station
+    chartSlug: fct-reservoir-level-observation
+    hideTitle: false
+    title: Mean observed pct of capacity by station
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Reservoir level observation — observations
+    chartSlug: fct-reservoir-level-observation-details
+    hideTitle: false
+    title: Reservoir level observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

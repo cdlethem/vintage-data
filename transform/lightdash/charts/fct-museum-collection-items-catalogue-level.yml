@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_museum_collection_items_fetched_at_day
+          yRef:
+            field: fct_museum_collection_items_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Distinct id
+    layout:
+      xField: fct_museum_collection_items_fetched_at_day
+      yField:
+      - fct_museum_collection_items_distinct_entities
+  type: cartesian
+description: Distinct `id` values present in the museum feed on each fetched day. This is a catalogue
+  level rather than a flow — the source republishes its collection, so movement indicates additions or
+  withdrawals; days without a successful fetch are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_museum_collection_items_fetched_at_day
+  exploreName: fct_museum_collection_items
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_museum_collection_items_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_museum_collection_items_fetched_at_day
+  tableCalculations: []
+name: Published catalogue items per observation day
+slug: fct-museum-collection-items-catalogue-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_museum_collection_items_fetched_at_day
+  - fct_museum_collection_items_distinct_entities
+tableName: fct_museum_collection_items
+version: 1

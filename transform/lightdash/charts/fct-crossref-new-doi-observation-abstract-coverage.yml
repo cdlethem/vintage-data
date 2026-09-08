@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_crossref_new_doi_observation_created_at_day
+          yRef:
+            field: fct_crossref_new_doi_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct doi
+    layout:
+      stack: true
+      xField: fct_crossref_new_doi_observation_created_at_day
+      yField:
+      - fct_crossref_new_doi_observation_distinct_entities
+  type: cartesian
+description: Distinct `doi_id` values per `created_at` day, stacked by the two `has_abstract` values.
+  The stack shows metadata coverage and repeated observations, not abstract quality; days without registrations
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_crossref_new_doi_observation_created_at_day
+  - fct_crossref_new_doi_observation_has_abstract
+  exploreName: fct_crossref_new_doi_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_crossref_new_doi_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_crossref_new_doi_observation_distinct_entities
+  - descending: false
+    fieldId: fct_crossref_new_doi_observation_created_at_day
+  tableCalculations: []
+name: DOI registrations by abstract coverage
+pivotConfig:
+  columns:
+  - fct_crossref_new_doi_observation_has_abstract
+slug: fct-crossref-new-doi-observation-abstract-coverage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_crossref_new_doi_observation_created_at_day
+  - fct_crossref_new_doi_observation_has_abstract
+  - fct_crossref_new_doi_observation_distinct_entities
+tableName: fct_crossref_new_doi_observation
+version: 1

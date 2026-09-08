@@ -1,0 +1,152 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 023936c9-90a7-52b1-85b9-096c7b6e82a7
+    label: 'Register to vote: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_register_to_vote_source
+      tableName: fct_register_to_vote
+    values: []
+  - disabled: true
+    id: 7f444655-f417-5715-b16a-e5f92b35a66a
+    label: 'Register to vote: Published at'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_register_to_vote_published_at
+      tableName: fct_register_to_vote
+    values: []
+  - disabled: true
+    id: 819f1dee-00ec-5cfd-8b46-fef730a1fb81
+    label: 'Register to vote: Application count'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_register_to_vote_application_count
+      tableName: fct_register_to_vote
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Register To Vote
+slug: register-to-vote
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical observations of the UK register-to-vote usage feed. Each row is one source registration
+      observation at one fetch timestamp, retaining the publisher timestamp, reported application count,
+      and load lineage. Exact replayed observations are reduced to the latest loaded copy.
+
+
+      **Grain:** source, registration_observation_id, observed_at
+
+
+      **What changes here:** how reported registration demand changes through the four-day feed window
+      and how the publisher''s event timestamps compare with collection levels.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `register_to_vote` — licence: UK government public data; attribution required: True. Source configuration:
+      `extract/sources/register_to_vote.yml`.'
+    hideFrame: false
+    title: Register to vote
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Register to vote — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct registration observations collected each day
+    chartSlug: fct-register-to-vote-observations-collected
+    hideTitle: false
+    title: Distinct registration observations collected each day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported applications collected each day
+    chartSlug: fct-register-to-vote-average-applications
+    hideTitle: false
+    title: Mean reported applications collected each day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Registration observations by source
+    chartSlug: fct-register-to-vote-observations-by-source
+    hideTitle: false
+    title: Registration observations by source
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean applications by publisher day
+    chartSlug: fct-register-to-vote-published-applications
+    hideTitle: false
+    title: Mean applications by publisher day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Register to vote — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed application count by published at
+    chartSlug: fct-register-to-vote
+    hideTitle: false
+    title: Mean observed application count by published at
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Register to vote — observations
+    chartSlug: fct-register-to-vote-details
+    hideTitle: false
+    title: Register to vote — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

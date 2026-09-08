@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 5ddd6b01-b793-5f5b-ae9a-a9eb369ff346
+    label: 'Digitraffic rail train observation: Train category'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_digitraffic_rail_train_observation_train_category
+      tableName: fct_digitraffic_rail_train_observation
+    values: []
+  - disabled: true
+    id: cd078891-96a8-54d9-a9d2-74cc2d336259
+    label: 'Digitraffic rail train observation: Train type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_digitraffic_rail_train_observation_train_type
+      tableName: fct_digitraffic_rail_train_observation
+    values: []
+  - disabled: true
+    id: 4df34a30-64bd-505e-b538-21a047497468
+    label: 'Digitraffic rail train observation: Operator short code'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_digitraffic_rail_train_observation_operator_short_code
+      tableName: fct_digitraffic_rail_train_observation
+    values: []
+  - disabled: true
+    id: f35362d7-a65d-5786-8dec-5171fa161730
+    label: 'Digitraffic rail train observation: Timetable type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_digitraffic_rail_train_observation_timetable_type
+      tableName: fct_digitraffic_rail_train_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Digitraffic Rail
+slug: digitraffic-rail
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical history of train snapshots reported by the Digitraffic Rail live trains feed. Each
+      row is one train from one feed at one observation timestamp, with the source timetable stop array
+      retained as JSON and the raw load lineage preserved. Re-ingested copies of the same feed, train,
+      and observation timestamp are reduced to the latest loaded copy.
+
+
+      **Grain:** source_feed, train_id, observed_at
+
+
+      **What changes here:** how the published train roster and source timetable mix change across observation
+      and acceptance time.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `digitraffic_rail` — licence: CC BY 4.0; attribution required: True. Source configuration: `extract/sources/digitraffic_rail.yml`.'
+    hideFrame: false
+    title: Digitraffic rail train observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Digitraffic rail train observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct trains observed per day
+    chartSlug: fct-digitraffic-rail-train-observation-observed-trains
+    hideTitle: false
+    title: Distinct trains observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean source record version per day
+    chartSlug: fct-digitraffic-rail-train-observation-record-version
+    hideTitle: false
+    title: Mean source record version per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Accepted trains by category each month
+    chartSlug: fct-digitraffic-rail-train-observation-accepted-by-category
+    hideTitle: false
+    title: Accepted trains by category each month
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Accepted trains by operator each month
+    chartSlug: fct-digitraffic-rail-train-observation-accepted-by-operator
+    hideTitle: false
+    title: Accepted trains by operator each month
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Digitraffic rail train observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct train by train category
+    chartSlug: fct-digitraffic-rail-train-observation
+    hideTitle: false
+    title: Distinct train by train category
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Digitraffic rail train observation — observations
+    chartSlug: fct-digitraffic-rail-train-observation-details
+    hideTitle: false
+    title: Digitraffic rail train observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

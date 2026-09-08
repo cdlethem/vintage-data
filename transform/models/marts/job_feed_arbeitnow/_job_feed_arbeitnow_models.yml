@@ -1,0 +1,338 @@
+version: 2
+models:
+- name: fct_job_feed_arbeitnow
+  description: Daily physical history of Arbeitnow job observations. Each row represents one Arbeitnow
+    job identifier in one extractor response at an observation timestamp; repeated ingestion of the same
+    observation is reduced to the latest loaded copy while load-layer lineage is retained for audit and
+    replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, job_id, observed_at
+      label: Job feed arbeitnow
+      group_label: Job feed arbeitnow
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: job_feed_arbeitnow_key
+      vintage:
+        visualization:
+          dimension: company
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct job by company
+          description: Distinct `job_id` values by `company` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - job_id
+          - company
+          - source_loaded_at
+          sources:
+          - '`job_feed_arbeitnow` — licence: public Arbeitnow Job Board API; attribution required: True.
+            Source configuration: `extract/sources/job_feed_arbeitnow.yml`.'
+          analysis:
+            headline: how the Arbeitnow catalogue level and job mix change across observation days.
+            event_time: posted_at
+            grain: DAY
+            controls:
+            - employment_type
+            - is_remote
+            - location_country
+            - company
+            trends:
+            - slug: jobs-observed
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct jobs observed per day
+              description: Distinct `job_id` values present in the Arbeitnow feed on each observation day. This
+                is a level rather than a flow because the feed republishes its catalogue; days with no successful
+                extract are absent rather than zero.
+              width: half
+            - slug: companies-observed
+              kind: total
+              metric: distinct_companies
+              time: observed_at
+              grain: DAY
+              title: Hiring companies observed per day
+              description: Distinct non-null `company` values represented in the feed on each observation day.
+                This is a catalogue level, not a count of newly hiring companies, and absent extract days are
+                absent rather than zero.
+              width: half
+            - slug: jobs-by-remote-status
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: is_remote
+              top_n: 2
+              time: observed_at
+              grain: DAY
+              title: Distinct jobs by remote status
+              description: Distinct `job_id` values per observation day split by Arbeitnow's `is_remote` flag.
+                Both boolean series are retained; this is a republished-catalogue level rather than a flow of
+                new postings.
+              width: full
+            - slug: posted-jobs-by-employment
+              kind: composition
+              metric: distinct_entities
+              breakdown: employment_type
+              top_n: 8
+              time: posted_at
+              grain: DAY
+              title: Source-posted jobs by employment type
+              description: Distinct `job_id` values grouped by the source `posted_at` day and stacked across the
+                eight largest `employment_type` values. All supplied timestamps fall on 1970-01-21, so this is
+                one event-time snapshot rather than a longitudinal posting history; smaller types are excluded.
+              width: full
+  columns:
+  - name: job_feed_arbeitnow_key
+    description: Stable hash of the upstream source, job identifier, and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job feed arbeitnow key
+          hidden: true
+  - name: source
+    description: Upstream source label carried by the Arbeitnow response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: job_id
+    description: Arbeitnow identifier assigned to the advertised job.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct job
+            description: Distinct `job_id` values by `company` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Job id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this job observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: provider
+    description: Provider label reported by the Arbeitnow job feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider
+          hidden: false
+  - name: company
+    description: Company or organization advertising the job.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_companies:
+            type: count_distinct
+            label: Distinct hiring companies
+            description: Distinct non-null `company` values present on each observation day. This is a catalogue
+              level and does not count newly hiring companies.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Company
+          hidden: false
+  - name: title
+    description: Public title of the advertised job.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: department
+    description: Department or discipline reported for the job listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Department
+          hidden: false
+  - name: employment_type
+    description: Employment arrangement reported for the job listing, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Employment type
+          hidden: false
+  - name: location
+    description: Location text reported for the job listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location
+          hidden: false
+  - name: location_country
+    description: Country associated with the reported job location when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location country
+          hidden: false
+  - name: workplace_type
+    description: Workplace arrangement reported by Arbeitnow, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Workplace type
+          hidden: false
+  - name: is_remote
+    description: Whether Arbeitnow marks the job as remote.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is remote
+          hidden: false
+  - name: posted_at
+    description: UTC publication timestamp supplied by Arbeitnow for the job posting.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Posted at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: job_url
+    description: Canonical public URL for the Arbeitnow job listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job url
+          hidden: false
+  - name: description
+    description: Full job description text reported by Arbeitnow.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Description
+          hidden: true
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the retained raw record content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

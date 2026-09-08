@@ -1,0 +1,160 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 80f1c056-93b7-5d0d-9baf-4cc594dc81f4
+    label: 'Chess archives gothamchess games: Player color'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_chess_archives_gothamchess_games_player_color
+      tableName: fct_chess_archives_gothamchess_games
+    values: []
+  - disabled: true
+    id: da5d7c61-0030-53d4-b432-b10a00ee239c
+    label: 'Chess archives gothamchess games: Time class'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_chess_archives_gothamchess_games_time_class
+      tableName: fct_chess_archives_gothamchess_games
+    values: []
+  - disabled: true
+    id: 340a2c55-95f8-5787-bc2b-9022e91d8105
+    label: 'Chess archives gothamchess games: Time control'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_chess_archives_gothamchess_games_time_control
+      tableName: fct_chess_archives_gothamchess_games
+    values: []
+  - disabled: true
+    id: 76256d08-9ede-517e-abd2-a56702ef00a5
+    label: 'Chess archives gothamchess games: Is rated'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_chess_archives_gothamchess_games_is_rated
+      tableName: fct_chess_archives_gothamchess_games
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Chess Archives Gothamchess
+slug: chess-archives-gothamchess
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical fact of Levy Rozman''s GothamChess Chess.com archive games. Each row is one
+      game at the archive-source and game identifier grain; repeated append-only copies are reduced to
+      the latest loaded row while game attributes and raw-load lineage remain available for audit.
+
+
+      **Grain:** archive_source, game_id
+
+
+      **What changes here:** how game volume, outcomes, time controls, and move timing shift across the
+      archive''s recorded end days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `chess_archives_gothamchess` — see dbt raw-source lineage.'
+    hideFrame: false
+    title: Chess archives gothamchess games
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Chess archives gothamchess games — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Games ended per day
+    chartSlug: fct-chess-archives-gothamchess-games-games-ended
+    hideTitle: false
+    title: Games ended per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average median move time per day
+    chartSlug: fct-chess-archives-gothamchess-games-average-move-time
+    hideTitle: false
+    title: Average median move time per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Games ended by player result
+    chartSlug: fct-chess-archives-gothamchess-games-results-by-day
+    hideTitle: false
+    title: Games ended by player result
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Games ended by time class
+    chartSlug: fct-chess-archives-gothamchess-games-time-class-mix
+    hideTitle: false
+    title: Games ended by time class
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Chess archives gothamchess games — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct game by player result
+    chartSlug: fct-chess-archives-gothamchess-games
+    hideTitle: false
+    title: Distinct game by player result
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Chess archives gothamchess games — observations
+    chartSlug: fct-chess-archives-gothamchess-games-details
+    hideTitle: false
+    title: Chess archives gothamchess games — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

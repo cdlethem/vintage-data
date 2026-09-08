@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_petitions_created_at_week
+          yRef:
+            field: fct_uk_petitions_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Week)
+      yAxis:
+      - name: Distinct petition
+    layout:
+      xField: fct_uk_petitions_created_at_week
+      yField:
+      - fct_uk_petitions_distinct_entities
+  type: cartesian
+description: Distinct petitions created each week split by publisher `state`. Only the open state is present
+  in this extract, so the chart has one series and does not compare states; absent weeks are not zero.
+metricQuery:
+  dimensions:
+  - fct_uk_petitions_created_at_week
+  - fct_uk_petitions_state
+  exploreName: fct_uk_petitions
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_uk_petitions_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_uk_petitions_distinct_entities
+  - descending: false
+    fieldId: fct_uk_petitions_created_at_week
+  tableCalculations: []
+name: Petitions created each week by state
+pivotConfig:
+  columns:
+  - fct_uk_petitions_state
+slug: fct-uk-petitions-petitions-by-state
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_petitions_created_at_week
+  - fct_uk_petitions_state
+  - fct_uk_petitions_distinct_entities
+tableName: fct_uk_petitions
+version: 1

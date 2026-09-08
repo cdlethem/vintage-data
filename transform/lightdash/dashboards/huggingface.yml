@@ -1,0 +1,152 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 5e87fdda-5476-5ed1-9d85-46fca14ccb87
+    label: 'Huggingface model snapshot: Author'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_huggingface_model_snapshot_author
+      tableName: fct_huggingface_model_snapshot
+    values: []
+  - disabled: true
+    id: 00ca1358-061c-561f-b192-36aa8a8196ad
+    label: 'Huggingface model snapshot: Is private'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_huggingface_model_snapshot_is_private
+      tableName: fct_huggingface_model_snapshot
+    values: []
+  - disabled: true
+    id: 19a5edff-d6cb-5921-8d53-2dc7c0da1af2
+    label: 'Huggingface model snapshot: Source name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_huggingface_model_snapshot_source_name
+      tableName: fct_huggingface_model_snapshot
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Huggingface
+slug: huggingface
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical history of models returned by the Hugging Face model catalog. Each
+      row is one model from one catalog observation, identified by the source, model identifier, and fetch
+      timestamp. If the same observation is loaded more than once, the latest load copy is kept while
+      its raw lineage remains available.
+
+
+      **Grain:** source_name, model_id, observed_at
+
+
+      **What changes here:** how the observed model catalogue and engagement signals move across collection
+      days and model authors.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `huggingface` — licence: unstated; attribution required: False. Source configuration: `extract/sources/huggingface.yml`.'
+    hideFrame: false
+    title: Huggingface model snapshot
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Huggingface model snapshot — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct models observed each day
+    chartSlug: fct-huggingface-model-snapshot-catalogue-size
+    hideTitle: false
+    title: Distinct models observed each day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported likes observed each day
+    chartSlug: fct-huggingface-model-snapshot-daily-likes
+    hideTitle: false
+    title: Mean reported likes observed each day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct models by repository creation day
+    chartSlug: fct-huggingface-model-snapshot-model-creations
+    hideTitle: false
+    title: Distinct models by repository creation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Observed models by leading authors
+    chartSlug: fct-huggingface-model-snapshot-author-catalogue
+    hideTitle: false
+    title: Observed models by leading authors
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Huggingface model snapshot — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed like count by author
+    chartSlug: fct-huggingface-model-snapshot
+    hideTitle: false
+    title: Mean observed like count by author
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Huggingface model snapshot — observations
+    chartSlug: fct-huggingface-model-snapshot-details
+    hideTitle: false
+    title: Huggingface model snapshot — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

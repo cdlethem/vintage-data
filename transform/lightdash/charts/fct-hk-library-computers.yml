@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_hk_library_computers_library_name
+          yRef:
+            field: fct_hk_library_computers_average_available_workstations
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_hk_library_computers_library_name
+      yField:
+      - fct_hk_library_computers_average_available_workstations
+  type: cartesian
+description: Mean observed available workstations by `library_name` in the selected observation window.
+  Number of workstations reported as available for the computer group, when supplied. Each retained observation
+  has equal weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+  measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_hk_library_computers_library_name
+  exploreName: fct_hk_library_computers
+  filters:
+    dimensions:
+      and:
+      - id: 50dc2d84-208a-5c20-8e98-b1943f9278d1
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_hk_library_computers_observed_at
+        values:
+        - 30
+      id: 26641ed9-e7fc-567d-a3e6-587f75f7a3be
+  limit: 20
+  metrics:
+  - fct_hk_library_computers_average_available_workstations
+  sorts:
+  - descending: true
+    fieldId: fct_hk_library_computers_average_available_workstations
+  tableCalculations: []
+name: Mean observed available workstations by library name
+slug: fct-hk-library-computers
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hk_library_computers_library_name
+  - fct_hk_library_computers_average_available_workstations
+tableName: fct_hk_library_computers
+version: 1

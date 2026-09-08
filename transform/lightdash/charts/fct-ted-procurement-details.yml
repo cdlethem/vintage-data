@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of procurement notices published through the Tenders Electronic Daily
+  (TED) source. Each row is one notice identifier observed at one extractor timestamp, retaining the source's
+  publication, buyer, category, value, deadline, and place-of-performance attributes with raw-load lineage.
+  Repeated rows for the same notice and observation timestamp are reduced to the latest loaded record.
+metricQuery:
+  dimensions: &id001
+  - fct_ted_procurement_observed_at
+  - fct_ted_procurement_notice_id
+  - fct_ted_procurement_notice_type
+  - fct_ted_procurement_source_loaded_at
+  exploreName: fct_ted_procurement
+  filters:
+    dimensions:
+      and:
+      - id: ae4afb25-86bb-52c1-9379-fa640595102b
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_ted_procurement_observed_at
+        values:
+        - 30
+      id: a4ecb693-d7b3-58db-ae76-302327e0d98e
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_ted_procurement_observed_at
+  tableCalculations: []
+name: Ted procurement — observations
+slug: fct-ted-procurement-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_ted_procurement
+version: 1

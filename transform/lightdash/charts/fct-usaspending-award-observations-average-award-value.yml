@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_usaspending_award_observations_performance_start_date_month
+          yRef:
+            field: fct_usaspending_award_observations_average_award_amount
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Performance start date (Month)
+      yAxis:
+      - name: Mean observed award amount
+    layout:
+      xField: fct_usaspending_award_observations_performance_start_date_month
+      yField:
+      - fct_usaspending_award_observations_average_award_amount
+  type: cartesian
+description: Average reported `award_amount` for awards whose performance starts in each month. Amounts
+  are US dollars and are not additive; sparse months are absent rather than zero, and each retained observation
+  has equal weight.
+metricQuery:
+  dimensions:
+  - fct_usaspending_award_observations_performance_start_date_month
+  exploreName: fct_usaspending_award_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_usaspending_award_observations_average_award_amount
+  sorts:
+  - descending: false
+    fieldId: fct_usaspending_award_observations_performance_start_date_month
+  tableCalculations: []
+name: Average award amount by performance-start month
+slug: fct-usaspending-award-observations-average-award-value
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_usaspending_award_observations_performance_start_date_month
+  - fct_usaspending_award_observations_average_award_amount
+tableName: fct_usaspending_award_observations
+version: 1

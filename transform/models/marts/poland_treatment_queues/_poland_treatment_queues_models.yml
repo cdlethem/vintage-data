@@ -1,0 +1,483 @@
+version: 2
+models:
+- name: fct_poland_treatment_queues
+  description: Daily physical history of specialist-treatment queue observations published by Poland's
+    National Health Fund (NFZ). Each row records one provider queue returned by the configured outpatient
+    search at a fetch timestamp, including published situation dates, available provider wait statistics,
+    and raw-load lineage.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, queue_id, observed_at
+      label: Poland treatment queues
+      group_label: Poland treatment queues
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: queue_observation_key
+      vintage:
+        visualization:
+          dimension: benefit_name
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct queue by benefit name
+          description: Distinct `queue_id` values by `benefit_name` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - queue_id
+          - benefit_name
+          - source_loaded_at
+          sources:
+          - '`poland_treatment_queues` — licence: NFZ reuse terms; attribution required: True. Source
+            configuration: `extract/sources/poland_treatment_queues.yml`.'
+          analysis:
+            headline: how published queue coverage and reported waiting measures change across situation dates
+              and observation days.
+            event_time: situation_date
+            grain: DAY
+            controls:
+            - benefit_name
+            - queue_type
+            - treatment_place
+            - benefits_for_children
+            trends:
+            - slug: observed-queue-level
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Queues present per observation day
+              description: Distinct `queue_id` values present in the NFZ feed on each extractor observation
+                day. This is a published level rather than a flow because the feed republishes queues;
+                days with no successful extract are absent rather than zero.
+              width: half
+            - slug: situation-date-queues
+              kind: total
+              metric: distinct_entities
+              time: situation_date
+              grain: DAY
+              title: Queues by published situation date
+              description: Distinct `queue_id` values carrying each NFZ `situation_date` across the
+                published June to August 2026 history. This follows the source's situation dates rather
+                than collection time; dates absent from the retained feed are absent rather than zero.
+              width: half
+            - slug: queues-by-benefit
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: benefit_name
+              top_n: 6
+              time: situation_date
+              grain: DAY
+              title: Queue coverage by treatment benefit
+              description: Distinct `queue_id` values per published situation date for the six largest
+                `benefit_name` series. Remaining benefits are excluded rather than aggregated, so the
+                lines compare the main treatment categories without implying an all-benefit total.
+              width: full
+            - slug: waiting-days-by-situation
+              kind: total
+              metric: avg_wait_days
+              time: situation_date
+              grain: DAY
+              title: Reported average wait days by situation date
+              description: Average non-null `average_wait_days` reported by providers on each NFZ situation
+                date. This is an observation-weighted measure of the published queue statistic, not a
+                sum or patient throughput; dates with no reported values are absent rather than zero.
+              width: half
+  columns:
+  - name: queue_observation_key
+    description: Stable hash of the NFZ source, queue identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Queue observation key
+          hidden: true
+  - name: source
+    description: NFZ source endpoint identifier that produced the queue observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: queue_id
+    description: Provider queue identifier assigned by the NFZ queue API.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct queue
+            description: Distinct `queue_id` values by `benefit_name` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Queue id
+          hidden: false
+  - name: queue_type
+    description: Record type reported by the NFZ queue API.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Queue type
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the NFZ queue observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: publisher_updated_at
+    description: UTC timestamp when the NFZ publisher reported its source data was updated.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Publisher updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: case_number
+    description: NFZ case number used for the queue search.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Case number
+          hidden: false
+          format: '#,##0'
+  - name: benefit_name
+    description: Treatment benefit or specialty label reported by the provider.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Benefit name
+          hidden: false
+  - name: provider_name
+    description: Healthcare provider name reported by the NFZ queue API.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider name
+          hidden: false
+  - name: provider_code
+    description: NFZ code identifying the healthcare provider.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider code
+          hidden: false
+  - name: provider_regon
+    description: Polish REGON business identifier reported for the healthcare provider.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider regon
+          hidden: false
+  - name: provider_nip
+    description: Polish NIP tax identifier reported for the healthcare provider.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider nip
+          hidden: false
+  - name: provider_teryt_code
+    description: TERYT territorial code reported for the healthcare provider.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider teryt code
+          hidden: false
+  - name: treatment_place
+    description: Name of the treatment place or clinic reported by the provider.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Treatment place
+          hidden: false
+  - name: provider_address
+    description: Street address reported for the treatment place.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider address
+          hidden: false
+  - name: locality
+    description: Locality reported for the treatment place.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Locality
+          hidden: false
+  - name: provider_phone
+    description: Contact phone number reported for the treatment place.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider phone
+          hidden: false
+  - name: place_teryt_code
+    description: TERYT territorial code reported for the treatment place.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Place teryt code
+          hidden: false
+  - name: registry_number
+    description: NFZ registry number reported for the treatment place.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Registry number
+          hidden: false
+  - name: resort_part_vii_code
+    description: NFZ resort Part VII code reported for the treatment benefit.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Resort part vii code
+          hidden: false
+  - name: resort_part_viii_code
+    description: NFZ resort Part VIII code reported for the treatment benefit.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Resort part viii code
+          hidden: false
+  - name: benefits_for_children
+    description: Source indicator for whether the benefit is available to children.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Benefits for children
+          hidden: false
+  - name: age_range
+    description: Source-provided age-range eligibility text for the benefit.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Age range
+          hidden: false
+  - name: covid_19
+    description: Source indicator for whether the queue is marked as COVID-19 related.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Covid 19
+          hidden: false
+  - name: queue_in_cer
+    description: Source indicator for whether the queue is listed in CER.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Queue in cer
+          hidden: false
+  - name: situation_date_applicable
+    description: Whether the NFZ published situation date is applicable to this queue.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Situation date applicable
+          hidden: false
+  - name: pcus_text
+    description: Source-provided PCUS waiting-time text.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Pcus text
+          hidden: false
+  - name: situation_date
+    description: Date for which the NFZ published the queue situation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Situation date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: patients_awaiting
+    description: Number of patients awaiting treatment in the provider-reported statistics block.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Patients awaiting
+          hidden: false
+          format: '#,##0'
+  - name: patients_removed
+    description: Number of patients removed in the provider-reported statistics block.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Patients removed
+          hidden: false
+          format: '#,##0'
+  - name: average_wait_days
+    description: Provider-reported average waiting period in days when supplied by NFZ.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          avg_wait_days:
+            type: average
+            label: Mean reported wait days
+            description: Average non-null `average_wait_days` reported by providers for each NFZ situation
+              date. Each retained queue observation has equal weight; this is a reported waiting-period
+              level, not a count of patients or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Average wait days
+          hidden: false
+          format: '#,##0'
+  - name: statistics_update_month
+    description: Source month label for the provider-reported statistics block.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Statistics update month
+          hidden: false
+  - name: _row_id
+    description: Raw row identifier retained for lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained queue observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position in the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the raw queue observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the normalized raw queue record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

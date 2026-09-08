@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_globe_measurement_observation_measured_date_year
+          yRef:
+            field: fct_globe_measurement_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Measured date (Year)
+      yAxis:
+      - name: Distinct measurement
+    layout:
+      xField: fct_globe_measurement_observation_measured_date_year
+      yField:
+      - fct_globe_measurement_observation_distinct_entities
+  type: cartesian
+description: Distinct `measurement_id` values by calendar year of the source measurement date. This is
+  a flow of recorded measurements rather than a current catalogue level; years with no source rows are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_globe_measurement_observation_measured_date_year
+  exploreName: fct_globe_measurement_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_globe_measurement_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_globe_measurement_observation_measured_date_year
+  tableCalculations: []
+name: Measurements taken per year
+slug: fct-globe-measurement-observation-annual-measurements
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_globe_measurement_observation_measured_date_year
+  - fct_globe_measurement_observation_distinct_entities
+tableName: fct_globe_measurement_observation
+version: 1

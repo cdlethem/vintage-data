@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_amsat_status_observations_reported_time_hour
+          yRef:
+            field: fct_amsat_status_observations_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Reported time (Hour)
+      yAxis:
+      - name: Distinct observation
+    layout:
+      xField: fct_amsat_status_observations_reported_time_hour
+      yField:
+      - fct_amsat_status_observations_distinct_entities
+  type: cartesian
+description: Distinct `observation_id` values by the hour the upstream feed reported them. This is a short
+  five-day event-time history rather than a long-run publication flow; hours without reports are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_amsat_status_observations_reported_time_hour
+  exploreName: fct_amsat_status_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_amsat_status_observations_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_amsat_status_observations_reported_time_hour
+  tableCalculations: []
+name: Distinct satellite reports by reported hour
+slug: fct-amsat-status-observations-reported-observations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_amsat_status_observations_reported_time_hour
+  - fct_amsat_status_observations_distinct_entities
+tableName: fct_amsat_status_observations
+version: 1

@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_chess_archives_gothamchess_games_ended_at_day
+          yRef:
+            field: fct_chess_archives_gothamchess_games_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Ended at (Day)
+      yAxis:
+      - name: Distinct game
+    layout:
+      stack: true
+      xField: fct_chess_archives_gothamchess_games_ended_at_day
+      yField:
+      - fct_chess_archives_gothamchess_games_distinct_entities
+  type: cartesian
+description: Distinct games per `ended_at` day stacked by the two observed `time_class` values. Stacked
+  bars show the daily mix, while dates without games remain absent.
+metricQuery:
+  dimensions:
+  - fct_chess_archives_gothamchess_games_ended_at_day
+  - fct_chess_archives_gothamchess_games_time_class
+  exploreName: fct_chess_archives_gothamchess_games
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_chess_archives_gothamchess_games_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_chess_archives_gothamchess_games_distinct_entities
+  - descending: false
+    fieldId: fct_chess_archives_gothamchess_games_ended_at_day
+  tableCalculations: []
+name: Games ended by time class
+pivotConfig:
+  columns:
+  - fct_chess_archives_gothamchess_games_time_class
+slug: fct-chess-archives-gothamchess-games-time-class-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_chess_archives_gothamchess_games_ended_at_day
+  - fct_chess_archives_gothamchess_games_time_class
+  - fct_chess_archives_gothamchess_games_distinct_entities
+tableName: fct_chess_archives_gothamchess_games
+version: 1

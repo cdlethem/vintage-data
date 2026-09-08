@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_openligadb_match_observations_scheduled_at_month
+          yRef:
+            field: fct_openligadb_match_observations_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Scheduled at (Month)
+      yAxis:
+      - name: Distinct match
+    layout:
+      xField: fct_openligadb_match_observations_scheduled_at_month
+      yField:
+      - fct_openligadb_match_observations_distinct_entities
+  type: cartesian
+description: Distinct scheduled `match_id` values pivoted by `home_team` and month. The eight largest
+  teams over the selected season are shown and the remainder is excluded rather than aggregated; a missing
+  month means no scheduled match in that series.
+metricQuery:
+  dimensions:
+  - fct_openligadb_match_observations_scheduled_at_month
+  - fct_openligadb_match_observations_home_team
+  exploreName: fct_openligadb_match_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_openligadb_match_observations_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_openligadb_match_observations_distinct_entities
+  - descending: false
+    fieldId: fct_openligadb_match_observations_scheduled_at_month
+  tableCalculations: []
+name: Leading home teams by scheduled month
+pivotConfig:
+  columns:
+  - fct_openligadb_match_observations_home_team
+slug: fct-openligadb-match-observations-team-calendar-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openligadb_match_observations_scheduled_at_month
+  - fct_openligadb_match_observations_home_team
+  - fct_openligadb_match_observations_distinct_entities
+tableName: fct_openligadb_match_observations
+version: 1

@@ -1,0 +1,134 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 6643aa83-da0b-53b4-b0ac-0231a4208c16
+    label: 'Nsidc sea ice: Source name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nsidc_sea_ice_source_name
+      tableName: fct_nsidc_sea_ice
+    values: []
+  - disabled: true
+    id: 5d8a16e3-6f57-5fb5-b82b-46b8f3243752
+    label: 'Nsidc sea ice: Observation date'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nsidc_sea_ice_observation_date
+      tableName: fct_nsidc_sea_ice
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Nsidc Sea Ice
+slug: nsidc-sea-ice
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of National Snow and Ice Data Center sea-ice observations. Each row
+      is the latest loaded record for one source, source record identifier, and observation date; repeated
+      insert-only raw snapshots are reduced by load lineage while extractor and loader fields remain available
+      for audit and replay.
+
+
+      **Grain:** source_name, sea_ice_id, observation_date
+
+
+      **What changes here:** how the reported Arctic sea-ice extent changes each day and whether the feed''s
+      catalogue remains complete.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `nsidc_sea_ice` — licence: unstated (US federal/NOAA-affiliated data); attribution required: True.
+      Source configuration: `extract/sources/nsidc_sea_ice.yml`.'
+    hideFrame: false
+    title: Nsidc sea ice
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Nsidc sea ice — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Reported sea-ice extent per day
+    chartSlug: fct-nsidc-sea-ice-daily-extent
+    hideTitle: false
+    title: Reported sea-ice extent per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Sea-ice observations per day
+    chartSlug: fct-nsidc-sea-ice-daily-observations
+    hideTitle: false
+    title: Sea-ice observations per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Observation coverage by source
+    chartSlug: fct-nsidc-sea-ice-source-coverage
+    hideTitle: false
+    title: Observation coverage by source
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 1
+  properties:
+    showDivider: true
+    text: Nsidc sea ice — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Mean observed extent million km2 by observation date
+    chartSlug: fct-nsidc-sea-ice
+    hideTitle: false
+    title: Mean observed extent million km2 by observation date
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 28
+- h: 10
+  properties:
+    chartName: Nsidc sea ice — observations
+    chartSlug: fct-nsidc-sea-ice-details
+    hideTitle: false
+    title: Nsidc sea ice — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 28
+version: 1

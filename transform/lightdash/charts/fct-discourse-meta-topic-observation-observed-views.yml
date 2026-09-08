@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_discourse_meta_topic_observation_observed_at_day
+          yRef:
+            field: fct_discourse_meta_topic_observation_average_views
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed views
+    layout:
+      xField: fct_discourse_meta_topic_observation_observed_at_day
+      yField:
+      - fct_discourse_meta_topic_observation_average_views
+  type: cartesian
+description: Average Discourse `views` counter across retained topic observations on each observation
+  day. Each observation has equal weight, so irregular polling and repeated snapshots can affect the level;
+  missing observation days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_discourse_meta_topic_observation_observed_at_day
+  exploreName: fct_discourse_meta_topic_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_discourse_meta_topic_observation_average_views
+  sorts:
+  - descending: false
+    fieldId: fct_discourse_meta_topic_observation_observed_at_day
+  tableCalculations: []
+name: Mean observed views per day
+slug: fct-discourse-meta-topic-observation-observed-views
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_discourse_meta_topic_observation_observed_at_day
+  - fct_discourse_meta_topic_observation_average_views
+tableName: fct_discourse_meta_topic_observation
+version: 1

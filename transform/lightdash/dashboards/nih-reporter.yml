@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: ff1ab087-a5a9-5a38-835d-945545dc43ef
+    label: 'Nih reporter project observations: Organization state'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nih_reporter_project_observations_organization_state
+      tableName: fct_nih_reporter_project_observations
+    values: []
+  - disabled: true
+    id: 022e2c8d-90ff-5496-a696-25dfbd67eb31
+    label: 'Nih reporter project observations: Organization name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nih_reporter_project_observations_organization_name
+      tableName: fct_nih_reporter_project_observations
+    values: []
+  - disabled: true
+    id: 0927f214-5161-59b4-b9c0-7d242d2728a2
+    label: 'Nih reporter project observations: Fiscal year'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nih_reporter_project_observations_fiscal_year
+      tableName: fct_nih_reporter_project_observations
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Nih Reporter
+slug: nih-reporter
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of NIH Reporter research-project records. Each row is one NIH application
+      observed at an extractor timestamp, retaining grant, project, organization, principal-investigator,
+      and raw-load lineage fields. Repeated raw copies of the same application observation are reduced
+      to the latest loaded row.
+
+
+      **Grain:** project_id, observed_at
+
+
+      **What changes here:** how NIH project starts, award levels, and recipient geography change across
+      the published research portfolio.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `nih_reporter` — licence: US Government work, public domain; attribution required: False. Source
+      configuration: `extract/sources/nih_reporter.yml`.'
+    hideFrame: false
+    title: Nih reporter project observations
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Nih reporter project observations — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Projects starting by month
+    chartSlug: fct-nih-reporter-project-observations-project-starts
+    hideTitle: false
+    title: Projects starting by month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean award amount by project-start month
+    chartSlug: fct-nih-reporter-project-observations-award-level
+    hideTitle: false
+    title: Mean award amount by project-start month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Project starts by recipient state
+    chartSlug: fct-nih-reporter-project-observations-projects-by-state
+    hideTitle: false
+    title: Project starts by recipient state
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean award level by recipient organization
+    chartSlug: fct-nih-reporter-project-observations-award-mix-by-organization
+    hideTitle: false
+    title: Mean award level by recipient organization
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Nih reporter project observations — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed award amount by organization state
+    chartSlug: fct-nih-reporter-project-observations
+    hideTitle: false
+    title: Mean observed award amount by organization state
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Nih reporter project observations — observations
+    chartSlug: fct-nih-reporter-project-observations-details
+    hideTitle: false
+    title: Nih reporter project observations — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

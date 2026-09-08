@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_musicbrainz_release_observation_observed_at_day
+          yRef:
+            field: fct_musicbrainz_release_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct release
+    layout:
+      xField: fct_musicbrainz_release_observation_observed_at_day
+      yField:
+      - fct_musicbrainz_release_observation_distinct_entities
+  type: cartesian
+description: Distinct `release_id` values per observation day compared across `release_group_type`. The
+  three observed types are retained; any type outside the selected top three is excluded rather than aggregated.
+metricQuery:
+  dimensions:
+  - fct_musicbrainz_release_observation_observed_at_day
+  - fct_musicbrainz_release_observation_release_group_type
+  exploreName: fct_musicbrainz_release_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_musicbrainz_release_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_musicbrainz_release_observation_distinct_entities
+  - descending: false
+    fieldId: fct_musicbrainz_release_observation_observed_at_day
+  tableCalculations: []
+name: Release groups observed by type
+pivotConfig:
+  columns:
+  - fct_musicbrainz_release_observation_release_group_type
+slug: fct-musicbrainz-release-observation-release-group-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_musicbrainz_release_observation_observed_at_day
+  - fct_musicbrainz_release_observation_release_group_type
+  - fct_musicbrainz_release_observation_distinct_entities
+tableName: fct_musicbrainz_release_observation
+version: 1

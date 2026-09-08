@@ -1,0 +1,474 @@
+version: 2
+models:
+- name: fct_nextstrain_sequence_observation
+  description: Daily physical history of Nextstrain phylogenetic sequence observations. Each row represents
+    one source, sequence identifier, and extractor fetch timestamp, retaining the reported sample, tree,
+    clade, geography, mutation, and provenance attributes together with complete load lineage. Because
+    the raw source is append-only, repeated copies of a source sequence at the same fetch timestamp are
+    reduced to the latest loaded record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, sequence_id, fetched_at
+      label: Nextstrain sequence observation
+      group_label: Nextstrain
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: nextstrain_sequence__032879
+      vintage:
+        visualization:
+          dimension: clade
+          metric: distinct_entities
+          time: fetched_at
+          window_days: 30
+          title: Distinct sequence by clade
+          description: Distinct `sequence_id` values by `clade` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - fetched_at
+          - sequence_id
+          - clade
+          - source_loaded_at
+          sources:
+          - '`nextstrain` — licence: Nextstrain data CC-BY; GISAID-sourced builds carry GISAID''s stricter
+            terms — check meta.data_provenance; attribution required: True. Source configuration: `extract/sources/nextstrain.yml`.'
+          analysis:
+            headline: how sampled sequence volume, genetic divergence, clades, and regions shift through time.
+            event_time: sample_date
+            grain: MONTH
+            controls:
+            - clade
+            - subclade
+            - region
+            - date_inferred
+            trends:
+            - slug: sampled-sequences
+              kind: total
+              metric: distinct_entities
+              time: sample_date
+              grain: MONTH
+              title: Distinct sequences by sample month
+              description: Distinct `sequence_id` values assigned to each calendar sample month across the
+                full published sample history. This is a sample flow rather than a current catalogue count;
+                months with no sampled sequences are absent rather than zero.
+              width: half
+            - slug: divergence-by-month
+              kind: total
+              metric: average_divergence
+              time: sample_date
+              grain: MONTH
+              title: Mean genetic divergence by sample month
+              description: Mean reported `divergence` across sequence observations assigned to each calendar
+                sample month. The average is observation-weighted and describes the sampled tree, not a sum
+                of mutations; months without samples are absent.
+              width: half
+            - slug: clade-trajectories
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: clade
+              top_n: 6
+              time: sample_date
+              grain: MONTH
+              title: Sampled sequences by leading clade
+              description: Distinct sequences per sample month pivoted by the six clades with the most
+                sequences across the full history. The remaining 11 clades are excluded rather than
+                aggregated, so the lines do not sum to all sampled sequences.
+              width: full
+            - slug: regional-composition
+              kind: composition
+              metric: distinct_entities
+              breakdown: region
+              top_n: 10
+              time: sample_date
+              grain: MONTH
+              title: Sampled sequence composition by region
+              description: Distinct sequences per sample month stacked by region across the full sample
+                history. All ten observed regions are retained; absent samples are missing bars rather than
+                zero-volume regions.
+              width: full
+  columns:
+  - name: nextstrain_sequence_observation_key
+    description: Stable hash of the source, sequence identifier, and fetch timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Nextstrain sequence observation key
+          hidden: true
+          name: nextstrain_sequence__032879
+  - name: source
+    description: Upstream source label that supplied the Nextstrain sequence observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: sequence_id
+    description: Nextstrain tree identifier for the observed sequence or tree node.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct sequence
+            description: Distinct `sequence_id` values by `clade` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Sequence id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp when the extractor fetched the Nextstrain dataset containing this observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: dataset
+    description: Nextstrain dataset path from which the sequence observation was produced.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Dataset
+          hidden: false
+  - name: built_at
+    description: Date on which Nextstrain built the reported dataset.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Built at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: strain
+    description: Public sample or strain name assigned to the sequence node.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Strain
+          hidden: false
+  - name: is_tip
+    description: Whether the tree node is a terminal sequence tip rather than an internal node.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is tip
+          hidden: false
+  - name: parent
+    description: Identifier of the parent node in the Nextstrain phylogenetic tree.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Parent
+          hidden: false
+  - name: depth
+    description: Number of tree edges from the root to this sequence node.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Depth
+          hidden: false
+          format: '#,##0'
+  - name: num_date
+    description: Numeric decimal-year representation of the sequence sample date.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Num date
+          hidden: false
+          format: '#,##0.00'
+  - name: sample_date
+    description: Calendar date assigned to the sequence sample.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Sample date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: date_confidence
+    description: JSON date-confidence metadata reported by Nextstrain for the sequence.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Date confidence
+          hidden: true
+          sql: CAST(${TABLE}.date_confidence AS VARCHAR)
+  - name: date_inferred
+    description: Whether Nextstrain inferred the sequence sample date rather than receiving it directly.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Date inferred
+          hidden: false
+  - name: divergence
+    description: Genetic divergence value reported for the sequence node.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_divergence:
+            type: average
+            label: Mean genetic divergence
+            description: Mean `divergence` reported for sequence observations in the selected sample window.
+              Each retained observation has equal weight; this is an average genetic measure, not an
+              additive mutation total.
+            format: '#,##0.0000'
+        dimension:
+          type: number
+          label: Divergence
+          hidden: false
+          format: '#,##0.00'
+  - name: clade
+    description: Nextstrain clade assignment for the sequence node.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Clade
+          hidden: false
+  - name: subclade
+    description: Nextstrain subclade assignment for the sequence node.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Subclade
+          hidden: false
+  - name: country
+    description: Country associated with the sequence sample.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Country
+          hidden: false
+  - name: region
+    description: Geographic region associated with the sequence sample.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Region
+          hidden: false
+  - name: division
+    description: Geographic division or subnational area associated with the sequence sample.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Division
+          hidden: false
+  - name: accession
+    description: Public sequence accession identifier associated with the sample.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Accession
+          hidden: false
+  - name: submitting_lab
+    description: Laboratory that submitted the sequence represented by the observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Submitting lab
+          hidden: false
+  - name: amino_acid_mutation_count
+    description: Count of amino-acid mutations reported for the sequence.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Amino acid mutation count
+          hidden: false
+          format: '#,##0'
+  - name: nucleotide_mutation_count
+    description: Count of nucleotide mutations reported for the sequence.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Nucleotide mutation count
+          hidden: false
+          format: '#,##0'
+  - name: provenance
+    description: JSON provenance metadata supplied by Nextstrain for the sequence observation.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provenance
+          hidden: true
+          sql: CAST(${TABLE}.provenance AS VARCHAR)
+  - name: _row_id
+    description: Load-layer row identifier of the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained sequence observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: _dt
+    description: Load-layer partition date associated with the retained raw observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _load_id
+    description: Identifier of the load operation that inserted the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained raw observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

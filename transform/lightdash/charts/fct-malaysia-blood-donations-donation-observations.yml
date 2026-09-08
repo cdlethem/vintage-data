@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_malaysia_blood_donations_donation_date_day
+          yRef:
+            field: fct_malaysia_blood_donations_distinct_observations
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Donation date (Day)
+      yAxis:
+      - name: Distinct donation observations
+    layout:
+      xField: fct_malaysia_blood_donations_donation_date_day
+      yField:
+      - fct_malaysia_blood_donations_distinct_observations
+  type: cartesian
+description: Distinct `observation_id` values by reported `donation_date`. This is one state and blood-type
+  feed's daily observation level, not a sum of donations across repeated snapshots — dates with no publisher
+  record are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_malaysia_blood_donations_donation_date_day
+  exploreName: fct_malaysia_blood_donations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_malaysia_blood_donations_distinct_observations
+  sorts:
+  - descending: false
+    fieldId: fct_malaysia_blood_donations_donation_date_day
+  tableCalculations: []
+name: Distinct donation observations per day
+slug: fct-malaysia-blood-donations-donation-observations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_malaysia_blood_donations_donation_date_day
+  - fct_malaysia_blood_donations_distinct_observations
+tableName: fct_malaysia_blood_donations
+version: 1

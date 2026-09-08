@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_food_hygiene_ratings_glasgow_rating_date_month
+          yRef:
+            field: fct_food_hygiene_ratings_glasgow_distinct_rating_values
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Rating date (Month)
+      yAxis:
+      - name: Distinct rating labels
+    layout:
+      xField: fct_food_hygiene_ratings_glasgow_rating_date_month
+      yField:
+      - fct_food_hygiene_ratings_glasgow_distinct_rating_values
+  type: cartesian
+description: Distinct publisher `rating_value` labels present in each rating month. This is a label-variety
+  measure rather than a business count — it can remain at two while business volume changes, and months
+  without ratings are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_food_hygiene_ratings_glasgow_rating_date_month
+  exploreName: fct_food_hygiene_ratings_glasgow
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_food_hygiene_ratings_glasgow_distinct_rating_values
+  sorts:
+  - descending: false
+    fieldId: fct_food_hygiene_ratings_glasgow_rating_date_month
+  tableCalculations: []
+name: Rating labels used per month
+slug: fct-food-hygiene-ratings-glasgow-rating-label-variety
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_food_hygiene_ratings_glasgow_rating_date_month
+  - fct_food_hygiene_ratings_glasgow_distinct_rating_values
+tableName: fct_food_hygiene_ratings_glasgow
+version: 1

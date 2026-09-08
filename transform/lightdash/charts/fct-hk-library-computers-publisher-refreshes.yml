@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_hk_library_computers_publisher_updated_at_day
+          yRef:
+            field: fct_hk_library_computers_distinct_computers
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Publisher updated at (Day)
+      yAxis:
+      - name: Distinct computers
+    layout:
+      xField: fct_hk_library_computers_publisher_updated_at_day
+      yField:
+      - fct_hk_library_computers_distinct_computers
+  type: cartesian
+description: Distinct `computer_id` values grouped by the publisher-supplied `publisher_updated_at` day
+  and shown for the six largest libraries. The source timestamp covers only five observed days in this
+  extract, with older days absent rather than zero; the remainder of libraries is excluded rather than
+  aggregated.
+metricQuery:
+  dimensions:
+  - fct_hk_library_computers_publisher_updated_at_day
+  - fct_hk_library_computers_library_name
+  exploreName: fct_hk_library_computers
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_hk_library_computers_distinct_computers
+  sorts:
+  - descending: true
+    fieldId: fct_hk_library_computers_distinct_computers
+  - descending: false
+    fieldId: fct_hk_library_computers_publisher_updated_at_day
+  tableCalculations: []
+name: Computer entries by publisher update day
+pivotConfig:
+  columns:
+  - fct_hk_library_computers_library_name
+slug: fct-hk-library-computers-publisher-refreshes
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hk_library_computers_publisher_updated_at_day
+  - fct_hk_library_computers_library_name
+  - fct_hk_library_computers_distinct_computers
+tableName: fct_hk_library_computers
+version: 1

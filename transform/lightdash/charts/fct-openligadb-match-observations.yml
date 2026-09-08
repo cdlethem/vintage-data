@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_openligadb_match_observations_league
+          yRef:
+            field: fct_openligadb_match_observations_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_openligadb_match_observations_league
+      yField:
+      - fct_openligadb_match_observations_distinct_entities
+  type: cartesian
+description: Distinct `match_id` values by `league` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_openligadb_match_observations_league
+  exploreName: fct_openligadb_match_observations
+  filters:
+    dimensions:
+      and:
+      - id: d66785a2-c2a6-512b-bab6-b3fb0393769b
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_openligadb_match_observations_observed_at
+        values:
+        - 30
+      id: 718d7663-561c-580c-b0a2-3b59bdcb577c
+  limit: 20
+  metrics:
+  - fct_openligadb_match_observations_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_openligadb_match_observations_distinct_entities
+  tableCalculations: []
+name: Distinct match by league
+slug: fct-openligadb-match-observations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openligadb_match_observations_league
+  - fct_openligadb_match_observations_distinct_entities
+tableName: fct_openligadb_match_observations
+version: 1

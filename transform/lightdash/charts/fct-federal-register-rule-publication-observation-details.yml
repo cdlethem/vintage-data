@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical observation fact for Federal Register rule and publication records. Each row records
+  one document identifier at one extractor observation timestamp, preserving publication metadata, public-inspection
+  state, and raw-load lineage. Repeated copies of the same source, document, and observation timestamp
+  retain the latest loaded row.
+metricQuery:
+  dimensions: &id001
+  - fct_federal_register_rule_publication_observation_da6ee
+  - fct_federal_register_rule_publication_observation_document_id
+  - fct_federal_register_rule_publication_observation_document_type
+  - fct_federal_register_rule_publication_observation_d2059
+  exploreName: fct_federal_register_rule_publication_observation
+  filters:
+    dimensions:
+      and:
+      - id: 3473ffc9-6f9a-53ec-9fb7-1178ef73a3dd
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_federal_register_rule_publication_observation_da6ee
+        values:
+        - 30
+      id: ce140e54-3cbd-5865-93ab-032b063b371e
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_federal_register_rule_publication_observation_da6ee
+  tableCalculations: []
+name: Federal register rule publication observation — observations
+slug: fct-federal-register-rule-publication-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_federal_register_rule_publication_observation
+version: 1

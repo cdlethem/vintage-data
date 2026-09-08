@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Year
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 5f199256-eb99-5461-9124-9abee38e01e6
+    label: 'Globe measurement observation: Country name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_globe_measurement_observation_country_name
+      tableName: fct_globe_measurement_observation
+    values: []
+  - disabled: true
+    id: bffc5ac9-9b63-552d-88f8-b75fe95a113e
+    label: 'Globe measurement observation: Organization name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_globe_measurement_observation_organization_name
+      tableName: fct_globe_measurement_observation
+    values: []
+  - disabled: true
+    id: f3dabd4a-7727-585d-b57d-73149b4714a3
+    label: 'Globe measurement observation: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_globe_measurement_observation_source
+      tableName: fct_globe_measurement_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Globe Measurements
+slug: globe-measurements
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Incremental history of GLOBE Observer protocol measurements. Each row is one distinct source
+      payload identified by measurement id, observation timestamp, and content hash; repeated raw deliveries
+      of an identical payload merge while distinct payload versions remain observable. Raw-load lineage
+      is retained for replay and audit.
+
+
+      **Grain:** measurement_id, observed_at, content_hash
+
+
+      **What changes here:** how GLOBE measurement coverage and site elevation patterns change across
+      countries over three decades.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `globe_measurements` — licence: GLOBE data-use policy; attribution required: True. Source configuration:
+      `extract/sources/globe_measurements.yml`.'
+    hideFrame: false
+    title: Globe measurement observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Globe measurement observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Measurements taken per year
+    chartSlug: fct-globe-measurement-observation-annual-measurements
+    hideTitle: false
+    title: Measurements taken per year
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean measurement-site elevation per year
+    chartSlug: fct-globe-measurement-observation-annual-elevation
+    hideTitle: false
+    title: Mean measurement-site elevation per year
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Measurements per year by country
+    chartSlug: fct-globe-measurement-observation-country-measurements
+    hideTitle: false
+    title: Measurements per year by country
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean measurement-site elevation by leading country
+    chartSlug: fct-globe-measurement-observation-country-elevation
+    hideTitle: false
+    title: Mean measurement-site elevation by leading country
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Globe measurement observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct measurement by protocol
+    chartSlug: fct-globe-measurement-observation
+    hideTitle: false
+    title: Distinct measurement by protocol
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Globe measurement observation — observations
+    chartSlug: fct-globe-measurement-observation-details
+    hideTitle: false
+    title: Globe measurement observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

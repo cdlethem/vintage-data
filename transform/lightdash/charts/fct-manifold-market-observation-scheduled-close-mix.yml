@@ -1,0 +1,57 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_manifold_market_observation_close_time_month
+          yRef:
+            field: fct_manifold_market_observation_distinct_markets
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Close time (Month)
+      yAxis:
+      - name: Distinct market
+    layout:
+      stack: true
+      xField: fct_manifold_market_observation_close_time_month
+      yField:
+      - fct_manifold_market_observation_distinct_markets
+  type: cartesian
+description: Distinct `market_id` values grouped by their scheduled `close_time` month and `outcome_type`.
+  Bars show the composition of scheduled horizons; far-future dates can represent open markets and are
+  not realized closures. All six outcome types fit this bounded pivot, and no categories are silently
+  aggregated.
+metricQuery:
+  dimensions:
+  - fct_manifold_market_observation_close_time_month
+  - fct_manifold_market_observation_outcome_type
+  exploreName: fct_manifold_market_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_manifold_market_observation_distinct_markets
+  sorts:
+  - descending: true
+    fieldId: fct_manifold_market_observation_distinct_markets
+  - descending: false
+    fieldId: fct_manifold_market_observation_close_time_month
+  tableCalculations: []
+name: Markets by scheduled close month and outcome type
+pivotConfig:
+  columns:
+  - fct_manifold_market_observation_outcome_type
+slug: fct-manifold-market-observation-scheduled-close-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_manifold_market_observation_close_time_month
+  - fct_manifold_market_observation_outcome_type
+  - fct_manifold_market_observation_distinct_markets
+tableName: fct_manifold_market_observation
+version: 1

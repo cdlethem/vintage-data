@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_malaysia_blood_donations_donation_date_day
+          yRef:
+            field: fct_malaysia_blood_donations_distinct_observations
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Donation date (Day)
+      yAxis:
+      - name: Distinct donation observations
+    layout:
+      xField: fct_malaysia_blood_donations_donation_date_day
+      yField:
+      - fct_malaysia_blood_donations_distinct_observations
+  type: cartesian
+description: Distinct donation observations per reported day, split by `state`. The feed currently contains
+  one observed state, so the chart intentionally shows that single series rather than implying nationwide
+  coverage; missing source dates are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_malaysia_blood_donations_donation_date_day
+  - fct_malaysia_blood_donations_state
+  exploreName: fct_malaysia_blood_donations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_malaysia_blood_donations_distinct_observations
+  sorts:
+  - descending: true
+    fieldId: fct_malaysia_blood_donations_distinct_observations
+  - descending: false
+    fieldId: fct_malaysia_blood_donations_donation_date_day
+  tableCalculations: []
+name: Donation observations by state
+pivotConfig:
+  columns:
+  - fct_malaysia_blood_donations_state
+slug: fct-malaysia-blood-donations-observations-by-state
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_malaysia_blood_donations_donation_date_day
+  - fct_malaysia_blood_donations_state
+  - fct_malaysia_blood_donations_distinct_observations
+tableName: fct_malaysia_blood_donations
+version: 1

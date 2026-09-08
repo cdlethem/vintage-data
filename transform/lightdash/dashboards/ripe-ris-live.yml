@@ -1,0 +1,164 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 52d17885-86b6-5def-b153-e59aa4dd127a
+    label: 'Ripe ris live bgp update: Collector host'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ripe_ris_live_bgp_update_collector_host
+      tableName: fct_ripe_ris_live_bgp_update
+    values: []
+  - disabled: true
+    id: 2c28f996-b7bd-52aa-9937-50988ded83a4
+    label: 'Ripe ris live bgp update: Origin'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ripe_ris_live_bgp_update_origin
+      tableName: fct_ripe_ris_live_bgp_update
+    values: []
+  - disabled: true
+    id: eeb8ae5d-114c-5acc-ad5c-ad1a5fa5619c
+    label: 'Ripe ris live bgp update: Update type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ripe_ris_live_bgp_update_update_type
+      tableName: fct_ripe_ris_live_bgp_update
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Ripe Ris Live
+slug: ripe-ris-live
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical history of BGP UPDATE messages observed by the RIPE RIS live collector.
+      Each row represents one source, update identifier, and observation timestamp, with the route path,
+      announcement and withdrawal sets preserved as JSON and raw-load lineage retained for audit and replay.
+      Insert-only copies of the same observation are reduced to the latest loaded copy using the append-only
+      load timestamp and file position.
+
+
+      **Grain:** source, update_id, observed_at
+
+
+      **What changes here:** how BGP update volume and route-change payloads vary by source event day
+      and collector across the seven observed event days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `ripe_ris_live` — licence: unstated (RIPE NCC public service); attribution required: False. Source
+      configuration: `extract/sources/ripe_ris_live.yml`.'
+    hideFrame: false
+    title: Ripe ris live bgp update
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Ripe ris live bgp update — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: BGP updates per source event day
+    chartSlug: fct-ripe-ris-live-bgp-update-updates-by-event-day
+    hideTitle: false
+    title: BGP updates per source event day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean announced-prefix count per event day
+    chartSlug: fct-ripe-ris-live-bgp-update-announcements-by-event-day
+    hideTitle: false
+    title: Mean announced-prefix count per event day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean withdrawn-prefix count per event day
+    chartSlug: fct-ripe-ris-live-bgp-update-withdrawals-by-event-day
+    hideTitle: false
+    title: Mean withdrawn-prefix count per event day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: BGP update mix across leading collectors
+    chartSlug: fct-ripe-ris-live-bgp-update-collector-volume
+    hideTitle: false
+    title: BGP update mix across leading collectors
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Updates ingested per collection day
+    chartSlug: fct-ripe-ris-live-bgp-update-collected-volume
+    hideTitle: false
+    title: Updates ingested per collection day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Ripe ris live bgp update — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed announcement count by collector host
+    chartSlug: fct-ripe-ris-live-bgp-update
+    hideTitle: false
+    title: Mean observed announcement count by collector host
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Ripe ris live bgp update — observations
+    chartSlug: fct-ripe-ris-live-bgp-update-details
+    hideTitle: false
+    title: Ripe ris live bgp update — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

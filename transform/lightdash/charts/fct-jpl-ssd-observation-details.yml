@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical observation fact for the JPL SSD fireball feed. Each row is one source observation
+  identified by its source, reported identifier, and fetch timestamp. Source-load lineage is retained
+  so append-only arrivals can be audited and replayed without exposing the raw payload.
+metricQuery:
+  dimensions: &id001
+  - fct_jpl_ssd_observation_observed_at
+  - fct_jpl_ssd_observation_observation_id
+  - fct_jpl_ssd_observation_impact_energy_kt
+  - fct_jpl_ssd_observation_source_loaded_at
+  exploreName: fct_jpl_ssd_observation
+  filters:
+    dimensions:
+      and:
+      - id: e1f4afa8-8ddf-5e4f-9295-fbd9a6e29a87
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_jpl_ssd_observation_observed_at
+        values:
+        - 30
+      id: 1701f442-14f5-59d6-85c6-35caae5093ad
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_jpl_ssd_observation_observed_at
+  tableCalculations: []
+name: Jpl ssd observation — observations
+slug: fct-jpl-ssd-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_jpl_ssd_observation
+version: 1

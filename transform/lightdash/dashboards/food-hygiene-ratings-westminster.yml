@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 29152083-b239-5732-9ac5-63d67d938df2
+    label: 'Food hygiene ratings westminster: Business type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_westminster_business_type
+      tableName: fct_food_hygiene_ratings_westminster
+    values: []
+  - disabled: true
+    id: 738264ec-da93-5eeb-b48f-a00c13b09c63
+    label: 'Food hygiene ratings westminster: Rating value text'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_westminster_rating_value_text
+      tableName: fct_food_hygiene_ratings_westminster
+    values: []
+  - disabled: true
+    id: d2504f74-4848-5981-9c79-0814375f2d89
+    label: 'Food hygiene ratings westminster: New rating pending'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_westminster_new_rating_pending
+      tableName: fct_food_hygiene_ratings_westminster
+    values: []
+  - disabled: true
+    id: 47144cbf-a0bc-55d6-82e1-5f991c7d0c2f
+    label: 'Food hygiene ratings westminster: Scheme type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_westminster_scheme_type
+      tableName: fct_food_hygiene_ratings_westminster
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Food Hygiene Ratings Westminster
+slug: food-hygiene-ratings-westminster
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical snapshot of Food Hygiene Rating Scheme records for Westminster businesses.
+      Each row is one source business identifier at one source fetch timestamp; repeated copies of the
+      same observation grain are resolved to the latest loaded file row. Published rating and component
+      scores are exposed as typed values, with original nested scores and geocode JSON retained alongside
+      source lineage.
+
+
+      **Grain:** source, business_id, fetched_at
+
+
+      **What changes here:** how Westminster rating activity and reported hygiene scores shift across
+      business types over rating history.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `food_hygiene_ratings_westminster` — see dbt raw-source lineage.'
+    hideFrame: false
+    title: Food hygiene ratings westminster
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Food hygiene ratings westminster — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Businesses rated per month
+    chartSlug: fct-food-hygiene-ratings-westminster-rating-volume
+    hideTitle: false
+    title: Businesses rated per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average hygiene component score per month
+    chartSlug: fct-food-hygiene-ratings-westminster-hygiene-score
+    hideTitle: false
+    title: Average hygiene component score per month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Rated businesses by business type
+    chartSlug: fct-food-hygiene-ratings-westminster-business-type-mix
+    hideTitle: false
+    title: Rated businesses by business type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Hygiene score by business type
+    chartSlug: fct-food-hygiene-ratings-westminster-score-by-business-type
+    hideTitle: false
+    title: Hygiene score by business type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Food hygiene ratings westminster — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct business by business type
+    chartSlug: fct-food-hygiene-ratings-westminster
+    hideTitle: false
+    title: Distinct business by business type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Food hygiene ratings westminster — observations
+    chartSlug: fct-food-hygiene-ratings-westminster-details
+    hideTitle: false
+    title: Food hygiene ratings westminster — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

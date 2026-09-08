@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_texas_scratch_prize_observation_publisher_updated_at_day
+          yRef:
+            field: fct_texas_scratch_prize_observation_average_prizes_claimed
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Publisher updated at (Day)
+      yAxis:
+      - name: Mean observed prizes claimed
+    layout:
+      xField: fct_texas_scratch_prize_observation_publisher_updated_at_day
+      yField:
+      - fct_texas_scratch_prize_observation_average_prizes_claimed
+  type: cartesian
+description: Average non-null `prizes_claimed` per publisher update date, split by game. Only the six
+  largest game series are shown; the remaining games are excluded rather than aggregated, and each line
+  remains a snapshot level rather than a sales flow.
+metricQuery:
+  dimensions:
+  - fct_texas_scratch_prize_observation_publisher_updated_at_day
+  - fct_texas_scratch_prize_observation_game_name
+  exploreName: fct_texas_scratch_prize_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_texas_scratch_prize_observation_average_prizes_claimed
+  sorts:
+  - descending: true
+    fieldId: fct_texas_scratch_prize_observation_average_prizes_claimed
+  - descending: false
+    fieldId: fct_texas_scratch_prize_observation_publisher_updated_at_day
+  tableCalculations: []
+name: Mean prizes claimed by game
+pivotConfig:
+  columns:
+  - fct_texas_scratch_prize_observation_game_name
+slug: fct-texas-scratch-prize-observation-claimed-by-game
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_texas_scratch_prize_observation_publisher_updated_at_day
+  - fct_texas_scratch_prize_observation_game_name
+  - fct_texas_scratch_prize_observation_average_prizes_claimed
+tableName: fct_texas_scratch_prize_observation
+version: 1

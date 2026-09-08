@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_launch_library_status_name
+          yRef:
+            field: fct_launch_library_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_launch_library_status_name
+      yField:
+      - fct_launch_library_distinct_entities
+  type: cartesian
+description: Distinct `launch_id` values by `status_name` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_launch_library_status_name
+  exploreName: fct_launch_library
+  filters:
+    dimensions:
+      and:
+      - id: 9836b3b5-1c10-5644-a32f-c8c0df085b21
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_launch_library_fetched_at
+        values:
+        - 30
+      id: 00f6765d-7c63-53c2-964c-a037d77503ac
+  limit: 20
+  metrics:
+  - fct_launch_library_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_launch_library_distinct_entities
+  tableCalculations: []
+name: Distinct launch by status name
+slug: fct-launch-library
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_launch_library_status_name
+  - fct_launch_library_distinct_entities
+tableName: fct_launch_library
+version: 1

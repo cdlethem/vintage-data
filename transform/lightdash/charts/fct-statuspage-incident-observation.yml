@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_statuspage_incident_observation_impact
+          yRef:
+            field: fct_statuspage_incident_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_statuspage_incident_observation_impact
+      yField:
+      - fct_statuspage_incident_observation_distinct_entities
+  type: cartesian
+description: Distinct `incident_id` values by `impact` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_statuspage_incident_observation_impact
+  exploreName: fct_statuspage_incident_observation
+  filters:
+    dimensions:
+      and:
+      - id: 7c3b510f-1df4-5fc0-bceb-6c5a44264aa9
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_statuspage_incident_observation_observed_at
+        values:
+        - 30
+      id: 23499ab2-ae89-54c9-a38a-4510bbfd6a53
+  limit: 20
+  metrics:
+  - fct_statuspage_incident_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_statuspage_incident_observation_distinct_entities
+  tableCalculations: []
+name: Distinct incident by impact
+slug: fct-statuspage-incident-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_statuspage_incident_observation_impact
+  - fct_statuspage_incident_observation_distinct_entities
+tableName: fct_statuspage_incident_observation
+version: 1

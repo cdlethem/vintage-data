@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_nhtsa_recall_report_received_date_month
+          yRef:
+            field: fct_nhtsa_recall_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Report received date (Month)
+      yAxis:
+      - name: Distinct recall
+    layout:
+      xField: fct_nhtsa_recall_report_received_date_month
+      yField:
+      - fct_nhtsa_recall_distinct_entities
+  type: cartesian
+description: Distinct recalls by the `park_it` safety flag and report month. The five-month source is
+  sparse, and the flag describes notice guidance rather than realized vehicle risk.
+metricQuery:
+  dimensions:
+  - fct_nhtsa_recall_report_received_date_month
+  - fct_nhtsa_recall_park_it
+  exploreName: fct_nhtsa_recall
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nhtsa_recall_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_nhtsa_recall_distinct_entities
+  - descending: false
+    fieldId: fct_nhtsa_recall_report_received_date_month
+  tableCalculations: []
+name: Park-it recall mix by month
+pivotConfig:
+  columns:
+  - fct_nhtsa_recall_park_it
+slug: fct-nhtsa-recall-park-it-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nhtsa_recall_report_received_date_month
+  - fct_nhtsa_recall_park_it
+  - fct_nhtsa_recall_distinct_entities
+tableName: fct_nhtsa_recall
+version: 1

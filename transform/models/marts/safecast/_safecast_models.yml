@@ -1,0 +1,331 @@
+version: 2
+models:
+- name: fct_safecast_radiation_measurement
+  description: Physical radiation readings published by the Safecast measurement API. Each row represents
+    one immutable Safecast measurement identified by its source and API measurement ID; non-radiation
+    status and temperature records are excluded, and repeated raw ingestion is reduced to the latest loaded
+    copy while preserving the measurement and load timestamps plus source lineage.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, measurement_id
+      label: Safecast radiation measurement
+      group_label: Safecast
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: safecast_radiation_me_46e999
+      vintage:
+        visualization:
+          dimension: measurement_unit
+          metric: average_measurement_value
+          time: observed_at
+          window_days: 30
+          title: Mean observed measurement value by measurement unit
+          description: Mean observed measurement value by `measurement_unit` in the selected observation
+            window. Numeric radiation reading reported by the device, in measurement_unit. Each retained
+            observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+            This is not a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - measurement_id
+          - measurement_unit
+          - measurement_value
+          - source_loaded_at
+          sources:
+          - '`safecast` — licence: Safecast — public, CC0-ish; attribution required: False. Source configuration:
+            `extract/sources/safecast.yml`.'
+          analysis:
+            headline: how the current radiation-reading level and measurement mix move across five collection
+              days, with a short captured-time view of the same readings.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - measurement_unit
+            - height
+            - latitude
+            - longitude
+            trends:
+            - slug: readings-collected
+              kind: total
+              metric: distinct_measurements
+              time: observed_at
+              grain: DAY
+              title: Radiation measurements represented per collection day
+              description: Distinct non-null `measurement_id` values present in each extractor observation
+                day. This is a five-day catalogue level rather than a flow; repeated immutable readings are
+                not new measurements, and days without a successful extract are absent rather than zero.
+              width: half
+            - slug: radiation-level
+              kind: total
+              metric: average_measurement_value
+              time: observed_at
+              grain: DAY
+              title: Mean radiation reading per collection day
+              description: Mean `measurement_value` across retained readings in each extractor observation
+                day, in their reported `measurement_unit`. Each reading has equal weight and units are not
+                combined meaningfully; the five-day collection series is a level, not a radiation event
+                flow, and absent days are absent rather than zero.
+              width: half
+            - slug: captured-level
+              kind: total
+              metric: average_measurement_value
+              time: captured_at
+              grain: DAY
+              title: Mean radiation reading per captured day
+              description: Mean `measurement_value` by device `captured_at` day. Captured readings span only
+                five days in this mart, so this is a short source-event view rather than long-term history;
+                each reading has equal weight and an absent captured day is not zero.
+              width: half
+            - slug: unit-mix
+              kind: composition
+              metric: average_measurement_value
+              breakdown: measurement_unit
+              top_n: 2
+              time: captured_at
+              grain: DAY
+              title: Radiation level mix by measurement unit
+              description: Mean `measurement_value` per captured day stacked by the two reported units —
+                cpm and usv. Units have different scales, so the stack is a category comparison rather than
+                an additive radiation total; captured days without a unit are absent.
+              width: full
+  columns:
+  - name: safecast_radiation_measurement_key
+    description: Stable hash of the Safecast source and immutable measurement ID.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Safecast radiation measurement key
+          hidden: true
+          name: safecast_radiation_me_46e999
+  - name: source
+    description: Safecast source identifier reported by the measurement API.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: measurement_id
+    description: Immutable Safecast API identifier for the physical radiation measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Measurement id
+          hidden: false
+        metrics:
+          distinct_measurements:
+            type: count_distinct
+            label: Distinct radiation measurements
+            description: Distinct non-null `measurement_id` values represented in each collection or captured
+              time and dimension group. Immutable readings count once and this measures feed coverage rather
+              than a summed radiation amount.
+            format: '#,##0'
+  - name: observed_at
+    description: UTC timestamp when the extraction observed this measurement in the Safecast API response.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: captured_at
+    description: UTC timestamp when the Safecast device captured the physical reading.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Captured at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: measurement_value
+    description: Numeric radiation reading reported by the device, in measurement_unit.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_measurement_value:
+            type: average
+            label: Mean observed measurement value
+            description: Mean observed measurement value by `measurement_unit` in the selected observation
+              window. Numeric radiation reading reported by the device, in measurement_unit. Each retained
+              observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+              This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Measurement value
+          hidden: false
+          format: '#,##0.00'
+  - name: measurement_unit
+    description: Unit reported for the radiation reading, observed as cpm or usv.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Measurement unit
+          hidden: false
+  - name: latitude
+    description: Latitude of the device location in decimal degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: longitude
+    description: Longitude of the device location in decimal degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: device_id
+    description: Safecast identifier of the device that produced the reading, when supplied.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Device id
+          hidden: false
+          format: '#,##0'
+  - name: height
+    description: Device height above the measurement surface in the source's reported units, when supplied.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Height
+          hidden: false
+          format: '#,##0'
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained raw measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_load_id
+    description: Identifier of the load job that inserted the retained raw measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source load id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained measurement in its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Raw partition date associated with the retained source file.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction began for the retained raw measurement.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained raw measurement.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Content hash of the retained raw measurement for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

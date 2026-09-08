@@ -1,0 +1,986 @@
+version: 2
+models:
+- name: fct_nz_charities
+  description: Physical daily snapshot of New Zealand Charities Register organisation observations. Each
+    row is one source, organisation identifier, and fetch timestamp, with the published organisation attributes
+    and nested register details retained alongside load lineage. Repeated copies of the same observation
+    grain are resolved to the latest loaded file row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, id, fetched_at
+      label: Nz charities
+      group_label: Nz charities
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: charity_observation_key
+      vintage:
+        visualization:
+          dimension: registrationstatus
+          metric: distinct_entities
+          time: fetched_at
+          window_days: 30
+          title: Distinct id by registrationstatus
+          description: Distinct `id` values by `registrationstatus` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - fetched_at
+          - id
+          - registrationstatus
+          - source_loaded_at
+          sources:
+          - '`nz_charities` — licence: CC BY 3.0 NZ; attribution required: True. Source configuration:
+            `extract/sources/nz_charities.yml`.'
+          analysis:
+            headline: when registered charities are revised and how their published overseas-spending
+              profile varies by organisation type.
+            event_time: modifiedon
+            grain: DAY
+            controls:
+            - postaladdresscity
+            - legalstructure
+            - organisationaltype
+            - ethniccharity
+            trends:
+            - slug: modified-charities
+              kind: total
+              metric: distinct_entities
+              time: modifiedon
+              grain: DAY
+              title: Charities modified per day
+              description: Distinct `id` values by `modifiedon` day. This is a count of registered entities
+                whose source record was revised, not a count of newly registered charities; days with no
+                revision are absent rather than zero.
+              width: half
+            - slug: overseas-spending
+              kind: total
+              metric: average_percentagespentoverseas
+              time: modifiedon
+              grain: DAY
+              title: Reported overseas spending share by revision day
+              description: Mean non-null `percentagespentoverseas` among records by `modifiedon` day. Most
+                rows do not report this field, so the average describes only reporting organisations and
+                days with no reported value are absent rather than zero.
+              width: half
+            - slug: revisions-by-legal-structure
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: legalstructure
+              top_n: 7
+              time: modifiedon
+              grain: DAY
+              title: Modified charities by legal structure
+              description: Distinct `id` values revised on each `modifiedon` day, compared across the
+                largest legal-structure groups. The remaining structures are excluded rather than
+                aggregated; this is revision activity, not a current census.
+              width: full
+            - slug: registrations-by-city
+              kind: composition
+              metric: distinct_entities
+              breakdown: postaladdresscity
+              top_n: 8
+              time: dateregistered
+              grain: DAY
+              title: Registered charities by city and registration day
+              description: Distinct `id` values stacked by postal city on each `dateregistered` day. Bars
+                show the mix among the eight largest cities and exclude the remainder rather than
+                aggregating it; a missing day means no registrations in the mart.
+              width: full
+  columns:
+  - name: charity_observation_key
+    description: Stable hash of the source identifier, charity identifier, and fetch timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Charity observation key
+          hidden: true
+  - name: source
+    description: Upstream register endpoint or feed name that produced the observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: id
+    description: Charity identifier reported by the New Zealand Charities Register.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct id
+            description: Distinct `id` values by `registrationstatus` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Id
+          hidden: false
+  - name: fetched_at
+    description: Timestamp at which the source organisation record was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: metadata
+    description: Nested source metadata describing the organisation register record.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Metadata
+          hidden: true
+          sql: CAST(${TABLE}.metadata AS VARCHAR)
+  - name: activities
+    description: Nested activities collection supplied by the register.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Activities
+          hidden: true
+          sql: CAST(${TABLE}.activities AS VARCHAR)
+  - name: beneficiaries
+    description: Nested beneficiaries collection supplied by the register.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Beneficiaries
+          hidden: true
+          sql: CAST(${TABLE}.beneficiaries AS VARCHAR)
+  - name: groups
+    description: Nested organisation groups collection supplied by the register.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Groups
+          hidden: true
+          sql: CAST(${TABLE}.groups AS VARCHAR)
+  - name: officers
+    description: Nested officers collection supplied by the register.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Officers
+          hidden: true
+          sql: CAST(${TABLE}.officers AS VARCHAR)
+  - name: sectors
+    description: Nested sector collection supplied by the register.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sectors
+          hidden: true
+          sql: CAST(${TABLE}.sectors AS VARCHAR)
+  - name: activities1
+    description: Alternate nested activities collection supplied by the register.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Activities1
+          hidden: true
+          sql: CAST(${TABLE}.activities1 AS VARCHAR)
+  - name: areaofoperations
+    description: Nested area-of-operations collection supplied by the register.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Areaofoperations
+          hidden: true
+          sql: CAST(${TABLE}.areaofoperations AS VARCHAR)
+  - name: areaofoperations1
+    description: Alternate nested area-of-operations collection supplied by the register.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Areaofoperations1
+          hidden: true
+          sql: CAST(${TABLE}.areaofoperations1 AS VARCHAR)
+  - name: beneficiaries1
+    description: Alternate nested beneficiaries collection supplied by the register.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Beneficiaries1
+          hidden: true
+          sql: CAST(${TABLE}.beneficiaries1 AS VARCHAR)
+  - name: sectors1
+    description: Alternate nested sectors collection supplied by the register.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sectors1
+          hidden: true
+          sql: CAST(${TABLE}.sectors1 AS VARCHAR)
+  - name: sourceoffunds
+    description: Nested source-of-funds details supplied by the register.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sourceoffunds
+          hidden: true
+          sql: CAST(${TABLE}.sourceoffunds AS VARCHAR)
+  - name: annualreturn
+    description: Nested annual-return details supplied by the register.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Annualreturn
+          hidden: true
+          sql: CAST(${TABLE}.annualreturn AS VARCHAR)
+  - name: organisationid
+    description: Numeric organisation identifier in the register system.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Organisationid
+          hidden: false
+          format: '#,##0'
+  - name: accountid
+    description: Account identifier associated with the registered organisation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Accountid
+          hidden: false
+  - name: name
+    description: Registered organisation name.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Name
+          hidden: false
+  - name: charityregistrationnumber
+    description: Public charity registration number.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Charityregistrationnumber
+          hidden: false
+  - name: websiteurl
+    description: Organisation website URL reported by the register.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Websiteurl
+          hidden: false
+  - name: emailaddress1
+    description: Primary email address reported by the register.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Emailaddress1
+          hidden: false
+  - name: telephone1
+    description: Primary telephone number reported by the register.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Telephone1
+          hidden: false
+  - name: fax
+    description: Fax number reported by the register.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Fax
+          hidden: false
+  - name: postaladdresscity
+    description: Postal address city.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Postaladdresscity
+          hidden: false
+  - name: postaladdressline1
+    description: First line of the postal address.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Postaladdressline1
+          hidden: false
+  - name: postaladdressline2
+    description: Second line of the postal address.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Postaladdressline2
+          hidden: false
+  - name: postaladdresspostcode
+    description: Postal address postcode.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Postaladdresspostcode
+          hidden: false
+  - name: postaladdresssuburb
+    description: Postal address suburb.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Postaladdresssuburb
+          hidden: false
+  - name: streetaddresscity
+    description: Street address city.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Streetaddresscity
+          hidden: false
+  - name: streetaddressline1
+    description: First line of the street address.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Streetaddressline1
+          hidden: false
+  - name: streetaddressline2
+    description: Second line of the street address.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Streetaddressline2
+          hidden: false
+  - name: streetaddresspostcode
+    description: Street address postcode.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Streetaddresspostcode
+          hidden: false
+  - name: streetaddresssuburb
+    description: Street address suburb.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Streetaddresssuburb
+          hidden: false
+  - name: charityemailaddress
+    description: Charity email address reported by the register.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Charityemailaddress
+          hidden: false
+  - name: companiesofficenumber
+    description: Companies Office registration number.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Companiesofficenumber
+          hidden: false
+  - name: dateregistered
+    description: Timestamp when the organisation was registered.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Dateregistered
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: endofyeardayofmonth
+    description: Day of month on which the organisation financial year ends.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Endofyeardayofmonth
+          hidden: false
+          format: '#,##0'
+  - name: endofyearmonth
+    description: Month in which the organisation financial year ends.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Endofyearmonth
+          hidden: false
+          format: '#,##0'
+  - name: establishedbyparliamentact
+    description: Whether the organisation was established by an Act of Parliament.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Establishedbyparliamentact
+          hidden: false
+  - name: excemptioncomment
+    description: Register comment describing an exemption, if supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Excemptioncomment
+          hidden: false
+  - name: isincorporated
+    description: Whether the organisation is incorporated.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Isincorporated
+          hidden: false
+  - name: maoritrustboard
+    description: Whether the organisation is a Māori trust board.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Maoritrustboard
+          hidden: false
+  - name: maoritrustapproved
+    description: Whether the organisation has Māori trust approval.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Maoritrustapproved
+          hidden: false
+  - name: maraefunds
+    description: Whether the organisation reports marae funds.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Maraefunds
+          hidden: false
+  - name: maraereservation
+    description: Whether the organisation reports a marae reservation.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Maraereservation
+          hidden: false
+  - name: onlandunderteturewhenuamaoriact
+    description: Whether the organisation is on land under Te Ture Whenua Māori Act.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Onlandunderteturewhenuamaoriact
+          hidden: false
+  - name: organisationaltype
+    description: Organisation type reported by the register.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Organisationaltype
+          hidden: false
+  - name: percentagespentoverseas
+    description: Reported percentage of expenditure spent overseas.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_percentagespentoverseas:
+            type: average
+            label: Mean overseas spending percentage
+            description: Mean non-null `percentagespentoverseas` reported by charities in each selected
+              revision window. This measure excludes organisations with no reported percentage and is
+              not a sum of spending.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Percentagespentoverseas
+          hidden: false
+          format: '#,##0'
+  - name: registrationstatus
+    description: Current registration status reported by the register.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Registrationstatus
+          hidden: false
+  - name: societyinstitution
+    description: Society or institution classification reported by the register.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Societyinstitution
+          hidden: false
+  - name: trusteestrust
+    description: Trustee or trust classification reported by the register.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Trusteestrust
+          hidden: false
+  - name: annualreturnduedate
+    description: Due timestamp for the organisation annual return.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Annualreturnduedate
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: grouptype
+    description: Numeric organisation group type identifier.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Grouptype
+          hidden: false
+          format: '#,##0'
+  - name: mainactivityid
+    description: Primary activity identifier.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Mainactivityid
+          hidden: false
+          format: '#,##0'
+  - name: mainbeneficiaryid
+    description: Primary beneficiary identifier.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Mainbeneficiaryid
+          hidden: false
+          format: '#,##0'
+  - name: mainsectorid
+    description: Primary sector identifier.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Mainsectorid
+          hidden: false
+          format: '#,##0'
+  - name: othernames
+    description: Other names reported for the organisation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Othernames
+          hidden: false
+  - name: modifiedon
+    description: Timestamp when the source organisation record was last modified.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Modifiedon
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: nzbnnumber
+    description: New Zealand Business Number reported by the register.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Nzbnnumber
+          hidden: false
+  - name: charitablepurpose
+    description: Charitable purpose statement reported by the organisation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Charitablepurpose
+          hidden: false
+  - name: entitystructure
+    description: Entity structure reported by the register.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Entitystructure
+          hidden: false
+  - name: facebookname
+    description: Facebook name reported by the organisation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Facebookname
+          hidden: false
+  - name: socialnetworkname
+    description: Other social-network name reported by the organisation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Socialnetworkname
+          hidden: false
+  - name: overseasoperationafrica
+    description: Whether overseas operations in Africa are reported.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Overseasoperationafrica
+          hidden: false
+  - name: overseasoperationantarctica
+    description: Whether overseas operations in Antarctica are reported.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Overseasoperationantarctica
+          hidden: false
+  - name: overseasoperationasia
+    description: Whether overseas operations in Asia are reported.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Overseasoperationasia
+          hidden: false
+  - name: organisationreceivesdonationskoha
+    description: Whether the organisation reports receiving donations or koha.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Organisationreceivesdonationskoha
+          hidden: false
+  - name: ethniccharity
+    description: Whether the organisation identifies as an ethnic charity.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Ethniccharity
+          hidden: false
+  - name: overseasoperationeurope
+    description: Whether overseas operations in Europe are reported.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Overseasoperationeurope
+          hidden: false
+  - name: organisationgeneratesfundsgrantsdonationstoothers
+    description: Whether the organisation generates funds, grants, or donations for others.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Organisationgeneratesfundsgrantsdonationstoothers
+          hidden: false
+          name: organisationgeneratesfundsgrantsdonatio_8a8fa1
+  - name: kaupapamaoricharityaffiliationwithiwiandorhapu
+    description: Whether a Māori charity reports affiliation with an iwi or hapū.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Kaupapamaoricharityaffiliationwithiwiandorhapu
+          hidden: false
+  - name: kaupapamaoricharity
+    description: Whether the organisation identifies as a kaupapa Māori charity.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Kaupapamaoricharity
+          hidden: false
+  - name: kaupapamaoricharitymarae
+    description: Whether the organisation identifies its kaupapa Māori charity as marae-focused.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Kaupapamaoricharitymarae
+          hidden: false
+  - name: overseasoperationnorthamerica
+    description: Whether overseas operations in North America are reported.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Overseasoperationnorthamerica
+          hidden: false
+  - name: overseasoperationoceania
+    description: Whether overseas operations in Oceania are reported.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Overseasoperationoceania
+          hidden: false
+  - name: otherlegalstructure
+    description: Other legal structure reported by the register.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Otherlegalstructure
+          hidden: false
+  - name: kaupapamaoricharityownership
+    description: Whether kaupapa Māori charity ownership is reported.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Kaupapamaoricharityownership
+          hidden: false
+  - name: pasifikacharity
+    description: Whether the organisation identifies as a Pasifika charity.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Pasifikacharity
+          hidden: false
+  - name: purposetogivegrantsanddonations
+    description: Whether the organisation reports a purpose to give grants or donations.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Purposetogivegrantsanddonations
+          hidden: false
+  - name: overseasoperationsouthamerica
+    description: Whether overseas operations in South America are reported.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Overseasoperationsouthamerica
+          hidden: false
+  - name: kaupapamaoricharityfocusesonoutcomesformaori
+    description: Whether a kaupapa Māori charity reports outcomes for Māori as a focus.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Kaupapamaoricharityfocusesonoutcomesformaori
+          hidden: false
+  - name: legalstructure
+    description: Legal structure reported by the register.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Legalstructure
+          hidden: false
+  - name: _batch_id
+    description: Identifier of the raw batch that produced the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position in the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted the raw observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

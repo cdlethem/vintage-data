@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nz_charities_modifiedon_day
+          yRef:
+            field: fct_nz_charities_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Modifiedon (Day)
+      yAxis:
+      - name: Distinct id
+    layout:
+      xField: fct_nz_charities_modifiedon_day
+      yField:
+      - fct_nz_charities_distinct_entities
+  type: cartesian
+description: Distinct `id` values by `modifiedon` day. This is a count of registered entities whose source
+  record was revised, not a count of newly registered charities; days with no revision are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_nz_charities_modifiedon_day
+  exploreName: fct_nz_charities
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nz_charities_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_nz_charities_modifiedon_day
+  tableCalculations: []
+name: Charities modified per day
+slug: fct-nz-charities-modified-charities
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nz_charities_modifiedon_day
+  - fct_nz_charities_distinct_entities
+tableName: fct_nz_charities
+version: 1

@@ -1,0 +1,445 @@
+version: 2
+models:
+- name: fct_clinicaltrials_study_observation
+  description: Hourly physical history of ClinicalTrials.gov study records. Each row is one study observed
+    at one extractor timestamp, preserving publication attributes, eligibility and intervention details,
+    and raw-load lineage. Repeated copies of the same study observation are reduced to the latest loaded
+    row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: study_id, observed_at
+      label: Clinicaltrials study observation
+      group_label: Clinicaltrials
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: clinicaltrials_stud_191eab
+      vintage:
+        visualization:
+          dimension: status
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct study by status
+          description: Distinct `study_id` values by `status` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - study_id
+          - status
+          - source_loaded_at
+          sources:
+          - '`clinicaltrials` — licence: NLM public domain (US Gov work); attribution required: False.
+            Source configuration: `extract/sources/clinicaltrials.yml`.'
+          analysis:
+            headline: how the two-day catalogue level, study statuses, sponsor mix, and reported enrollment differ
+              across source update dates.
+            event_time: last_update
+            grain: DAY
+            controls:
+            - status
+            - study_type
+            - sponsor_class
+            - sex
+            trends:
+            - slug: studies-updated
+              kind: total
+              metric: distinct_entities
+              time: last_update
+              grain: DAY
+              title: Distinct studies by source update date
+              description: Distinct `study_id` values grouped by the source-reported `last_update` date. This
+                is a two-day source-time level rather than a historical flow, and dates without records are
+                absent rather than zero.
+              width: half
+            - slug: average-enrollment
+              kind: total
+              metric: average_enrollment
+              time: last_update
+              grain: DAY
+              title: Average reported enrollment by update date
+              description: Average non-null reported enrollment per study observation by `last_update` date.
+                This is a reported planning or actual measure, not a total participant count, and empty dates
+                are absent.
+              width: half
+            - slug: status-by-day
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: status
+              top_n: 8
+              time: last_update
+              grain: DAY
+              title: Studies by status and update date
+              description: Distinct studies per source update date pivoted by recruitment `status`. The eight
+                largest status series are shown, while smaller statuses are excluded rather than aggregated.
+              width: full
+            - slug: sponsor-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: sponsor_class
+              top_n: 7
+              time: last_update
+              grain: DAY
+              title: Study mix by sponsor class
+              description: Distinct studies per source update date stacked by `sponsor_class`. The seven
+                observed sponsor classes are shown, with null classifications absent from the stack.
+              width: full
+  columns:
+  - name: clinicaltrials_study_observation_key
+    description: Stable hash of the ClinicalTrials.gov study identifier and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Clinicaltrials study observation key
+          hidden: true
+          name: clinicaltrials_stud_191eab
+  - name: source_name
+    description: Source label supplied by the ClinicalTrials.gov extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: study_id
+    description: ClinicalTrials.gov identifier for the observed study.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct study
+            description: Distinct `study_id` values by `status` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Study id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the study record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: title
+    description: Public title of the clinical study.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: status
+    description: Recruitment or completion status reported for the study.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status
+          hidden: false
+  - name: start_date
+    description: Reported study start date, retained as source text because the feed uses partial dates.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Start date
+          hidden: false
+  - name: completion_date
+    description: Reported study completion date, retained as source text because the feed uses partial
+      dates.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Completion date
+          hidden: false
+  - name: last_update
+    description: Calendar date of the latest study update reported by the source.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Last update
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: study_type
+    description: Study type classification reported by ClinicalTrials.gov.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Study type
+          hidden: false
+  - name: phases
+    description: JSON array of study phases reported by the source.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Phases
+          hidden: true
+          sql: CAST(${TABLE}.phases AS VARCHAR)
+  - name: enrollment
+    description: Planned or actual participant enrollment count reported by the source.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_enrollment:
+            type: average
+            label: Average enrollment
+            description: Average non-null planned or actual participant enrollment per study observation in
+              the selected time bucket. This reported measure is not a total enrolled count.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Enrollment
+          hidden: false
+          format: '#,##0'
+  - name: enrollment_type
+    description: Whether enrollment is estimated or actual.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Enrollment type
+          hidden: false
+  - name: sponsor
+    description: Lead sponsor name reported for the study.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sponsor
+          hidden: false
+  - name: sponsor_class
+    description: Sponsor classification reported for the study.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sponsor class
+          hidden: false
+  - name: conditions
+    description: JSON array of conditions or diseases studied.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Conditions
+          hidden: true
+          sql: CAST(${TABLE}.conditions AS VARCHAR)
+  - name: interventions
+    description: JSON array of interventions evaluated by the study.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Interventions
+          hidden: true
+          sql: CAST(${TABLE}.interventions AS VARCHAR)
+  - name: sex
+    description: Eligibility sex classification reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sex
+          hidden: false
+  - name: min_age
+    description: Minimum eligible age retained as source text.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Min age
+          hidden: false
+  - name: max_age
+    description: Maximum eligible age retained as source text.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Max age
+          hidden: false
+  - name: healthy_volunteers
+    description: Whether healthy volunteers may participate according to the source.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Healthy volunteers
+          hidden: false
+  - name: eligibility_criteria
+    description: Free-text eligibility criteria reported for the study.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Eligibility criteria
+          hidden: true
+  - name: why_stopped
+    description: Reason supplied when a study was stopped early.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Why stopped
+          hidden: false
+  - name: source_row_id
+    description: Raw warehouse row identifier for the retained study observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Load batch identifier that supplied the retained study observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained study observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Extraction partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch began.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Load operation identifier that inserted the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the source row into raw storage.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw study record for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

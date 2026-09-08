@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_police_crime_observation_category
+          yRef:
+            field: fct_uk_police_crime_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_uk_police_crime_observation_category
+      yField:
+      - fct_uk_police_crime_observation_distinct_entities
+  type: cartesian
+description: Distinct `crime_id` values by `category` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_uk_police_crime_observation_category
+  exploreName: fct_uk_police_crime_observation
+  filters:
+    dimensions:
+      and:
+      - id: aef3e331-89b1-54b4-b939-eb865d4f6ed0
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_police_crime_observation_observed_at
+        values:
+        - 30
+      id: 65398f83-fa20-523b-a037-684d7cb0305c
+  limit: 20
+  metrics:
+  - fct_uk_police_crime_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_uk_police_crime_observation_distinct_entities
+  tableCalculations: []
+name: Distinct crime by category
+slug: fct-uk-police-crime-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_police_crime_observation_category
+  - fct_uk_police_crime_observation_distinct_entities
+tableName: fct_uk_police_crime_observation
+version: 1

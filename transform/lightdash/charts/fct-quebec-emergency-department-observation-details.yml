@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of Quebec emergency-department status observations. Each row represents
+  one department or published regional total at one upstream fetch timestamp. Source text is retained
+  alongside null-safe typed patient, stretcher, and length-of-stay measures, with raw load lineage for
+  replay and audit.
+metricQuery:
+  dimensions: &id001
+  - fct_quebec_emergency_department_observation_observed_at
+  - fct_quebec_emergency_department_observation_department_id
+  - fct_quebec_emergency_department_observation_facility_name
+  - fct_quebec_emergency_department_observation_patients_wai_2f6dd8
+  - fct_quebec_emergency_department_observation_sour_2059e1
+  exploreName: fct_quebec_emergency_department_observation
+  filters:
+    dimensions:
+      and:
+      - id: 782ea158-22fa-5fed-8697-4aefb9e0e7b1
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_quebec_emergency_department_observation_observed_at
+        values:
+        - 30
+      id: 60c29fa4-2dc7-543f-83e7-cbe14b626dd4
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_quebec_emergency_department_observation_observed_at
+  tableCalculations: []
+name: Quebec emergency department observation — observations
+slug: fct-quebec-emergency-department-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_quebec_emergency_department_observation
+version: 1

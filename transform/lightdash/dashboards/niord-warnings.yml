@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 44efdd9c-0599-52e9-afed-d6e673e35ae8
+    label: 'Niord warning observation: Warning type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_niord_warning_observation_warning_type
+      tableName: fct_niord_warning_observation
+    values: []
+  - disabled: true
+    id: be17def3-4593-59c2-8b9d-d6060b48d99f
+    label: 'Niord warning observation: Main type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_niord_warning_observation_main_type
+      tableName: fct_niord_warning_observation
+    values: []
+  - disabled: true
+    id: fff9389f-10e2-5d9c-bc6f-367678422c91
+    label: 'Niord warning observation: Original information'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_niord_warning_observation_original_information
+      tableName: fct_niord_warning_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Niord Warnings
+slug: niord-warnings
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of maritime warnings published through the Danish Niord service.
+      Each row represents one warning identifier from one source at one extractor observation time, with
+      nested warning content and raw-load lineage retained for audit and replay. Repeated insert-only
+      copies of the same observation are reduced to the latest loaded copy.
+
+
+      **Grain:** source_name, warning_id, observed_at
+
+
+      **What changes here:** how maritime warning creation accelerates across warning types and classifications.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `niord_warnings` — licence: Danish Maritime Authority terms; attribution required: True. Source
+      configuration: `extract/sources/niord_warnings.yml`.'
+    hideFrame: false
+    title: Niord warning observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Niord warning observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Warnings created per month
+    chartSlug: fct-niord-warning-observation-monthly-warnings
+    hideTitle: false
+    title: Warnings created per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Warnings created by warning type
+    chartSlug: fct-niord-warning-observation-warning-type-mix
+    hideTitle: false
+    title: Warnings created by warning type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Warnings created by main classification
+    chartSlug: fct-niord-warning-observation-main-type-mix
+    hideTitle: false
+    title: Warnings created by main classification
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Main warning classifications represented each month
+    chartSlug: fct-niord-warning-observation-classification-breadth
+    hideTitle: false
+    title: Main warning classifications represented each month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Warnings by scheduled follow-up month
+    chartSlug: fct-niord-warning-observation-follow-up-schedule
+    hideTitle: false
+    title: Warnings by scheduled follow-up month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Niord warning observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct warning by warning type
+    chartSlug: fct-niord-warning-observation
+    hideTitle: false
+    title: Distinct warning by warning type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Niord warning observation — observations
+    chartSlug: fct-niord-warning-observation-details
+    hideTitle: false
+    title: Niord warning observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

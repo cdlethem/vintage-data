@@ -1,0 +1,171 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 44cb624a-35d2-5b78-b46b-b4f5c87ce66e
+    label: 'Digitraffic marine aton fault observation: Fault type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_digitraffic_marine_aton_fault_observation_fault_type
+      tableName: fct_digitraffic_marine_aton_fault_observation
+    values: []
+  - disabled: true
+    id: 2b62d7cd-bca8-56d1-9e56-6c27db95ec3a
+    label: 'Digitraffic marine aton fault observation: Domain'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_digitraffic_marine_aton_fault_observation_domain
+      tableName: fct_digitraffic_marine_aton_fault_observation
+    values: []
+  - disabled: true
+    id: 734425f0-a92a-54f1-a1ce-9833b691fdcd
+    label: 'Digitraffic marine aton fault observation: State'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_digitraffic_marine_aton_fault_observation_state
+      tableName: fct_digitraffic_marine_aton_fault_observation
+    values: []
+  - disabled: true
+    id: ccf77c33-2416-5e26-8107-f99771bd311e
+    label: 'Digitraffic marine aton fault observation: Aton type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_digitraffic_marine_aton_fault_observation_aton_type
+      tableName: fct_digitraffic_marine_aton_fault_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Digitraffic Marine
+slug: digitraffic-marine
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical history of Finnish Digitraffic AtoN fault observations. Each row is
+      one reported fault identified by its upstream source and fault identifier at an extractor observation
+      timestamp; normalized fault status, AtoN and fairway attributes, point coordinates, and raw-load
+      lineage are retained for analysis and replay auditing.
+
+
+      **Grain:** source_name, fault_id, observed_at
+
+
+      **What changes here:** how reported AtoN fault entries, affected aids, and status mix change across
+      the publisher''s fault-entry history.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `digitraffic_marine` — licence: CC BY 4.0; attribution required: True. Source configuration: `extract/sources/digitraffic_marine.yml`.'
+    hideFrame: false
+    title: Digitraffic marine aton fault observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Digitraffic marine aton fault observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Faults entered per month
+    chartSlug: fct-digitraffic-marine-aton-fault-observation-monthly-fault-entries
+    hideTitle: false
+    title: Faults entered per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Aids affected by entered faults per month
+    chartSlug: fct-digitraffic-marine-aton-fault-observation-monthly-affected-atons
+    hideTitle: false
+    title: Aids affected by entered faults per month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Entered faults by fault type
+    chartSlug: fct-digitraffic-marine-aton-fault-observation-fault-type-composition
+    hideTitle: false
+    title: Entered faults by fault type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Entered faults by navigation domain
+    chartSlug: fct-digitraffic-marine-aton-fault-observation-domain-composition
+    hideTitle: false
+    title: Entered faults by navigation domain
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Entered faults by reported state
+    chartSlug: fct-digitraffic-marine-aton-fault-observation-state-composition
+    hideTitle: false
+    title: Entered faults by reported state
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Digitraffic marine aton fault observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct fault by fault type
+    chartSlug: fct-digitraffic-marine-aton-fault-observation
+    hideTitle: false
+    title: Distinct fault by fault type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Digitraffic marine aton fault observation — observations
+    chartSlug: fct-digitraffic-marine-aton-fault-observation-details
+    hideTitle: false
+    title: Digitraffic marine aton fault observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

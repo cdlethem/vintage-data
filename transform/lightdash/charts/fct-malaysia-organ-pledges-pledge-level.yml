@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_malaysia_organ_pledges_pledge_date_day
+          yRef:
+            field: fct_malaysia_organ_pledges_average_pledge_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Pledge date (Day)
+      yAxis:
+      - name: Mean observed pledge count
+    layout:
+      xField: fct_malaysia_organ_pledges_pledge_date_day
+      yField:
+      - fct_malaysia_organ_pledges_average_pledge_count
+  type: cartesian
+description: Mean `pledge_count` among retained observations for each reported `pledge_date`. Repeated
+  snapshots and irregular polling receive equal row weight, so this is a reported level rather than an
+  additive flow; dates absent from the source are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_malaysia_organ_pledges_pledge_date_day
+  exploreName: fct_malaysia_organ_pledges
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_malaysia_organ_pledges_average_pledge_count
+  sorts:
+  - descending: false
+    fieldId: fct_malaysia_organ_pledges_pledge_date_day
+  tableCalculations: []
+name: Mean reported pledges per day
+slug: fct-malaysia-organ-pledges-pledge-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_malaysia_organ_pledges_pledge_date_day
+  - fct_malaysia_organ_pledges_average_pledge_count
+tableName: fct_malaysia_organ_pledges
+version: 1

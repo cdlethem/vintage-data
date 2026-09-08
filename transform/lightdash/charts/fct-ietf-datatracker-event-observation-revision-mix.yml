@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_ietf_datatracker_event_observation_event_time_day
+          yRef:
+            field: fct_ietf_datatracker_event_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Event time (Day)
+      yAxis:
+      - name: Distinct event
+    layout:
+      stack: true
+      xField: fct_ietf_datatracker_event_observation_event_time_day
+      yField:
+      - fct_ietf_datatracker_event_observation_distinct_entities
+  type: cartesian
+description: Distinct `event_id` values per event day stacked by revision for the eight revisions with
+  the largest recent totals. Remaining revisions are excluded rather than aggregated, and the stack shows
+  observed event mix rather than cumulative draft state.
+metricQuery:
+  dimensions:
+  - fct_ietf_datatracker_event_observation_event_time_day
+  - fct_ietf_datatracker_event_observation_revision
+  exploreName: fct_ietf_datatracker_event_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ietf_datatracker_event_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_ietf_datatracker_event_observation_distinct_entities
+  - descending: false
+    fieldId: fct_ietf_datatracker_event_observation_event_time_day
+  tableCalculations: []
+name: Event mix per day by revision
+pivotConfig:
+  columns:
+  - fct_ietf_datatracker_event_observation_revision
+slug: fct-ietf-datatracker-event-observation-revision-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ietf_datatracker_event_observation_event_time_day
+  - fct_ietf_datatracker_event_observation_revision
+  - fct_ietf_datatracker_event_observation_distinct_entities
+tableName: fct_ietf_datatracker_event_observation
+version: 1

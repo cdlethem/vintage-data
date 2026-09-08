@@ -6,6 +6,8 @@ enabled: true
 retries: 1
 timeout_minutes: 10
 sink: local
+run_summary:
+  required: true
 
 # Vetting metadata (documentation only, not read by the DAG factory)
 cadence_note: "GDELT itself refreshes every 15 minutes, but live operation (2026-09-03 21:54 UTC onward) showed sustained HTTP 429s at a 15-min/4x-hourly cadence lasting several hours straight; backed off to hourly to reduce load on what is evidently a real, undocumented limit."

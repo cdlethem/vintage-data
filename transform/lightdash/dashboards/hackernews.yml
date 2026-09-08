@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: a56d3e79-fe2c-5152-ab14-2ea759633efb
+    label: 'Hackernews item observation: Item type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_hackernews_item_observation_item_type
+      tableName: fct_hackernews_item_observation
+    values: []
+  - disabled: true
+    id: 7dbeec55-fdae-5899-b878-3e79713f8ebb
+    label: 'Hackernews item observation: Is dead'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_hackernews_item_observation_is_dead
+      tableName: fct_hackernews_item_observation
+    values: []
+  - disabled: true
+    id: 2359ac86-c2a5-575f-8513-8746768d7efe
+    label: 'Hackernews item observation: Is deleted'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_hackernews_item_observation_is_deleted
+      tableName: fct_hackernews_item_observation
+    values: []
+  - disabled: true
+    id: ac53c24d-fbee-5597-86d8-6272143e3ac2
+    label: 'Hackernews item observation: Author'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_hackernews_item_observation_author
+      tableName: fct_hackernews_item_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Hackernews
+slug: hackernews
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Incremental physical observation fact for Hacker News API items. Each row is one Hacker
+      News item identifier from the source stream at one fetched_at observation timestamp, preserving
+      the item payload fields and raw-load lineage. Replayed copies of the same source, item, and observation
+      timestamp are reduced to the latest loaded row; this model does not infer parent/child relationships
+      or fill fields omitted by the API.
+
+
+      **Grain:** source_system, item_id, observed_at
+
+
+      **What changes here:** how Hacker News item volume and story engagement change across the sparse
+      archive.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `hackernews` — licence: HN Firebase API — public; attribution required: False. Source configuration:
+      `extract/sources/hackernews.yml`.'
+    hideFrame: false
+    title: Hackernews item observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Hackernews item observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct items created per month
+    chartSlug: fct-hackernews-item-observation-items-created
+    hideTitle: false
+    title: Distinct items created per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean story score by creation month
+    chartSlug: fct-hackernews-item-observation-average-story-score
+    hideTitle: false
+    title: Mean story score by creation month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean story comments by creation month
+    chartSlug: fct-hackernews-item-observation-average-story-comments
+    hideTitle: false
+    title: Mean story comments by creation month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Monthly item mix by type
+    chartSlug: fct-hackernews-item-observation-items-by-type
+    hideTitle: false
+    title: Monthly item mix by type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Hackernews item observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed score by item type
+    chartSlug: fct-hackernews-item-observation
+    hideTitle: false
+    title: Mean observed score by item type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Hackernews item observation — observations
+    chartSlug: fct-hackernews-item-observation-details
+    hideTitle: false
+    title: Hackernews item observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

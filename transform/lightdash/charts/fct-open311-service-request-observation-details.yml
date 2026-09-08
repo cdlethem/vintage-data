@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly incremental history of Open311 service-request observations. Each row is one
+  source request at one extractor observation timestamp, retaining the normalized request status and attributes
+  together with raw load lineage. Repeated copies of the same observation are reduced to the latest loaded
+  copy so the insert-only source can be replayed safely.
+metricQuery:
+  dimensions: &id001
+  - fct_open311_service_request_observation_observed_at
+  - fct_open311_service_request_observation_request_id
+  - fct_open311_service_request_observation_service_name
+  - fct_open311_service_request_observation_source_l_2059e1
+  exploreName: fct_open311_service_request_observation
+  filters:
+    dimensions:
+      and:
+      - id: c28e07b5-7c8a-55c2-8ec8-8da0e7fab5e6
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_open311_service_request_observation_observed_at
+        values:
+        - 30
+      id: 66a921ae-fac7-524b-ae5e-1a8ab2830bae
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_open311_service_request_observation_observed_at
+  tableCalculations: []
+name: Open311 service request observation — observations
+slug: fct-open311-service-request-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_open311_service_request_observation
+version: 1

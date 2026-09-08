@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_stac_imagery_captured_at_day
+          yRef:
+            field: fct_stac_imagery_distinct_items
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Captured at (Day)
+      yAxis:
+      - name: Distinct imagery items
+    layout:
+      stack: true
+      xField: fct_stac_imagery_captured_at_day
+      yField:
+      - fct_stac_imagery_distinct_items
+  type: cartesian
+description: Distinct `item_id` values by source `captured_at` day stacked by platform. All three observed
+  platforms are shown; this event-time slice covers only four capture days, not a long historical flow,
+  and missing capture days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_stac_imagery_captured_at_day
+  - fct_stac_imagery_platform
+  exploreName: fct_stac_imagery
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_stac_imagery_distinct_items
+  sorts:
+  - descending: true
+    fieldId: fct_stac_imagery_distinct_items
+  - descending: false
+    fieldId: fct_stac_imagery_captured_at_day
+  tableCalculations: []
+name: Captured imagery mix by platform
+pivotConfig:
+  columns:
+  - fct_stac_imagery_platform
+slug: fct-stac-imagery-platform-capture-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_stac_imagery_captured_at_day
+  - fct_stac_imagery_platform
+  - fct_stac_imagery_distinct_items
+tableName: fct_stac_imagery
+version: 1

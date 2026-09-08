@@ -1,0 +1,42 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical observation fact for posts returned by the Bluesky AppView feed. Each
+  row represents one post URI at one extractor observation timestamp, retaining the engagement snapshot,
+  post text metadata, and raw-load lineage. The incremental table preserves the append-only observation
+  history without rescanning prior raw snapshots on each 15-minute load. Repeated raw copies of the same
+  observation are reduced to the latest loaded row.
+metricQuery:
+  dimensions: &id001
+  - fct_bluesky_appview_post_observation_observed_at
+  - fct_bluesky_appview_post_observation_bluesky_appview_pos_32be6e
+  - fct_bluesky_appview_post_observation_author_handle
+  - fct_bluesky_appview_post_observation_like_count
+  - fct_bluesky_appview_post_observation_source_loaded_at
+  exploreName: fct_bluesky_appview_post_observation
+  filters:
+    dimensions:
+      and:
+      - id: 22b15ffc-5728-5877-b5c3-bc899c1a311b
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_bluesky_appview_post_observation_observed_at
+        values:
+        - 30
+      id: 2035c31a-83bc-587f-89b1-a6b5bc39cf72
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_bluesky_appview_post_observation_observed_at
+  tableCalculations: []
+name: Bluesky appview post observation — observations
+slug: fct-bluesky-appview-post-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_bluesky_appview_post_observation
+version: 1

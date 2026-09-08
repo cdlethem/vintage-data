@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical history of package releases observed from the package registry. Each row represents
+  one registry source, package, version, and observation timestamp, with the latest insert-only copy retained
+  when a load is replayed. Package metadata and raw-load lineage are typed for dependable release discovery
+  and audit.
+metricQuery:
+  dimensions: &id001
+  - fct_package_registry_release_observation_observed_at
+  - fct_package_registry_release_observation_release_id
+  - fct_package_registry_release_observation_package_name
+  - fct_package_registry_release_observation_source__2059e1
+  exploreName: fct_package_registry_release_observation
+  filters:
+    dimensions:
+      and:
+      - id: ecc1cdc5-7e17-5ea8-bf3e-186cafc5c223
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_package_registry_release_observation_observed_at
+        values:
+        - 30
+      id: a2007e57-61a7-55b8-94ad-4ca63bf807dc
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_package_registry_release_observation_observed_at
+  tableCalculations: []
+name: Package registry release observation — observations
+slug: fct-package-registry-release-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_package_registry_release_observation
+version: 1

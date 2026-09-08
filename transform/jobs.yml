@@ -1,0 +1,13 @@
+jobs:
+  - name: twice_hourly
+    schedule: "7,37 * * * *"
+    timeout_minutes: 25
+    lock_wait_seconds: 300
+  - name: hourly
+    schedule: "17 * * * *"
+    timeout_minutes: 50
+    lock_wait_seconds: 300
+  - name: daily
+    schedule: "47 3 * * *"
+    timeout_minutes: 240
+    lock_wait_seconds: 300

@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nhtsa_recall_report_received_date_month
+          yRef:
+            field: fct_nhtsa_recall_distinct_components
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Report received date (Month)
+      yAxis:
+      - name: Distinct components
+    layout:
+      xField: fct_nhtsa_recall_report_received_date_month
+      yField:
+      - fct_nhtsa_recall_distinct_components
+  type: cartesian
+description: Distinct non-null `component` values among recalls received in each report month. This measures
+  breadth of affected systems, not the number of vehicles recalled.
+metricQuery:
+  dimensions:
+  - fct_nhtsa_recall_report_received_date_month
+  exploreName: fct_nhtsa_recall
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nhtsa_recall_distinct_components
+  sorts:
+  - descending: false
+    fieldId: fct_nhtsa_recall_report_received_date_month
+  tableCalculations: []
+name: Affected components by report month
+slug: fct-nhtsa-recall-affected-components
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nhtsa_recall_report_received_date_month
+  - fct_nhtsa_recall_distinct_components
+tableName: fct_nhtsa_recall
+version: 1

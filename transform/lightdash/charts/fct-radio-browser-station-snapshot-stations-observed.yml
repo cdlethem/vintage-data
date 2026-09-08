@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_radio_browser_station_snapshot_observed_at_day
+          yRef:
+            field: fct_radio_browser_station_snapshot_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct station
+    layout:
+      xField: fct_radio_browser_station_snapshot_observed_at_day
+      yField:
+      - fct_radio_browser_station_snapshot_distinct_entities
+  type: cartesian
+description: Distinct `station_id` values in each collection-day snapshot. This is a catalogue level rather
+  than a flow because the directory republishes station records; days with no successful extract are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_radio_browser_station_snapshot_observed_at_day
+  exploreName: fct_radio_browser_station_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_radio_browser_station_snapshot_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_radio_browser_station_snapshot_observed_at_day
+  tableCalculations: []
+name: Distinct stations observed each day
+slug: fct-radio-browser-station-snapshot-stations-observed
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_radio_browser_station_snapshot_observed_at_day
+  - fct_radio_browser_station_snapshot_distinct_entities
+tableName: fct_radio_browser_station_snapshot
+version: 1

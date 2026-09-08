@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 29be9855-0c9c-548c-b2cb-7b4bc5f50a4d
+    label: 'Job boards breezy: Company'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_breezy_company
+      tableName: fct_job_boards_breezy
+    values: []
+  - disabled: true
+    id: a3c5fef3-e791-56e6-9bbb-0830dff5e60b
+    label: 'Job boards breezy: Company country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_breezy_company_country
+      tableName: fct_job_boards_breezy
+    values: []
+  - disabled: true
+    id: 55851b22-7b6c-5ced-a9f0-43e0e347e10d
+    label: 'Job boards breezy: Company industry'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_breezy_company_industry
+      tableName: fct_job_boards_breezy
+    values: []
+  - disabled: true
+    id: 296ba319-aafd-5ff1-b1a2-9601efe24000
+    label: 'Job boards breezy: Employment type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_breezy_employment_type
+      tableName: fct_job_boards_breezy
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Boards Breezy
+slug: job-boards-breezy
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of job observations returned by Breezy applicant tracking boards.
+      Each row represents one upstream source, job identifier, and extractor observation timestamp; repeated
+      raw copies of an observation are reduced to the latest loaded lineage record while listing attributes
+      and load metadata remain available for audit and replay.
+
+
+      **Grain:** source, job_id, observed_at
+
+
+      **What changes here:** how Breezy''s tiny published catalogue changes across extractor observation
+      days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_boards_breezy` — licence: public ATS board endpoints; attribution required: False. Source
+      configuration: `extract/sources/job_boards_breezy.yml`.'
+    hideFrame: false
+    title: Job boards breezy
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards breezy — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Observed Breezy jobs per day
+    chartSlug: fct-job-boards-breezy-observed-jobs
+    hideTitle: false
+    title: Observed Breezy jobs per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Observed Breezy companies per day
+    chartSlug: fct-job-boards-breezy-observed-companies
+    hideTitle: false
+    title: Observed Breezy companies per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Observed Breezy jobs by employment type
+    chartSlug: fct-job-boards-breezy-catalogue-by-employment
+    hideTitle: false
+    title: Observed Breezy jobs by employment type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Breezy jobs by source posting month
+    chartSlug: fct-job-boards-breezy-source-posted-level
+    hideTitle: false
+    title: Breezy jobs by source posting month
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards breezy — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-boards-breezy
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Job boards breezy — observations
+    chartSlug: fct-job-boards-breezy-details
+    hideTitle: false
+    title: Job boards breezy — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_certificate_transparency_certificate_observation_nb_month
+          yRef:
+            field: fct_certificate_transparency_certificate_observation_m_a6e4e251
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Not before (Month)
+      yAxis:
+      - name: Distinct certificate
+    layout:
+      xField: fct_certificate_transparency_certificate_observation_nb_month
+      yField:
+      - fct_certificate_transparency_certificate_observation_m_a6e4e251
+  type: cartesian
+description: Distinct `certificate_id` values per `not_before` month, pivoted by the four observed common
+  names — every observed value is retained. This compares subject-name trajectories and does not imply
+  certificates are additive across repeated observations.
+metricQuery:
+  dimensions:
+  - fct_certificate_transparency_certificate_observation_nb_month
+  - fct_certificate_transparency_certificate_observation_com_43912d
+  exploreName: fct_certificate_transparency_certificate_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_certificate_transparency_certificate_observation_m_a6e4e251
+  sorts:
+  - descending: true
+    fieldId: fct_certificate_transparency_certificate_observation_m_a6e4e251
+  - descending: false
+    fieldId: fct_certificate_transparency_certificate_observation_nb_month
+  tableCalculations: []
+name: Certificates issued by common name
+pivotConfig:
+  columns:
+  - fct_certificate_transparency_certificate_observation_com_43912d
+slug: fct-certificate-transparency-certificate-observation-common-name-trajectories
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_certificate_transparency_certificate_observation_nb_month
+  - fct_certificate_transparency_certificate_observation_com_43912d
+  - fct_certificate_transparency_certificate_observation_m_a6e4e251
+tableName: fct_certificate_transparency_certificate_observation
+version: 1

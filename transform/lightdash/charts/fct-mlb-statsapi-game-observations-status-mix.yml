@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_mlb_statsapi_game_observations_scheduled_at_hour
+          yRef:
+            field: fct_mlb_statsapi_game_observations_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Scheduled at (Hour)
+      yAxis:
+      - name: Distinct game
+    layout:
+      stack: true
+      xField: fct_mlb_statsapi_game_observations_scheduled_at_hour
+      yField:
+      - fct_mlb_statsapi_game_observations_distinct_entities
+  type: cartesian
+description: Distinct `game_id` values grouped by scheduled start hour and broad StatsAPI status. The
+  three observed statuses are shown as stacked bars; status can change between snapshots, so segments
+  are not additive across the full window.
+metricQuery:
+  dimensions:
+  - fct_mlb_statsapi_game_observations_scheduled_at_hour
+  - fct_mlb_statsapi_game_observations_game_abstract_status
+  exploreName: fct_mlb_statsapi_game_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_mlb_statsapi_game_observations_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_mlb_statsapi_game_observations_distinct_entities
+  - descending: false
+    fieldId: fct_mlb_statsapi_game_observations_scheduled_at_hour
+  tableCalculations: []
+name: Scheduled games by broad status and start hour
+pivotConfig:
+  columns:
+  - fct_mlb_statsapi_game_observations_game_abstract_status
+slug: fct-mlb-statsapi-game-observations-status-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_mlb_statsapi_game_observations_scheduled_at_hour
+  - fct_mlb_statsapi_game_observations_game_abstract_status
+  - fct_mlb_statsapi_game_observations_distinct_entities
+tableName: fct_mlb_statsapi_game_observations
+version: 1

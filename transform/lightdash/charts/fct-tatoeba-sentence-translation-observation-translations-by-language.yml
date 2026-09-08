@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_tatoeba_sentence_translation_observation_observed_at_day
+          yRef:
+            field: fct_tatoeba_sentence_translation_observation_translation_count
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct translations
+    layout:
+      stack: true
+      xField: fct_tatoeba_sentence_translation_observation_observed_at_day
+      yField:
+      - fct_tatoeba_sentence_translation_observation_translation_count
+  type: cartesian
+description: Distinct translations stacked by `translation_language` for each observation day. The observed
+  feed currently contains one language, so the single segment is a level and any future languages beyond
+  the top two are excluded rather than aggregated.
+metricQuery:
+  dimensions:
+  - fct_tatoeba_sentence_translation_observation_observed_at_day
+  - fct_tatoeba_sentence_translation_observation_translation_607b6e
+  exploreName: fct_tatoeba_sentence_translation_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_tatoeba_sentence_translation_observation_translation_count
+  sorts:
+  - descending: true
+    fieldId: fct_tatoeba_sentence_translation_observation_translation_count
+  - descending: false
+    fieldId: fct_tatoeba_sentence_translation_observation_observed_at_day
+  tableCalculations: []
+name: Translation coverage by language
+pivotConfig:
+  columns:
+  - fct_tatoeba_sentence_translation_observation_translation_607b6e
+slug: fct-tatoeba-sentence-translation-observation-translations-by-language
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_tatoeba_sentence_translation_observation_observed_at_day
+  - fct_tatoeba_sentence_translation_observation_translation_607b6e
+  - fct_tatoeba_sentence_translation_observation_translation_count
+tableName: fct_tatoeba_sentence_translation_observation
+version: 1

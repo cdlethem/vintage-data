@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_gbif_occurrence_snapshot_country
+          yRef:
+            field: fct_gbif_occurrence_snapshot_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_gbif_occurrence_snapshot_country
+      yField:
+      - fct_gbif_occurrence_snapshot_distinct_entities
+  type: cartesian
+description: Distinct `occurrence_id` values by `country` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_gbif_occurrence_snapshot_country
+  exploreName: fct_gbif_occurrence_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: 98f4ad6e-cdf4-511d-92ff-5a55700d7b42
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_gbif_occurrence_snapshot_fetched_at
+        values:
+        - 30
+      id: d5bb3b6a-e358-560f-a5ee-de20a36b56a4
+  limit: 20
+  metrics:
+  - fct_gbif_occurrence_snapshot_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_gbif_occurrence_snapshot_distinct_entities
+  tableCalculations: []
+name: Distinct occurrence by country
+slug: fct-gbif-occurrence-snapshot
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gbif_occurrence_snapshot_country
+  - fct_gbif_occurrence_snapshot_distinct_entities
+tableName: fct_gbif_occurrence_snapshot
+version: 1

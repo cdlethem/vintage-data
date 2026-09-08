@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_internet_archive_item_observation_media_type
+          yRef:
+            field: fct_internet_archive_item_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_internet_archive_item_observation_media_type
+      yField:
+      - fct_internet_archive_item_observation_distinct_entities
+  type: cartesian
+description: Distinct `item_id` values by `media_type` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_internet_archive_item_observation_media_type
+  exploreName: fct_internet_archive_item_observation
+  filters:
+    dimensions:
+      and:
+      - id: e9a62900-3e06-5111-9a30-b7d5ca3ff063
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_internet_archive_item_observation_observed_at
+        values:
+        - 30
+      id: e2a6053f-2040-507f-b398-a1bc2da83602
+  limit: 20
+  metrics:
+  - fct_internet_archive_item_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_internet_archive_item_observation_distinct_entities
+  tableCalculations: []
+name: Distinct item by media type
+slug: fct-internet-archive-item-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_internet_archive_item_observation_media_type
+  - fct_internet_archive_item_observation_distinct_entities
+tableName: fct_internet_archive_item_observation
+version: 1

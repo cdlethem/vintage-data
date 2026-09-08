@@ -1,0 +1,65 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_reservoir_level_observation_observation_start_at_day
+          yRef:
+            field: fct_reservoir_level_observation_distinct_levels
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observation start at (Day)
+      yAxis:
+      - name: Distinct reservoir levels
+    layout:
+      stack: true
+      xField: fct_reservoir_level_observation_observation_start_at_day
+      yField:
+      - fct_reservoir_level_observation_distinct_levels
+  type: cartesian
+description: Distinct `reservoir_level_id` values per source observation day, stacked by the three reported
+  measures — inflow, outflow, and storage. The bars show the mix of publisher measurement types, not an
+  additive water volume; missing measure-days are absent.
+metricQuery:
+  dimensions:
+  - fct_reservoir_level_observation_observation_start_at_day
+  - fct_reservoir_level_observation_measure
+  exploreName: fct_reservoir_level_observation
+  filters:
+    dimensions:
+      and:
+      - id: e499f9d9-50d0-5155-bf06-9609b6a800f4
+        operator: equals
+        target:
+          fieldId: fct_reservoir_level_observation_is_missing
+        values:
+        - false
+      id: 61e720d1-64bc-569b-9623-1543addd8a9f
+  limit: 5000
+  metrics:
+  - fct_reservoir_level_observation_distinct_levels
+  sorts:
+  - descending: true
+    fieldId: fct_reservoir_level_observation_distinct_levels
+  - descending: false
+    fieldId: fct_reservoir_level_observation_observation_start_at_day
+  tableCalculations: []
+name: Reservoir measurements by source measure
+pivotConfig:
+  columns:
+  - fct_reservoir_level_observation_measure
+slug: fct-reservoir-level-observation-measure-coverage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_reservoir_level_observation_observation_start_at_day
+  - fct_reservoir_level_observation_measure
+  - fct_reservoir_level_observation_distinct_levels
+tableName: fct_reservoir_level_observation
+version: 1

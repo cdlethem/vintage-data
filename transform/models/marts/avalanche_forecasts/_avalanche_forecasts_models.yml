@@ -1,0 +1,362 @@
+version: 2
+models:
+- name: fct_avalanche_forecasts
+  description: Daily physical history of avalanche forecast observations published by avalanche.org. Each
+    row is one forecast zone identified by its upstream source and identifier at an extractor observation
+    timestamp, with the published danger, season dates, travel guidance, and raw-load lineage retained
+    for audit and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, forecast_id, observed_at
+      label: Avalanche forecasts
+      group_label: Avalanche forecasts
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: avalanche_forecast_key
+      vintage:
+        visualization:
+          dimension: danger_text
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct forecast by danger text
+          description: Distinct `forecast_id` values by `danger_text` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - forecast_id
+          - danger_text
+          - source_loaded_at
+          sources:
+          - '`avalanche_forecasts` — licence: varies per EAWS member service; several require attribution
+            to issuing warning service; attribution required: True. Source configuration: `extract/sources/avalanche_forecasts.yml`.'
+          analysis:
+            headline: how forecast-zone coverage and the sparse published season schedule change across
+              observations.
+            event_time: start_date
+            grain: DAY
+            controls:
+            - state
+            - center
+            - timezone
+            - off_season
+            trends:
+            - slug: forecast-coverage
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct forecast zones observed per day
+              description: Distinct `forecast_id` values in each extractor observation day. This is a
+                five-day catalogue level because the feed republishes its zones; days without a successful
+                extract are absent rather than zero.
+              width: half
+            - slug: center-coverage
+              kind: total
+              metric: distinct_centers
+              time: observed_at
+              grain: DAY
+              title: Forecast centers represented per day
+              description: Distinct non-null `center_id` values in each observation day. This is a
+                publisher-coverage level, not a count of forecast events; days without observations are
+                absent rather than zero.
+              width: half
+            - slug: season-starts
+              kind: total
+              metric: distinct_entities
+              time: start_date
+              grain: DAY
+              title: Forecast zones by published start day
+              description: Distinct `forecast_id` values by the published forecast `start_date` day.
+                Only 175 rows have a start date and the eight observed days are sparse season schedules;
+                missing days are absent rather than zero.
+              width: half
+            - slug: starts-by-state
+              kind: composition
+              metric: distinct_entities
+              breakdown: state
+              top_n: 8
+              time: start_date
+              grain: DAY
+              title: Published forecast starts by state
+              description: Distinct `forecast_id` values with a non-null start date, stacked by state and
+                start day. The eight largest states are shown and the remainder is excluded rather than
+                aggregated; sparse dates are absent rather than zero.
+              width: full
+  columns:
+  - name: avalanche_forecast_key
+    description: Stable hash of the upstream source, forecast identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Avalanche forecast key
+          hidden: true
+  - name: source_name
+    description: Upstream source label that published the forecast observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: forecast_id
+    description: Upstream identifier for the forecast zone observation.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct forecast
+            description: Distinct `forecast_id` values by `danger_text` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Forecast id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this forecast observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: network
+    description: Network or publisher network associated with the forecast feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Network
+          hidden: false
+  - name: center_id
+    description: Identifier of the avalanche forecasting center publishing the zone.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_centers:
+            type: count_distinct
+            label: Distinct forecast centers
+            description: Distinct non-null `center_id` values represented by forecast observations in each
+              time bucket. This measures publisher coverage rather than forecast count.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Center id
+          hidden: false
+  - name: center
+    description: Human-readable avalanche forecasting center or zone grouping.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Center
+          hidden: false
+  - name: zone_id
+    description: Numeric identifier assigned to the published forecast zone.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Zone id
+          hidden: false
+          format: '#,##0'
+  - name: state
+    description: State or regional abbreviation containing the forecast zone.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: State
+          hidden: false
+  - name: timezone
+    description: IANA timezone used by the forecast publisher for this zone.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Timezone
+          hidden: false
+  - name: danger_text
+    description: Published avalanche danger rating text for the observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Danger text
+          hidden: false
+  - name: off_season
+    description: Whether the publisher marks this zone as outside its avalanche season.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Off season
+          hidden: false
+  - name: start_date
+    description: UTC timestamp at which the published forecast period starts, when provided.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Start date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: end_date
+    description: UTC timestamp at which the published forecast period ends, when provided.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: End date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: travel_advice
+    description: Publisher guidance for travel in or around the forecast zone.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Travel advice
+          hidden: false
+  - name: warning
+    description: Whether the publisher marks the forecast with a warning flag.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Warning
+          hidden: false
+  - name: link
+    description: Publisher URL for the forecast zone.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Link
+          hidden: false
+  - name: provider
+    description: Name of the organization providing the forecast.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider
+          hidden: false
+  - name: _batch_id
+    description: Extract batch identifier that produced the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Load operation identifier that inserted the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained forecast observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the retained raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 2c63c32f-cbf0-5f83-b3d2-06803a54e99b
+    label: 'Radio browser station snapshot: Country code'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_radio_browser_station_snapshot_country_code
+      tableName: fct_radio_browser_station_snapshot
+    values: []
+  - disabled: true
+    id: 1a6fc049-2941-57f8-bd6c-848c95f75e48
+    label: 'Radio browser station snapshot: State'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_radio_browser_station_snapshot_state
+      tableName: fct_radio_browser_station_snapshot
+    values: []
+  - disabled: true
+    id: faa61e9c-989b-5659-8d0a-e8a7df71edb1
+    label: 'Radio browser station snapshot: Language'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_radio_browser_station_snapshot_language
+      tableName: fct_radio_browser_station_snapshot
+    values: []
+  - disabled: true
+    id: dece9ac4-ce88-5716-91ce-0442d8f079f5
+    label: 'Radio browser station snapshot: Codec'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_radio_browser_station_snapshot_codec
+      tableName: fct_radio_browser_station_snapshot
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Radio Browser
+slug: radio-browser
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of stations returned by the Radio Browser directory. Each row is
+      one station observed in one source snapshot, keyed by the source, station identifier, and observation
+      timestamp. Raw re-ingestion of the same snapshot is reduced to the latest loaded copy while load
+      lineage is retained.
+
+
+      **Grain:** source, station_id, observed_at
+
+
+      **What changes here:** how the monitored station catalogue and reported engagement measures change
+      while station metadata is revised.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `radio_browser` — licence: Radio Browser — community project; attribution required: False. Source
+      configuration: `extract/sources/radio_browser.yml`.'
+    hideFrame: false
+    title: Radio browser station snapshot
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Radio browser station snapshot — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct stations observed each day
+    chartSlug: fct-radio-browser-station-snapshot-stations-observed
+    hideTitle: false
+    title: Distinct stations observed each day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported clicks per day
+    chartSlug: fct-radio-browser-station-snapshot-average-clicks
+    hideTitle: false
+    title: Mean reported clicks per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Station catalogue mix by country
+    chartSlug: fct-radio-browser-station-snapshot-stations-by-country
+    hideTitle: false
+    title: Station catalogue mix by country
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Stations with metadata changes by month
+    chartSlug: fct-radio-browser-station-snapshot-changed-stations
+    hideTitle: false
+    title: Stations with metadata changes by month
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Radio browser station snapshot — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct station by country code
+    chartSlug: fct-radio-browser-station-snapshot
+    hideTitle: false
+    title: Distinct station by country code
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Radio browser station snapshot — observations
+    chartSlug: fct-radio-browser-station-snapshot-details
+    hideTitle: false
+    title: Radio browser station snapshot — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

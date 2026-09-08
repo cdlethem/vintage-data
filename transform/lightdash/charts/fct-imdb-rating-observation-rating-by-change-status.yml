@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_imdb_rating_observation_observed_at_day
+          yRef:
+            field: fct_imdb_rating_observation_average_average_rating
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed average rating
+    layout:
+      xField: fct_imdb_rating_observation_observed_at_day
+      yField:
+      - fct_imdb_rating_observation_average_average_rating
+  type: cartesian
+description: Mean title rating per observation day split among null, updated, and new change statuses.
+  Null status means the publisher supplied no classification and dominates this feed; the segments are
+  separate row-weighted means, not additive totals.
+metricQuery:
+  dimensions:
+  - fct_imdb_rating_observation_observed_at_day
+  - fct_imdb_rating_observation_change_status
+  exploreName: fct_imdb_rating_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_imdb_rating_observation_average_average_rating
+  sorts:
+  - descending: true
+    fieldId: fct_imdb_rating_observation_average_average_rating
+  - descending: false
+    fieldId: fct_imdb_rating_observation_observed_at_day
+  tableCalculations: []
+name: Mean rating by publisher change status
+pivotConfig:
+  columns:
+  - fct_imdb_rating_observation_change_status
+slug: fct-imdb-rating-observation-rating-by-change-status
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_imdb_rating_observation_observed_at_day
+  - fct_imdb_rating_observation_change_status
+  - fct_imdb_rating_observation_average_average_rating
+tableName: fct_imdb_rating_observation
+version: 1

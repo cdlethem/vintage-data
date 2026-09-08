@@ -1,0 +1,238 @@
+version: 2
+models:
+- name: fct_register_to_vote
+  description: Physical observations of the UK register-to-vote usage feed. Each row is one source registration
+    observation at one fetch timestamp, retaining the publisher timestamp, reported application count,
+    and load lineage. Exact replayed observations are reduced to the latest loaded copy.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, registration_observation_id, observed_at
+      label: Register to vote
+      group_label: Register to vote
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: register_to_vote_key
+      vintage:
+        visualization:
+          dimension: published_at
+          metric: average_application_count
+          time: observed_at
+          window_days: 30
+          title: Mean observed application count by published at
+          description: Mean observed application count by `published_at` in the selected observation window.
+            Number of applications reported by the upstream feed for the observation. Each retained observation
+            has equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+            a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - registration_observation_id
+          - published_at
+          - application_count
+          - source_loaded_at
+          sources:
+          - '`register_to_vote` — licence: UK government public data; attribution required: True. Source
+            configuration: `extract/sources/register_to_vote.yml`.'
+          analysis:
+            headline: how reported registration demand changes through the four-day feed window and how
+              the publisher's event timestamps compare with collection levels.
+            event_time: published_at
+            grain: DAY
+            controls:
+            - source
+            - published_at
+            - application_count
+            trends:
+            - slug: observations-collected
+              kind: total
+              metric: distinct_observations
+              time: observed_at
+              grain: DAY
+              title: Distinct registration observations collected each day
+              description: Distinct `registration_observation_id` values present on each collection day.
+                This is a feed level rather than an additive application total; the four-day collection
+                window is short and days with no successful extract are absent rather than zero.
+              width: half
+            - slug: average-applications
+              kind: total
+              metric: average_application_count
+              time: observed_at
+              grain: DAY
+              title: Mean reported applications collected each day
+              description: Average reported `application_count` across observations collected each day.
+                It is a reported observation level, not a sum of applications; polling frequency and
+                repeated snapshots weight the mean, and absent days are absent rather than zero.
+              width: half
+            - slug: observations-by-source
+              kind: composition
+              metric: distinct_observations
+              breakdown: source
+              top_n: 2
+              time: observed_at
+              grain: DAY
+              title: Registration observations by source
+              description: Distinct registration observations per collection day stacked by source. The
+                current extract has one source, so the stack has one segment; no remainder is aggregated
+                and absent days are absent rather than zero.
+              width: full
+            - slug: published-applications
+              kind: total
+              metric: average_application_count
+              time: published_at
+              grain: DAY
+              title: Mean applications by publisher day
+              description: Average reported application count on the source `published_at` day. This
+                event-time view covers four populated days only and measures a reported level rather than
+                a daily sum; days without published observations are absent rather than zero.
+              width: full
+  columns:
+  - name: register_to_vote_key
+    description: Stable hash of source, registration observation identifier, and observed timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Register to vote key
+          hidden: true
+  - name: source
+    description: Identifier of the upstream registration-usage feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: registration_observation_id
+    description: Upstream identifier for the registration-usage observation.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_observations:
+            type: count_distinct
+            label: Distinct registration observations
+            description: Distinct `registration_observation_id` values represented in the selected
+              observation window. Repeated snapshots are deduplicated within each time or source group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Registration observation id
+          hidden: false
+  - name: observed_at
+    description: Timestamp at which the registration-usage observation was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: published_at
+    description: Timestamp at which the upstream publisher reported the observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Published at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: application_count
+    description: Number of applications reported by the upstream feed for the observation.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_application_count:
+            type: average
+            label: Mean observed application count
+            description: Mean observed application count by `published_at` in the selected observation
+              window. Number of applications reported by the upstream feed for the observation. Each retained
+              observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+              This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Application count
+          hidden: false
+          format: '#,##0'
+  - name: _batch_id
+    description: Load batch identifier assigned when the raw observation was ingested.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position of the observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted the raw observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

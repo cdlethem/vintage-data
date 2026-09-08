@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: f0bb974e-37bd-5b92-9e30-feffdc56794f
+    label: 'Nhl game observations: Game state'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nhl_game_observations_game_state
+      tableName: fct_nhl_game_observations
+    values: []
+  - disabled: true
+    id: 454951dc-79da-5bb1-850d-9967876ce428
+    label: 'Nhl game observations: Venue'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nhl_game_observations_venue
+      tableName: fct_nhl_game_observations
+    values: []
+  - disabled: true
+    id: 720bb1b5-7d8e-5c71-b7ee-47ca861b7c4e
+    label: 'Nhl game observations: Home team abbrev'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nhl_game_observations_home_team_abbrev
+      tableName: fct_nhl_game_observations
+    values: []
+  - disabled: true
+    id: 5b117512-286c-5d01-899b-f7f690c76d34
+    label: 'Nhl game observations: Away team abbrev'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nhl_game_observations_away_team_abbrev
+      tableName: fct_nhl_game_observations
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Nhl
+slug: nhl
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical observation fact for NHL schedule records. Each row is one deduplicated game snapshot
+      at the schedule feed fetch timestamp, retaining the scheduled game, participating teams, venue,
+      state, and raw-load lineage. The source currently reports future game schedules; this fact does
+      not infer scores or player-level statistics.
+
+
+      **Grain:** source_system, game_id, observed_at
+
+
+      **What changes here:** how the scheduled NHL slate and its venue mix change across the upcoming
+      game days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `nhl` — licence: NHL official API — public; attribution required: False. Source configuration:
+      `extract/sources/nhl.yml`.'
+    hideFrame: false
+    title: Nhl game observations
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Nhl game observations — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Scheduled games by day
+    chartSlug: fct-nhl-game-observations-scheduled-games
+    hideTitle: false
+    title: Scheduled games by day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Scheduled venues by day
+    chartSlug: fct-nhl-game-observations-scheduled-venues
+    hideTitle: false
+    title: Scheduled venues by day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Scheduled games by home team
+    chartSlug: fct-nhl-game-observations-games-by-home-team
+    hideTitle: false
+    title: Scheduled games by home team
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Scheduled games by venue
+    chartSlug: fct-nhl-game-observations-venue-slate-mix
+    hideTitle: false
+    title: Scheduled games by venue
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Nhl game observations — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct game by game state
+    chartSlug: fct-nhl-game-observations
+    hideTitle: false
+    title: Distinct game by game state
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Nhl game observations — observations
+    chartSlug: fct-nhl-game-observations-details
+    hideTitle: false
+    title: Nhl game observations — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_onionoo_relay_status_published_at_day
+          yRef:
+            field: fct_onionoo_relay_status_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Published at (Day)
+      yAxis:
+      - name: Distinct relay
+    layout:
+      xField: fct_onionoo_relay_status_published_at_day
+      yField:
+      - fct_onionoo_relay_status_distinct_entities
+  type: cartesian
+description: Distinct `relay_id` values by the publisher's `published_at` day. The event-time span is
+  only six days, so this is a short publication-batch view rather than historical relay activity; absent
+  days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_onionoo_relay_status_published_at_day
+  exploreName: fct_onionoo_relay_status
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_onionoo_relay_status_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_onionoo_relay_status_published_at_day
+  tableCalculations: []
+name: Distinct relays by Onionoo publication day
+slug: fct-onionoo-relay-status-relays-by-publication-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_onionoo_relay_status_published_at_day
+  - fct_onionoo_relay_status_distinct_entities
+tableName: fct_onionoo_relay_status
+version: 1

@@ -1,0 +1,434 @@
+version: 2
+models:
+- name: fct_drivebc_event_observations
+  description: Incremental physical observation fact for DriveBC Open511 road events. Each row is one
+    source event at one feed fetch timestamp, preserving the event's status, classification, location
+    JSON, scheduling metadata, and raw-load lineage. Replayed copies of the same source event observation
+    retain the latest loaded row; no current-state inference is applied.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, event_id, observed_at
+      label: Drivebc event observations
+      group_label: Drivebc events
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: drivebc_event_observation_key
+      vintage:
+        visualization:
+          dimension: severity
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct event by severity
+          description: Distinct `event_id` values by `severity` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - event_id
+          - severity
+          - source_loaded_at
+          sources:
+          - '`drivebc_events` — licence: Open Government Licence-Canada; attribution required: True. Source
+            configuration: `extract/sources/drivebc_events.yml`.'
+          analysis:
+            headline: how road-event creation, updates, and reported locations change across the DriveBC feed.
+            event_time: event_created_at
+            grain: WEEK
+            controls:
+            - event_type
+            - severity
+            - status
+            trends:
+            - slug: created-events
+              kind: total
+              metric: distinct_entities
+              time: event_created_at
+              grain: WEEK
+              title: Distinct events by creation week
+              description: Distinct `event_id` values grouped by the source `event_created_at` week. This is a
+                source-event flow rather than a polling total; sparse weeks with no represented events are absent
+                rather than zero.
+              width: half
+            - slug: observed-events
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct events observed per day
+              description: Distinct `event_id` values present in each extractor observation day. This is a
+                current-feed level because the feed republishes active events; movement reflects coverage or
+                withdrawals, and days without a successful extract are absent rather than zero.
+              width: half
+            - slug: updated-distance
+              kind: total
+              metric: average_linear_km
+              time: event_updated_at
+              grain: WEEK
+              title: Mean linear reference at update week
+              description: Average `linear_reference_km` reported for events grouped by source update week.
+                The source retains sentinel positions such as -1, so the average can be pulled toward sentinel
+                values; weeks without represented updates are absent rather than zero.
+              width: half
+            - slug: created-by-type
+              kind: composition
+              metric: distinct_entities
+              breakdown: event_type
+              top_n: 5
+              time: event_created_at
+              grain: WEEK
+              title: Created events by type each week
+              description: Distinct `event_id` values by source creation week stacked by `event_type`. All five
+                observed event types are retained; sparse weeks and types with no represented events are absent
+                rather than zero.
+              width: full
+            - slug: updated-by-severity
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: severity
+              top_n: 2
+              time: event_updated_at
+              grain: WEEK
+              title: Updated events by severity each week
+              description: Distinct `event_id` values by source update week, pivoted by the two observed severity
+                values. Both severities are retained; weeks without represented updates are absent rather than
+                zero.
+              width: full
+  columns:
+  - name: drivebc_event_observation_key
+    description: Stable hash of the source name, DriveBC event identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Drivebc event observation key
+          hidden: true
+  - name: source_name
+    description: Source stream identifier supplied by the DriveBC extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: event_id
+    description: Stable identifier assigned to the DriveBC road event.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct event
+            description: Distinct `event_id` values by `severity` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Event id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this event observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: jurisdiction_url
+    description: URL identifying the jurisdiction associated with the event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Jurisdiction url
+          hidden: false
+  - name: event_url
+    description: Canonical URL for the DriveBC event record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Event url
+          hidden: false
+  - name: headline
+    description: Short headline supplied for the road event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Headline
+          hidden: false
+  - name: status
+    description: Event status reported by the DriveBC feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status
+          hidden: false
+  - name: event_created_at
+    description: UTC timestamp when DriveBC reports that the event was created.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Event created at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: event_updated_at
+    description: UTC timestamp when DriveBC reports that the event was last updated.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Event updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: description
+    description: Full event description supplied by DriveBC.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Description
+          hidden: true
+  - name: ivr_message
+    description: Interactive voice response message supplied for the event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Ivr message
+          hidden: false
+  - name: linear_reference_km
+    description: DriveBC linear reference position in kilometres; source sentinel values are retained.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Linear reference km
+          hidden: false
+          format: '#,##0.00'
+        metrics:
+          average_linear_km:
+            type: average
+            label: Mean linear reference km
+            description: Average `linear_reference_km` across retained event observations. Source sentinel
+              positions such as -1 are retained and included, so this is not a clean geographic distance.
+            format: '#,##0.00'
+  - name: schedule
+    description: JSON schedule intervals supplied for the event.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Schedule
+          hidden: true
+          sql: CAST(${TABLE}.schedule AS VARCHAR)
+  - name: event_type
+    description: High-level event classification reported by DriveBC.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Event type
+          hidden: false
+  - name: event_subtypes
+    description: JSON array of more specific event classifications.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Event subtypes
+          hidden: true
+          sql: CAST(${TABLE}.event_subtypes AS VARCHAR)
+  - name: severity
+    description: Event severity reported by DriveBC.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Severity
+          hidden: false
+  - name: geography
+    description: GeoJSON geometry supplied for the event location or route.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Geography
+          hidden: true
+          sql: CAST(${TABLE}.geography AS VARCHAR)
+  - name: roads
+    description: JSON array of roads and lane-state details associated with the event.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Roads
+          hidden: true
+          sql: CAST(${TABLE}.roads AS VARCHAR)
+  - name: areas
+    description: JSON array of administrative areas associated with the event.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Areas
+          hidden: true
+          sql: CAST(${TABLE}.areas AS VARCHAR)
+  - name: source_row_id
+    description: Raw load row identifier for this event observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced this event observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing this event observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of this event observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_load_id
+    description: Identifier of the load operation that inserted this event observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this event observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the original raw event content for replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

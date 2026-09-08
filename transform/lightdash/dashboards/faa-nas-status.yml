@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Hour
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Hour
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 6e174674-54e5-5122-b6a2-c30f9caf5df6
+    label: 'Faa nas status observation: Has ground stop'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_faa_nas_status_observation_has_ground_stop
+      tableName: fct_faa_nas_status_observation
+    values: []
+  - disabled: true
+    id: fc4e378c-9dc2-51dd-9c55-1d23df348578
+    label: 'Faa nas status observation: Has ground delay'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_faa_nas_status_observation_has_ground_delay
+      tableName: fct_faa_nas_status_observation
+    values: []
+  - disabled: true
+    id: 10e26fe4-730b-51a4-a1f1-b942ec8c4a24
+    label: 'Faa nas status observation: Ground stop reason'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_faa_nas_status_observation_ground_stop_reason
+      tableName: fct_faa_nas_status_observation
+    values: []
+  - disabled: true
+    id: 7147e770-e719-5c62-8b69-ba00356b4d9e
+    label: 'Faa nas status observation: Ground delay reason'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_faa_nas_status_observation_ground_delay_reason
+      tableName: fct_faa_nas_status_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Faa Nas Status
+slug: faa-nas-status
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical observation fact for the FAA National Airspace System status feed.
+      Each row represents one airport identifier at one extractor observation timestamp. Repeated insert-only
+      raw copies of the same airport observation retain the latest loaded row, while source and load lineage
+      remain available for audit and replay.
+
+
+      **Grain:** airport_id, observed_at
+
+
+      **What changes here:** how airport coverage and delay pressure move through each status observation
+      and source update.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `faa_nas_status` — licence: US Government work, public domain; attribution required: False. Source
+      configuration: `extract/sources/faa_nas_status.yml`.'
+    hideFrame: false
+    title: Faa nas status observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Faa nas status observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Airports reporting per observation hour
+    chartSlug: fct-faa-nas-status-observation-observed-airports
+    hideTitle: false
+    title: Airports reporting per observation hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported ground delay by source hour
+    chartSlug: fct-faa-nas-status-observation-source-delay
+    hideTitle: false
+    title: Mean reported ground delay by source hour
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Delay trajectories for the busiest airports
+    chartSlug: fct-faa-nas-status-observation-airport-delay
+    hideTitle: false
+    title: Delay trajectories for the busiest airports
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Airports by ground-delay reason
+    chartSlug: fct-faa-nas-status-observation-delay-reasons
+    hideTitle: false
+    title: Airports by ground-delay reason
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Faa nas status observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed ground delay avg min by airport
+    chartSlug: fct-faa-nas-status-observation
+    hideTitle: false
+    title: Mean observed ground delay avg min by airport
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Faa nas status observation — observations
+    chartSlug: fct-faa-nas-status-observation-details
+    hideTitle: false
+    title: Faa nas status observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

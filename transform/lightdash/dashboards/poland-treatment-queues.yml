@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 45790d26-c957-5672-8e49-2bb69f2e683d
+    label: 'Poland treatment queues: Benefit name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_poland_treatment_queues_benefit_name
+      tableName: fct_poland_treatment_queues
+    values: []
+  - disabled: true
+    id: d8f82337-38b4-567a-a6f2-3a78a70eae32
+    label: 'Poland treatment queues: Queue type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_poland_treatment_queues_queue_type
+      tableName: fct_poland_treatment_queues
+    values: []
+  - disabled: true
+    id: 1f7351a0-897d-5862-ab07-40fae9a3c957
+    label: 'Poland treatment queues: Treatment place'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_poland_treatment_queues_treatment_place
+      tableName: fct_poland_treatment_queues
+    values: []
+  - disabled: true
+    id: 86df2e51-e279-5fef-b51c-a42e21c92f6f
+    label: 'Poland treatment queues: Benefits for children'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_poland_treatment_queues_benefits_for_children
+      tableName: fct_poland_treatment_queues
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Poland Treatment Queues
+slug: poland-treatment-queues
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of specialist-treatment queue observations published by Poland''s
+      National Health Fund (NFZ). Each row records one provider queue returned by the configured outpatient
+      search at a fetch timestamp, including published situation dates, available provider wait statistics,
+      and raw-load lineage.
+
+
+      **Grain:** source, queue_id, observed_at
+
+
+      **What changes here:** how published queue coverage and reported waiting measures change across
+      situation dates and observation days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `poland_treatment_queues` — licence: NFZ reuse terms; attribution required: True. Source configuration:
+      `extract/sources/poland_treatment_queues.yml`.'
+    hideFrame: false
+    title: Poland treatment queues
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Poland treatment queues — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Queues present per observation day
+    chartSlug: fct-poland-treatment-queues-observed-queue-level
+    hideTitle: false
+    title: Queues present per observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Queues by published situation date
+    chartSlug: fct-poland-treatment-queues-situation-date-queues
+    hideTitle: false
+    title: Queues by published situation date
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Queue coverage by treatment benefit
+    chartSlug: fct-poland-treatment-queues-queues-by-benefit
+    hideTitle: false
+    title: Queue coverage by treatment benefit
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Reported average wait days by situation date
+    chartSlug: fct-poland-treatment-queues-waiting-days-by-situation
+    hideTitle: false
+    title: Reported average wait days by situation date
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Poland treatment queues — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct queue by benefit name
+    chartSlug: fct-poland-treatment-queues
+    hideTitle: false
+    title: Distinct queue by benefit name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Poland treatment queues — observations
+    chartSlug: fct-poland-treatment-queues-details
+    hideTitle: false
+    title: Poland treatment queues — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

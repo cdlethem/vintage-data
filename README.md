@@ -5,7 +5,7 @@ lands raw newline-delimited JSON, and is designed to grow across the data lifecy
 
 - **extract** (live): source → raw NDJSON files, orchestrated by Airflow
 - **load** (live): raw files → a warehouse RAW schema, through a single-writer service
-- **transform** (planned): dbt models over the warehouse
+- **transform** (live): dbt base views and governed facts, scheduled by Airflow
 
 The point of the project is pedagogical: aspiring data engineers rarely have access to
 real, frequently-changing data sources to practice on. Everything here is free, keyless,
@@ -36,12 +36,35 @@ extract-loader.service                 the single writer (load/loader/)
         │                              schema inferred, never user-supplied
         ▼
 ~/.local/share/vintage-data/warehouse/extract.duckdb    raw.<source> (insert-only) + _load.* ledger
+        │
+        ▼  selected by twice-hourly/hourly/daily tags
+orchestration/dags/transform_dags.py   parse → policy → dbt build
+        │
+        ▼
+transform_base.* views + transform_staging.* views + transform_marts.fct_* tables
 ```
 
 Airflow 3.3 runs natively under systemd: api-server, scheduler, dag-processor,
 and N Celery workers backed by Postgres (metadata) and Redis (broker). Host,
 port and worker count come from `orchestration/config.env`; the UI binds
 loopback only unless you publish it deliberately.
+
+### Bot workflow authority
+
+Seven scheduled read-only/report agents maintain the portfolio: six specialists and
+one daily manager. `task_executor` and `pr_reviewer` are manual queue consumers.
+Their authoritative state is the provider-owned dashboard database, reached from
+Airflow tasks through a bounded bearer-authenticated internal API. Typed outcomes,
+immutable logical deadlines, context/token evidence, failure fingerprints, queue
+stages, and provider identities remain server-side; XCom carries only bounded
+projection metadata.
+
+Models cannot mutate the shared checkout. Human accept/assign/start is the sole
+admission path. The only writer runs in an externally confined credential-free plain
+tree, returns a validated artifact and verification manifest, and asks trusted server
+code to create or recover a draft PR. The reviewer is read-only and advisory.
+Maintenance observes provider state but never approves or merges; human evidence and
+transition remain required for completion. See [`bots/README.md`](bots/README.md).
 
 ## The extract contract
 
@@ -125,6 +148,30 @@ step-by-step of what one job does, and a troubleshooting section — start there
 `load__raw` run goes red, and note that its first failure mode ("heartbeat missing") is
 about the service being down, not about data.
 
+## The transform stage
+
+Every `raw.<source>` has one generated `base_<source>` view. Dataset-specific
+staging views are optional; governed outputs are contracted `fct_*` tables or
+incremental models with exactly one cadence tag. `transform/jobs.yml` creates
+`transform__twice_hourly`, `transform__hourly`, and `transform__daily`; each
+selection includes untagged ancestors.
+
+Development writes to a disposable DuckDB file and attaches the live warehouse
+read-only. Production writes `transform_base`, `transform_staging`, and
+`transform_marts` schemas into `$EXTRACT_WAREHOUSE`. A shared transform lock
+serializes the three dbt cadences; the dbt wrapper also retries an explicit
+warehouse-lock failure only when it occurs before model execution.
+
+```bash
+transform/bin/sync_raw_sources --check
+transform/bin/dbt build --target dev --select +fct_bike_station_status_daily
+transform/bin/validate_project transform/target/manifest.json
+```
+
+[`transform/README.md`](transform/README.md) documents source synchronization,
+layering, incremental/SCD rules, cadence tags, efficient tests, and manual
+operations.
+
 ## Configuration
 
 Everything specific to one machine — paths, service account, ports, model
@@ -184,7 +231,7 @@ one pipeline's execution order:
 ```
 extract/          source contracts, fetchers, source configs, and catalogs
 load/             destination-agnostic warehouse loader and its configuration
-transform/        dbt project (planned)
+transform/        dbt source views, governed facts, project policy, and tooling
 discovery/        pre-production source research, evidence, and staged fetchers
 bots/             recurring agent runs (definitions, prompts, model providers)
 orchestration/    Airflow deployment, cross-phase DAGs, runners, and sink adapters
@@ -211,25 +258,64 @@ both, at `$EXTRACT_WAREHOUSE` (default `~/.local/share/vintage-data/warehouse/ex
 
 ## Bots
 
-Recurring **agent** work is a first-class layer, not a cron line hidden in a
-shell script. A bot is a directory (`bots/<name>/bot.yml` + `prompt.md`) that
-the same Airflow scheduler runs as `bot__<name>`, and **which model answers is
-configuration, not code**: a bot names a model *alias*, and
-`bots/models.yml` (gitignored, per-machine) maps aliases onto OpenRouter, OpenAI,
-Anthropic, a local llama-server/vLLM/Ollama, or any CLI agent.
+Ten definitions form one evidence pipeline under the same Airflow scheduler:
+eight scheduled/report agents — discovery, vetting, source scheduling,
+cadence/usefulness review, failure triage, analytics engineering, a data analyst
+that explores the real serving marts and plans the time-series analysis each
+dashboard is missing, and a daily strategic manager — plus a manual
+`task_executor` and a manual `pr_reviewer`.
+Definitions are `bots/<name>/bot.yml` plus `prompt.md`; deterministic, bounded
+JSON context comes from `bots/agent_context.py`.
+
+The six specialists are strictly read-only: they emit named Pydantic reports
+whose recommendations become dashboard tasks, never file edits. `task_executor`
+is the only writer and runs only after a human admits a task, inside the
+configured root-owned sandbox launcher; `pr_reviewer` is the only reviewer and
+cannot approve, merge, or apply anything. Trusted provider code — never a model
+— computes the patch, publishes the deterministic branch and draft pull request,
+and humans remain the only merge and completion authority. The daily manager
+reads freshness-qualified specialist evidence and emits only a prioritized
+human-approval plan; stale, missing, or failed required evidence forces
+`degraded_evidence`.
+
+The dashboard database is the single authority for run history and task state.
+Every Airflow try persists one typed `RunEnvelopeV1` under
+`(dag_id, run_id, task_id, map_index, try_number)` with an outcome of
+`succeeded`, `skipped`, `capacity_unavailable`, `timed_out`, or `failed` and a
+retry class of `none`, `capacity`, `transient`, or `terminal`. Task code reaches
+that state only through the authenticated `/bot-dashboard/api/internal` routes;
+no bot process opens the metadata database. XCom carries projection metadata
+only — never a report body, context, path, or credential.
+
+Model choice is configuration, not code. `bots/models.yml` (gitignored and
+per-machine) maps capability profiles to configured OMP roles or direct
+providers. Capability declarations prevent a chat-only alias from running a role
+that must search the web or run repository probes. One logical task claims one
+immutable deadline, so retries and fallbacks share a single wall clock;
+deterministic typed gates skip the model entirely when there is no work.
+
+Token usage and spend are first-class and provider-agnostic. Every model attempt
+normalizes into one `usage.v1` record (input, output, cached input, cache write,
+reasoning, requests, cost) from any of four dialects — OpenAI-shaped,
+Anthropic-shaped, already-normalized, or CLI session telemetry — so a deployment
+that does not use OMP only has to point one `usage:` block at wherever its model
+reports usage. Cost resolves provider-reported first, then a versioned price book
+stamped onto each attempt, else "unavailable" rather than a misleading zero. The
+dashboard rolls this up per model, per bot and per day at
+`/bot-dashboard/api/usage`, and an optional `daily_spend_cap_usd` refuses new run
+claims once the day's spend is exhausted without interrupting a running bot.
 
 ```bash
 P=orchestration/.venv/bin/python
 $P bots/bin/run_bot --list
-$P bots/bin/run_bot pipeline_check --dry-run            # assembled prompt only
-$P bots/bin/run_bot pipeline_check --model openrouter   # override the alias
+$P bots/bin/run_bot source_discovery --dry-run
+$P bots/bin/run_bot analytics_engineer --dry-run
+$P bots/bin/run_bot manager --ephemeral
 ```
 
-Live today: `pipeline_check` (every 30 min) — `monitoring/digest.py --triage`
-classifies every source deterministically and the model is asked only about
-flagged ones, so a healthy pipeline costs zero tokens.
-[`bots/README.md`](bots/README.md) has the definition format, the provider
-contract, and the two planned bots (script staging, schedule tuning).
+[`bots/README.md`](bots/README.md) documents the role boundaries, schedules,
+typed report contracts, budgets and retry classification, the admitted
+executor→artifact→PR→review lifecycle, and portable model configuration.
 
 ## Swapping infrastructure
 
@@ -253,3 +339,14 @@ decides (paths, accounts, ports, model, contact address) never enters git.
 MIT — see [LICENSE](LICENSE). The fetchers only read public, keyless APIs;
 each script's docstring records that source's own terms and attribution
 requirements, which this license does not override.
+
+## Lightdash
+
+The optional [open-source Lightdash installation](visualization/README.md) serves all
+163 dbt marts with semantic metadata, 326 checked-in charts and 162 family dashboards.
+Successful cadence builds capture immutable DuckDB snapshots; a separate retryable
+task publishes them atomically to a read-only Postgres serving layer. Runtime images
+and dependencies are pinned, configuration uses the existing renderer, and secrets
+and state stay outside versioned project files. Set `LIGHTDASH_ENABLED=1` and follow
+the linked setup and first-publication instructions. Analytics engineering owns both
+modeling and visualization planning through the existing bot review workflow.

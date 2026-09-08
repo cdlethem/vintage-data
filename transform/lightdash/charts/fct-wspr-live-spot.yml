@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_wspr_live_spot_band
+          yRef:
+            field: fct_wspr_live_spot_average_distance_km
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_wspr_live_spot_band
+      yField:
+      - fct_wspr_live_spot_average_distance_km
+  type: cartesian
+description: Mean observed distance km by `band` in the selected observation window. Great-circle distance
+  between transmitting and receiving stations in kilometres. Each retained observation has equal weight;
+  polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure or
+  an additive total.
+metricQuery:
+  dimensions:
+  - fct_wspr_live_spot_band
+  exploreName: fct_wspr_live_spot
+  filters:
+    dimensions:
+      and:
+      - id: fefea989-36e9-54df-93ce-9f0760b866b4
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_wspr_live_spot_observed_at
+        values:
+        - 30
+      id: 0802a5eb-c42a-5032-b9ba-328f521a4bc6
+  limit: 20
+  metrics:
+  - fct_wspr_live_spot_average_distance_km
+  sorts:
+  - descending: true
+    fieldId: fct_wspr_live_spot_average_distance_km
+  tableCalculations: []
+name: Mean observed distance km by band
+slug: fct-wspr-live-spot
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_wspr_live_spot_band
+  - fct_wspr_live_spot_average_distance_km
+tableName: fct_wspr_live_spot
+version: 1

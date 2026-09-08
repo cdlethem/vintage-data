@@ -1,0 +1,321 @@
+version: 2
+models:
+- name: fct_gbif_occurrence_snapshot
+  description: Daily physical snapshot of GBIF occurrence records returned by the configured occurrence
+    search. Each row represents one occurrence identifier from one GBIF API observation timestamp, with
+    taxonomy, event, location, and raw-load lineage retained for reproducibility.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, occurrence_id, fetched_at
+      label: Gbif occurrence snapshot
+      group_label: Gbif occurrences
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: gbif_occurrence_snapshot_key
+      vintage:
+        visualization:
+          dimension: country
+          metric: distinct_entities
+          time: fetched_at
+          window_days: 30
+          title: Distinct occurrence by country
+          description: Distinct `occurrence_id` values by `country` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - fetched_at
+          - occurrence_id
+          - country
+          - source_loaded_at
+          sources:
+          - '`gbif_occurrences` — licence: per-record, mostly CC-friendly; attribution required: False.
+            Source configuration: `extract/sources/gbif_occurrences.yml`.'
+          analysis:
+            headline: how the three-day fetched catalogue compares with the month of biological event
+              dates and its changing taxonomic mix.
+            event_time: event_date
+            grain: DAY
+            controls:
+            - kingdom
+            - basis_of_record
+            - species
+            trends:
+            - slug: occurrences-fetched
+              kind: total
+              metric: distinct_entities
+              time: fetched_at
+              grain: DAY
+              title: Distinct occurrences fetched per day
+              description: Distinct `occurrence_id` values present in each GBIF API snapshot day. This
+                is a level of the returned catalogue rather than a flow of newly recorded observations;
+                changes can reflect the API result set. Days without a fetch are absent rather than zero.
+              width: half
+            - slug: species-fetched
+              kind: total
+              metric: distinct_species
+              time: fetched_at
+              grain: DAY
+              title: Distinct species represented per fetch day
+              description: Distinct non-null `species` values in the GBIF result set on each fetch day.
+                This is a snapshot level and not a count of species first observed that day; missing
+                species names are excluded. Days without a fetch are absent rather than zero.
+              width: half
+            - slug: occurrences-by-event-day
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: kingdom
+              top_n: 5
+              time: event_date
+              grain: DAY
+              title: Biological occurrences per event day by kingdom
+              description: Distinct `occurrence_id` values by reported `event_date` day, compared across
+                taxonomic kingdom. This reads source event timing rather than ingestion timing; the five
+                largest kingdoms are shown and smaller or null kingdoms are excluded, not combined.
+                Event days with no records are absent rather than zero.
+              width: full
+            - slug: observation-method-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: basis_of_record
+              top_n: 4
+              time: event_date
+              grain: DAY
+              title: Occurrence mix by event day and basis of record
+              description: Distinct `occurrence_id` values per reported `event_date` day stacked by
+                `basis_of_record`. Bars show how collection methods contribute to the source event mix;
+                this is not a cumulative flow and all four observed methods fit the chart. Event days
+                with no records are absent rather than zero.
+              width: full
+  columns:
+  - name: gbif_occurrence_snapshot_key
+    description: Stable hash of the GBIF source, occurrence identifier, and API observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Gbif occurrence snapshot key
+          hidden: true
+  - name: source
+    description: GBIF source identifier supplied by the occurrence extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: occurrence_id
+    description: GBIF occurrence key identifying the recorded occurrence.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct occurrence
+            description: Distinct `occurrence_id` values by `country` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Occurrence id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp when the extractor fetched this occurrence snapshot from the GBIF API.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: species
+    description: Species name reported by GBIF for the occurrence, when available.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_species:
+            type: count_distinct
+            label: Distinct species
+            description: Distinct non-null `species` values in each GBIF result set. This measures the
+              taxonomic breadth of returned occurrences and is not a count of species first observed
+              during the period.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Species
+          hidden: false
+  - name: scientific_name
+    description: Scientific name reported by GBIF for the occurrence, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Scientific name
+          hidden: false
+  - name: kingdom
+    description: Taxonomic kingdom reported by GBIF for the occurrence, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Kingdom
+          hidden: false
+  - name: event_date
+    description: UTC timestamp of the biological or collection event reported by GBIF, when available.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Event date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: ingested
+    description: UTC timestamp when GBIF last interpreted or ingested the occurrence record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Ingested
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: latitude
+    description: Decimal latitude reported by GBIF for the occurrence, when available.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: longitude
+    description: Decimal longitude reported by GBIF for the occurrence, when available.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: country
+    description: ISO country code reported by GBIF for the occurrence, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Country
+          hidden: false
+  - name: basis_of_record
+    description: GBIF basis-of-record classification, such as human observation or preserved specimen.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Basis of record
+          hidden: false
+  - name: _batch_id
+    description: Load batch identifier that supplied the retained occurrence snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Load job identifier that inserted the retained occurrence snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained occurrence snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position of the retained occurrence snapshot in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained occurrence snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw occurrence record content for lineage and replay.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

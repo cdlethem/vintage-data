@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_software_heritage_observations_last_visit_at_month
+          yRef:
+            field: fct_software_heritage_observations_average_visit_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Last visit at (Month)
+      yAxis:
+      - name: Average reported visits
+    layout:
+      xField: fct_software_heritage_observations_last_visit_at_month
+      yField:
+      - fct_software_heritage_observations_average_visit_count
+  type: cartesian
+description: Average reported `visit_count` for repository observations grouped by their `last_visit_at`
+  month. This observation-weighted measure can be influenced by polling frequency and is sparse — months
+  with no non-null last visits are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_software_heritage_observations_last_visit_at_month
+  exploreName: fct_software_heritage_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_software_heritage_observations_average_visit_count
+  sorts:
+  - descending: false
+    fieldId: fct_software_heritage_observations_last_visit_at_month
+  tableCalculations: []
+name: Average reported visits by last visit month
+slug: fct-software-heritage-observations-average-visit-count
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_software_heritage_observations_last_visit_at_month
+  - fct_software_heritage_observations_average_visit_count
+tableName: fct_software_heritage_observations
+version: 1

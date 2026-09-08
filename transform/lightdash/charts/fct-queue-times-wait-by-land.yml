@@ -1,0 +1,64 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_queue_times_observed_at_day
+          yRef:
+            field: fct_queue_times_average_wait_minutes
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed wait minutes
+    layout:
+      xField: fct_queue_times_observed_at_day
+      yField:
+      - fct_queue_times_average_wait_minutes
+  type: cartesian
+description: Average reported wait minutes per observation day, with one line for each of the eight lands.
+  All eight observed lands are shown; no remainder is aggregated. Sparse days are absent rather than zero,
+  and repeated polls give frequently observed rides more weight.
+metricQuery:
+  dimensions:
+  - fct_queue_times_observed_at_day
+  - fct_queue_times_land
+  exploreName: fct_queue_times
+  filters:
+    dimensions:
+      and:
+      - id: 352d660f-fa3e-5b15-9e47-c90b38576bcd
+        operator: equals
+        target:
+          fieldId: fct_queue_times_is_open
+        values:
+        - true
+      id: 3d6bc802-b545-576e-8637-66ed0984b2fd
+  limit: 5000
+  metrics:
+  - fct_queue_times_average_wait_minutes
+  sorts:
+  - descending: true
+    fieldId: fct_queue_times_average_wait_minutes
+  - descending: false
+    fieldId: fct_queue_times_observed_at_day
+  tableCalculations: []
+name: Mean queue wait by land
+pivotConfig:
+  columns:
+  - fct_queue_times_land
+slug: fct-queue-times-wait-by-land
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_queue_times_observed_at_day
+  - fct_queue_times_land
+  - fct_queue_times_average_wait_minutes
+tableName: fct_queue_times
+version: 1

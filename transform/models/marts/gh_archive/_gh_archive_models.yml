@@ -1,0 +1,402 @@
+version: 2
+models:
+- name: fct_gh_archive_events
+  description: Physical hourly fact of GitHub Archive events. Each row represents one archive source,
+    event identifier, and extractor fetch timestamp, retaining event metadata, typed scalar payload fields,
+    the event payload, and raw-load lineage. Repeated copies of the same event observation retain the
+    latest loaded record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: archive_source, event_id, fetched_at
+      label: Gh archive events
+      group_label: Gh archive
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: gh_archive_event_key
+      vintage:
+        visualization:
+          dimension: event_type
+          metric: distinct_entities
+          time: fetched_at
+          window_days: 30
+          title: Distinct event by event type
+          description: Distinct `event_id` values by `event_type` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - fetched_at
+          - event_id
+          - event_type
+          - source_loaded_at
+          sources:
+          - '`gh_archive` — licence: unstated (GitHub public event data, redistributed by GH Archive);
+            attribution required: False. Source configuration: `extract/sources/gh_archive.yml`.'
+          analysis:
+            headline: how GitHub event volume and distinct actors change by event type across the short
+              observation and event windows.
+            event_time: created_at
+            grain: DAY
+            controls:
+            - event_type
+            - is_public
+            - payload_action
+            - payload_ref_type
+            trends:
+            - slug: events-by-created-day
+              kind: total
+              metric: distinct_entities
+              time: created_at
+              grain: DAY
+              title: GitHub events created per day
+              description: Distinct `event_id` values by the day GitHub reports they were created. This is a
+                short six-day event window rather than a long historical flow; days with no source events are
+                absent rather than zero.
+              width: half
+            - slug: actors-by-created-day
+              kind: total
+              metric: distinct_actors
+              time: created_at
+              grain: DAY
+              title: Distinct actors creating events per day
+              description: Distinct non-null `actor_login` values by GitHub event creation day. A creator can
+                produce several events, so this line is not an event count; days absent from the source are
+                absent rather than zero.
+              width: half
+            - slug: events-by-type
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: event_type
+              top_n: 6
+              time: created_at
+              grain: DAY
+              title: Event volume by GitHub event type
+              description: Distinct `event_id` values per creation day, pivoted by `event_type`. The six
+                observed types are retained; no remainder is aggregated, and sparse types may be absent on
+                individual days rather than zero.
+              width: full
+            - slug: payload-reference-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: payload_ref_type
+              top_n: 2
+              time: created_at
+              grain: DAY
+              title: Events with payload references by reference type
+              description: Distinct events per creation day stacked by non-null `payload_ref_type`. This is a
+                sparse payload subset, so bars show bursts and absent combinations are absent rather than zero;
+                the two observed reference types are kept without a remainder.
+              width: full
+            - slug: fetched-event-level
+              kind: total
+              metric: distinct_entities
+              time: fetched_at
+              grain: DAY
+              title: Distinct events fetched per day
+              description: Distinct `event_id` values in each extractor fetch day. This is a collection-level
+                view of a five-day feed window, not source event history; days without a successful extract are
+                absent rather than zero.
+              width: half
+  columns:
+  - name: gh_archive_event_key
+    description: Stable hash of the archive source, event identifier, and fetch timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Gh archive event key
+          hidden: true
+  - name: archive_source
+    description: Archive source name supplied by the GitHub Archive extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Archive source
+          hidden: false
+  - name: event_id
+    description: GitHub Archive event identifier.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct event
+            description: Distinct `event_id` values by `event_type` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Event id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp when the extractor fetched the GitHub Archive event.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: event_type
+    description: GitHub event type, such as PushEvent, CreateEvent, or DeleteEvent.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Event type
+          hidden: false
+  - name: created_at
+    description: UTC timestamp when GitHub reports that the event was created.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Created at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: actor_login
+    description: GitHub login of the actor reported for the event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Actor login
+          hidden: false
+        metrics:
+          distinct_actors:
+            type: count_distinct
+            label: Distinct actor
+            description: Distinct non-null `actor_login` values among events in each selected time and
+              dimension group. One actor can produce multiple events, so this measures participating
+              accounts rather than event volume.
+            format: '#,##0'
+  - name: repository_name
+    description: GitHub owner and repository name reported for the event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Repository name
+          hidden: false
+  - name: is_public
+    description: Whether GitHub marks the event as public.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is public
+          hidden: false
+  - name: event_payload
+    description: JSON payload supplied by GitHub Archive for the event.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Event payload
+          hidden: true
+          sql: CAST(${TABLE}.event_payload AS VARCHAR)
+  - name: payload_action
+    description: Optional action extracted from event payloads that report one.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Payload action
+          hidden: false
+  - name: payload_ref
+    description: Optional branch, tag, or reference name extracted from the event payload.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Payload ref
+          hidden: false
+  - name: payload_ref_type
+    description: Optional reference type, such as branch or tag, extracted from the event payload.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Payload ref type
+          hidden: false
+  - name: payload_number
+    description: Optional issue or pull request number extracted from the event payload.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Payload number
+          hidden: false
+          format: '#,##0'
+  - name: payload_push_id
+    description: Optional GitHub push identifier extracted from PushEvent payloads.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Payload push id
+          hidden: false
+          format: '#,##0'
+  - name: payload_repository_id
+    description: Optional GitHub repository identifier extracted from PushEvent payloads.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Payload repository id
+          hidden: false
+          format: '#,##0'
+  - name: payload_head_sha
+    description: Optional head commit SHA extracted from PushEvent payloads.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Payload head sha
+          hidden: false
+  - name: payload_before_sha
+    description: Optional prior commit SHA extracted from PushEvent payloads.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Payload before sha
+          hidden: false
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the event within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load job that inserted the event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the event into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw event content used for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

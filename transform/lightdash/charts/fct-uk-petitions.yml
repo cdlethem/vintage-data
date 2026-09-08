@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_petitions_state
+          yRef:
+            field: fct_uk_petitions_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_uk_petitions_state
+      yField:
+      - fct_uk_petitions_distinct_entities
+  type: cartesian
+description: Distinct `petition_id` values by `state` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_uk_petitions_state
+  exploreName: fct_uk_petitions
+  filters:
+    dimensions:
+      and:
+      - id: 3ecb4dfc-9f11-5b9c-8a25-e754c01db3a3
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_petitions_observed_at
+        values:
+        - 30
+      id: 1c973a3a-8939-5a76-b719-42eb924c39ea
+  limit: 20
+  metrics:
+  - fct_uk_petitions_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_uk_petitions_distinct_entities
+  tableCalculations: []
+name: Distinct petition by state
+slug: fct-uk-petitions
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_petitions_state
+  - fct_uk_petitions_distinct_entities
+tableName: fct_uk_petitions
+version: 1

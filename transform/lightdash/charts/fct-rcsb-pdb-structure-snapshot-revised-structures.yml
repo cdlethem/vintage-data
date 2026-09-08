@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_rcsb_pdb_structure_snapshot_revision_date_month
+          yRef:
+            field: fct_rcsb_pdb_structure_snapshot_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Revision date (Month)
+      yAxis:
+      - name: Distinct structure
+    layout:
+      stack: true
+      xField: fct_rcsb_pdb_structure_snapshot_revision_date_month
+      yField:
+      - fct_rcsb_pdb_structure_snapshot_distinct_entities
+  type: cartesian
+description: Distinct structures grouped by the month of source `revision_date`, stacked by experimental
+  method. The source history has two populated months, so this sparse event-time view omits months without
+  reported revisions rather than treating them as zero.
+metricQuery:
+  dimensions:
+  - fct_rcsb_pdb_structure_snapshot_revision_date_month
+  - fct_rcsb_pdb_structure_snapshot_experimental_method
+  exploreName: fct_rcsb_pdb_structure_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_rcsb_pdb_structure_snapshot_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_rcsb_pdb_structure_snapshot_distinct_entities
+  - descending: false
+    fieldId: fct_rcsb_pdb_structure_snapshot_revision_date_month
+  tableCalculations: []
+name: Structures by source revision month
+pivotConfig:
+  columns:
+  - fct_rcsb_pdb_structure_snapshot_experimental_method
+slug: fct-rcsb-pdb-structure-snapshot-revised-structures
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_rcsb_pdb_structure_snapshot_revision_date_month
+  - fct_rcsb_pdb_structure_snapshot_experimental_method
+  - fct_rcsb_pdb_structure_snapshot_distinct_entities
+tableName: fct_rcsb_pdb_structure_snapshot
+version: 1

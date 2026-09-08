@@ -1,0 +1,394 @@
+version: 2
+models:
+- name: fct_stackexchange_question_observation
+  description: Incremental physical observation fact for Stack Exchange questions. Each row is one question
+    from one Stack Exchange site at one API fetch time, retaining the question metadata, engagement counters,
+    and raw-load lineage. Replayed copies of the same site, question, and observation timestamp are reduced
+    to the latest loaded row; this model does not infer question edits or reconstruct omitted API fields.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, question_id, observed_at
+      label: Stackexchange question observation
+      group_label: Stackexchange
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: stackexchange_que_dfbb91
+      vintage:
+        visualization:
+          dimension: is_answered
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct question by is answered
+          description: Distinct `question_id` values by `is_answered` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - question_id
+          - is_answered
+          - source_loaded_at
+          sources:
+          - '`stackexchange` — licence: Stack Exchange API — CC-BY-SA content; attribution required: True.
+            Source configuration: `extract/sources/stackexchange.yml`.'
+          analysis:
+            headline: how the latest question catalogue changes in size, answered mix, and reported engagement
+              during the five-day API observation window.
+            event_time: created_at
+            grain: DAY
+            controls:
+            - source_name
+            - is_answered
+            - owner_user_type
+            - owner_display_name
+            trends:
+            - slug: observed-questions-by-day
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct questions observed per day
+              description: Distinct `question_id` values present in the API response on each observation day.
+                This is a catalogue level because questions are repeatedly polled, not a new-question flow;
+                days without a successful fetch are absent rather than zero.
+              width: half
+            - slug: score-by-day
+              kind: total
+              metric: average_score
+              time: observed_at
+              grain: DAY
+              title: Mean question score observed per day
+              description: Mean reported `score` across question observations on each API observation day.
+                Each retained observation has equal weight and polling frequency can affect the average; it
+                is not an additive total, and absent days are absent rather than zero.
+              width: half
+            - slug: views-by-day
+              kind: total
+              metric: average_views
+              time: observed_at
+              grain: DAY
+              title: Mean question views observed per day
+              description: Mean reported `view_count` across question observations on each API observation day.
+                This observation-weighted level can be affected by polling frequency and is not a sum of
+                views; absent observation days are absent rather than zero.
+              width: half
+            - slug: answered-mix-by-day
+              kind: composition
+              metric: distinct_entities
+              breakdown: is_answered
+              top_n: 2
+              time: observed_at
+              grain: DAY
+              title: Answered and unanswered question mix
+              description: Distinct `question_id` values per observation day stacked by `is_answered`. The
+                two boolean states cover the reported question set, but repeated polling means this is a
+                daily level rather than a cumulative flow.
+              width: full
+            - slug: questions-created-by-day
+              kind: total
+              metric: distinct_entities
+              time: created_at
+              grain: DAY
+              title: Distinct questions by source creation day
+              description: Distinct `question_id` values grouped by their source `created_at` day. The source
+                history spans only five days in this mart, so this is a short creation flow rather than a
+                long historical series; days with no source-created questions are absent rather than zero.
+              width: half
+  columns:
+  - name: stackexchange_question_observation_key
+    description: Stable hash of the Stack Exchange site, question identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Stackexchange question observation key
+          hidden: true
+          name: stackexchange_que_dfbb91
+  - name: source_name
+    description: Stack Exchange site identifier supplied by the extractor, such as stackexchange_stackoverflow.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: question_id
+    description: Stack Exchange question identifier supplied by the API.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct question
+            description: Distinct `question_id` values by `is_answered` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Question id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this question from the Stack Exchange API.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: title
+    description: HTML-encoded question title supplied by the Stack Exchange API.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: tags
+    description: JSON array of tags assigned to the question by the Stack Exchange API.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Tags
+          hidden: true
+          sql: CAST(${TABLE}.tags AS VARCHAR)
+  - name: created_at
+    description: UTC timestamp derived from the question creation epoch supplied by the Stack Exchange
+      API.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Created at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: owner_display_name
+    description: Display name of the question owner, when supplied by the Stack Exchange API.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Owner display name
+          hidden: false
+  - name: owner_user_type
+    description: Stack Exchange user type reported for the question owner.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Owner user type
+          hidden: false
+  - name: score
+    description: Net vote score reported for the question at observation time.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_score:
+            type: average
+            label: Mean question score
+            description: Mean reported `score` across question observations in each time and filter group.
+              Each observation has equal weight; this reflects the published snapshot and is not an additive
+              total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Score
+          hidden: false
+          format: '#,##0'
+  - name: view_count
+    description: Number of views reported for the question at observation time.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_views:
+            type: average
+            label: Mean question views
+            description: Mean reported `view_count` across question observations in each time and filter
+              group. This observation-weighted level can be affected by polling frequency and is not a sum
+              of views.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: View count
+          hidden: false
+          format: '#,##0'
+  - name: answer_count
+    description: Number of answers reported for the question at observation time.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Answer count
+          hidden: false
+          format: '#,##0'
+  - name: is_answered
+    description: Whether Stack Exchange reported the question as answered at observation time.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is answered
+          hidden: false
+  - name: link
+    description: Canonical Stack Exchange URL for the question.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Link
+          hidden: false
+  - name: quota_remaining
+    description: Remaining Stack Exchange API quota reported alongside the observation.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Quota remaining
+          hidden: false
+          format: '#,##0'
+  - name: source_row_id
+    description: Raw load row identifier for the retained Stack Exchange observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained Stack Exchange observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: extract_s_51074f
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained raw observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw record content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

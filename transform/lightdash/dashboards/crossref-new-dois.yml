@@ -1,0 +1,182 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: be1bada9-878b-5425-834a-16497cbcc379
+    label: 'Crossref new doi observation: Source name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_crossref_new_doi_observation_source_name
+      tableName: fct_crossref_new_doi_observation
+    values: []
+  - disabled: true
+    id: da481317-1863-52f8-b416-2f19a6da3fee
+    label: 'Crossref new doi observation: Work type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_crossref_new_doi_observation_work_type
+      tableName: fct_crossref_new_doi_observation
+    values: []
+  - disabled: true
+    id: 0cbf38aa-ff8b-5882-a5d8-a280ce00cb64
+    label: 'Crossref new doi observation: Publisher'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_crossref_new_doi_observation_publisher
+      tableName: fct_crossref_new_doi_observation
+    values: []
+  - disabled: true
+    id: f1ea8813-0667-58f9-b3fa-4a75667edd67
+    label: 'Crossref new doi observation: Has abstract'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_crossref_new_doi_observation_has_abstract
+      tableName: fct_crossref_new_doi_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Crossref New Dois
+slug: crossref-new-dois
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical observation fact for newly registered Crossref DOI records. Each row records
+      one DOI identifier at one extractor observation timestamp, preserving publication metadata and raw-load
+      lineage. Repeated copies of the same source, DOI, and observation timestamp retain the latest loaded
+      row.
+
+
+      **Grain:** source_name, doi_id, observed_at
+
+
+      **What changes here:** how newly registered DOI volume, work-type mix, publisher breadth, and author
+      counts move in the Crossref feed.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `crossref_new_dois` — licence: CrossRef metadata — free reuse; attribution required: False. Source
+      configuration: `extract/sources/crossref_new_dois.yml`.'
+    hideFrame: false
+    title: Crossref new doi observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Crossref new doi observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: DOIs created per day
+    chartSlug: fct-crossref-new-doi-observation-daily-dois
+    hideTitle: false
+    title: DOIs created per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average authors per DOI by day
+    chartSlug: fct-crossref-new-doi-observation-daily-author-count
+    hideTitle: false
+    title: Average authors per DOI by day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: DOI registrations by work type
+    chartSlug: fct-crossref-new-doi-observation-work-type-trajectories
+    hideTitle: false
+    title: DOI registrations by work type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Publishers registering DOIs per day
+    chartSlug: fct-crossref-new-doi-observation-publisher-breadth
+    hideTitle: false
+    title: Publishers registering DOIs per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: DOI registrations by abstract coverage
+    chartSlug: fct-crossref-new-doi-observation-abstract-coverage
+    hideTitle: false
+    title: DOI registrations by abstract coverage
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: DOI registrations by leading publisher
+    chartSlug: fct-crossref-new-doi-observation-publisher-trajectories
+    hideTitle: false
+    title: DOI registrations by leading publisher
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 47
+- h: 1
+  properties:
+    showDivider: true
+    text: Crossref new doi observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 57
+- h: 10
+  properties:
+    chartName: Distinct doi by work type
+    chartSlug: fct-crossref-new-doi-observation
+    hideTitle: false
+    title: Distinct doi by work type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 58
+- h: 10
+  properties:
+    chartName: Crossref new doi observation — observations
+    chartSlug: fct-crossref-new-doi-observation-details
+    hideTitle: false
+    title: Crossref new doi observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 58
+version: 1

@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_zenodo_record_observation_created_at_day
+          yRef:
+            field: fct_zenodo_record_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct record
+    layout:
+      xField: fct_zenodo_record_observation_created_at_day
+      yField:
+      - fct_zenodo_record_observation_distinct_entities
+  type: cartesian
+description: Distinct `record_id` values per UTC Zenodo creation day, split among the eight busiest observed
+  `resource_type` values. Remaining resource types are excluded rather than aggregated, and the source
+  axis covers only the five-day extract window.
+metricQuery:
+  dimensions:
+  - fct_zenodo_record_observation_created_at_day
+  - fct_zenodo_record_observation_resource_type
+  exploreName: fct_zenodo_record_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_zenodo_record_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_zenodo_record_observation_distinct_entities
+  - descending: false
+    fieldId: fct_zenodo_record_observation_created_at_day
+  tableCalculations: []
+name: Created records by resource type
+pivotConfig:
+  columns:
+  - fct_zenodo_record_observation_resource_type
+slug: fct-zenodo-record-observation-resource-mix-by-created-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_zenodo_record_observation_created_at_day
+  - fct_zenodo_record_observation_resource_type
+  - fct_zenodo_record_observation_distinct_entities
+tableName: fct_zenodo_record_observation
+version: 1

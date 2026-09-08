@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_register_to_vote_published_at_day
+          yRef:
+            field: fct_register_to_vote_average_application_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Published at (Day)
+      yAxis:
+      - name: Mean observed application count
+    layout:
+      xField: fct_register_to_vote_published_at_day
+      yField:
+      - fct_register_to_vote_average_application_count
+  type: cartesian
+description: Average reported application count on the source `published_at` day. This event-time view
+  covers four populated days only and measures a reported level rather than a daily sum; days without
+  published observations are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_register_to_vote_published_at_day
+  exploreName: fct_register_to_vote
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_register_to_vote_average_application_count
+  sorts:
+  - descending: false
+    fieldId: fct_register_to_vote_published_at_day
+  tableCalculations: []
+name: Mean applications by publisher day
+slug: fct-register-to-vote-published-applications
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_register_to_vote_published_at_day
+  - fct_register_to_vote_average_application_count
+tableName: fct_register_to_vote
+version: 1

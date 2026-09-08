@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_job_boards_greenhouse_posted_at_month
+          yRef:
+            field: fct_job_boards_greenhouse_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Month)
+      yAxis:
+      - name: Distinct job
+    layout:
+      xField: fct_job_boards_greenhouse_posted_at_month
+      yField:
+      - fct_job_boards_greenhouse_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values whose Greenhouse `posted_at` falls in each month. Repeated observations
+  of a listing count once within its posting month; months with no source rows are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_job_boards_greenhouse_posted_at_month
+  exploreName: fct_job_boards_greenhouse
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_boards_greenhouse_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_job_boards_greenhouse_posted_at_month
+  tableCalculations: []
+name: Distinct jobs posted per month
+slug: fct-job-boards-greenhouse-jobs-posted
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_boards_greenhouse_posted_at_month
+  - fct_job_boards_greenhouse_distinct_entities
+tableName: fct_job_boards_greenhouse
+version: 1

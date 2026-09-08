@@ -1,0 +1,570 @@
+version: 2
+models:
+- name: fct_catalonia_beach_status
+  description: Hourly physical history of Catalonia beach-status records. Each row is one beach status
+    update identified by the upstream source, beach id, and publisher status timestamp; repeated copies
+    delivered by later raw loads are reduced to the latest loaded record while source lineage is retained.
+    Source numeric fields are typed, the upstream -9999 wave-height sentinel is represented as null, and
+    the source's N/A UV value remains nullable.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, beach_id, status_updated_at
+      label: Catalonia beach status
+      group_label: Catalonia beaches
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: beach_status_key
+      vintage:
+        visualization:
+          dimension: municipality_name
+          metric: average_water_temperature
+          time: observed_at
+          window_days: 30
+          title: Mean observed water temperature by municipality name
+          description: Mean observed water temperature by `municipality_name` in the selected observation
+            window. Sea-water temperature supplied by the source. Each retained observation has equal
+            weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+            measure or an additive total.
+          detail_fields:
+          - observed_at
+          - beach_id
+          - municipality_name
+          - water_temperature
+          - source_loaded_at
+          sources:
+          - '`catalonia_beaches` — licence: Catalonia open-data terms; attribution required: True. Source
+            configuration: `extract/sources/catalonia_beaches.yml`.'
+          analysis:
+            headline: how the beach roster and reported conditions differ across four sparse annual status snapshots.
+            event_time: status_updated_at
+            grain: DAY
+            controls:
+            - municipality_name
+            - coast_name
+            - beach_flag
+            trends:
+            - slug: water-temperature-history
+              kind: total
+              metric: average_water_temperature
+              time: status_updated_at
+              grain: DAY
+              title: Mean water temperature by status date
+              description: Mean non-null `water_temperature` reported for all beaches on each publisher
+                `status_updated_at` day. Only the 2025 and 2026 snapshots supply this field; earlier
+                dates are absent from this series rather than zero degrees.
+              width: half
+            - slug: beach-roster-history
+              kind: total
+              metric: distinct_beaches
+              time: status_updated_at
+              grain: DAY
+              title: Distinct beaches reported by status date
+              description: Distinct `beach_id` values in each publisher `status_updated_at` snapshot.
+                This is a catalogue level rather than a flow of new beaches, and the three earlier
+                snapshots are sparse annual points rather than continuous daily history.
+              width: half
+            - slug: temperature-by-coast
+              kind: breakdown
+              metric: average_water_temperature
+              breakdown: coast_name
+              top_n: 5
+              time: status_updated_at
+              grain: DAY
+              title: Water temperature by coast and status date
+              description: Mean non-null `water_temperature` per `status_updated_at` day, split across the
+                five observed `coast_name` values. Each retained row has equal weight, and missing weather
+                readings or dates are absent rather than zero; all five coasts are shown.
+              width: full
+            - slug: beach-flag-mix
+              kind: composition
+              metric: distinct_beaches
+              breakdown: beach_flag
+              top_n: 3
+              time: status_updated_at
+              grain: DAY
+              title: Distinct beaches by flag and status date
+              description: Distinct `beach_id` values per `status_updated_at` day stacked by the source
+                `beach_flag`. The three observed flag values are retained, so bar heights show the
+                reported roster mix and not a count of new beaches; absent dates are absent.
+              width: full
+  columns:
+  - name: beach_status_key
+    description: Stable hash of the source name, beach identifier, and publisher status-update timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Beach status key
+          hidden: true
+  - name: source_name
+    description: Upstream feed label that supplied the beach status record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: beach_id
+    description: Upstream identifier for the beach status record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Beach id
+          hidden: false
+        metrics:
+          distinct_beaches:
+            type: count_distinct
+            label: Distinct beaches
+            description: Distinct non-null `beach_id` values reported in each status-date and dimension
+              group. This measures the published beach roster and does not count repeated status rows as
+              additional beaches.
+            format: '#,##0'
+  - name: beach_code
+    description: Upstream beach code, equal to the source beach identifier in the observed feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Beach code
+          hidden: false
+  - name: beach_name
+    description: Human-readable Catalan beach name supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Beach name
+          hidden: false
+  - name: municipality_code
+    description: Source municipality code containing the beach.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Municipality code
+          hidden: false
+  - name: municipality_name
+    description: Source municipality name containing the beach.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Municipality name
+          hidden: false
+  - name: coast_id
+    description: Source identifier for the coast containing the beach.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Coast id
+          hidden: false
+  - name: coast_name
+    description: Human-readable coast name supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Coast name
+          hidden: false
+  - name: coordinate_x
+    description: Numeric x coordinate supplied by the source for the beach location; source values are
+      retained without geographic reinterpretation.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Coordinate x
+          hidden: false
+          format: '#,##0.00'
+  - name: coordinate_y
+    description: Numeric y coordinate supplied by the source for the beach location; source values are
+      retained without geographic reinterpretation.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Coordinate y
+          hidden: false
+          format: '#,##0.00'
+  - name: status_updated_at
+    description: UTC timestamp when the publisher last updated the beach status, parsed from estat_data.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Status updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the source response containing this beach status.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: weather_date
+    description: UTC weather date and time supplied by the source for the associated weather values.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Weather date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: morning_weather
+    description: Morning weather description supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Morning weather
+          hidden: false
+  - name: afternoon_weather
+    description: Afternoon weather description supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Afternoon weather
+          hidden: false
+  - name: morning_wind_direction
+    description: Morning wind-direction label supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Morning wind direction
+          hidden: false
+  - name: morning_wind_speed
+    description: Morning wind speed supplied by the source, parsed as a numeric value.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Morning wind speed
+          hidden: false
+          format: '#,##0.00'
+  - name: afternoon_wind_direction
+    description: Afternoon wind-direction label supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Afternoon wind direction
+          hidden: false
+  - name: afternoon_wind_speed
+    description: Afternoon wind speed supplied by the source, parsed as a numeric value.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Afternoon wind speed
+          hidden: false
+          format: '#,##0.00'
+  - name: max_temperature
+    description: Maximum air temperature supplied by the source.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Max temperature
+          hidden: false
+          format: '#,##0.00'
+  - name: min_temperature
+    description: Minimum air temperature supplied by the source.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Min temperature
+          hidden: false
+          format: '#,##0.00'
+  - name: max_feels_like
+    description: Maximum apparent temperature supplied by the source.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Max feels like
+          hidden: false
+          format: '#,##0.00'
+  - name: min_feels_like
+    description: Minimum apparent temperature supplied by the source.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Min feels like
+          hidden: false
+          format: '#,##0.00'
+  - name: uv_index
+    description: Numeric UV index supplied by the source; source N/A values are nullable.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Uv index
+          hidden: false
+          format: '#,##0'
+  - name: water_temperature
+    description: Sea-water temperature supplied by the source.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_water_temperature:
+            type: average
+            label: Mean observed water temperature
+            description: Mean observed water temperature by `municipality_name` in the selected observation
+              window. Sea-water temperature supplied by the source. Each retained observation has equal
+              weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+              measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Water temperature
+          hidden: false
+          format: '#,##0.00'
+  - name: sea_direction
+    description: Sea-direction label supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sea direction
+          hidden: false
+  - name: wave_height
+    description: Sea wave height supplied by the source as a numeric value; the observed -9999 source
+      sentinel is represented as null.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Wave height
+          hidden: false
+          format: '#,##0.00'
+  - name: beach_flag
+    description: Beach warning flag supplied by the source, such as groga, verda, or vermella.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Beach flag
+          hidden: false
+  - name: beach_flag_reason
+    description: Source explanation for the beach warning flag.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Beach flag reason
+          hidden: false
+  - name: meteorology
+    description: Meteorological status label supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Meteorology
+          hidden: false
+  - name: water_transparency
+    description: Water-transparency label supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Water transparency
+          hidden: false
+  - name: sea_state
+    description: Sea-state label supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sea state
+          hidden: false
+  - name: beach_temperature
+    description: Numeric beach temperature status supplied by the source.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Beach temperature
+          hidden: false
+          format: '#,##0.00'
+  - name: jellyfish_status
+    description: Jellyfish status text supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Jellyfish status
+          hidden: false
+  - name: buoy_code
+    description: Source buoy code associated with the beach status, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Buoy code
+          hidden: false
+  - name: morning_precipitation
+    description: Morning precipitation measure supplied by the source.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Morning precipitation
+          hidden: false
+          format: '#,##0.00'
+  - name: afternoon_precipitation
+    description: Afternoon precipitation measure supplied by the source.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Afternoon precipitation
+          hidden: false
+          format: '#,##0.00'
+  - name: _row_id
+    description: Raw warehouse row identifier for the retained source record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Extract batch identifier that produced the retained source record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Load operation identifier that inserted the retained source record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained source record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained source record in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained source record into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the retained raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

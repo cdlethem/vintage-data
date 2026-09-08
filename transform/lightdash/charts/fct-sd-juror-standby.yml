@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sd_juror_standby_courthouse
+          yRef:
+            field: fct_sd_juror_standby_average_group_range_count
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_sd_juror_standby_courthouse
+      yField:
+      - fct_sd_juror_standby_average_group_range_count
+  type: cartesian
+description: Mean observed group range count by `courthouse` in the selected observation window. Number
+  of entries in the parsed group_ranges array. Each retained observation has equal weight; polling frequency
+  and repeated snapshots can affect the mean. This is not a latest-value measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_sd_juror_standby_courthouse
+  exploreName: fct_sd_juror_standby
+  filters:
+    dimensions:
+      and:
+      - id: af56ddb8-0d63-5b69-bc0f-beffa3d8086d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sd_juror_standby_observed_at
+        values:
+        - 30
+      id: 585b3f8b-83ec-570e-9a75-7785e08ba62e
+  limit: 20
+  metrics:
+  - fct_sd_juror_standby_average_group_range_count
+  sorts:
+  - descending: true
+    fieldId: fct_sd_juror_standby_average_group_range_count
+  tableCalculations: []
+name: Mean observed group range count by courthouse
+slug: fct-sd-juror-standby
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sd_juror_standby_courthouse
+  - fct_sd_juror_standby_average_group_range_count
+tableName: fct_sd_juror_standby
+version: 1

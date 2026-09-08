@@ -1,0 +1,172 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Week
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 1e1ebeaa-acf0-5808-94c3-aea2e98a132f
+    label: 'Infodengue brasilia: Alert level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_brasilia_alert_level
+      tableName: fct_infodengue_brasilia
+    values: []
+  - disabled: true
+    id: 77e90df9-20a9-5f6f-aeef-9172b823ddf1
+    label: 'Infodengue brasilia: Receptive status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_brasilia_receptive_status
+      tableName: fct_infodengue_brasilia
+    values: []
+  - disabled: true
+    id: a61f33d2-b9ca-56f5-878c-8a667156a41f
+    label: 'Infodengue brasilia: Transmission status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_brasilia_transmission_status
+      tableName: fct_infodengue_brasilia
+    values: []
+  - disabled: true
+    id: 6ecbc496-6ced-523b-8a94-3693e801a626
+    label: 'Infodengue brasilia: Incidence level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_infodengue_brasilia_incidence_level
+      tableName: fct_infodengue_brasilia
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Infodengue Brasilia
+slug: infodengue-brasilia
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of InfoDengue epidemiology observations for Brasília. Each row represents
+      one source observation id at one publisher fetch timestamp; repeated insert-only loads of that observation
+      are reduced to the latest loaded copy while source and loader lineage are retained. The source profile
+      found 34 rows in one recent batch, one municipality, and no null observation ids or fetch timestamps,
+      so the daily incremental grain preserves successive API snapshots without rescanning prior loads.
+
+
+      **Grain:** source_relation, observation_id, observed_at
+
+
+      **What changes here:** Weekly epidemiological estimates show how Brasília''s burden changes, while
+      alert and transmission statuses explain the shifts.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `infodengue_brasilia` — see dbt raw-source lineage.'
+    hideFrame: false
+    title: Infodengue brasilia
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Infodengue brasilia — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct epidemiological observations per week
+    chartSlug: fct-infodengue-brasilia-weekly-observations
+    hideTitle: false
+    title: Distinct epidemiological observations per week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean estimated cases by epidemiological week
+    chartSlug: fct-infodengue-brasilia-weekly-cases-estimate
+    hideTitle: false
+    title: Mean estimated cases by epidemiological week
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean incidence per 100k by epidemiological week
+    chartSlug: fct-infodengue-brasilia-weekly-incidence
+    hideTitle: false
+    title: Mean incidence per 100k by epidemiological week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean estimated cases by alert level
+    chartSlug: fct-infodengue-brasilia-cases-by-alert-level
+    hideTitle: false
+    title: Mean estimated cases by alert level
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Mean estimated cases by transmission status
+    chartSlug: fct-infodengue-brasilia-cases-by-transmission
+    hideTitle: false
+    title: Mean estimated cases by transmission status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Infodengue brasilia — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed incidence per 100k by municipality name
+    chartSlug: fct-infodengue-brasilia
+    hideTitle: false
+    title: Mean observed incidence per 100k by municipality name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Infodengue brasilia — observations
+    chartSlug: fct-infodengue-brasilia-details
+    hideTitle: false
+    title: Infodengue brasilia — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

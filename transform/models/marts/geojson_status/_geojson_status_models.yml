@@ -1,0 +1,503 @@
+version: 2
+models:
+- name: fct_geojson_shelter_status
+  description: Incremental physical history of GeoJSON shelter status features. Each row is one upstream
+    feature at one extractor observation timestamp, with the normalized shelter attributes, point geometry,
+    and raw-load lineage needed to audit refreshes and replay the insert-only source.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, feature_id, observed_at
+      label: Geojson shelter status
+      group_label: Geojson status
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: geojson_shelter_status_key
+      vintage:
+        visualization:
+          dimension: shelter_status
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct feature by shelter status
+          description: Distinct `feature_id` values by `shelter_status` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - feature_id
+          - shelter_status
+          - source_loaded_at
+          sources:
+          - '`geojson_status` — licence: varies per feed (US federal / NSW / ND DOT); attribution required:
+            True. Source configuration: `extract/sources/geojson_status.yml`.'
+          analysis:
+            headline: how the shelter catalogue level and reported population move across four days of
+              extractor observations.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - state
+            - city
+            - subfacility_code
+            - ada_compliant
+            trends:
+            - slug: shelters-observed
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct shelters observed per day
+              description: Distinct `feature_id` values present in the GeoJSON feed on each observation
+                day. This is a level rather than a flow because the publisher republishes shelter
+                features; changes reflect the returned catalogue. Days without a successful observation
+                are absent rather than zero.
+              width: half
+            - slug: population-level
+              kind: total
+              metric: average_population
+              time: observed_at
+              grain: DAY
+              title: Average reported population per observation day
+              description: Observation-weighted average of non-null `total_population` values among
+                shelter rows on each observation day. This is a reported snapshot level, not people
+                arriving that day; irregular polling and row retention can bias the average. Days without
+                population observations are absent rather than zero.
+              width: half
+            - slug: shelters-by-state
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: state
+              top_n: 8
+              time: observed_at
+              grain: DAY
+              title: Shelters observed per day by state
+              description: Distinct `feature_id` values per observation day pivoted by reported `state`.
+                This compares catalogue coverage across states rather than shelter openings; all eight
+                observed states fit the readable chart. Days without observations are absent rather than
+                zero.
+              width: full
+            - slug: facility-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: subfacility_code
+              top_n: 2
+              time: observed_at
+              grain: DAY
+              title: Shelter catalogue mix by facility code
+              description: Distinct `feature_id` values per observation day stacked by
+                `subfacility_code`. Bars show how the returned snapshot mix changes; this is not a
+                cumulative flow, and both observed codes are shown. Days without observations are absent
+                rather than zero.
+              width: full
+  columns:
+  - name: geojson_shelter_status_key
+    description: Stable hash of the source name, feature identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Geojson shelter status key
+          hidden: true
+  - name: source_name
+    description: Upstream source label that published the GeoJSON feature.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: feature_id
+    description: Upstream GeoJSON feature identifier used to identify the shelter across observations.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct feature
+            description: Distinct `feature_id` values by `shelter_status` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Feature id
+          hidden: false
+  - name: shelter_id
+    description: Numeric shelter identifier carried in the feature properties, when provided.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Shelter id
+          hidden: false
+          format: '#,##0'
+  - name: object_id
+    description: Numeric source object identifier carried in the feature properties, when provided.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Object id
+          hidden: false
+          format: '#,##0'
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the GeoJSON feature.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: feature_type
+    description: GeoJSON feature type declared by the upstream record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Feature type
+          hidden: false
+  - name: geometry_type
+    description: Geometry type declared in the GeoJSON geometry object.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Geometry type
+          hidden: false
+  - name: geometry
+    description: GeoJSON geometry object for the shelter feature.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Geometry
+          hidden: true
+          sql: CAST(${TABLE}.geometry AS VARCHAR)
+  - name: longitude
+    description: Longitude parsed from the first coordinate in the GeoJSON point geometry.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: latitude
+    description: Latitude parsed from the second coordinate in the GeoJSON point geometry.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: shelter_name
+    description: Human-readable shelter name from the feature properties.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Shelter name
+          hidden: false
+  - name: address
+    description: Street address reported for the shelter.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Address
+          hidden: false
+  - name: city
+    description: City reported for the shelter.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: City
+          hidden: false
+  - name: state
+    description: State or territory abbreviation reported for the shelter.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: State
+          hidden: false
+  - name: postal_code
+    description: Postal code reported for the shelter.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Postal code
+          hidden: false
+  - name: shelter_status
+    description: Operational status reported for the shelter at the observation time.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Shelter status
+          hidden: false
+  - name: evacuation_capacity
+    description: Reported evacuation capacity of the shelter, when provided.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Evacuation capacity
+          hidden: false
+          format: '#,##0'
+  - name: post_impact_capacity
+    description: Reported post-impact capacity of the shelter, when provided.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Post impact capacity
+          hidden: false
+          format: '#,##0'
+  - name: total_population
+    description: Reported population currently assigned to the shelter, when provided.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_population:
+            type: average
+            label: Average reported population
+            description: Average non-null `total_population` among retained shelter rows. This is an
+              observation-weighted snapshot level, not a sum of people or a daily arrival measure;
+              irregular polling and row retention can bias it.
+            format: '#,##0.0'
+        dimension:
+          type: number
+          label: Total population
+          hidden: false
+          format: '#,##0'
+  - name: hours_open
+    description: Opening time text reported by the upstream source, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Hours open
+          hidden: false
+  - name: hours_close
+    description: Closing time text reported by the upstream source, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Hours close
+          hidden: false
+  - name: organization_name
+    description: Organization name associated with the shelter, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Organization name
+          hidden: false
+  - name: organization_id
+    description: Numeric organization identifier associated with the shelter, when provided.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Organization id
+          hidden: false
+          format: '#,##0'
+  - name: match_type
+    description: Upstream match classification for the shelter record, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Match type
+          hidden: false
+  - name: subfacility_code
+    description: Upstream subfacility code for the shelter, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Subfacility code
+          hidden: false
+  - name: ada_compliant
+    description: Accessibility compliance code reported by the source, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Ada compliant
+          hidden: false
+  - name: pet_accommodations_code
+    description: Pet-accommodation code reported by the source, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Pet accommodations code
+          hidden: false
+  - name: wheelchair_accessible
+    description: Wheelchair-accessibility code reported by the source, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Wheelchair accessible
+          hidden: false
+  - name: source_row_id
+    description: Load-layer row identifier for the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date for the retained source observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction began for the retained source observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Load operation identifier that inserted the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained source observation into the raw
+      warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

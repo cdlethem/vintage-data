@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sensor_community_measurement_observed_at_day
+          yRef:
+            field: fct_sensor_community_measurement_average_pm25
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed pm25
+    layout:
+      xField: fct_sensor_community_measurement_observed_at_day
+      yField:
+      - fct_sensor_community_measurement_average_pm25
+  type: cartesian
+description: Observation-weighted mean reported PM2.5 concentration for each observation day under the
+  dashboard's `is_clean` filter. Polling frequency affects the mean, and the short five-day series is
+  a level rather than a historical air-quality flow; absent days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_sensor_community_measurement_observed_at_day
+  exploreName: fct_sensor_community_measurement
+  filters:
+    dimensions:
+      and:
+      - id: e11dbfc3-e950-5acb-b580-5ddac0113ea2
+        operator: equals
+        target:
+          fieldId: fct_sensor_community_measurement_is_clean
+        values:
+        - true
+      id: e6e3116c-a76b-507a-90d1-14c50538811c
+  limit: 5000
+  metrics:
+  - fct_sensor_community_measurement_average_pm25
+  sorts:
+  - descending: false
+    fieldId: fct_sensor_community_measurement_observed_at_day
+  tableCalculations: []
+name: Mean observed PM2.5 by observation day
+slug: fct-sensor-community-measurement-pm25-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sensor_community_measurement_observed_at_day
+  - fct_sensor_community_measurement_average_pm25
+tableName: fct_sensor_community_measurement
+version: 1

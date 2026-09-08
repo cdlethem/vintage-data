@@ -1,0 +1,68 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_openactive_feed_starts_at_month
+          yRef:
+            field: fct_openactive_feed_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Starts at (Month)
+      yAxis:
+      - name: Distinct record
+    layout:
+      stack: true
+      xField: fct_openactive_feed_starts_at_month
+      yField:
+      - fct_openactive_feed_distinct_entities
+  type: cartesian
+description: Distinct `record_id` values per scheduled start month stacked by feed state. The state mix
+  describes how records are represented in the feed, not whether activities occurred; months with no source
+  rows are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_openactive_feed_starts_at_month
+  - fct_openactive_feed_state
+  exploreName: fct_openactive_feed
+  filters:
+    dimensions:
+      and:
+      - id: 71a61b15-1102-5db7-adca-596ae304ae3a
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_openactive_feed_observed_at
+        values:
+        - 2
+      id: 9b0b1dce-daca-5a1e-8081-2751b6259576
+  limit: 5000
+  metrics:
+  - fct_openactive_feed_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_openactive_feed_distinct_entities
+  - descending: false
+    fieldId: fct_openactive_feed_starts_at_month
+  tableCalculations: []
+name: Scheduled records by feed state
+pivotConfig:
+  columns:
+  - fct_openactive_feed_state
+slug: fct-openactive-feed-state-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openactive_feed_starts_at_month
+  - fct_openactive_feed_state
+  - fct_openactive_feed_distinct_entities
+tableName: fct_openactive_feed
+version: 1

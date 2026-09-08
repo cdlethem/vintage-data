@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sec_edgar_filing_observation_filed_date_day
+          yRef:
+            field: fct_sec_edgar_filing_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Filed date (Day)
+      yAxis:
+      - name: Distinct filing party
+    layout:
+      xField: fct_sec_edgar_filing_observation_filed_date_day
+      yField:
+      - fct_sec_edgar_filing_observation_distinct_entities
+  type: cartesian
+description: Distinct `filing_party_id` values represented by filings on each filed day. Party rows can
+  repeat across roles and accessions, so this is not an additive row count; days with no filings are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_sec_edgar_filing_observation_filed_date_day
+  exploreName: fct_sec_edgar_filing_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sec_edgar_filing_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_sec_edgar_filing_observation_filed_date_day
+  tableCalculations: []
+name: Distinct filing parties by filed day
+slug: fct-sec-edgar-filing-observation-filed-parties
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sec_edgar_filing_observation_filed_date_day
+  - fct_sec_edgar_filing_observation_distinct_entities
+tableName: fct_sec_edgar_filing_observation
+version: 1

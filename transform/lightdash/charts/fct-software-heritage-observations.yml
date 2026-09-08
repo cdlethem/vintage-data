@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_software_heritage_observations_has_visits
+          yRef:
+            field: fct_software_heritage_observations_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_software_heritage_observations_has_visits
+      yField:
+      - fct_software_heritage_observations_distinct_entities
+  type: cartesian
+description: Distinct `repository_id` values by `has_visits` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_software_heritage_observations_has_visits
+  exploreName: fct_software_heritage_observations
+  filters:
+    dimensions:
+      and:
+      - id: d69a5b6b-351f-53c4-9897-dc40d4a0dc04
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_software_heritage_observations_fetched_at
+        values:
+        - 30
+      id: 09d6589f-18a9-51a7-9291-e7e24ec88ebf
+  limit: 20
+  metrics:
+  - fct_software_heritage_observations_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_software_heritage_observations_distinct_entities
+  tableCalculations: []
+name: Distinct repository by has visits
+slug: fct-software-heritage-observations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_software_heritage_observations_has_visits
+  - fct_software_heritage_observations_distinct_entities
+tableName: fct_software_heritage_observations
+version: 1

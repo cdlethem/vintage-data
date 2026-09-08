@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 291bdc76-0779-524e-96f7-8dea15993b75
+    label: 'Job feed jobicy: Company'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_jobicy_company
+      tableName: fct_job_feed_jobicy
+    values: []
+  - disabled: true
+    id: 8390cd8d-3e6b-5a13-b431-addc87ae877a
+    label: 'Job feed jobicy: Experience level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_jobicy_experience_level
+      tableName: fct_job_feed_jobicy
+    values: []
+  - disabled: true
+    id: f4beaeda-1be8-58ec-ba07-fb5f48a1e97b
+    label: 'Job feed jobicy: Location country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_jobicy_location_country
+      tableName: fct_job_feed_jobicy
+    values: []
+  - disabled: true
+    id: e618d14b-94fe-56e2-8120-ed5fc9c2bf16
+    label: 'Job feed jobicy: Salary currency'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_jobicy_salary_currency
+      tableName: fct_job_feed_jobicy
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Feed Jobicy
+slug: job-feed-jobicy
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of jobs published by the Jobicy remote-jobs feed. Each row is one
+      job identifier at one upstream observation timestamp; repeated copies of that observation are reduced
+      to the latest loaded lineage record while the published job attributes and source payload lineage
+      remain available for analysis and audit.
+
+
+      **Grain:** job_id, observed_at
+
+
+      **What changes here:** how the four-day catalogue level and recent posting mix change across jobicy''s
+      remote-job feed.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_feed_jobicy` — licence: Jobicy public API terms; attribution required: True. Source configuration:
+      `extract/sources/job_feed_jobicy.yml`.'
+    hideFrame: false
+    title: Job feed jobicy
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed jobicy — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Jobs present in the catalogue each day
+    chartSlug: fct-job-feed-jobicy-catalogue-level
+    hideTitle: false
+    title: Jobs present in the catalogue each day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Jobs by publisher posted day
+    chartSlug: fct-job-feed-jobicy-posted-day-history
+    hideTitle: false
+    title: Jobs by publisher posted day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Catalogue jobs by experience level
+    chartSlug: fct-job-feed-jobicy-experience-levels
+    hideTitle: false
+    title: Catalogue jobs by experience level
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Hiring-company mix by posting day and country
+    chartSlug: fct-job-feed-jobicy-country-mix
+    hideTitle: false
+    title: Hiring-company mix by posting day and country
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed jobicy — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-feed-jobicy
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Job feed jobicy — observations
+    chartSlug: fct-job-feed-jobicy-details
+    hideTitle: false
+    title: Job feed jobicy — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_mlb_statsapi_game_observations_scheduled_at_hour
+          yRef:
+            field: fct_mlb_statsapi_game_observations_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Scheduled at (Hour)
+      yAxis:
+      - name: Distinct game
+    layout:
+      xField: fct_mlb_statsapi_game_observations_scheduled_at_hour
+      yField:
+      - fct_mlb_statsapi_game_observations_distinct_entities
+  type: cartesian
+description: Distinct `game_id` values by the scheduled start hour. This is a short-horizon schedule flow
+  rather than a historical game total; repeated snapshots count once per hour. Hours without scheduled
+  games are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_mlb_statsapi_game_observations_scheduled_at_hour
+  exploreName: fct_mlb_statsapi_game_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_mlb_statsapi_game_observations_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_mlb_statsapi_game_observations_scheduled_at_hour
+  tableCalculations: []
+name: Distinct scheduled games by start hour
+slug: fct-mlb-statsapi-game-observations-scheduled-games
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_mlb_statsapi_game_observations_scheduled_at_hour
+  - fct_mlb_statsapi_game_observations_distinct_entities
+tableName: fct_mlb_statsapi_game_observations
+version: 1

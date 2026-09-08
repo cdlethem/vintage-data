@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_speedrun_run_run_date_month
+          yRef:
+            field: fct_speedrun_run_average_duration_seconds
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Run date (Month)
+      yAxis:
+      - name: Mean observed duration seconds
+    layout:
+      xField: fct_speedrun_run_run_date_month
+      yField:
+      - fct_speedrun_run_average_duration_seconds
+  type: cartesian
+description: Mean `duration_seconds` for runs whose published `run_date` falls in each month. Each run
+  has equal weight and this is not an additive total; months with no recorded runs are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_speedrun_run_run_date_month
+  exploreName: fct_speedrun_run
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_speedrun_run_average_duration_seconds
+  sorts:
+  - descending: false
+    fieldId: fct_speedrun_run_run_date_month
+  tableCalculations: []
+name: Mean completion duration by run month
+slug: fct-speedrun-run-duration-by-month
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_speedrun_run_run_date_month
+  - fct_speedrun_run_average_duration_seconds
+tableName: fct_speedrun_run
+version: 1

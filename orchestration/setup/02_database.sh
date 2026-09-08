@@ -16,6 +16,7 @@ cd "$(dirname "$0")/.."
 : "${POSTGRES_DB:=airflow}"
 : "${POSTGRES_ROLE:=airflow}"
 
+: "${BOT_DASHBOARD_API_USERNAME:=bot-worker}"
 SECRETS=airflow.secrets.env
 
 if [[ -f "$SECRETS" ]]; then
@@ -31,6 +32,43 @@ EOF
     chmod 600 "$SECRETS"
     echo "wrote $SECRETS"
 fi
+
+if ! grep -q '^BOT_DASHBOARD_API_PASSWORD=' "$SECRETS"; then
+    printf 'BOT_DASHBOARD_API_PASSWORD=%s\n' "$(openssl rand -hex 32)" >> "$SECRETS"
+    chmod 600 "$SECRETS"
+fi
+BOT_DASHBOARD_API_PASSWORD=$(
+    sed -n 's/^BOT_DASHBOARD_API_PASSWORD=//p' "$SECRETS"
+)
+[[ -n "$BOT_DASHBOARD_API_PASSWORD" ]] || {
+    echo "cannot read bot dashboard API password from $SECRETS" >&2
+    exit 1
+}
+
+PASSWORD_FILE=airflow_home/simple_auth_manager_passwords.json.generated
+mkdir -p airflow_home
+BOT_DASHBOARD_API_USERNAME="$BOT_DASHBOARD_API_USERNAME" \
+BOT_DASHBOARD_API_PASSWORD="$BOT_DASHBOARD_API_PASSWORD" \
+PASSWORD_FILE="$PASSWORD_FILE" python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+path = Path(os.environ["PASSWORD_FILE"])
+try:
+    passwords = json.loads(path.read_text()) if path.is_file() else {}
+except (OSError, json.JSONDecodeError) as exc:
+    raise SystemExit(f"cannot merge {path}: {exc}") from exc
+if not isinstance(passwords, dict):
+    raise SystemExit(f"cannot merge {path}: root is not an object")
+passwords[os.environ["BOT_DASHBOARD_API_USERNAME"]] = os.environ[
+    "BOT_DASHBOARD_API_PASSWORD"
+]
+temporary = path.with_suffix(path.suffix + ".tmp")
+temporary.write_text(json.dumps(passwords, sort_keys=True) + "\n")
+temporary.chmod(0o600)
+temporary.replace(path)
+PY
 
 if [[ "$POSTGRES_HOST" != localhost && "$POSTGRES_HOST" != 127.0.0.1 ]]; then
     echo "POSTGRES_HOST=$POSTGRES_HOST is not local; create the role and database there yourself"

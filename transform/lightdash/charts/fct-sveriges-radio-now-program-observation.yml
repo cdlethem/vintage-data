@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sveriges_radio_now_program_observation_channel_name
+          yRef:
+            field: fct_sveriges_radio_now_program_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_sveriges_radio_now_program_observation_channel_name
+      yField:
+      - fct_sveriges_radio_now_program_observation_distinct_entities
+  type: cartesian
+description: Distinct `observation_id` values by `channel_name` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_sveriges_radio_now_program_observation_channel_name
+  exploreName: fct_sveriges_radio_now_program_observation
+  filters:
+    dimensions:
+      and:
+      - id: 6103c1e8-2ea1-5178-9172-b6ca53439b5e
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sveriges_radio_now_program_observation_observed_at
+        values:
+        - 30
+      id: eddc9bcf-0fbf-5998-b85f-e060f1e92715
+  limit: 20
+  metrics:
+  - fct_sveriges_radio_now_program_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_sveriges_radio_now_program_observation_distinct_entities
+  tableCalculations: []
+name: Distinct observation by channel name
+slug: fct-sveriges-radio-now-program-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sveriges_radio_now_program_observation_channel_name
+  - fct_sveriges_radio_now_program_observation_distinct_entities
+tableName: fct_sveriges_radio_now_program_observation
+version: 1

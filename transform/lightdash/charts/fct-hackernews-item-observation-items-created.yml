@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_hackernews_item_observation_created_at_month
+          yRef:
+            field: fct_hackernews_item_observation_distinct_items
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Month)
+      yAxis:
+      - name: Distinct items
+    layout:
+      xField: fct_hackernews_item_observation_created_at_month
+      yField:
+      - fct_hackernews_item_observation_distinct_items
+  type: cartesian
+description: Distinct `item_id` values by Hacker News `created_at` month. The archive is sparse before
+  the latest collection burst — absent months have no source rows, not zero item creation.
+metricQuery:
+  dimensions:
+  - fct_hackernews_item_observation_created_at_month
+  exploreName: fct_hackernews_item_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_hackernews_item_observation_distinct_items
+  sorts:
+  - descending: false
+    fieldId: fct_hackernews_item_observation_created_at_month
+  tableCalculations: []
+name: Distinct items created per month
+slug: fct-hackernews-item-observation-items-created
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hackernews_item_observation_created_at_month
+  - fct_hackernews_item_observation_distinct_items
+tableName: fct_hackernews_item_observation
+version: 1

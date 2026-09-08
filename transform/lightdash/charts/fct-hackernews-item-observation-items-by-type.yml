@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_hackernews_item_observation_created_at_month
+          yRef:
+            field: fct_hackernews_item_observation_distinct_items
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Month)
+      yAxis:
+      - name: Distinct items
+    layout:
+      stack: true
+      xField: fct_hackernews_item_observation_created_at_month
+      yField:
+      - fct_hackernews_item_observation_distinct_items
+  type: cartesian
+description: Distinct Hacker News items stacked by `item_type` and creation month. Both available types
+  are shown — story and comment — while absent months indicate no source rows. Bars expose the sparse
+  archive and the September 2026 collection burst rather than implying zeroes.
+metricQuery:
+  dimensions:
+  - fct_hackernews_item_observation_created_at_month
+  - fct_hackernews_item_observation_item_type
+  exploreName: fct_hackernews_item_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_hackernews_item_observation_distinct_items
+  sorts:
+  - descending: true
+    fieldId: fct_hackernews_item_observation_distinct_items
+  - descending: false
+    fieldId: fct_hackernews_item_observation_created_at_month
+  tableCalculations: []
+name: Monthly item mix by type
+pivotConfig:
+  columns:
+  - fct_hackernews_item_observation_item_type
+slug: fct-hackernews-item-observation-items-by-type
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hackernews_item_observation_created_at_month
+  - fct_hackernews_item_observation_item_type
+  - fct_hackernews_item_observation_distinct_items
+tableName: fct_hackernews_item_observation
+version: 1

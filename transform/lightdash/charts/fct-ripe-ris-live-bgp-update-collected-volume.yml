@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ripe_ris_live_bgp_update_observed_at_day
+          yRef:
+            field: fct_ripe_ris_live_bgp_update_distinct_updates
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct BGP updates
+    layout:
+      xField: fct_ripe_ris_live_bgp_update_observed_at_day
+      yField:
+      - fct_ripe_ris_live_bgp_update_distinct_updates
+  type: cartesian
+description: Distinct `update_id` values by extractor `observed_at` day. This five-day series describes
+  ingestion throughput rather than when routes changed; repeated source updates remain one per collection-day
+  group and days without a load are absent.
+metricQuery:
+  dimensions:
+  - fct_ripe_ris_live_bgp_update_observed_at_day
+  exploreName: fct_ripe_ris_live_bgp_update
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ripe_ris_live_bgp_update_distinct_updates
+  sorts:
+  - descending: false
+    fieldId: fct_ripe_ris_live_bgp_update_observed_at_day
+  tableCalculations: []
+name: Updates ingested per collection day
+slug: fct-ripe-ris-live-bgp-update-collected-volume
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ripe_ris_live_bgp_update_observed_at_day
+  - fct_ripe_ris_live_bgp_update_distinct_updates
+tableName: fct_ripe_ris_live_bgp_update
+version: 1

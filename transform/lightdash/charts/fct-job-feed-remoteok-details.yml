@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of Remote OK job observations. Each row represents one Remote OK job
+  identifier as observed in one extractor response at an observed timestamp; repeated raw ingestion of
+  the same observation is reduced to the latest loaded copy while load-layer lineage is retained for audit
+  and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_job_feed_remoteok_observed_at
+  - fct_job_feed_remoteok_job_id
+  - fct_job_feed_remoteok_company
+  - fct_job_feed_remoteok_source_loaded_at
+  exploreName: fct_job_feed_remoteok
+  filters:
+    dimensions:
+      and:
+      - id: bb82a9e0-1ed0-50aa-a60b-e50713c84aa1
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_feed_remoteok_observed_at
+        values:
+        - 30
+      id: 341fdbdd-5e8c-598c-9073-c07b6b53878b
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_remoteok_observed_at
+  tableCalculations: []
+name: Job feed remoteok — observations
+slug: fct-job-feed-remoteok-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_job_feed_remoteok
+version: 1

@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_openfema_declaration_observation_requested_day
+          yRef:
+            field: fct_openfema_declaration_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Declaration requested at (Day)
+      yAxis:
+      - name: Distinct declaration
+    layout:
+      stack: true
+      xField: fct_openfema_declaration_observation_requested_day
+      yField:
+      - fct_openfema_declaration_observation_distinct_entities
+  type: cartesian
+description: Distinct `declaration_id` values by `declaration_type` on FEMA request day. Both declaration
+  types are retained, while null or empty days are absent rather than interpreted as zero.
+metricQuery:
+  dimensions:
+  - fct_openfema_declaration_observation_requested_day
+  - fct_openfema_declaration_observation_declaration_type
+  exploreName: fct_openfema_declaration_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_openfema_declaration_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_openfema_declaration_observation_distinct_entities
+  - descending: false
+    fieldId: fct_openfema_declaration_observation_requested_day
+  tableCalculations: []
+name: Requested declarations by day and type
+pivotConfig:
+  columns:
+  - fct_openfema_declaration_observation_declaration_type
+slug: fct-openfema-declaration-observation-declarations-by-request-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openfema_declaration_observation_requested_day
+  - fct_openfema_declaration_observation_declaration_type
+  - fct_openfema_declaration_observation_distinct_entities
+tableName: fct_openfema_declaration_observation
+version: 1

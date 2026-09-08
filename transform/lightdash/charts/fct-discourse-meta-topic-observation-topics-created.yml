@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_discourse_meta_topic_observation_created_at_day
+          yRef:
+            field: fct_discourse_meta_topic_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct topic
+    layout:
+      xField: fct_discourse_meta_topic_observation_created_at_day
+      yField:
+      - fct_discourse_meta_topic_observation_distinct_entities
+  type: cartesian
+description: Distinct `topic_id` values grouped by each topic's Discourse `created_at` day. This is a
+  source-event flow of topics represented in the feed, not a polling count; days with no represented creations
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_discourse_meta_topic_observation_created_at_day
+  exploreName: fct_discourse_meta_topic_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_discourse_meta_topic_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_discourse_meta_topic_observation_created_at_day
+  tableCalculations: []
+name: Distinct topics by creation day
+slug: fct-discourse-meta-topic-observation-topics-created
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_discourse_meta_topic_observation_created_at_day
+  - fct_discourse_meta_topic_observation_distinct_entities
+tableName: fct_discourse_meta_topic_observation
+version: 1

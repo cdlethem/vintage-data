@@ -1,0 +1,29 @@
+name: source_vetting
+description: vet one discovery and propose implementation work
+schedule: "47 */6 * * *"
+enabled: true
+model: vetting_cli
+prompt: prompt.md
+timeout_minutes: 35
+context_budget_minutes: 5
+model_budget_minutes: 25
+cleanup_margin_seconds: 180
+capacity_policy: skip
+retry_on: [transient]
+freshness_sla_minutes: 420
+requires_capabilities: [web_search]
+context:
+  VETTING_CONTEXT:
+    command: ["orchestration/.venv/bin/python", "bots/agent_context.py", "vetting"]
+    cwd: .
+    timeout_s: 300
+triggers: []
+gate:
+  context: VETTING_CONTEXT
+  path: pending_count
+  operator: equals
+  value: 0
+  reason_code: no_vetting_candidates
+output:
+  format: json
+  schema: source_vetting_v2

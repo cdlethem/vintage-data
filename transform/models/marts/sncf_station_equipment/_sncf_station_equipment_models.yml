@@ -1,0 +1,335 @@
+version: 2
+models:
+- name: fct_sncf_station_equipment_observation
+  description: Twice-hourly physical history of equipment published by SNCF station services. Each row
+    represents one equipment identifier from one source at one extractor observation time. Repeated copies
+    of an observation from later insert-only raw loads are reduced to the latest loaded copy, while source
+    and load lineage are retained. The source coordinate text is preserved and parsed into nullable latitude
+    and longitude values.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, equipment_id, observed_at
+      label: Sncf station equipment observation
+      group_label: Sncf station equipment
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: sncf_station_equi_52e55f
+      vintage:
+        visualization:
+          dimension: operating_status
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct equipment by operating status
+          description: Distinct `equipment_id` values by `operating_status` among observations in the
+            selected window. Repeated observations of an entity count once within each group. An entity
+            that changed category can appear in multiple groups; these groups are not additive and do
+            not represent a current-state census.
+          detail_fields:
+          - observed_at
+          - equipment_id
+          - operating_status
+          - source_loaded_at
+          sources:
+          - '`sncf_station_equipment` — licence: SNCF open-data reuse terms; attribution required: True.
+            Source configuration: `extract/sources/sncf_station_equipment.yml`.'
+          analysis:
+            headline: how the reported station-equipment catalogue and operating-status mix change across
+              each polling hour.
+            event_time: observed_at
+            grain: HOUR
+            controls:
+            - operating_status
+            - location_description
+            trends:
+            - slug: equipment-level
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: HOUR
+              title: Distinct equipment observed each hour
+              description: Distinct `equipment_id` values present in the republished catalogue at each
+                observation hour. This is a level rather than a flow — the publisher republishes equipment,
+                so changes indicate coverage or catalogue revisions; hours without a successful poll are
+                absent rather than zero.
+              width: half
+            - slug: station-level
+              kind: total
+              metric: distinct_stations
+              time: observed_at
+              grain: HOUR
+              title: Distinct stations represented each hour
+              description: Distinct `station_id` values represented in the catalogue at each observation
+                hour. This is a reporting-coverage level, not newly added stations; hours without a
+                successful poll are absent rather than zero.
+              width: half
+            - slug: status-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: operating_status
+              top_n: 4
+              time: observed_at
+              grain: HOUR
+              title: Equipment catalogue by operating status
+              description: Distinct `equipment_id` values per observation hour, stacked by source
+                `operating_status`. The four observed statuses, including the null status series, are
+                retained; this is a catalogue mix rather than a count of status changes, and missing
+                poll hours are absent rather than zero.
+              width: full
+            - slug: stations-by-status
+              kind: breakdown
+              metric: distinct_stations
+              breakdown: operating_status
+              top_n: 4
+              time: observed_at
+              grain: HOUR
+              title: Stations represented by operating status
+              description: Distinct `station_id` values per observation hour pivoted by
+                `operating_status`. The four observed statuses are shown and are not additive when a
+                station has equipment in multiple statuses; missing poll hours are absent rather than
+                zero.
+              width: full
+  columns:
+  - name: sncf_station_equipment_key
+    description: Stable hash of the source name, equipment identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sncf station equipment key
+          hidden: true
+          name: sncf_station_equi_52e55f
+  - name: source_name
+    description: Source product label that supplied the equipment observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: equipment_id
+    description: Stable identifier assigned by the SNCF source to the equipment.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct equipment
+            description: Distinct `equipment_id` values by `operating_status` among observations in the
+              selected window. Repeated observations of an entity count once within each group. An entity
+              that changed category can appear in multiple groups; these groups are not additive and do
+              not represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Equipment id
+          hidden: false
+  - name: station_id
+    description: Station identifier associated with the equipment in the SNCF source.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_stations:
+            type: count_distinct
+            label: Distinct stations
+            description: Distinct `station_id` values represented by the equipment catalogue at each
+              observation time and breakdown. This measures reporting coverage rather than newly added
+              stations.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Station id
+          hidden: false
+  - name: equipment_name
+    description: Human-readable equipment label supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Equipment name
+          hidden: false
+  - name: position_geographique
+    description: Original source coordinate text, retained without reinterpretation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Position geographique
+          hidden: false
+  - name: latitude
+    description: Parsed latitude from the source coordinate text, when valid.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: longitude
+    description: Parsed longitude from the source coordinate text, when valid.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: location_description
+    description: Source description of the equipment's station location.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location description
+          hidden: false
+  - name: operating_status
+    description: Equipment operating status reported by the source, such as OK, KO, or INCONNU.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Operating status
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the equipment record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_row_id
+    description: Raw loader row identifier for the retained equipment observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained equipment observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained equipment observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained equipment observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date for the retained equipment observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction began for the retained equipment observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: extract_s_51074f
+  - name: load_id
+    description: Load operation identifier that inserted the retained equipment observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained equipment observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained raw equipment record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

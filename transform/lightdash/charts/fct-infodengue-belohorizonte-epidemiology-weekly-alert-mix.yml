@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+          yRef:
+            field: fct_infodengue_belohorizonte_epidemiology_distinct_records
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Week start date (Week)
+      yAxis:
+      - name: Distinct epidemiological record
+    layout:
+      stack: true
+      xField: fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+      yField:
+      - fct_infodengue_belohorizonte_epidemiology_distinct_records
+  type: cartesian
+description: Distinct provider `record_id` observations per epidemiological week stacked by the three
+  alert levels. The stack shows which alert level labels the published row; absent weeks are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+  - fct_infodengue_belohorizonte_epidemiology_alert_level
+  exploreName: fct_infodengue_belohorizonte_epidemiology
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_infodengue_belohorizonte_epidemiology_distinct_records
+  sorts:
+  - descending: true
+    fieldId: fct_infodengue_belohorizonte_epidemiology_distinct_records
+  - descending: false
+    fieldId: fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+  tableCalculations: []
+name: Weekly observation mix by alert level
+pivotConfig:
+  columns:
+  - fct_infodengue_belohorizonte_epidemiology_alert_level
+slug: fct-infodengue-belohorizonte-epidemiology-weekly-alert-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_infodengue_belohorizonte_epidemiology_week_start_date_week
+  - fct_infodengue_belohorizonte_epidemiology_alert_level
+  - fct_infodengue_belohorizonte_epidemiology_distinct_records
+tableName: fct_infodengue_belohorizonte_epidemiology
+version: 1

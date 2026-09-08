@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_open311_service_request_observation_requested_at_week
+          yRef:
+            field: fct_open311_service_request_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Requested at (Week)
+      yAxis:
+      - name: Distinct request
+    layout:
+      xField: fct_open311_service_request_observation_requested_at_week
+      yField:
+      - fct_open311_service_request_observation_distinct_entities
+  type: cartesian
+description: Distinct requests per request week pivoted by the eight service codes with the most requests
+  across the full history. The other 73 codes are excluded rather than aggregated, so the lines do not
+  represent all demand.
+metricQuery:
+  dimensions:
+  - fct_open311_service_request_observation_requested_at_week
+  - fct_open311_service_request_observation_service_code
+  exploreName: fct_open311_service_request_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_open311_service_request_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_open311_service_request_observation_distinct_entities
+  - descending: false
+    fieldId: fct_open311_service_request_observation_requested_at_week
+  tableCalculations: []
+name: Request trajectories for leading service codes
+pivotConfig:
+  columns:
+  - fct_open311_service_request_observation_service_code
+slug: fct-open311-service-request-observation-requests-by-service-code
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_open311_service_request_observation_requested_at_week
+  - fct_open311_service_request_observation_service_code
+  - fct_open311_service_request_observation_distinct_entities
+tableName: fct_open311_service_request_observation
+version: 1

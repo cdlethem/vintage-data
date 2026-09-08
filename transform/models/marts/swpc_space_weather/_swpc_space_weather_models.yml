@@ -1,0 +1,329 @@
+version: 2
+models:
+- name: fct_swpc_space_weather
+  description: Hourly physical history of NOAA SWPC planetary K-index observations. Each row represents
+    one source, SWPC observation identifier, and three-hour observation timestamp. Repeated insert-only
+    raw snapshots are reduced to the latest loaded copy for that observation while extractor and load
+    lineage remain available for audit and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, observation_id, observation_at
+      label: Swpc space weather
+      group_label: Swpc space weather
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: swpc_space_weather_key
+      vintage:
+        visualization:
+          dimension: observation_at
+          metric: average_kp_index
+          time: fetched_at
+          window_days: 30
+          title: Mean observed kp index by observation at
+          description: Mean observed kp index by `observation_at` in the selected observation window.
+            Planetary K-index value reported by SWPC for the observation interval. Each retained observation
+            has equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+            a latest-value measure or an additive total.
+          detail_fields:
+          - fetched_at
+          - observation_id
+          - observation_at
+          - kp_index
+          - source_loaded_at
+          sources:
+          - '`swpc_space_weather` — licence: NOAA SWPC — public domain; attribution required: False. Source
+            configuration: `extract/sources/swpc_space_weather.yml`.'
+          analysis:
+            headline: how NOAA's planetary activity and reporting coverage move across source observation days.
+            event_time: observation_at
+            grain: DAY
+            controls:
+            - source_name
+            - station_count
+            - a_running_index
+            trends:
+            - slug: kp-activity
+              kind: total
+              metric: average_kp_index
+              time: observation_at
+              grain: DAY
+              title: Mean planetary K-index by observation day
+              description: Mean `kp_index` across SWPC observations assigned to each source observation day.
+                This is an observation-weighted activity level rather than an additive storm total; days with
+                no source observations are absent rather than zero.
+              width: half
+            - slug: a-index-activity
+              kind: total
+              metric: average_a_running_index
+              time: observation_at
+              grain: DAY
+              title: Mean running A-index by observation day
+              description: Mean `a_running_index` across SWPC observations assigned to each source observation
+                day. This is an observation-weighted level, not a cumulative index; days with no source
+                observations are absent rather than zero.
+              width: half
+            - slug: station-coverage
+              kind: total
+              metric: average_station_count
+              time: observation_at
+              grain: DAY
+              title: Mean reporting station count by day
+              description: Mean `station_count` contributing to each day's source observations. This measures
+                reporting coverage rather than station totals over time; irregular polling gives each retained
+                observation equal weight, and absent days are absent rather than zero.
+              width: half
+            - slug: activity-by-stations
+              kind: composition
+              metric: average_kp_index
+              breakdown: station_count
+              top_n: 2
+              time: observation_at
+              grain: DAY
+              title: K-index mix by reporting station count
+              description: Mean `kp_index` stacked by the two observed `station_count` values for each source
+                observation day. This compares activity readings by reporting coverage, not additive storm
+                volume; no station-count remainder is aggregated.
+              width: full
+  columns:
+  - name: swpc_space_weather_key
+    description: Stable hash of the source name, SWPC observation identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '6 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '6 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Swpc space weather key
+          hidden: true
+  - name: source_name
+    description: SWPC feed source label identifying the upstream product.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: observation_id
+    description: Identifier assigned by SWPC to the planetary K-index observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Observation id
+          hidden: false
+  - name: fetched_at
+    description: Timestamp at which the extractor fetched the SWPC response containing this observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: observation_at
+    description: Timestamp at which SWPC assigns the planetary K-index observation, sourced from time_tag.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observation at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: kp_index
+    description: Planetary K-index value reported by SWPC for the observation interval.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_kp_index:
+            type: average
+            label: Mean observed kp index
+            description: Mean observed kp index by `observation_at` in the selected observation window.
+              Planetary K-index value reported by SWPC for the observation interval. Each retained observation
+              has equal weight; polling frequency and repeated snapshots can affect the mean. This is
+              not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Kp index
+          hidden: false
+          format: '#,##0.00'
+  - name: a_running_index
+    description: Running planetary A-index value reported by SWPC at the observation timestamp.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_a_running_index:
+            type: average
+            label: Mean running A-index
+            description: Mean `a_running_index` across retained SWPC observations in each source observation
+              time bucket. This is an observation-weighted level, not a cumulative sum.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: A running index
+          hidden: false
+          format: '#,##0'
+  - name: station_count
+    description: Number of observing stations contributing to the SWPC record.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_station_count:
+            type: average
+            label: Mean reporting station count
+            description: Mean `station_count` across retained SWPC observations in each source observation
+              time bucket. This measures reporting coverage and gives each observation equal weight.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Station count
+          hidden: false
+          format: '#,##0'
+  - name: source_timestamp
+    description: Source-provided timestamp field ts for the observation; retained separately for source
+      fidelity.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source timestamp
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _row_id
+    description: Load-layer row identifier of the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained SWPC observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: _dt
+    description: Load-layer partition date associated with the retained raw observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: Timestamp when the extract job that produced the retained observation started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted the retained raw observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer content hash of the retained raw observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

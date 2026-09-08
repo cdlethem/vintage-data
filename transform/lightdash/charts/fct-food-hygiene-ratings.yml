@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_food_hygiene_ratings_business_type
+          yRef:
+            field: fct_food_hygiene_ratings_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_food_hygiene_ratings_business_type
+      yField:
+      - fct_food_hygiene_ratings_distinct_entities
+  type: cartesian
+description: Distinct `rating_id` values by `business_type` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_food_hygiene_ratings_business_type
+  exploreName: fct_food_hygiene_ratings
+  filters:
+    dimensions:
+      and:
+      - id: 9e708f9c-90f1-5b28-8138-2f8e6c711c25
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_food_hygiene_ratings_observed_at
+        values:
+        - 30
+      id: af849a3f-f130-5106-8610-40b7743f6474
+  limit: 20
+  metrics:
+  - fct_food_hygiene_ratings_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_food_hygiene_ratings_distinct_entities
+  tableCalculations: []
+name: Distinct rating by business type
+slug: fct-food-hygiene-ratings
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_food_hygiene_ratings_business_type
+  - fct_food_hygiene_ratings_distinct_entities
+tableName: fct_food_hygiene_ratings
+version: 1

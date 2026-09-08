@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 62a92dad-2c85-54f0-9b38-9ed5c94dc65f
+    label: 'Speedrun run: Game name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_speedrun_run_game_name
+      tableName: fct_speedrun_run
+    values: []
+  - disabled: true
+    id: 35577f8a-9ef9-5eae-9224-57345f1dfa8f
+    label: 'Speedrun run: Category name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_speedrun_run_category_name
+      tableName: fct_speedrun_run
+    values: []
+  - disabled: true
+    id: 905e2e30-3229-5aa5-8015-2ffbfcb8dab9
+    label: 'Speedrun run: Platform name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_speedrun_run_platform_name
+      tableName: fct_speedrun_run
+    values: []
+  - disabled: true
+    id: d2491a8a-8696-5e0d-a950-f66dcaeaf116
+    label: 'Speedrun run: Is emulated'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_speedrun_run_is_emulated
+      tableName: fct_speedrun_run
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Speedrun Runs
+slug: speedrun-runs
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Current-state fact for Speedrun.com run records. Each row is one run identifier, retaining
+      the latest loaded representation of that run and the source observation and load lineage used to
+      select it. This model deliberately keeps player lists as JSON because a run may have multiple participants.
+
+
+      **Grain:** run_id
+
+
+      **What changes here:** how run submissions accumulate across games and platforms while completion
+      speed changes through the published run-date history.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `speedrun_runs` — licence: CC-BY-NC 4.0 — non-commercial use only; attribution required: True.
+      Source configuration: `extract/sources/speedrun_runs.yml`.'
+    hideFrame: false
+    title: Speedrun run
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Speedrun run — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct runs by run month
+    chartSlug: fct-speedrun-run-runs-by-month
+    hideTitle: false
+    title: Distinct runs by run month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean completion duration by run month
+    chartSlug: fct-speedrun-run-duration-by-month
+    hideTitle: false
+    title: Mean completion duration by run month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct runs by game and run month
+    chartSlug: fct-speedrun-run-games-by-month
+    hideTitle: false
+    title: Distinct runs by game and run month
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Run platform mix by run month
+    chartSlug: fct-speedrun-run-platform-mix-by-month
+    hideTitle: false
+    title: Run platform mix by run month
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Speedrun run — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed duration seconds by category name
+    chartSlug: fct-speedrun-run
+    hideTitle: false
+    title: Mean observed duration seconds by category name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Speedrun run — observations
+    chartSlug: fct-speedrun-run-details
+    hideTitle: false
+    title: Speedrun run — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

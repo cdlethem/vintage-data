@@ -1,0 +1,57 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_bike_station_status_station_reported_at_day
+          yRef:
+            field: fct_bike_station_status_average_num_bikes_available
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Station reported at (Day)
+      yAxis:
+      - name: Mean observed num bikes available
+    layout:
+      xField: fct_bike_station_status_station_reported_at_day
+      yField:
+      - fct_bike_station_status_average_num_bikes_available
+  type: cartesian
+description: Observation-weighted mean available bikes by the station-reported timestamp day, using the
+  recent 14-day window. The feed contains epoch-junk timestamps around 1970 outside this window; valid
+  recent timestamps describe source reporting cadence, not extractor collection volume, and days without
+  valid reports are absent.
+metricQuery:
+  dimensions:
+  - fct_bike_station_status_station_reported_at_day
+  exploreName: fct_bike_station_status
+  filters:
+    dimensions:
+      and:
+      - id: 8937df3b-f92f-5162-ab0c-033f596e2b97
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_bike_station_status_station_reported_at
+        values:
+        - 14
+      id: a2e04c77-eac6-52f4-b63b-60f9e20c7c9e
+  limit: 5000
+  metrics:
+  - fct_bike_station_status_average_num_bikes_available
+  sorts:
+  - descending: false
+    fieldId: fct_bike_station_status_station_reported_at_day
+  tableCalculations: []
+name: Available bikes by station-reported day
+slug: fct-bike-station-status-station-report-times
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_bike_station_status_station_reported_at_day
+  - fct_bike_station_status_average_num_bikes_available
+tableName: fct_bike_station_status
+version: 1

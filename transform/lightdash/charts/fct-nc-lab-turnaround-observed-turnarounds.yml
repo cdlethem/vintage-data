@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nc_lab_turnaround_fetched_at_day
+          yRef:
+            field: fct_nc_lab_turnaround_distinct_turnarounds
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Distinct turnaround reports
+    layout:
+      xField: fct_nc_lab_turnaround_fetched_at_day
+      yField:
+      - fct_nc_lab_turnaround_distinct_turnarounds
+  type: cartesian
+description: Distinct `turnaround_id` values present in each daily feed fetch. This is a snapshot level
+  of the publisher's current estimates rather than a flow of completed reports; days without a fetch are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_nc_lab_turnaround_fetched_at_day
+  exploreName: fct_nc_lab_turnaround
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nc_lab_turnaround_distinct_turnarounds
+  sorts:
+  - descending: false
+    fieldId: fct_nc_lab_turnaround_fetched_at_day
+  tableCalculations: []
+name: Distinct turnaround reports per fetch day
+slug: fct-nc-lab-turnaround-observed-turnarounds
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nc_lab_turnaround_fetched_at_day
+  - fct_nc_lab_turnaround_distinct_turnarounds
+tableName: fct_nc_lab_turnaround
+version: 1

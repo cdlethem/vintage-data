@@ -1,0 +1,172 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: bc6a74ea-01a7-50a3-9f7b-0bfcfbf31d52
+    label: 'Job feed himalayas: Employment type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_himalayas_employment_type
+      tableName: fct_job_feed_himalayas
+    values: []
+  - disabled: true
+    id: 73218fbe-ce72-567f-8678-4e3ab4324cf4
+    label: 'Job feed himalayas: Location country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_himalayas_location_country
+      tableName: fct_job_feed_himalayas
+    values: []
+  - disabled: true
+    id: 2e86740a-0145-5aa4-930e-c5733797738e
+    label: 'Job feed himalayas: Salary currency'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_himalayas_salary_currency
+      tableName: fct_job_feed_himalayas
+    values: []
+  - disabled: true
+    id: 143b1cdd-2fcd-5724-afe1-bdc93bbdc4c5
+    label: 'Job feed himalayas: Salary interval'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_himalayas_salary_interval
+      tableName: fct_job_feed_himalayas
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Feed Himalayas
+slug: job-feed-himalayas
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of Himalayas job observations. Each row represents one job identifier
+      from one upstream observation timestamp; repeated ingestion of the same observation is reduced to
+      the latest loaded copy while published job attributes and load-layer lineage remain available for
+      analysis, audit, and replay.
+
+
+      **Grain:** source, job_id, observed_at
+
+
+      **What changes here:** how the Himalayas catalogue level and employment mix change across observation
+      days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_feed_himalayas` — licence: public Himalayas jobs API; attribution required: True. Source
+      configuration: `extract/sources/job_feed_himalayas.yml`.'
+    hideFrame: false
+    title: Job feed himalayas
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed himalayas — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct jobs observed per day
+    chartSlug: fct-job-feed-himalayas-jobs-observed
+    hideTitle: false
+    title: Distinct jobs observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Hiring companies observed per day
+    chartSlug: fct-job-feed-himalayas-companies-observed
+    hideTitle: false
+    title: Hiring companies observed per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Job locations observed per day
+    chartSlug: fct-job-feed-himalayas-locations-observed
+    hideTitle: false
+    title: Job locations observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Distinct jobs by employment type
+    chartSlug: fct-job-feed-himalayas-jobs-by-employment
+    hideTitle: false
+    title: Distinct jobs by employment type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Source-posted jobs by location country
+    chartSlug: fct-job-feed-himalayas-posted-jobs-by-country
+    hideTitle: false
+    title: Source-posted jobs by location country
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed himalayas — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-feed-himalayas
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Job feed himalayas — observations
+    chartSlug: fct-job-feed-himalayas-details
+    hideTitle: false
+    title: Job feed himalayas — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

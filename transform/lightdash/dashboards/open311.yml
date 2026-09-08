@@ -1,0 +1,152 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Week
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 83d8ba1b-6474-5f53-9e02-321d52b20814
+    label: 'Open311 service request observation: Service name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_open311_service_request_observation_service_name
+      tableName: fct_open311_service_request_observation
+    values: []
+  - disabled: true
+    id: af57fa9f-f1d4-5a68-afe3-5e8e48746197
+    label: 'Open311 service request observation: Service code'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_open311_service_request_observation_service_code
+      tableName: fct_open311_service_request_observation
+    values: []
+  - disabled: true
+    id: af477a01-c8f1-588a-a1af-6a6c3027edf3
+    label: 'Open311 service request observation: Status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_open311_service_request_observation_status
+      tableName: fct_open311_service_request_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Open311
+slug: open311
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly incremental history of Open311 service-request observations. Each row is one
+      source request at one extractor observation timestamp, retaining the normalized request status and
+      attributes together with raw load lineage. Repeated copies of the same observation are reduced to
+      the latest loaded copy so the insert-only source can be replayed safely.
+
+
+      **Grain:** source_name, request_id, observed_at
+
+
+      **What changes here:** how service-request demand, service breadth, and status mix change by request
+      week.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `open311` — licence: open311 public data; attribution required: True. Source configuration: `extract/sources/open311.yml`.'
+    hideFrame: false
+    title: Open311 service request observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Open311 service request observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct requests by request week
+    chartSlug: fct-open311-service-request-observation-weekly-requests
+    hideTitle: false
+    title: Distinct requests by request week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Service codes represented by request week
+    chartSlug: fct-open311-service-request-observation-weekly-service-breadth
+    hideTitle: false
+    title: Service codes represented by request week
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Request trajectories for leading service codes
+    chartSlug: fct-open311-service-request-observation-requests-by-service-code
+    hideTitle: false
+    title: Request trajectories for leading service codes
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Request status composition by week
+    chartSlug: fct-open311-service-request-observation-status-composition
+    hideTitle: false
+    title: Request status composition by week
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Open311 service request observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct request by service name
+    chartSlug: fct-open311-service-request-observation
+    hideTitle: false
+    title: Distinct request by service name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Open311 service request observation — observations
+    chartSlug: fct-open311-service-request-observation-details
+    hideTitle: false
+    title: Open311 service request observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

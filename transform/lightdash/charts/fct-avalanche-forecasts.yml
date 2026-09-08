@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_avalanche_forecasts_danger_text
+          yRef:
+            field: fct_avalanche_forecasts_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_avalanche_forecasts_danger_text
+      yField:
+      - fct_avalanche_forecasts_distinct_entities
+  type: cartesian
+description: Distinct `forecast_id` values by `danger_text` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_avalanche_forecasts_danger_text
+  exploreName: fct_avalanche_forecasts
+  filters:
+    dimensions:
+      and:
+      - id: 07a839c8-f41c-516b-ad46-a49db985fc7d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_avalanche_forecasts_observed_at
+        values:
+        - 30
+      id: 8dceba75-1c80-588d-ab5f-c4f6ac6ed510
+  limit: 20
+  metrics:
+  - fct_avalanche_forecasts_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_avalanche_forecasts_distinct_entities
+  tableCalculations: []
+name: Distinct forecast by danger text
+slug: fct-avalanche-forecasts
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_avalanche_forecasts_danger_text
+  - fct_avalanche_forecasts_distinct_entities
+tableName: fct_avalanche_forecasts
+version: 1

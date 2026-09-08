@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_malaysia_pricecatcher_item_code
+          yRef:
+            field: fct_malaysia_pricecatcher_average_price_amount
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_malaysia_pricecatcher_item_code
+      yField:
+      - fct_malaysia_pricecatcher_average_price_amount
+  type: cartesian
+description: Mean observed price amount by `item_code` in the selected observation window. The window
+  is one day because the mart was seeded with a 126-million-row historical backfill on a single collection
+  day and now receives roughly a hundred rows per poll, so a longer window is dominated by that one backfill.
+  Price amount reported for the item at the premise on the price date, parsed to four decimal places.
+  Each retained observation has equal weight; polling frequency and repeated snapshots can affect the
+  mean. This is not a latest-value measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_malaysia_pricecatcher_item_code
+  exploreName: fct_malaysia_pricecatcher
+  filters:
+    dimensions:
+      and:
+      - id: 91757b74-6ad3-54ff-935b-dd3c3a02aa43
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_malaysia_pricecatcher_observed_at
+        values:
+        - 1
+      id: 49a5c599-0901-57da-b2fd-82e9cae8522d
+  limit: 20
+  metrics:
+  - fct_malaysia_pricecatcher_average_price_amount
+  sorts:
+  - descending: true
+    fieldId: fct_malaysia_pricecatcher_average_price_amount
+  tableCalculations: []
+name: Mean observed price amount by item code
+slug: fct-malaysia-pricecatcher
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_malaysia_pricecatcher_item_code
+  - fct_malaysia_pricecatcher_average_price_amount
+tableName: fct_malaysia_pricecatcher
+version: 1

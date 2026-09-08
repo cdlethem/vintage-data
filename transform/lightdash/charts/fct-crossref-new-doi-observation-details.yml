@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical observation fact for newly registered Crossref DOI records. Each row records
+  one DOI identifier at one extractor observation timestamp, preserving publication metadata and raw-load
+  lineage. Repeated copies of the same source, DOI, and observation timestamp retain the latest loaded
+  row.
+metricQuery:
+  dimensions: &id001
+  - fct_crossref_new_doi_observation_observed_at
+  - fct_crossref_new_doi_observation_doi_id
+  - fct_crossref_new_doi_observation_work_type
+  - fct_crossref_new_doi_observation_source_loaded_at
+  exploreName: fct_crossref_new_doi_observation
+  filters:
+    dimensions:
+      and:
+      - id: 79af9d0d-292e-5211-8437-c3b54e7075d6
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_crossref_new_doi_observation_observed_at
+        values:
+        - 30
+      id: 96c75cae-3e7e-5306-b8d2-d276ba74db0b
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_crossref_new_doi_observation_observed_at
+  tableCalculations: []
+name: Crossref new doi observation — observations
+slug: fct-crossref-new-doi-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_crossref_new_doi_observation
+version: 1

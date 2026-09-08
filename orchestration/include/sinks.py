@@ -67,8 +67,11 @@ class LocalSink(Sink):
         """Publish the staged file (atomic rename) and write the manifest.
 
         A run with zero records is a valid outcome: the empty staged file is
-        dropped and only the manifest is written.
+        dropped and only the manifest is written. A run that would clobber an
+        artifact currently under an active hold is refused: held evidence is
+        preserved byte-for-byte and republished only by an explicit release.
         """
+        self._refuse_held_clobber()
         if meta["records"] > 0:
             os.replace(self._staged, self._final)
             meta["path"] = str(self._final)
@@ -78,6 +81,16 @@ class LocalSink(Sink):
         manifest = self._final.with_name(self._final.name + ".meta.json")
         manifest.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
         return str(manifest)
+
+
+    def _refuse_held_clobber(self) -> None:
+        """Refuse to publish over an artifact that is on hold."""
+        if self._final is None:
+            return
+        hold = self._final.with_name(self._final.name + ".hold.json")
+        released = self._final.with_name(self._final.name + ".hold.released.json")
+        if hold.is_file() and not released.is_file() and self._final.exists():
+            raise FileExistsError(f"refusing to overwrite a held artifact: {self._final}")
 
     def discard(self):
         """Drop the staged file after a failed run."""

@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical fact of Levy Rozman's GothamChess Chess.com archive games. Each row is one
+  game at the archive-source and game identifier grain; repeated append-only copies are reduced to the
+  latest loaded row while game attributes and raw-load lineage remain available for audit.
+metricQuery:
+  dimensions: &id001
+  - fct_chess_archives_gothamchess_games_fetched_at
+  - fct_chess_archives_gothamchess_games_game_id
+  - fct_chess_archives_gothamchess_games_player_result
+  - fct_chess_archives_gothamchess_games_source_loaded_at
+  exploreName: fct_chess_archives_gothamchess_games
+  filters:
+    dimensions:
+      and:
+      - id: 7b9dbfdb-d327-5c51-928c-e5fcf816c6ae
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_chess_archives_gothamchess_games_fetched_at
+        values:
+        - 30
+      id: 2bde655e-ecde-525c-8f55-68d3b7574a1b
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_chess_archives_gothamchess_games_fetched_at
+  tableCalculations: []
+name: Chess archives gothamchess games — observations
+slug: fct-chess-archives-gothamchess-games-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_chess_archives_gothamchess_games
+version: 1

@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 5d60722e-b63b-5257-9590-b65efeb55c12
+    label: 'Nz charities: Postaladdresscity'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nz_charities_postaladdresscity
+      tableName: fct_nz_charities
+    values: []
+  - disabled: true
+    id: 6112a37e-2486-5e6a-986d-f9f79ff41b8f
+    label: 'Nz charities: Legalstructure'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nz_charities_legalstructure
+      tableName: fct_nz_charities
+    values: []
+  - disabled: true
+    id: f9197358-e4cc-5221-88d8-379398b47fa3
+    label: 'Nz charities: Organisationaltype'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nz_charities_organisationaltype
+      tableName: fct_nz_charities
+    values: []
+  - disabled: true
+    id: d572cb93-a109-5ff8-bd01-fcea084ff0e7
+    label: 'Nz charities: Ethniccharity'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nz_charities_ethniccharity
+      tableName: fct_nz_charities
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Nz Charities
+slug: nz-charities
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical daily snapshot of New Zealand Charities Register organisation observations. Each
+      row is one source, organisation identifier, and fetch timestamp, with the published organisation
+      attributes and nested register details retained alongside load lineage. Repeated copies of the same
+      observation grain are resolved to the latest loaded file row.
+
+
+      **Grain:** source, id, fetched_at
+
+
+      **What changes here:** when registered charities are revised and how their published overseas-spending
+      profile varies by organisation type.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `nz_charities` — licence: CC BY 3.0 NZ; attribution required: True. Source configuration: `extract/sources/nz_charities.yml`.'
+    hideFrame: false
+    title: Nz charities
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Nz charities — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Charities modified per day
+    chartSlug: fct-nz-charities-modified-charities
+    hideTitle: false
+    title: Charities modified per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Reported overseas spending share by revision day
+    chartSlug: fct-nz-charities-overseas-spending
+    hideTitle: false
+    title: Reported overseas spending share by revision day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Modified charities by legal structure
+    chartSlug: fct-nz-charities-revisions-by-legal-structure
+    hideTitle: false
+    title: Modified charities by legal structure
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Registered charities by city and registration day
+    chartSlug: fct-nz-charities-registrations-by-city
+    hideTitle: false
+    title: Registered charities by city and registration day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Nz charities — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct id by registrationstatus
+    chartSlug: fct-nz-charities
+    hideTitle: false
+    title: Distinct id by registrationstatus
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Nz charities — observations
+    chartSlug: fct-nz-charities-details
+    hideTitle: false
+    title: Nz charities — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

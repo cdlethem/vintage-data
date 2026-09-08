@@ -1,0 +1,173 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 0e1293d4-74e5-5e38-8ddf-ebbc827b77e0
+    label: 'Stackexchange question observation: Source name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_stackexchange_question_observation_source_name
+      tableName: fct_stackexchange_question_observation
+    values: []
+  - disabled: true
+    id: e9a11128-41cb-530d-af75-59709b5156bd
+    label: 'Stackexchange question observation: Is answered'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_stackexchange_question_observation_is_answered
+      tableName: fct_stackexchange_question_observation
+    values: []
+  - disabled: true
+    id: c559dcb0-0198-55d5-bdfd-b08a826ee763
+    label: 'Stackexchange question observation: Owner user type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_stackexchange_question_observation_owner_user_type
+      tableName: fct_stackexchange_question_observation
+    values: []
+  - disabled: true
+    id: 046f1d03-3196-5553-a9ed-8182c34e43bc
+    label: 'Stackexchange question observation: Owner display name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_stackexchange_question_observation_owner_display_name
+      tableName: fct_stackexchange_question_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Stackexchange
+slug: stackexchange
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Incremental physical observation fact for Stack Exchange questions. Each row is one question
+      from one Stack Exchange site at one API fetch time, retaining the question metadata, engagement
+      counters, and raw-load lineage. Replayed copies of the same site, question, and observation timestamp
+      are reduced to the latest loaded row; this model does not infer question edits or reconstruct omitted
+      API fields.
+
+
+      **Grain:** source_name, question_id, observed_at
+
+
+      **What changes here:** how the latest question catalogue changes in size, answered mix, and reported
+      engagement during the five-day API observation window.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `stackexchange` — licence: Stack Exchange API — CC-BY-SA content; attribution required: True.
+      Source configuration: `extract/sources/stackexchange.yml`.'
+    hideFrame: false
+    title: Stackexchange question observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Stackexchange question observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct questions observed per day
+    chartSlug: fct-stackexchange-question-observation-observed-questions-by-day
+    hideTitle: false
+    title: Distinct questions observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean question score observed per day
+    chartSlug: fct-stackexchange-question-observation-score-by-day
+    hideTitle: false
+    title: Mean question score observed per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean question views observed per day
+    chartSlug: fct-stackexchange-question-observation-views-by-day
+    hideTitle: false
+    title: Mean question views observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Answered and unanswered question mix
+    chartSlug: fct-stackexchange-question-observation-answered-mix-by-day
+    hideTitle: false
+    title: Answered and unanswered question mix
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Distinct questions by source creation day
+    chartSlug: fct-stackexchange-question-observation-questions-created-by-day
+    hideTitle: false
+    title: Distinct questions by source creation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Stackexchange question observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct question by is answered
+    chartSlug: fct-stackexchange-question-observation
+    hideTitle: false
+    title: Distinct question by is answered
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Stackexchange question observation — observations
+    chartSlug: fct-stackexchange-question-observation-details
+    hideTitle: false
+    title: Stackexchange question observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

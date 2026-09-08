@@ -1,0 +1,412 @@
+version: 2
+models:
+- name: fct_statuspage_incident_observation
+  description: Hourly physical history of incidents reported by the Statuspage API. Each row represents
+    one upstream status page incident at one extractor observation timestamp, retaining incident lifecycle,
+    impact, nested update and component details, page context, and complete load lineage. Repeated insert-only
+    copies of the same source, incident, and observation timestamp are reduced to the latest loaded copy.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, incident_id, observed_at
+      label: Statuspage incident observation
+      group_label: Statuspage incidents
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: statuspage_incident_key
+      vintage:
+        visualization:
+          dimension: impact
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct incident by impact
+          description: Distinct `incident_id` values by `impact` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - incident_id
+          - impact
+          - source_loaded_at
+          sources:
+          - '`statuspage_incidents` — licence: public status page; attribution required: False. Source
+            configuration: `extract/sources/statuspage_incidents.yml`.'
+          analysis:
+            headline: how incident intake and impact mix change across the three-month lifecycle history while
+              the latest feed level remains steady.
+            event_time: created_at
+            grain: DAY
+            controls:
+            - impact
+            - incident_status
+            - incident_name
+            trends:
+            - slug: observed-incidents-by-day
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct incidents in the observed feed
+              description: Distinct `incident_id` values present on each extractor observation day. This is
+                a current feed level rather than an incident flow because active incidents are republished;
+                absent observation days are absent rather than zero.
+              width: half
+            - slug: observed-names-by-day
+              kind: total
+              metric: distinct_incident_names
+              time: observed_at
+              grain: DAY
+              title: Distinct incident names in the observed feed
+              description: Distinct non-null `incident_name` values present on each observation day. This
+                measures title breadth in the republished feed, not incident volume; absent observation days
+                are absent rather than zero.
+              width: half
+            - slug: incidents-created-by-day
+              kind: total
+              metric: distinct_entities
+              time: created_at
+              grain: DAY
+              title: Incidents created per source day
+              description: Distinct `incident_id` values whose source `created_at` falls on each day. This
+                is the incident-intake flow across the available three-month history; days with no reported
+                creations are absent rather than zero.
+              width: half
+            - slug: impact-mix-by-created-day
+              kind: composition
+              metric: distinct_entities
+              breakdown: impact
+              top_n: 4
+              time: created_at
+              grain: DAY
+              title: Incident intake mix by impact
+              description: Distinct incidents by source creation day stacked by the four reported impact
+                classes. These classes cover the observed impact values, and the bars show composition of
+                the creation flow rather than repeated observation volume.
+              width: full
+  columns:
+  - name: statuspage_incident_key
+    description: Stable hash of the source name, incident identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Statuspage incident key
+          hidden: true
+  - name: source_name
+    description: Loader source label identifying the Statuspage incident feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: incident_id
+    description: Stable incident identifier assigned by the upstream Statuspage instance.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct incident
+            description: Distinct `incident_id` values by `impact` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Incident id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the incident record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: incident_name
+    description: Human-readable incident title published by the status page.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_incident_names:
+            type: count_distinct
+            label: Distinct incident names
+            description: Distinct non-null `incident_name` values in each time and filter group. This measures
+              title breadth in the published incident feed and does not count repeated snapshots as new
+              incidents.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Incident name
+          hidden: false
+  - name: incident_status
+    description: Current lifecycle status reported for the incident, such as investigating or resolved.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Incident status
+          hidden: false
+  - name: impact
+    description: Impact classification reported by the status page for the incident.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Impact
+          hidden: false
+  - name: created_at
+    description: UTC timestamp when the status page reports that the incident was created.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Created at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: updated_at
+    description: UTC timestamp when the status page reports that the incident was last updated.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: monitoring_at
+    description: UTC timestamp when the status page began monitoring the incident, when provided.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Monitoring at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: resolved_at
+    description: UTC timestamp when the status page reports that the incident was resolved, when provided.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Resolved at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: started_at
+    description: UTC timestamp when the status page reports that the incident started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Started at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: shortlink
+    description: Public short URL for the incident status page.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Shortlink
+          hidden: false
+  - name: page_id
+    description: Identifier of the Statuspage instance that published the incident.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Page id
+          hidden: false
+  - name: incident_updates
+    description: JSON array of incident update messages and their lifecycle timestamps.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Incident updates
+          hidden: true
+          sql: CAST(${TABLE}.incident_updates AS VARCHAR)
+  - name: components
+    description: JSON array of status page components associated with the incident.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Components
+          hidden: true
+          sql: CAST(${TABLE}.components AS VARCHAR)
+  - name: page
+    description: JSON object containing the publishing status page identity and context.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Page
+          hidden: true
+          sql: CAST(${TABLE}.page AS VARCHAR)
+  - name: source_row_id
+    description: Loader row identifier for the retained raw incident observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained raw incident observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained incident observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained incident observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date for the retained raw incident observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch began.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained raw incident observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained raw incident observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained raw incident record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

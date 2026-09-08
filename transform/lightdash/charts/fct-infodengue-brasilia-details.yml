@@ -1,0 +1,42 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of InfoDengue epidemiology observations for Brasília. Each row represents
+  one source observation id at one publisher fetch timestamp; repeated insert-only loads of that observation
+  are reduced to the latest loaded copy while source and loader lineage are retained. The source profile
+  found 34 rows in one recent batch, one municipality, and no null observation ids or fetch timestamps,
+  so the daily incremental grain preserves successive API snapshots without rescanning prior loads.
+metricQuery:
+  dimensions: &id001
+  - fct_infodengue_brasilia_observed_at
+  - fct_infodengue_brasilia_observation_id
+  - fct_infodengue_brasilia_municipality_name
+  - fct_infodengue_brasilia_incidence_per_100k
+  - fct_infodengue_brasilia_source_loaded_at
+  exploreName: fct_infodengue_brasilia
+  filters:
+    dimensions:
+      and:
+      - id: 27a46875-f9d1-5ab4-907c-dfa48a8f77da
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_infodengue_brasilia_observed_at
+        values:
+        - 30
+      id: 93024672-e9fe-5384-8bc5-12d1d85af54d
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_infodengue_brasilia_observed_at
+  tableCalculations: []
+name: Infodengue brasilia — observations
+slug: fct-infodengue-brasilia-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_infodengue_brasilia
+version: 1

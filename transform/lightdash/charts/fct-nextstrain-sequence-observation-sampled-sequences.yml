@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nextstrain_sequence_observation_sample_date_month
+          yRef:
+            field: fct_nextstrain_sequence_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Sample date (Month)
+      yAxis:
+      - name: Distinct sequence
+    layout:
+      xField: fct_nextstrain_sequence_observation_sample_date_month
+      yField:
+      - fct_nextstrain_sequence_observation_distinct_entities
+  type: cartesian
+description: Distinct `sequence_id` values assigned to each calendar sample month across the full published
+  sample history. This is a sample flow rather than a current catalogue count; months with no sampled
+  sequences are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_nextstrain_sequence_observation_sample_date_month
+  exploreName: fct_nextstrain_sequence_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nextstrain_sequence_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_nextstrain_sequence_observation_sample_date_month
+  tableCalculations: []
+name: Distinct sequences by sample month
+slug: fct-nextstrain-sequence-observation-sampled-sequences
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nextstrain_sequence_observation_sample_date_month
+  - fct_nextstrain_sequence_observation_distinct_entities
+tableName: fct_nextstrain_sequence_observation
+version: 1

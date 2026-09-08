@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 020c408c-29a5-5af4-b0b0-b5781cb8c3a7
+    label: 'Ireland bathing alerts: County name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ireland_bathing_alerts_county_name
+      tableName: fct_ireland_bathing_alerts
+    values: []
+  - disabled: true
+    id: 00f4ee24-95de-5abb-bfe9-bd9c5df768a2
+    label: 'Ireland bathing alerts: Local authority name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ireland_bathing_alerts_local_authority_name
+      tableName: fct_ireland_bathing_alerts
+    values: []
+  - disabled: true
+    id: 761053cd-4dc3-513e-98f0-1b525d839f2e
+    label: 'Ireland bathing alerts: Restriction in place'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ireland_bathing_alerts_restriction_in_place
+      tableName: fct_ireland_bathing_alerts
+    values: []
+  - disabled: true
+    id: 17ed0248-80dc-5c76-992b-d8f068358532
+    label: 'Ireland bathing alerts: Restriction type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ireland_bathing_alerts_restriction_type
+      tableName: fct_ireland_bathing_alerts
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Ireland Bathing Alerts
+slug: ireland-bathing-alerts
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical history of bathing-water alerts published for Irish beaches. Each
+      row is one source alert at one extractor fetch timestamp, identified by source, alert identifier,
+      and fetched_at. Repeated copies from later insert-only raw loads are reduced to the latest loaded
+      record, while load lineage is retained for replay and audit.
+
+
+      **Grain:** source, alert_id, fetched_at
+
+
+      **What changes here:** how bathing-alert levels and expected durations differ across Irish counties
+      over sparse incident dates.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `ireland_bathing_alerts` — licence: Ireland EPA open-data terms; attribution required: True. Source
+      configuration: `extract/sources/ireland_bathing_alerts.yml`.'
+    hideFrame: false
+    title: Ireland bathing alerts
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Ireland bathing alerts — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Alerts by incident start day
+    chartSlug: fct-ireland-bathing-alerts-incident-alerts
+    hideTitle: false
+    title: Alerts by incident start day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Expected duration by incident start day
+    chartSlug: fct-ireland-bathing-alerts-expected-duration
+    hideTitle: false
+    title: Expected duration by incident start day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Incident alerts by county
+    chartSlug: fct-ireland-bathing-alerts-alerts-by-county
+    hideTitle: false
+    title: Incident alerts by county
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Expected duration by restriction type and fetch day
+    chartSlug: fct-ireland-bathing-alerts-fetched-alert-levels
+    hideTitle: false
+    title: Expected duration by restriction type and fetch day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Ireland bathing alerts — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct alert by county name
+    chartSlug: fct-ireland-bathing-alerts
+    hideTitle: false
+    title: Distinct alert by county name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Ireland bathing alerts — observations
+    chartSlug: fct-ireland-bathing-alerts-details
+    hideTitle: false
+    title: Ireland bathing alerts — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

@@ -1,0 +1,344 @@
+version: 2
+models:
+- name: fct_deezer_chart_observation
+  description: Hourly physical history of Deezer chart observations. Each row represents one source, track,
+    observation timestamp, and chart position, retaining track metadata and raw-load lineage. Repeated
+    raw loads of the same chart slot are reduced to the latest loaded record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, track_id, observed_at, chart_position
+      label: Deezer chart observation
+      group_label: Deezer
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: deezer_chart_observation_key
+      vintage:
+        visualization:
+          dimension: artist_name
+          metric: average_chart_position
+          time: observed_at
+          window_days: 30
+          title: Mean observed chart position by artist name
+          description: Mean observed chart position by `artist_name` in the selected observation window.
+            One-based chart position assigned to the track in the observed chart. Each retained observation
+            has equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+            a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - track_id
+          - artist_name
+          - chart_position
+          - source_loaded_at
+          sources:
+          - '`deezer` — licence: unstated; attribution required: False. Source configuration: `extract/sources/deezer.yml`.'
+          analysis:
+            headline: how Deezer's short-window chart level, artist breadth, ranking, and explicit-content mix move across observations.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - artist_name
+            - is_explicit
+            - album_title
+            trends:
+            - slug: daily-chart-position
+              kind: total
+              metric: average_chart_position
+              time: observed_at
+              grain: DAY
+              title: Mean chart position per day
+              description: Average one-based `chart_position` across retained chart observations on each
+                `observed_at` day. This is a short collection-time level, not a flow; repeated polling gives
+                observations equal weight and days without a successful extract are absent rather than zero.
+              width: half
+            - slug: daily-track-breadth
+              kind: total
+              metric: distinct_tracks
+              time: observed_at
+              grain: DAY
+              title: Distinct tracks observed per day
+              description: Distinct `track_id` values present in the Deezer chart on each `observed_at` day.
+                This measures the published chart breadth rather than plays or additions; absent observation
+                days are absent rather than zero.
+              width: half
+            - slug: artist-rank-trajectories
+              kind: breakdown
+              metric: average_chart_position
+              breakdown: artist_name
+              top_n: 6
+              time: observed_at
+              grain: DAY
+              title: Mean chart position by leading artist
+              description: Average one-based `chart_position` per `observed_at` day, pivoted by the six artists
+                with the most retained observations. Other artists are excluded rather than aggregated, and
+                lower positions indicate stronger chart rank.
+              width: full
+            - slug: explicit-content-mix
+              kind: composition
+              metric: distinct_tracks
+              breakdown: is_explicit
+              top_n: 2
+              time: observed_at
+              grain: DAY
+              title: Chart tracks by explicit-content flag
+              description: Distinct `track_id` values per `observed_at` day, stacked by `is_explicit`. This
+                shows the chart's metadata mix rather than a listening share; days without a retained chart
+                are absent rather than zero.
+              width: full
+            - slug: artist-duration-trajectories
+              kind: breakdown
+              metric: average_duration_seconds
+              breakdown: artist_name
+              top_n: 6
+              time: observed_at
+              grain: DAY
+              title: Mean track duration by leading artist
+              description: Average reported `duration_seconds` per `observed_at` day, pivoted by the six artists
+                with the most retained observations. Other artists are excluded rather than aggregated, and
+                repeated snapshots receive equal observation weight.
+              width: full
+  columns:
+  - name: deezer_chart_observation_key
+    description: Stable hash of the source, track, observation timestamp, and chart position defining
+      the row grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Deezer chart observation key
+          hidden: true
+  - name: source_name
+    description: Upstream source label carried by the Deezer chart record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: track_id
+    description: Deezer catalog identifier of the ranked track.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_tracks:
+            type: count_distinct
+            label: Distinct tracks
+            description: Distinct non-null `track_id` values present in the selected observation window. Repeated
+              chart snapshots count once within each time and filter group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Track id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the Deezer chart.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: genre_id
+    description: Deezer genre identifier associated with the chart response.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Genre id
+          hidden: false
+          format: '#,##0'
+  - name: chart_position
+    description: One-based chart position assigned to the track in the observed chart.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_chart_position:
+            type: average
+            label: Mean observed chart position
+            description: Mean observed chart position by `artist_name` in the selected observation window.
+              One-based chart position assigned to the track in the observed chart. Each retained observation
+              has equal weight; polling frequency and repeated snapshots can affect the mean. This is
+              not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Chart position
+          hidden: false
+          format: '#,##0'
+  - name: track_rank
+    description: Deezer rank score reported for the track at observation time.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Track rank
+          hidden: false
+          format: '#,##0'
+  - name: track_title
+    description: Track title reported by Deezer.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Track title
+          hidden: false
+  - name: artist_name
+    description: Primary artist name reported by Deezer.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Artist name
+          hidden: false
+  - name: artist_id
+    description: Deezer catalog identifier of the primary artist.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          distinct_artists:
+            type: count_distinct
+            label: Distinct artists
+            description: Distinct non-null `artist_id` values represented in the selected observation window.
+              Repeated chart snapshots count once within each time and filter group.
+            format: '#,##0'
+        dimension:
+          type: number
+          label: Artist id
+          hidden: false
+          format: '#,##0'
+  - name: album_title
+    description: Album title reported for the track by Deezer.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Album title
+          hidden: false
+  - name: duration_seconds
+    description: Track duration in seconds reported by Deezer.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_duration_seconds:
+            type: average
+            label: Average track duration seconds
+            description: Average reported `duration_seconds` in the selected observation window. Repeated
+              chart snapshots make this observation-weighted and each observation has equal weight.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Duration seconds
+          hidden: false
+          format: '#,##0'
+  - name: is_explicit
+    description: Whether Deezer marks the track as containing explicit lyrics.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is explicit
+          hidden: false
+  - name: track_url
+    description: Deezer URL for the ranked track.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Track url
+          hidden: false
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained chart record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_load_id
+    description: Identifier of the load operation that inserted the retained chart record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source load id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained chart record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained chart record in its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained chart record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer content hash of the retained raw chart record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_openfema_declaration_observation_incident_type
+          yRef:
+            field: fct_openfema_declaration_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_openfema_declaration_observation_incident_type
+      yField:
+      - fct_openfema_declaration_observation_distinct_entities
+  type: cartesian
+description: Distinct `declaration_id` values by `incident_type` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_openfema_declaration_observation_incident_type
+  exploreName: fct_openfema_declaration_observation
+  filters:
+    dimensions:
+      and:
+      - id: 7a994185-e6db-5401-aaf0-82a0b6344991
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_openfema_declaration_observation_observed_at
+        values:
+        - 30
+      id: 835c38f6-2b07-5fe9-b53c-da991b60104b
+  limit: 20
+  metrics:
+  - fct_openfema_declaration_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_openfema_declaration_observation_distinct_entities
+  tableCalculations: []
+name: Distinct declaration by incident type
+slug: fct-openfema-declaration-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openfema_declaration_observation_incident_type
+  - fct_openfema_declaration_observation_distinct_entities
+tableName: fct_openfema_declaration_observation
+version: 1

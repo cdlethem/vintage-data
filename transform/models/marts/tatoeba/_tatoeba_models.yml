@@ -1,0 +1,280 @@
+version: 2
+models:
+- name: fct_tatoeba_sentence_translation_observation
+  description: Hourly physical observation fact for Tatoeba sentence and translation records. Each row
+    represents one translation object attached to a source sentence at one extractor observation timestamp;
+    sentence-level attributes are repeated for each attached translation. The stable observation key combines
+    the source, sentence, translation, and observation timestamp, and raw-load lineage is retained for
+    replay and audit. A sentence observation with no translation objects contributes no child row to this
+    fact.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, sentence_id, translation_id, observed_at
+      label: Tatoeba sentence translation observation
+      group_label: Tatoeba
+      default_time_dimension:
+        field: obs_a6ee05
+        interval: DAY
+      primary_key: tatoeba_sen_639b13
+      vintage:
+        visualization:
+          dimension: sentence_language
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct sentence by sentence language
+          description: Distinct `sentence_id` values by `sentence_language` among observations in the
+            selected window. Repeated observations of an entity count once within each group. An entity
+            that changed category can appear in multiple groups; these groups are not additive and do
+            not represent a current-state census.
+          detail_fields:
+          - observed_at
+          - sentence_id
+          - sentence_language
+          - source_loaded_at
+          sources:
+          - '`tatoeba` — licence: per-sentence (CC BY 2.0 FR observed) -- check each record, not the dataset
+            as a whole; attribution required: True. Source configuration: `extract/sources/tatoeba.yml`.'
+          analysis:
+            headline: how the observed English-to-French sentence and translation coverage changes across collection days.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - sentence_language
+            - translation_language
+            - license
+            trends:
+            - slug: sentence-coverage
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct source sentences by observation day
+              description: Distinct non-null `sentence_id` values present in the translation feed on each
+                observation day. This is a catalogue level rather than a sentence-publication flow; days
+                without a successful extract are absent rather than zero.
+              width: half
+            - slug: translation-coverage
+              kind: total
+              metric: translation_count
+              time: observed_at
+              grain: DAY
+              title: Distinct translations by observation day
+              description: Distinct non-null `translation_id` values attached to retained source sentences on
+                each observation day. This is feed coverage at fetch time, not new translations created that
+                day; absent observation days are absent rather than zero.
+              width: half
+            - slug: translations-by-language
+              kind: composition
+              metric: translation_count
+              breakdown: translation_language
+              top_n: 2
+              time: observed_at
+              grain: DAY
+              title: Translation coverage by language
+              description: Distinct translations stacked by `translation_language` for each observation day.
+                The observed feed currently contains one language, so the single segment is a level and any
+                future languages beyond the top two are excluded rather than aggregated.
+              width: full
+  columns:
+  - name: tatoeba_sentence_translation_observation_key
+    description: Stable hash of the source, sentence ID, translation ID, and observed-at timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Tatoeba sentence translation observation key
+          hidden: true
+          name: tatoeba_sen_639b13
+  - name: source_name
+    description: Source identifier reported by the extractor, normally tatoeba.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: sentence_id
+    description: Tatoeba identifier of the observed source sentence.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct sentence
+            description: Distinct `sentence_id` values by `sentence_language` among observations in the
+              selected window. Repeated observations of an entity count once within each group. An entity
+              that changed category can appear in multiple groups; these groups are not additive and do
+              not represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Sentence id
+          hidden: false
+  - name: sentence_text
+    description: Text of the observed source sentence.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sentence text
+          hidden: false
+  - name: sentence_language
+    description: ISO language code reported for the observed source sentence.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sentence language
+          hidden: false
+  - name: translation_id
+    description: Tatoeba identifier of the attached translation sentence.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        metrics:
+          translation_count:
+            type: count_distinct
+            label: Distinct translations
+            description: Distinct non-null `translation_id` values represented in each observation time
+              bucket. Repeated translation snapshots count once within each time and filter group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Translation id
+          hidden: false
+  - name: translation_text
+    description: Text of the attached translation sentence.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Translation text
+          hidden: false
+  - name: translation_language
+    description: ISO language code reported for the attached translation sentence.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Translation language
+          hidden: false
+          name: translation_607b6e
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the sentence and translation relationship.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: obs_a6ee05
+  - name: license
+    description: Per-sentence license reported by Tatoeba for the source sentence.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: License
+          hidden: false
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_load_id
+    description: Identifier of the load job that inserted the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source load id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the source sentence observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the source observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+          name: source_file_36bd5c
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the source observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: sou_2059e1
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw source record content used for lineage and deduplication.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

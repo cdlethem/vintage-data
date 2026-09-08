@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly incremental fact of GDELT DOC article observations. Each row represents one document
+  identifier observed at one extractor fetch timestamp, retaining the article metadata and the raw-load
+  lineage for replay and audit. Replayed copies of the same document observation are reduced to the latest
+  loaded record; this model does not infer article sentiment, topic, or canonical identity beyond the
+  supplied URL.
+metricQuery:
+  dimensions: &id001
+  - fct_gdelt_document_observation_observed_at
+  - fct_gdelt_document_observation_document_id
+  - fct_gdelt_document_observation_language
+  - fct_gdelt_document_observation_source_loaded_at
+  exploreName: fct_gdelt_document_observation
+  filters:
+    dimensions:
+      and:
+      - id: fece148e-b78f-54b8-a172-765583a75636
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_gdelt_document_observation_observed_at
+        values:
+        - 30
+      id: 4c21e79b-6e57-57db-bea7-e2a59196fec3
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_gdelt_document_observation_observed_at
+  tableCalculations: []
+name: Gdelt document observation — observations
+slug: fct-gdelt-document-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_gdelt_document_observation
+version: 1

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_texas_scratch_prize_observation_game_close_date_day
+          yRef:
+            field: fct_texas_scratch_prize_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Game close date (Day)
+      yAxis:
+      - name: Distinct prize records
+    layout:
+      stack: true
+      xField: fct_texas_scratch_prize_observation_game_close_date_day
+      yField:
+      - fct_texas_scratch_prize_observation_distinct_entities
+  type: cartesian
+description: Distinct `prize_id` values with a non-null scheduled close date, stacked by ticket price.
+  This is a sparse five-date schedule view rather than a historical flow; dates with no scheduled closes
+  and rows without a close date are absent.
+metricQuery:
+  dimensions:
+  - fct_texas_scratch_prize_observation_game_close_date_day
+  - fct_texas_scratch_prize_observation_ticket_price
+  exploreName: fct_texas_scratch_prize_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_texas_scratch_prize_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_texas_scratch_prize_observation_distinct_entities
+  - descending: false
+    fieldId: fct_texas_scratch_prize_observation_game_close_date_day
+  tableCalculations: []
+name: Prize levels by scheduled game close date
+pivotConfig:
+  columns:
+  - fct_texas_scratch_prize_observation_ticket_price
+slug: fct-texas-scratch-prize-observation-closing-schedule
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_texas_scratch_prize_observation_game_close_date_day
+  - fct_texas_scratch_prize_observation_ticket_price
+  - fct_texas_scratch_prize_observation_distinct_entities
+tableName: fct_texas_scratch_prize_observation
+version: 1

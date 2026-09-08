@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_openligadb_match_observations_scheduled_at_month
+          yRef:
+            field: fct_openligadb_match_observations_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Scheduled at (Month)
+      yAxis:
+      - name: Distinct match
+    layout:
+      stack: true
+      xField: fct_openligadb_match_observations_scheduled_at_month
+      yField:
+      - fct_openligadb_match_observations_distinct_entities
+  type: cartesian
+description: Distinct scheduled `match_id` values stacked by OpenLigaDB `is_finished` status and kickoff
+  month. The stack compares completed and upcoming calendar entries; missing months are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_openligadb_match_observations_scheduled_at_month
+  - fct_openligadb_match_observations_is_finished
+  exploreName: fct_openligadb_match_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_openligadb_match_observations_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_openligadb_match_observations_distinct_entities
+  - descending: false
+    fieldId: fct_openligadb_match_observations_scheduled_at_month
+  tableCalculations: []
+name: Scheduled matches by completion status
+pivotConfig:
+  columns:
+  - fct_openligadb_match_observations_is_finished
+slug: fct-openligadb-match-observations-completion-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openligadb_match_observations_scheduled_at_month
+  - fct_openligadb_match_observations_is_finished
+  - fct_openligadb_match_observations_distinct_entities
+tableName: fct_openligadb_match_observations
+version: 1

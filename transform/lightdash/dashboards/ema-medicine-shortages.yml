@@ -1,0 +1,165 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 41a130e2-ef5b-5a3d-b1ba-20105ba6936a
+    label: 'Ema medicine shortage: Supply shortage status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ema_medicine_shortage_supply_shortage_status
+      tableName: fct_ema_medicine_shortage
+    values: []
+  - disabled: true
+    id: 43e4240a-d8de-5306-8c68-3d29ceddfeea
+    label: 'Ema medicine shortage: Availability of alternatives'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ema_medicine_shortage_availability_of_alternatives
+      tableName: fct_ema_medicine_shortage
+    values: []
+  - disabled: true
+    id: 07000a2c-f1c4-58c3-ac23-76bc9001be6f
+    label: 'Ema medicine shortage: Therapeutic area mesh'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ema_medicine_shortage_therapeutic_area_mesh
+      tableName: fct_ema_medicine_shortage
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Ema Medicine Shortages
+slug: ema-medicine-shortages
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical change-observation fact for medicine shortages published by the European
+      Medicines Agency. The extractor emits one row when a catalogue entry is first seen, updated, or
+      removed, and emits every entry when seeding its baseline. Each row is one source label, stable shortage
+      identifier, and extractor fetch timestamp. Replayed raw copies of the same observation are reduced
+      to the latest loaded row while the source change history remains available.
+
+
+      **Grain:** source, shortage_id, fetched_at
+
+
+      **What changes here:** how newly published medicine shortages and their status mix accumulate across
+      EMA history.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `ema_medicine_shortages` — licence: EMA legal notice permits commercial and non-commercial reproduction
+      and distribution when EMA is acknowledged; third-party material excluded; attribution required:
+      True. Source configuration: `extract/sources/ema_medicine_shortages.yml`.'
+    hideFrame: false
+    title: Ema medicine shortage
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Ema medicine shortage — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Shortages first published each month
+    chartSlug: fct-ema-medicine-shortage-published-shortages
+    hideTitle: false
+    title: Shortages first published each month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Affected medicines first published each month
+    chartSlug: fct-ema-medicine-shortage-published-medicines
+    hideTitle: false
+    title: Affected medicines first published each month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Published shortages by status each month
+    chartSlug: fct-ema-medicine-shortage-status-mix
+    hideTitle: false
+    title: Published shortages by status each month
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Published shortages by alternative availability
+    chartSlug: fct-ema-medicine-shortage-alternatives-mix
+    hideTitle: false
+    title: Published shortages by alternative availability
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Updated shortages by status each month
+    chartSlug: fct-ema-medicine-shortage-updated-status
+    hideTitle: false
+    title: Updated shortages by status each month
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Ema medicine shortage — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct shortage by supply shortage status
+    chartSlug: fct-ema-medicine-shortage
+    hideTitle: false
+    title: Distinct shortage by supply shortage status
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Ema medicine shortage — observations
+    chartSlug: fct-ema-medicine-shortage-details
+    hideTitle: false
+    title: Ema medicine shortage — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

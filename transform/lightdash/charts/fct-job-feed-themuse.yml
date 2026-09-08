@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_job_feed_themuse_company
+          yRef:
+            field: fct_job_feed_themuse_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_job_feed_themuse_company
+      yField:
+      - fct_job_feed_themuse_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values by `company` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_job_feed_themuse_company
+  exploreName: fct_job_feed_themuse
+  filters:
+    dimensions:
+      and:
+      - id: b70dcf91-8e9a-5359-8af2-a8e35930d59d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_feed_themuse_observed_at
+        values:
+        - 30
+      id: a0420279-fcaf-5e46-ac10-ca3a114a6f6d
+  limit: 20
+  metrics:
+  - fct_job_feed_themuse_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_themuse_distinct_entities
+  tableCalculations: []
+name: Distinct job by company
+slug: fct-job-feed-themuse
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_feed_themuse_company
+  - fct_job_feed_themuse_distinct_entities
+tableName: fct_job_feed_themuse
+version: 1

@@ -1,0 +1,597 @@
+version: 2
+models:
+- name: fct_uk_petitions
+  description: Hourly physical observations of UK Parliament petitions. Each row is one petition at one
+    upstream fetch timestamp, retaining the publisher's scalar petition attributes, nested response metadata,
+    and raw loader lineage. Repeated loads of the same petition and timestamp are reduced to the latest
+    loader row, while distinct fetch timestamps remain historical observations.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_relation, petition_id, observed_at
+      label: Uk petitions
+      group_label: Uk petitions
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: uk_petition_observation_key
+      vintage:
+        visualization:
+          dimension: state
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct petition by state
+          description: Distinct `petition_id` values by `state` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - petition_id
+          - state
+          - source_loaded_at
+          sources:
+          - '`uk_petitions` — licence: Parliament reuse terms; attribution required: True. Source configuration:
+            `extract/sources/uk_petitions.yml`.'
+          analysis:
+            headline: petition creation and signature momentum move alongside threshold events over time.
+            event_time: created_at
+            grain: WEEK
+            controls:
+            - state
+            - action
+            - record_type
+            trends:
+            - slug: petitions-created-weekly
+              kind: total
+              metric: distinct_entities
+              time: created_at
+              grain: WEEK
+              title: Distinct petitions created each week
+              description: Distinct `petition_id` values by publisher `created_at` week. This is a petition
+                creation flow rather than a current-state count; weeks without created petitions are absent
+                rather than zero.
+              width: half
+            - slug: signatures-created-weekly
+              kind: total
+              metric: average_signature_count
+              time: created_at
+              grain: WEEK
+              title: Mean signatures on petitions created each week
+              description: Mean reported `signature_count` for petitions by their `created_at` week. This is
+                an observation-weighted measure of signatures at fetch time, not signatures gained during
+                the week; repeated snapshots and polling frequency affect it, and absent weeks are not zero.
+              width: half
+            - slug: petitions-reaching-response-threshold
+              kind: total
+              metric: distinct_entities
+              time: response_threshold_reached_at
+              grain: WEEK
+              title: Petitions reaching response threshold each week
+              description: Distinct petitions whose publisher `response_threshold_reached_at` falls in each
+                week. This is a threshold-event flow; petitions without a recorded threshold timestamp are
+                absent rather than counted as zero.
+              width: half
+            - slug: petitions-by-state
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: state
+              top_n: 2
+              time: created_at
+              grain: WEEK
+              title: Petitions created each week by state
+              description: Distinct petitions created each week split by publisher `state`. Only the open
+                state is present in this extract, so the chart has one series and does not compare states;
+                absent weeks are not zero.
+              width: full
+  columns:
+  - name: uk_petition_observation_key
+    description: Stable hash of the raw source relation, petition identifier, and fetch timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '3 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '3 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Uk petition observation key
+          hidden: true
+  - name: source_relation
+    description: Raw relation label identifying the loaded UK petitions dataset.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source relation
+          hidden: false
+  - name: source
+    description: Publisher source identifier supplied by the petition API record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: petition_id
+    description: Stable petition identifier supplied by the UK Parliament API.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct petition
+            description: Distinct `petition_id` values by `state` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Petition id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the petition API response was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: record_type
+    description: Record type supplied by the API, normally petition.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Record type
+          hidden: false
+  - name: action
+    description: Action requested by the petition.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Action
+          hidden: false
+  - name: background
+    description: Background context supplied by the petition creator.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Background
+          hidden: false
+  - name: additional_details
+    description: Additional details supplied by the petition creator.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Additional details
+          hidden: false
+  - name: committee_note
+    description: Note supplied by the petitions committee.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Committee note
+          hidden: false
+  - name: state
+    description: Current petition state reported by the publisher.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: State
+          hidden: false
+  - name: signature_count
+    description: Number of signatures reported for the petition at observation time.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_signature_count:
+            type: average
+            label: Mean signature count
+            description: Mean publisher-reported `signature_count` at observation time for petitions in each
+              period. Repeated snapshots and polling frequency can affect this level; it is not an additive
+              signature flow.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Signature count
+          hidden: false
+          format: '#,##0'
+  - name: closing_date
+    description: Publisher-reported petition closing date.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Closing date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: created_at
+    description: Timestamp when the petition was created according to the publisher.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Created at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: updated_at
+    description: Timestamp when the petition was last updated according to the publisher.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: rejected_at
+    description: Timestamp when the petition was rejected, when applicable.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Rejected at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: opened_at
+    description: Timestamp when the petition was opened, when applicable.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Opened at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: closed_at
+    description: Timestamp when the petition was closed, when applicable.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Closed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: moderation_threshold_reached_at
+    description: Timestamp when the moderation threshold was reached, when applicable.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Moderation threshold reached at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: response_threshold_reached_at
+    description: Timestamp when the government response threshold was reached, when applicable.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Response threshold reached at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: government_response_at
+    description: Timestamp when a government response was recorded, when applicable.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Government response at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: debate_threshold_reached_at
+    description: Timestamp when the debate threshold was reached, when applicable.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Debate threshold reached at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: debate_scheduled_on
+    description: Date on which a debate was scheduled, when applicable.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Debate scheduled on
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: scheduled_debate_date
+    description: Date scheduled for the petition debate, when applicable.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Scheduled debate date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: debate_outcome_at
+    description: Timestamp when the debate outcome was recorded, when applicable.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Debate outcome at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: creator_name
+    description: Name of the petition creator supplied by the publisher.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Creator name
+          hidden: false
+  - name: rejection
+    description: Nested rejection metadata supplied by the publisher.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Rejection
+          hidden: true
+          sql: CAST(${TABLE}.rejection AS VARCHAR)
+  - name: government_response
+    description: Nested government response metadata supplied by the publisher.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Government response
+          hidden: true
+          sql: CAST(${TABLE}.government_response AS VARCHAR)
+  - name: debate
+    description: Nested debate metadata supplied by the publisher.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Debate
+          hidden: true
+          sql: CAST(${TABLE}.debate AS VARCHAR)
+  - name: departments
+    description: JSON array of government departments associated with the petition.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Departments
+          hidden: true
+          sql: CAST(${TABLE}.departments AS VARCHAR)
+  - name: topics
+    description: JSON array of topics associated with the petition.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Topics
+          hidden: true
+          sql: CAST(${TABLE}.topics AS VARCHAR)
+  - name: self_link
+    description: Canonical API URL for the petition record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Self link
+          hidden: false
+  - name: _row_id
+    description: Stable raw loader row identifier retained for replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Raw load batch identifier associated with the observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Raw load job identifier associated with the observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _dt
+    description: Raw partition date associated with the observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: UTC timestamp when extraction of the source file began.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _source_file
+    description: Raw source file containing the observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position in the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Stable hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

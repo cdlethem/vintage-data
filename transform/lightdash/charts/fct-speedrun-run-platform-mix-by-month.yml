@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_speedrun_run_run_date_month
+          yRef:
+            field: fct_speedrun_run_distinct_runs
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Run date (Month)
+      yAxis:
+      - name: Distinct runs
+    layout:
+      stack: true
+      xField: fct_speedrun_run_run_date_month
+      yField:
+      - fct_speedrun_run_distinct_runs
+  type: cartesian
+description: Distinct `run_id` values per run-date month stacked by the eight most common reported platforms.
+  Null and less-common platforms are excluded rather than aggregated, so the stack is not the full run
+  total.
+metricQuery:
+  dimensions:
+  - fct_speedrun_run_run_date_month
+  - fct_speedrun_run_platform_name
+  exploreName: fct_speedrun_run
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_speedrun_run_distinct_runs
+  sorts:
+  - descending: true
+    fieldId: fct_speedrun_run_distinct_runs
+  - descending: false
+    fieldId: fct_speedrun_run_run_date_month
+  tableCalculations: []
+name: Run platform mix by run month
+pivotConfig:
+  columns:
+  - fct_speedrun_run_platform_name
+slug: fct-speedrun-run-platform-mix-by-month
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_speedrun_run_run_date_month
+  - fct_speedrun_run_platform_name
+  - fct_speedrun_run_distinct_runs
+tableName: fct_speedrun_run
+version: 1

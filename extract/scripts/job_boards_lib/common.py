@@ -44,6 +44,27 @@ class HttpClient:
         self._sems: dict[str, threading.Semaphore] = {}
         self._next_at: dict[str, float] = {}
         self._lock = threading.Lock()
+        self._local = threading.local()
+
+    def begin_observation(self) -> None:
+        """Start per-thread request/retry accounting for one tenant fetch."""
+        self._local.stats = {"requests": 0, "retries": 0, "statuses": []}
+
+    def request_stats(self) -> dict:
+        """Return a copy so concurrent tenant fetches cannot cross-contaminate."""
+        stats = getattr(self._local, "stats", {"requests": 0, "retries": 0, "statuses": []})
+        return {**stats, "statuses": list(stats["statuses"])}
+
+    def _observe(self, *, status: int | None = None, retry: bool = False) -> None:
+        stats = getattr(self._local, "stats", None)
+        if stats is None:
+            return
+        if status is None:
+            stats["requests"] += 1
+        else:
+            stats["statuses"].append(status)
+        if retry:
+            stats["retries"] += 1
 
     def _sem(self, provider: str) -> threading.Semaphore:
         with self._lock:
@@ -76,14 +97,18 @@ class HttpClient:
                 req = urllib.request.Request(
                     url, data=body, headers=headers, method=method
                 )
+                self._observe()
                 try:
                     with urllib.request.urlopen(req, timeout=timeout) as resp:
+                        self._observe(status=getattr(resp, "status", 200))
                         return resp.read()
                 except urllib.error.HTTPError as exc:
+                    self._observe(status=exc.code)
                     transient = exc.code == 429 or 500 <= exc.code < 600
                     if not transient or attempt == 2:
                         raise
                     retry_after = exc.headers.get("Retry-After")
+                    self._observe(retry=True)
             try:
                 delay = min(float(retry_after), 30.0) if retry_after else 2 ** attempt
             except ValueError:

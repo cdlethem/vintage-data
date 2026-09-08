@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_radio_browser_station_snapshot_observed_at_day
+          yRef:
+            field: fct_radio_browser_station_snapshot_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct station
+    layout:
+      stack: true
+      xField: fct_radio_browser_station_snapshot_observed_at_day
+      yField:
+      - fct_radio_browser_station_snapshot_distinct_entities
+  type: cartesian
+description: Distinct stations observed per collection day stacked by country code. The eight countries
+  with the largest observed station counts are shown and the remainder is excluded rather than aggregated;
+  absent collection days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_radio_browser_station_snapshot_observed_at_day
+  - fct_radio_browser_station_snapshot_country_code
+  exploreName: fct_radio_browser_station_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_radio_browser_station_snapshot_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_radio_browser_station_snapshot_distinct_entities
+  - descending: false
+    fieldId: fct_radio_browser_station_snapshot_observed_at_day
+  tableCalculations: []
+name: Station catalogue mix by country
+pivotConfig:
+  columns:
+  - fct_radio_browser_station_snapshot_country_code
+slug: fct-radio-browser-station-snapshot-stations-by-country
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_radio_browser_station_snapshot_observed_at_day
+  - fct_radio_browser_station_snapshot_country_code
+  - fct_radio_browser_station_snapshot_distinct_entities
+tableName: fct_radio_browser_station_snapshot
+version: 1

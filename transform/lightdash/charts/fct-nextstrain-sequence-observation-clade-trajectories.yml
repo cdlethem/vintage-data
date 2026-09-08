@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_nextstrain_sequence_observation_sample_date_month
+          yRef:
+            field: fct_nextstrain_sequence_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Sample date (Month)
+      yAxis:
+      - name: Distinct sequence
+    layout:
+      xField: fct_nextstrain_sequence_observation_sample_date_month
+      yField:
+      - fct_nextstrain_sequence_observation_distinct_entities
+  type: cartesian
+description: Distinct sequences per sample month pivoted by the six clades with the most sequences across
+  the full history. The remaining 11 clades are excluded rather than aggregated, so the lines do not sum
+  to all sampled sequences.
+metricQuery:
+  dimensions:
+  - fct_nextstrain_sequence_observation_sample_date_month
+  - fct_nextstrain_sequence_observation_clade
+  exploreName: fct_nextstrain_sequence_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nextstrain_sequence_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_nextstrain_sequence_observation_distinct_entities
+  - descending: false
+    fieldId: fct_nextstrain_sequence_observation_sample_date_month
+  tableCalculations: []
+name: Sampled sequences by leading clade
+pivotConfig:
+  columns:
+  - fct_nextstrain_sequence_observation_clade
+slug: fct-nextstrain-sequence-observation-clade-trajectories
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nextstrain_sequence_observation_sample_date_month
+  - fct_nextstrain_sequence_observation_clade
+  - fct_nextstrain_sequence_observation_distinct_entities
+tableName: fct_nextstrain_sequence_observation
+version: 1

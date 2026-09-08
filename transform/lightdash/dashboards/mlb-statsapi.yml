@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Hour
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Hour
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 7b7bcc37-d19f-5f03-8654-7f791f3bee15
+    label: 'Mlb statsapi game observations: Game status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_mlb_statsapi_game_observations_game_status
+      tableName: fct_mlb_statsapi_game_observations
+    values: []
+  - disabled: true
+    id: 3178364b-a9dc-55d3-b8dc-9556278bb3fd
+    label: 'Mlb statsapi game observations: Game abstract status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_mlb_statsapi_game_observations_game_abstract_status
+      tableName: fct_mlb_statsapi_game_observations
+    values: []
+  - disabled: true
+    id: a390f610-1137-57a4-899a-d1177553a7e1
+    label: 'Mlb statsapi game observations: Home team'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_mlb_statsapi_game_observations_home_team
+      tableName: fct_mlb_statsapi_game_observations
+    values: []
+  - disabled: true
+    id: c57526b5-46a3-58b0-9283-35ae3568df84
+    label: 'Mlb statsapi game observations: Venue'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_mlb_statsapi_game_observations_venue
+      tableName: fct_mlb_statsapi_game_observations
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Mlb Statsapi
+slug: mlb-statsapi
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical observation fact for MLB schedule records. Each row is one observed game snapshot
+      at the StatsAPI fetch timestamp, retaining the scheduled game, participating teams, status, scores,
+      venue, probable pitchers, and raw-load lineage. The source does not expose player-level statistics,
+      so this model intentionally has no player grain.
+
+
+      **Grain:** game_id, observed_at
+
+
+      **What changes here:** how the scheduled game slate, status mix, and reported scores change across
+      the collection window.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `mlb_statsapi` — licence: MLB Advanced Media — personal/prototype use only, read their terms before
+      going further; attribution required: True. Source configuration: `extract/sources/mlb_statsapi.yml`.'
+    hideFrame: false
+    title: Mlb statsapi game observations
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Mlb statsapi game observations — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct scheduled games by start hour
+    chartSlug: fct-mlb-statsapi-game-observations-scheduled-games
+    hideTitle: false
+    title: Distinct scheduled games by start hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported home score by scheduled hour
+    chartSlug: fct-mlb-statsapi-game-observations-home-score-level
+    hideTitle: false
+    title: Mean reported home score by scheduled hour
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Scheduled games by broad status and start hour
+    chartSlug: fct-mlb-statsapi-game-observations-status-mix
+    hideTitle: false
+    title: Scheduled games by broad status and start hour
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean home score by leading home teams
+    chartSlug: fct-mlb-statsapi-game-observations-home-teams
+    hideTitle: false
+    title: Mean home score by leading home teams
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Mlb statsapi game observations — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct game by game status
+    chartSlug: fct-mlb-statsapi-game-observations
+    hideTitle: false
+    title: Distinct game by game status
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Mlb statsapi game observations — observations
+    chartSlug: fct-mlb-statsapi-game-observations-details
+    hideTitle: false
+    title: Mlb statsapi game observations — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

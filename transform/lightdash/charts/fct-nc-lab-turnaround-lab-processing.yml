@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_nc_lab_turnaround_fetched_at_day
+          yRef:
+            field: fct_nc_lab_turnaround_average_processing_days
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Mean observed processing days
+    layout:
+      xField: fct_nc_lab_turnaround_fetched_at_day
+      yField:
+      - fct_nc_lab_turnaround_average_processing_days
+  type: cartesian
+description: Mean reported `processing_days` per fetch day, compared across the six observed `lab` values.
+  The selected top six are retained; any additional lab would be excluded rather than aggregated.
+metricQuery:
+  dimensions:
+  - fct_nc_lab_turnaround_fetched_at_day
+  - fct_nc_lab_turnaround_lab
+  exploreName: fct_nc_lab_turnaround
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nc_lab_turnaround_average_processing_days
+  sorts:
+  - descending: true
+    fieldId: fct_nc_lab_turnaround_average_processing_days
+  - descending: false
+    fieldId: fct_nc_lab_turnaround_fetched_at_day
+  tableCalculations: []
+name: Processing days by laboratory
+pivotConfig:
+  columns:
+  - fct_nc_lab_turnaround_lab
+slug: fct-nc-lab-turnaround-lab-processing
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nc_lab_turnaround_fetched_at_day
+  - fct_nc_lab_turnaround_lab
+  - fct_nc_lab_turnaround_average_processing_days
+tableName: fct_nc_lab_turnaround
+version: 1

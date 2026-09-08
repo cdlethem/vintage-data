@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+VIS_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+set -a
+source "$VIS_ROOT/../orchestration/airflow.env"
+source "$VIS_ROOT/../orchestration/airflow.secrets.env"
+source "$VIS_ROOT/images.env"
+set +a
+exec docker compose --project-directory "$VIS_ROOT" -f "$VIS_ROOT/compose.yml" "$@"

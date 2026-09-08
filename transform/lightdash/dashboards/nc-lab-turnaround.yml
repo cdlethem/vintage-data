@@ -1,0 +1,152 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 3cffb83c-3768-5135-9fb3-a047a78db6b6
+    label: 'Nc lab turnaround: Lab'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nc_lab_turnaround_lab
+      tableName: fct_nc_lab_turnaround
+    values: []
+  - disabled: true
+    id: 80ce98e9-35b4-532c-a0e8-f27a0ab22c2a
+    label: 'Nc lab turnaround: Report type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nc_lab_turnaround_report_type
+      tableName: fct_nc_lab_turnaround
+    values: []
+  - disabled: true
+    id: 4d007d6f-f4a5-5903-854e-4d3fd19809d4
+    label: 'Nc lab turnaround: Processing time'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nc_lab_turnaround_processing_time
+      tableName: fct_nc_lab_turnaround
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Nc Lab Turnaround
+slug: nc-lab-turnaround
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Deduplicated laboratory turnaround observations from the North Carolina agronomic laboratory
+      feed. Each row records the observed turnaround estimate for one report identifier at one source
+      fetch timestamp, with typed duration measures and load lineage retained for audit and replay.
+
+
+      **Grain:** source, turnaround_id, fetched_at
+
+
+      **What changes here:** how the observed turnaround level and processing-day estimates vary across
+      labs and report types.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `nc_lab_turnaround` — licence: North Carolina public-information terms; attribution required:
+      True. Source configuration: `extract/sources/nc_lab_turnaround.yml`.'
+    hideFrame: false
+    title: Nc lab turnaround
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Nc lab turnaround — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct turnaround reports per fetch day
+    chartSlug: fct-nc-lab-turnaround-observed-turnarounds
+    hideTitle: false
+    title: Distinct turnaround reports per fetch day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean observed processing days per fetch day
+    chartSlug: fct-nc-lab-turnaround-processing-level
+    hideTitle: false
+    title: Mean observed processing days per fetch day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Processing days by laboratory
+    chartSlug: fct-nc-lab-turnaround-lab-processing
+    hideTitle: false
+    title: Processing days by laboratory
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Observed turnaround reports by type
+    chartSlug: fct-nc-lab-turnaround-report-type-mix
+    hideTitle: false
+    title: Observed turnaround reports by type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Nc lab turnaround — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed processing days by lab
+    chartSlug: fct-nc-lab-turnaround
+    hideTitle: false
+    title: Mean observed processing days by lab
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Nc lab turnaround — observations
+    chartSlug: fct-nc-lab-turnaround-details
+    hideTitle: false
+    title: Nc lab turnaround — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

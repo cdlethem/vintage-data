@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_job_feed_themuse_posted_at_month
+          yRef:
+            field: fct_job_feed_themuse_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Month)
+      yAxis:
+      - name: Distinct job
+    layout:
+      xField: fct_job_feed_themuse_posted_at_month
+      yField:
+      - fct_job_feed_themuse_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values grouped by the publisher's posted month across retained observations.
+  This is not a new-posting count because a listing can recur in later snapshots; months with no matching
+  posted records are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_job_feed_themuse_posted_at_month
+  exploreName: fct_job_feed_themuse
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_feed_themuse_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_job_feed_themuse_posted_at_month
+  tableCalculations: []
+name: Jobs by publisher posted month
+slug: fct-job-feed-themuse-monthly-postings
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_feed_themuse_posted_at_month
+  - fct_job_feed_themuse_distinct_entities
+tableName: fct_job_feed_themuse
+version: 1

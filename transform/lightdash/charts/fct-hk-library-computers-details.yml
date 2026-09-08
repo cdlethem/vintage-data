@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical observation fact for the Hong Kong Public Libraries computer-availability
+  feed. Each row records one library or availability entry identified by the source record id at one extractor
+  observation timestamp, retaining published availability fields and raw-load lineage. Repeated copies
+  of the same source, record id, and observation timestamp retain the latest loaded row.
+metricQuery:
+  dimensions: &id001
+  - fct_hk_library_computers_observed_at
+  - fct_hk_library_computers_computer_id
+  - fct_hk_library_computers_library_name
+  - fct_hk_library_computers_available_workstations
+  - fct_hk_library_computers_source_loaded_at
+  exploreName: fct_hk_library_computers
+  filters:
+    dimensions:
+      and:
+      - id: 50dc2d84-208a-5c20-8e98-b1943f9278d1
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_hk_library_computers_observed_at
+        values:
+        - 30
+      id: 26641ed9-e7fc-567d-a3e6-587f75f7a3be
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_hk_library_computers_observed_at
+  tableCalculations: []
+name: Hk library computers — observations
+slug: fct-hk-library-computers-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_hk_library_computers
+version: 1

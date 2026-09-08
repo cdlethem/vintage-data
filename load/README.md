@@ -22,6 +22,8 @@ raw.<source>       insert-only tables, lineage columns on every row
 _load.files        the ledger: which sink file produced which rows
 _load.jobs         every load job, with counts and timings
 _load.schema_changes   every column added or widened, and when
+_load.cadence_state / _load.cadence_decisions
+                   where each managed source's schedule sits, and every step it took
 ```
 
 ## Why a service and a queue
@@ -121,6 +123,30 @@ make every run red.
 Dedupe on `(source, id)` is deliberately *not* done here — RAW keeps every observation,
 including re-fetched overlaps, and the transform stage decides what "current" means.
 
+## Extract run evidence and holds
+
+Schema-v2 manifests carry extraction `health`, `completeness`, duration, partition
+results, request metrics, coverage, and state changes. `complete` means every planned
+partition succeeded; `partial` is safely loadable evidence from the partitions that did
+succeed; `failed` never publishes staged records.
+
+An active `<artifact>.hold.json` excludes the exact NDJSON artifact from discovery before
+ledger checks. Review candidates without opening the warehouse:
+
+```bash
+load/bin/loader candidates --sources infodengue
+load/bin/loader status
+```
+
+Release requires immutable artifact/manifest hashes plus recorded evidence:
+
+```bash
+load/bin/loader release /path/to/run.ndjson --actor reviewer --evidence report.json
+```
+
+Release writes `.hold.released.json`; it does not modify RAW rows, ledger history, or the
+artifact. RAW loading remains one-way and insert-only.
+
 ## Configuration
 
 Everything lives in [`config/load.yml`](config/load.yml) — destination, paths, DAG
@@ -140,6 +166,132 @@ sources:
 
 `${VAR:-default}` interpolation means the same file works under systemd, in Airflow and
 from a shell. The paths come from `orchestration/airflow.env`.
+
+## Algorithmic scheduling cadence
+
+A declared cron is a guess about how often an upstream publishes. The `cadence` task of
+`load__raw` replaces the guess with a measurement: after each load pass it compares each
+managed source's newest extract run with the run before it, and steps the schedule
+**one rung faster** when the run brought genuinely new records, **one rung slower** when
+it did not.
+
+```
+raw.<source>  ──probe two batches──▶  decision  ──▶  _load.cadence_decisions   (the log)
+                                        │            _load.cadence_state       (where it sits)
+                                        ▼
+                          state/cadence/plan.json  ──read by──▶ extract_dags.py
+```
+
+Airflow still never opens the warehouse: the plan file is the seam, the same way the job
+queue is the seam for loading. A missing, stale or out-of-bounds plan simply leaves every
+source on its declared cron.
+
+### What counts as "genuinely new"
+
+Not "the payload differs". Every record carries a per-run `fetched_at`, so
+`_content_hash` changes on every run even when the publisher published nothing — the
+probe therefore hashes each record with the volatile envelope keys removed
+(`cadence.volatile_keys`, default `fetched_at`) and counts how many of the newest
+batch's distinct records the previous batch did not have. Reading a value change on a
+stable `id` is exactly the case this catches, and the case a naive id-diff misses. A
+source loaded with `keep_payload: false` falls back to comparing `id`s.
+
+`volatile_keys` takes dotted paths, because the noisy field is often nested. Measured
+live: `statuspage_incidents` embeds the whole status page object in every incident, and
+its `page.updated_at` moves on each poll — with only `fetched_at` excluded, 50 unchanged
+incidents measured as **50 of 50 new**; adding `page.updated_at` brought that to **1 of
+50**, the one incident that had actually appeared. If a source never seems to settle,
+that is the first thing to check:
+
+```yaml
+cadence:
+  auto: true
+  volatile_keys: [fetched_at, page.updated_at]
+```
+
+The query that finds such a field — which keys differ between the two newest batches for
+the same record id:
+
+```sql
+WITH b AS (
+  SELECT batch_id, row_number() OVER (ORDER BY file_mtime DESC) AS rn
+  FROM _load.files
+  WHERE source = 'statuspage_incidents' AND status = 'loaded'
+    AND regexp_matches(batch_id, '_[0-9]{8}T[0-9]{6}Z$')
+  ORDER BY file_mtime DESC LIMIT 2
+), r AS (
+  SELECT _batch_id AS bid, id, _payload AS pl
+  FROM raw.statuspage_incidents WHERE _batch_id IN (SELECT batch_id FROM b)
+)
+SELECT a.id, k.key, left(k.av, 60) AS newest, left(k.pv, 60) AS previous
+FROM (SELECT * FROM r WHERE bid = (SELECT batch_id FROM b WHERE rn = 1)) a
+JOIN (SELECT * FROM r WHERE bid = (SELECT batch_id FROM b WHERE rn = 2)) p USING (id)
+CROSS JOIN LATERAL (
+  SELECT unnest(json_keys(a.pl)) AS key,
+         json_extract(a.pl, '$.' || unnest(json_keys(a.pl)))::VARCHAR AS av,
+         json_extract(p.pl, '$.' || unnest(json_keys(a.pl)))::VARCHAR AS pv) k
+WHERE k.av IS DISTINCT FROM k.pv
+LIMIT 10;
+```
+
+The cheap answers are taken first, in this order:
+
+| situation | signal | cost |
+|---|---|---|
+| the run loaded 0 rows | `empty_batch` — not changed | no query at all |
+| no previous run yet | `cold_start` — hold, record the batch | no query |
+| batch bigger than `max_probe_rows` | `rows_only` — rows arriving is the signal | no query |
+| otherwise | `content` (or `ids`) | one query over two batches |
+
+That last query only ever touches two batches of one table, selected by `_batch_id`.
+RAW is insert-only and loaded batch by batch, so `_batch_id` is effectively clustered and
+DuckDB's row-group statistics prune everything else: comparing two 32k-row batches of the
+8.3M-row `raw.sensor_community` measured **0.65s**, and a whole pass over seven managed
+sources measured **0.45s**.
+
+### Bounds, ladder and hysteresis
+
+A source opts in from its own yml, where the rate limit it must respect also lives:
+
+```yaml
+cadence:
+  auto: true
+  min_minutes: 15      # never poll faster than this
+  max_minutes: 720     # never drift slower than this
+```
+
+The schedule moves along `cadence.ladder_minutes` in `load.yml`, clipped to those bounds
+and to the repo-wide 5-minute floor. Only intervals a cron can express are allowed
+(a divisor of an hour, or a whole number of hours dividing a day), so "every 90 minutes"
+is rejected at config load rather than silently mis-scheduled. Synthesized crons are
+staggered by a hash of the source name, and returning to the declared interval restores
+the declared cron verbatim.
+
+`speed_up_after` / `slow_down_after` are the streak thresholds (default 1 each: step on
+the next run, as the control law is described above); `change_ratio` lets a source demand
+that a fraction of the batch be new, not just one record.
+
+A source that has produced no new run since the last pass is **not** slowed down — the
+pipeline's own silence is not evidence about the upstream. Backfill batches are excluded
+for the same reason: a 2004 unit says nothing about how often the publisher posts today.
+
+### Operating it
+
+```bash
+load/bin/loader cadence                 # managed sources, current cadence, recent steps
+load/bin/loader cadence --all --log 50  # include evaluations that held
+load/bin/loader cadence --submit --wait # re-evaluate now
+```
+
+```sql
+-- why is this source on that schedule?
+SELECT decided_at, decision, from_minutes, to_minutes, rows_new, novel_rows, signal, reason
+FROM _load.cadence_decisions WHERE source = 'statuspage_incidents'
+ORDER BY decided_at DESC LIMIT 10;
+```
+
+`monitoring/digest.py` reads the same plan, so a source the cadence layer slowed to two
+hours is judged stale against two hours, not against the cron in its yml.
 
 ## Changing destination
 
@@ -187,6 +339,7 @@ load/bin/loader submit --wait  # one incremental pass
 load/bin/loader backfill       # everything the ledger hasn't seen (uncapped)
 load/bin/loader inspect gbfs_citibike   # inferred schema, writes nothing
 load/bin/loader run-once --sources gbfs_divvy --max-files 5   # no service
+load/bin/loader cadence        # schedules the data chose, and why
 
 # query it read-only; the service releases the lock after service.idle_release_s
 load/bin/loader sql --utc "SELECT count(*) FROM raw.gbfs_divvy"
@@ -206,6 +359,10 @@ DuckDB renders `TIMESTAMPTZ` in the session timezone by default, so without it
 A newly created `load__raw` DAG is **paused**, because Airflow pauses DAGs at creation by
 default. Unpause it once (`airflow dags unpause load__raw`, or the UI toggle); the yml's
 `schedule` has nothing to do with it.
+
+Loader code changes reach the pipeline only on `systemctl restart extract-loader` — the
+service holds the package in memory. Restarting mid-job is safe (the orphaned job is
+requeued), and a new job kind (`cadence`) fails as `unknown job kind` until you do.
 
 ## Troubleshooting
 

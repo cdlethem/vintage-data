@@ -1,0 +1,42 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical history of BGP UPDATE messages observed by the RIPE RIS live collector.
+  Each row represents one source, update identifier, and observation timestamp, with the route path, announcement
+  and withdrawal sets preserved as JSON and raw-load lineage retained for audit and replay. Insert-only
+  copies of the same observation are reduced to the latest loaded copy using the append-only load timestamp
+  and file position.
+metricQuery:
+  dimensions: &id001
+  - fct_ripe_ris_live_bgp_update_observed_at
+  - fct_ripe_ris_live_bgp_update_update_id
+  - fct_ripe_ris_live_bgp_update_collector_host
+  - fct_ripe_ris_live_bgp_update_announcement_count
+  - fct_ripe_ris_live_bgp_update_source_loaded_at
+  exploreName: fct_ripe_ris_live_bgp_update
+  filters:
+    dimensions:
+      and:
+      - id: f489c342-a843-59d5-80ac-c4ebb27912c1
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_ripe_ris_live_bgp_update_observed_at
+        values:
+        - 30
+      id: 8c3b88fb-27cd-5929-8b0d-0db228ea90d2
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_ripe_ris_live_bgp_update_observed_at
+  tableCalculations: []
+name: Ripe ris live bgp update — observations
+slug: fct-ripe-ris-live-bgp-update-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_ripe_ris_live_bgp_update
+version: 1

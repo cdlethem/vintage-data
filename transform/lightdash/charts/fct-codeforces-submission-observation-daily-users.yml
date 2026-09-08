@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_codeforces_submission_observation_submitted_at_day
+          yRef:
+            field: fct_codeforces_submission_observation_distinct_users
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Submitted at (Day)
+      yAxis:
+      - name: Distinct submitters
+    layout:
+      xField: fct_codeforces_submission_observation_submitted_at_day
+      yField:
+      - fct_codeforces_submission_observation_distinct_users
+  type: cartesian
+description: Distinct non-null `user_handle` values among submissions by their `submitted_at` day. This
+  measures participating accounts, not submissions, and days without named handles are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_codeforces_submission_observation_submitted_at_day
+  exploreName: fct_codeforces_submission_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_codeforces_submission_observation_distinct_users
+  sorts:
+  - descending: false
+    fieldId: fct_codeforces_submission_observation_submitted_at_day
+  tableCalculations: []
+name: Active submitters per day
+slug: fct-codeforces-submission-observation-daily-users
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_codeforces_submission_observation_submitted_at_day
+  - fct_codeforces_submission_observation_distinct_users
+tableName: fct_codeforces_submission_observation
+version: 1

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 12
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_public_art_arcgis_observed_at_day
+          yRef:
+            field: fct_public_art_arcgis_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct feature
+    layout:
+      stack: true
+      xField: fct_public_art_arcgis_observed_at_day
+      yField:
+      - fct_public_art_arcgis_distinct_entities
+  type: cartesian
+description: Distinct `feature_id` values per observation day stacked by `category`, the district or funding
+  collection the publisher assigns. Segment heights show which district is growing its published catalogue;
+  the stack total is the whole published catalogue because each feature carries exactly one category.
+metricQuery:
+  dimensions:
+  - fct_public_art_arcgis_observed_at_day
+  - fct_public_art_arcgis_category
+  exploreName: fct_public_art_arcgis
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_public_art_arcgis_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_public_art_arcgis_distinct_entities
+  - descending: false
+    fieldId: fct_public_art_arcgis_observed_at_day
+  tableCalculations: []
+name: Published artworks by district and collection, stacked per day
+pivotConfig:
+  columns:
+  - fct_public_art_arcgis_category
+slug: fct-public-art-arcgis-district-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_public_art_arcgis_observed_at_day
+  - fct_public_art_arcgis_category
+  - fct_public_art_arcgis_distinct_entities
+tableName: fct_public_art_arcgis
+version: 1

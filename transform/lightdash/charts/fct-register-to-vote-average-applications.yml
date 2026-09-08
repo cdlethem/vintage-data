@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_register_to_vote_observed_at_day
+          yRef:
+            field: fct_register_to_vote_average_application_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed application count
+    layout:
+      xField: fct_register_to_vote_observed_at_day
+      yField:
+      - fct_register_to_vote_average_application_count
+  type: cartesian
+description: Average reported `application_count` across observations collected each day. It is a reported
+  observation level, not a sum of applications; polling frequency and repeated snapshots weight the mean,
+  and absent days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_register_to_vote_observed_at_day
+  exploreName: fct_register_to_vote
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_register_to_vote_average_application_count
+  sorts:
+  - descending: false
+    fieldId: fct_register_to_vote_observed_at_day
+  tableCalculations: []
+name: Mean reported applications collected each day
+slug: fct-register-to-vote-average-applications
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_register_to_vote_observed_at_day
+  - fct_register_to_vote_average_application_count
+tableName: fct_register_to_vote
+version: 1

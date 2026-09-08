@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nih_reporter_project_observations_organization_state
+          yRef:
+            field: fct_nih_reporter_project_observations_average_award_amount
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_nih_reporter_project_observations_organization_state
+      yField:
+      - fct_nih_reporter_project_observations_average_award_amount
+  type: cartesian
+description: Mean observed award amount by `organization_state` in the selected observation window. Award
+  amount reported by NIH Reporter in US dollars. Each retained observation has equal weight; polling frequency
+  and repeated snapshots can affect the mean. This is not a latest-value measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_nih_reporter_project_observations_organization_state
+  exploreName: fct_nih_reporter_project_observations
+  filters:
+    dimensions:
+      and:
+      - id: 85c84a6e-f6f5-56ec-9f9f-0227e6128ca4
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nih_reporter_project_observations_observed_at
+        values:
+        - 30
+      id: 6143a753-0de0-566d-8d8e-5d526916d8fc
+  limit: 20
+  metrics:
+  - fct_nih_reporter_project_observations_average_award_amount
+  sorts:
+  - descending: true
+    fieldId: fct_nih_reporter_project_observations_average_award_amount
+  tableCalculations: []
+name: Mean observed award amount by organization state
+slug: fct-nih-reporter-project-observations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nih_reporter_project_observations_organization_state
+  - fct_nih_reporter_project_observations_average_award_amount
+tableName: fct_nih_reporter_project_observations
+version: 1

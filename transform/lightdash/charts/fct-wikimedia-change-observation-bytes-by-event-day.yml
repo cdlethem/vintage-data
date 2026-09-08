@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_wikimedia_change_observation_event_at_day
+          yRef:
+            field: fct_wikimedia_change_observation_average_bytes_delta
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event at (Day)
+      yAxis:
+      - name: Mean bytes delta
+    layout:
+      xField: fct_wikimedia_change_observation_event_at_day
+      yField:
+      - fct_wikimedia_change_observation_average_bytes_delta
+  type: cartesian
+description: Mean signed `bytes_delta` per change on each UTC event day. Positive values indicate additions
+  on average and negative values indicate removals; changes are weighted equally, and absent event days
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_wikimedia_change_observation_event_at_day
+  exploreName: fct_wikimedia_change_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_wikimedia_change_observation_average_bytes_delta
+  sorts:
+  - descending: false
+    fieldId: fct_wikimedia_change_observation_event_at_day
+  tableCalculations: []
+name: Mean byte change by event day
+slug: fct-wikimedia-change-observation-bytes-by-event-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_wikimedia_change_observation_event_at_day
+  - fct_wikimedia_change_observation_average_bytes_delta
+tableName: fct_wikimedia_change_observation
+version: 1

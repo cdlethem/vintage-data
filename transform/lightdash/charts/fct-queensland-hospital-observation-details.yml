@@ -1,0 +1,47 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical history of Queensland hospital emergency-pressure observations. Each
+  row records one facility snapshot at an extractor fetch time, including source-published wait-time values,
+  normalized minute and count measures, facility metadata, and raw-load lineage. The model grain is source,
+  hospital_id, observed_at.
+metricQuery:
+  dimensions: &id001
+  - fct_queensland_hospital_observation_observed_at
+  - fct_queensland_hospital_observation_hospital_id
+  - fct_queensland_hospital_observation_facility_name
+  - fct_queensland_hospital_observation_wait_time_all_patien_fd504c
+  - fct_queensland_hospital_observation_source_loaded_at
+  exploreName: fct_queensland_hospital_observation
+  filters:
+    dimensions:
+      and:
+      - id: 321459af-072e-5073-82ad-95b4b43c098a
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_queensland_hospital_observation_observed_at
+        values:
+        - 30
+      - id: 34717c26-2f92-5396-92ff-5c95e6e042b2
+        operator: equals
+        target:
+          fieldId: fct_queensland_hospital_observation_live_data_available
+        values:
+        - true
+      id: 001dc2db-4ded-5706-abcb-f53b01ddd773
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_queensland_hospital_observation_observed_at
+  tableCalculations: []
+name: Queensland hospital observation — observations
+slug: fct-queensland-hospital-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_queensland_hospital_observation
+version: 1

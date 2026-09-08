@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_hk_parking_vacancy_vehicle_type
+          yRef:
+            field: fct_hk_parking_vacancy_average_vacancy_count
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_hk_parking_vacancy_vehicle_type
+      yField:
+      - fct_hk_parking_vacancy_average_vacancy_count
+  type: cartesian
+description: Mean observed vacancy count by `vehicle_type` in the selected observation window. Total vacancies
+  reported by the publisher for the facility and vehicle class. Each retained observation has equal weight;
+  polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure or
+  an additive total.
+metricQuery:
+  dimensions:
+  - fct_hk_parking_vacancy_vehicle_type
+  exploreName: fct_hk_parking_vacancy
+  filters:
+    dimensions:
+      and:
+      - id: 983a2b9f-a0c5-57dd-8f5c-7b57b746e400
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_hk_parking_vacancy_observed_at
+        values:
+        - 30
+      id: 016535bb-a924-5884-9bdf-8bed3a974224
+  limit: 20
+  metrics:
+  - fct_hk_parking_vacancy_average_vacancy_count
+  sorts:
+  - descending: true
+    fieldId: fct_hk_parking_vacancy_average_vacancy_count
+  tableCalculations: []
+name: Mean observed vacancy count by vehicle type
+slug: fct-hk-parking-vacancy
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hk_parking_vacancy_vehicle_type
+  - fct_hk_parking_vacancy_average_vacancy_count
+tableName: fct_hk_parking_vacancy
+version: 1

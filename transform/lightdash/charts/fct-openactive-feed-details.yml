@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Incremental physical history of OpenActive slot-feed observations, including and extractor-row
+  observation. The source row identifier preserves repeated observations as auditable append-only facts
+  alongside their original loader lineage. Slot attributes are parsed from the feed's JSON data when a
+  record is not a tombstone.
+metricQuery:
+  dimensions: &id001
+  - fct_openactive_feed_observed_at
+  - fct_openactive_feed_record_id
+  - fct_openactive_feed_state
+  - fct_openactive_feed_source_loaded_at
+  exploreName: fct_openactive_feed
+  filters:
+    dimensions:
+      and:
+      - id: 03bd50e0-661d-5be0-b10e-2d283f1babb9
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_openactive_feed_observed_at
+        values:
+        - 2
+      id: 6df43338-aeb3-55c1-941a-dfcb734500dd
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_openactive_feed_observed_at
+  tableCalculations: []
+name: Openactive feed — observations
+slug: fct-openactive-feed-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_openactive_feed
+version: 1

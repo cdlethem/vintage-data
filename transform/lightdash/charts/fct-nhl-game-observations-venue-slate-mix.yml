@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_nhl_game_observations_game_date_day
+          yRef:
+            field: fct_nhl_game_observations_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Game date (Day)
+      yAxis:
+      - name: Distinct game
+    layout:
+      stack: true
+      xField: fct_nhl_game_observations_game_date_day
+      yField:
+      - fct_nhl_game_observations_distinct_entities
+  type: cartesian
+description: Distinct scheduled `game_id` values stacked by venue and game date for the eight largest
+  venues. Remaining venues are excluded, so the stack is not the full slate.
+metricQuery:
+  dimensions:
+  - fct_nhl_game_observations_game_date_day
+  - fct_nhl_game_observations_venue
+  exploreName: fct_nhl_game_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nhl_game_observations_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_nhl_game_observations_distinct_entities
+  - descending: false
+    fieldId: fct_nhl_game_observations_game_date_day
+  tableCalculations: []
+name: Scheduled games by venue
+pivotConfig:
+  columns:
+  - fct_nhl_game_observations_venue
+slug: fct-nhl-game-observations-venue-slate-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nhl_game_observations_game_date_day
+  - fct_nhl_game_observations_venue
+  - fct_nhl_game_observations_distinct_entities
+tableName: fct_nhl_game_observations
+version: 1

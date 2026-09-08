@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_job_feed_themuse_posted_at_month
+          yRef:
+            field: fct_job_feed_themuse_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Month)
+      yAxis:
+      - name: Distinct job
+    layout:
+      xField: fct_job_feed_themuse_posted_at_month
+      yField:
+      - fct_job_feed_themuse_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values per publisher posted month for the eight departments with the largest
+  retained volume. The remainder is excluded rather than aggregated; repeated listings can recur, so this
+  is observed publication history rather than a unique-job census. Months without matching records are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_job_feed_themuse_posted_at_month
+  - fct_job_feed_themuse_department
+  exploreName: fct_job_feed_themuse
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_feed_themuse_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_themuse_distinct_entities
+  - descending: false
+    fieldId: fct_job_feed_themuse_posted_at_month
+  tableCalculations: []
+name: Published jobs by leading department
+pivotConfig:
+  columns:
+  - fct_job_feed_themuse_department
+slug: fct-job-feed-themuse-department-volume
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_feed_themuse_posted_at_month
+  - fct_job_feed_themuse_department
+  - fct_job_feed_themuse_distinct_entities
+tableName: fct_job_feed_themuse
+version: 1

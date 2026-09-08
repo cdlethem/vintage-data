@@ -1,0 +1,155 @@
+config:
+  dateZoomGranularities:
+  - Hour
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Hour
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 7f76831b-6656-59a1-b7a7-44bf2ccb8bcd
+    label: 'Opensky flight observation: Origin country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_opensky_flight_observation_origin_country
+      tableName: fct_opensky_flight_observation
+    values: []
+  - disabled: true
+    id: 7b44938b-7860-513d-9f09-aa669641f64b
+    label: 'Opensky flight observation: On ground'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_opensky_flight_observation_on_ground
+      tableName: fct_opensky_flight_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Opensky
+slug: opensky
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical history of OpenSky aircraft state observations. Each row is one source,
+      aircraft, and fetch timestamp, preserving the reported position, motion, flight identity, and raw-load
+      lineage. Replayed copies of the same observation grain are reduced to the latest loaded row; this
+      model does not interpolate tracks or infer flights between snapshots.
+
+
+      **Grain:** source, aircraft_id, observed_at
+
+
+      **What changes here:** how the observed aircraft population, altitude, speed, and country mix move
+      through each OpenSky snapshot cycle.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `opensky` — licence: OpenSky Network — public ADS-B aggregation; attribution required: False.
+      Source configuration: `extract/sources/opensky.yml`.'
+    hideFrame: false
+    title: Opensky flight observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Opensky flight observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct aircraft observed each hour
+    chartSlug: fct-opensky-flight-observation-aircraft-by-hour
+    hideTitle: false
+    title: Distinct aircraft observed each hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported barometric altitude by hour
+    chartSlug: fct-opensky-flight-observation-altitude-by-hour
+    hideTitle: false
+    title: Mean reported barometric altitude by hour
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported velocity by hour
+    chartSlug: fct-opensky-flight-observation-velocity-by-hour
+    hideTitle: false
+    title: Mean reported velocity by hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Aircraft mix by origin country and hour
+    chartSlug: fct-opensky-flight-observation-country-aircraft
+    hideTitle: false
+    title: Aircraft mix by origin country and hour
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Aircraft mix by ground status and hour
+    chartSlug: fct-opensky-flight-observation-ground-aircraft
+    hideTitle: false
+    title: Aircraft mix by ground status and hour
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Opensky flight observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed baro altitude m by origin country
+    chartSlug: fct-opensky-flight-observation
+    hideTitle: false
+    title: Mean observed baro altitude m by origin country
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Opensky flight observation — observations
+    chartSlug: fct-opensky-flight-observation-details
+    hideTitle: false
+    title: Opensky flight observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

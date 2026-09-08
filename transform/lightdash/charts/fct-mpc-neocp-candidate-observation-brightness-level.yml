@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_mpc_neocp_candidate_observation_observed_at_day
+          yRef:
+            field: fct_mpc_neocp_candidate_observation_average_visual_magnitude
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed visual magnitude
+    layout:
+      xField: fct_mpc_neocp_candidate_observation_observed_at_day
+      yField:
+      - fct_mpc_neocp_candidate_observation_average_visual_magnitude
+  type: cartesian
+description: Average reported `visual_magnitude` across candidate snapshots on each collection day. Each
+  retained observation has equal weight, so irregular polling and repeated snapshots can influence the
+  level; lower magnitudes indicate brighter objects. Missing days are absent.
+metricQuery:
+  dimensions:
+  - fct_mpc_neocp_candidate_observation_observed_at_day
+  exploreName: fct_mpc_neocp_candidate_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_mpc_neocp_candidate_observation_average_visual_magnitude
+  sorts:
+  - descending: false
+    fieldId: fct_mpc_neocp_candidate_observation_observed_at_day
+  tableCalculations: []
+name: Mean visual magnitude per observation day
+slug: fct-mpc-neocp-candidate-observation-brightness-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_mpc_neocp_candidate_observation_observed_at_day
+  - fct_mpc_neocp_candidate_observation_average_visual_magnitude
+tableName: fct_mpc_neocp_candidate_observation
+version: 1

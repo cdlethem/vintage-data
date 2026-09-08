@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_hackernews_item_observation_created_at_month
+          yRef:
+            field: fct_hackernews_item_observation_average_descendants
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Month)
+      yAxis:
+      - name: Mean story comments
+    layout:
+      xField: fct_hackernews_item_observation_created_at_month
+      yField:
+      - fct_hackernews_item_observation_average_descendants
+  type: cartesian
+description: Mean non-null `descendants` count for Hacker News stories by their `created_at` month. This
+  is an observation-weighted snapshot measure, not newly posted comments; months without story comment
+  counts are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_hackernews_item_observation_created_at_month
+  exploreName: fct_hackernews_item_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_hackernews_item_observation_average_descendants
+  sorts:
+  - descending: false
+    fieldId: fct_hackernews_item_observation_created_at_month
+  tableCalculations: []
+name: Mean story comments by creation month
+slug: fct-hackernews-item-observation-average-story-comments
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hackernews_item_observation_created_at_month
+  - fct_hackernews_item_observation_average_descendants
+tableName: fct_hackernews_item_observation
+version: 1

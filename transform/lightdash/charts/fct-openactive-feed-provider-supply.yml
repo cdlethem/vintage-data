@@ -1,0 +1,68 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_openactive_feed_starts_at_month
+          yRef:
+            field: fct_openactive_feed_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Starts at (Month)
+      yAxis:
+      - name: Distinct record
+    layout:
+      stack: true
+      xField: fct_openactive_feed_starts_at_month
+      yField:
+      - fct_openactive_feed_distinct_entities
+  type: cartesian
+description: Distinct `record_id` values per scheduled start month stacked by the eight providers with
+  the largest totals. Remaining providers are excluded rather than aggregated; stacked bars make the sparse,
+  bursty feed easier to read across past and future months.
+metricQuery:
+  dimensions:
+  - fct_openactive_feed_starts_at_month
+  - fct_openactive_feed_provider
+  exploreName: fct_openactive_feed
+  filters:
+    dimensions:
+      and:
+      - id: c6636f1b-42fc-542b-a1c4-5237b23bcd2d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_openactive_feed_observed_at
+        values:
+        - 2
+      id: fd9d1fb5-60af-5570-9580-c1cdbc292c82
+  limit: 5000
+  metrics:
+  - fct_openactive_feed_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_openactive_feed_distinct_entities
+  - descending: false
+    fieldId: fct_openactive_feed_starts_at_month
+  tableCalculations: []
+name: Scheduled records by leading provider
+pivotConfig:
+  columns:
+  - fct_openactive_feed_provider
+slug: fct-openactive-feed-provider-supply
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openactive_feed_starts_at_month
+  - fct_openactive_feed_provider
+  - fct_openactive_feed_distinct_entities
+tableName: fct_openactive_feed
+version: 1

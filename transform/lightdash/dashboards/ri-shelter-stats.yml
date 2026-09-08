@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: aa7fdf6f-75cb-5436-b68b-c2b3f7dae3c0
+    label: 'Ri shelter stats: Species'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ri_shelter_stats_species
+      tableName: fct_ri_shelter_stats
+    values: []
+  - disabled: true
+    id: 067ae65f-afcb-5200-999d-2f2a540d0eac
+    label: 'Ri shelter stats: Status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ri_shelter_stats_status
+      tableName: fct_ri_shelter_stats
+    values: []
+  - disabled: true
+    id: e3c31152-705b-5ae8-a6e9-94ce590a3af2
+    label: 'Ri shelter stats: Entity name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ri_shelter_stats_entity_name
+      tableName: fct_ri_shelter_stats
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Ri Shelter Stats
+slug: ri-shelter-stats
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Incremental physical history of Rhode Island shelter statistics. Each row is one shelter-species
+      record at one publisher observation timestamp, retaining intake, outcome, population-status metrics,
+      and raw-load lineage from the insert-only source.
+
+
+      **Grain:** source_name, record_id, observed_at
+
+
+      **What changes here:** how reported shelter intake and outcome levels change across species and
+      shelter-status records in the four-day collection history.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `ri_shelter_stats` — licence: Rhode Island terms; attribution required: True. Source configuration:
+      `extract/sources/ri_shelter_stats.yml`.'
+    hideFrame: false
+    title: Ri shelter stats
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Ri shelter stats — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Shelter records represented per observation day
+    chartSlug: fct-ri-shelter-stats-records-observed
+    hideTitle: false
+    title: Shelter records represented per observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported intake level per observation day
+    chartSlug: fct-ri-shelter-stats-intake-level
+    hideTitle: false
+    title: Mean reported intake level per observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported outcome level per observation day
+    chartSlug: fct-ri-shelter-stats-outcome-level
+    hideTitle: false
+    title: Mean reported outcome level per observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Intake level mix by species
+    chartSlug: fct-ri-shelter-stats-species-intake
+    hideTitle: false
+    title: Intake level mix by species
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Outcome level mix by shelter status
+    chartSlug: fct-ri-shelter-stats-status-outcome
+    hideTitle: false
+    title: Outcome level mix by shelter status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Ri shelter stats — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed intake count by species
+    chartSlug: fct-ri-shelter-stats
+    hideTitle: false
+    title: Mean observed intake count by species
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Ri shelter stats — observations
+    chartSlug: fct-ri-shelter-stats-details
+    hideTitle: false
+    title: Ri shelter stats — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_wayback_cdx_observation_captured_at_day
+          yRef:
+            field: fct_wayback_cdx_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Captured at (Day)
+      yAxis:
+      - name: Distinct capture
+    layout:
+      stack: true
+      xField: fct_wayback_cdx_observation_captured_at_day
+      yField:
+      - fct_wayback_cdx_observation_distinct_entities
+  type: cartesian
+description: Distinct `capture_id` values per capture day stacked by HTTP `status_code`. The eight largest
+  status series are retained and the remainder excluded rather than aggregated; segment heights show the
+  mix of captured responses, not total bytes.
+metricQuery:
+  dimensions:
+  - fct_wayback_cdx_observation_captured_at_day
+  - fct_wayback_cdx_observation_status_code
+  exploreName: fct_wayback_cdx_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_wayback_cdx_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_wayback_cdx_observation_distinct_entities
+  - descending: false
+    fieldId: fct_wayback_cdx_observation_captured_at_day
+  tableCalculations: []
+name: Capture status-code mix
+pivotConfig:
+  columns:
+  - fct_wayback_cdx_observation_status_code
+slug: fct-wayback-cdx-observation-status-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_wayback_cdx_observation_captured_at_day
+  - fct_wayback_cdx_observation_status_code
+  - fct_wayback_cdx_observation_distinct_entities
+tableName: fct_wayback_cdx_observation
+version: 1

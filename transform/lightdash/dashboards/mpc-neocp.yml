@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: a852896d-9aae-5d0c-99e9-f300b178c0d6
+    label: 'Mpc neocp candidate observation: Discovery'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_mpc_neocp_candidate_observation_discovery
+      tableName: fct_mpc_neocp_candidate_observation
+    values: []
+  - disabled: true
+    id: a5a7e188-e6b4-55a3-a541-f468a41490dc
+    label: 'Mpc neocp candidate observation: Note'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_mpc_neocp_candidate_observation_note
+      tableName: fct_mpc_neocp_candidate_observation
+    values: []
+  - disabled: true
+    id: 07045bad-d242-50cb-9f45-6b8b7d4aeeba
+    label: 'Mpc neocp candidate observation: Update description'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_mpc_neocp_candidate_observation_update_description
+      tableName: fct_mpc_neocp_candidate_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Mpc Neocp
+slug: mpc-neocp
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical history of Minor Planet Center near-Earth-object candidate reports.
+      Each row is one candidate identifier observed at one upstream fetch timestamp, with parsed numeric
+      discovery measures and raw load lineage retained for replay and audit. Rows are deduplicated by
+      the candidate observation grain, retaining the latest loaded copy.
+
+
+      **Grain:** source, candidate_id, observed_at
+
+
+      **What changes here:** how the published candidate catalogue and its reported brightness change
+      across collection days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `mpc_neocp` — licence: MPC (Minor Planet Center); attribution required: True. Source configuration:
+      `extract/sources/mpc_neocp.yml`.'
+    hideFrame: false
+    title: Mpc neocp candidate observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Mpc neocp candidate observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct candidates observed per day
+    chartSlug: fct-mpc-neocp-candidate-observation-candidate-level
+    hideTitle: false
+    title: Distinct candidates observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean visual magnitude per observation day
+    chartSlug: fct-mpc-neocp-candidate-observation-brightness-level
+    hideTitle: false
+    title: Mean visual magnitude per observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Candidate catalogue mix by discovery report
+    chartSlug: fct-mpc-neocp-candidate-observation-discovery-composition
+    hideTitle: false
+    title: Candidate catalogue mix by discovery report
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean visual magnitude by candidate note
+    chartSlug: fct-mpc-neocp-candidate-observation-note-brightness
+    hideTitle: false
+    title: Mean visual magnitude by candidate note
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Mpc neocp candidate observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed visual magnitude by temporary designation
+    chartSlug: fct-mpc-neocp-candidate-observation
+    hideTitle: false
+    title: Mean observed visual magnitude by temporary designation
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Mpc neocp candidate observation — observations
+    chartSlug: fct-mpc-neocp-candidate-observation-details
+    hideTitle: false
+    title: Mpc neocp candidate observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

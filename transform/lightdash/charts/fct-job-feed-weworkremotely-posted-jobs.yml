@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_job_feed_weworkremotely_posted_at_day
+          yRef:
+            field: fct_job_feed_weworkremotely_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Day)
+      yAxis:
+      - name: Distinct job
+    layout:
+      xField: fct_job_feed_weworkremotely_posted_at_day
+      yField:
+      - fct_job_feed_weworkremotely_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values by the day the upstream feed says each job was posted. This is a
+  sparse event-time flow over the available posting history — days without postings are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_job_feed_weworkremotely_posted_at_day
+  exploreName: fct_job_feed_weworkremotely
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_feed_weworkremotely_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_job_feed_weworkremotely_posted_at_day
+  tableCalculations: []
+name: Distinct jobs by posting day
+slug: fct-job-feed-weworkremotely-posted-jobs
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_feed_weworkremotely_posted_at_day
+  - fct_job_feed_weworkremotely_distinct_entities
+tableName: fct_job_feed_weworkremotely
+version: 1

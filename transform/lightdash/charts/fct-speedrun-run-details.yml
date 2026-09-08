@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Current-state fact for Speedrun.com run records. Each row is one run identifier, retaining
+  the latest loaded representation of that run and the source observation and load lineage used to select
+  it. This model deliberately keeps player lists as JSON because a run may have multiple participants.
+metricQuery:
+  dimensions: &id001
+  - fct_speedrun_run_observed_at
+  - fct_speedrun_run_run_id
+  - fct_speedrun_run_category_name
+  - fct_speedrun_run_duration_seconds
+  - fct_speedrun_run_source_loaded_at
+  exploreName: fct_speedrun_run
+  filters:
+    dimensions:
+      and:
+      - id: 2a989aec-ef11-563d-b794-31b0bc9383c8
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_speedrun_run_observed_at
+        values:
+        - 30
+      id: 97438e4b-9c8f-5d45-9909-69722104fddf
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_speedrun_run_observed_at
+  tableCalculations: []
+name: Speedrun run — observations
+slug: fct-speedrun-run-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_speedrun_run
+version: 1

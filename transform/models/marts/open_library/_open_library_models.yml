@@ -1,0 +1,332 @@
+version: 2
+models:
+- name: fct_open_library_change
+  description: Twice-hourly physical history of changes published by the Open Library change feed. Each
+    row represents one change identifier from the Open Library source at one extractor observation time.
+    Insert-only copies of the same source, identifier, and observation timestamp are reduced to the latest
+    loaded copy while raw-load lineage is retained for replay and audit.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, change_id, observed_at
+      label: Open library change
+      group_label: Open library
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: open_library_change_key
+      vintage:
+        visualization:
+          dimension: change_kind
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct change by change kind
+          description: Distinct `change_id` values by `change_kind` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - change_id
+          - change_kind
+          - source_loaded_at
+          sources:
+          - '`open_library` — licence: unstated (Internet Archive project); attribution required: False.
+            Source configuration: `extract/sources/open_library.yml`.'
+          analysis:
+            headline: Open Library change volume rises and falls by operation kind while changed-key depth shows how substantial each burst is.
+            event_time: event_timestamp
+            grain: DAY
+            controls:
+            - change_kind
+            - author
+            - source_name
+            trends:
+            - slug: changes-by-event-day
+              kind: total
+              metric: distinct_entities
+              time: event_timestamp
+              grain: DAY
+              title: Distinct changes by source event day
+              description: Distinct `change_id` values by the Open Library `event_timestamp` day. This is the source event flow and can include repeated observations of one change only once per group; absent event days are absent rather than zero.
+              width: half
+            - slug: changed-keys-by-event-day
+              kind: total
+              metric: average_change_count
+              time: event_timestamp
+              grain: DAY
+              title: Mean changed keys per event day
+              description: Mean `change_count` reported on each source event day. This measures event size rather than event volume, and sparse or missing event days are absent rather than zero.
+              width: half
+            - slug: changes-by-kind
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: change_kind
+              top_n: 8
+              time: event_timestamp
+              grain: DAY
+              title: Leading change kinds by event day
+              description: Distinct `change_id` values per event day split across the eight most common `change_kind` values. Remaining kinds are excluded rather than aggregated, so the lines compare the dominant operation flows without implying that the remainder is zero.
+              width: full
+            - slug: changed-key-depth-by-kind
+              kind: composition
+              metric: average_change_count
+              breakdown: change_kind
+              top_n: 12
+              time: event_timestamp
+              grain: DAY
+              title: Changed-key depth by operation kind
+              description: Mean reported `change_count` per event day stacked across up to twelve common operation kinds. Remaining kinds are excluded rather than aggregated, and stack heights show average event size rather than counts of changes.
+              width: full
+            - slug: observed-change-catalogue
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct changes present in each fetched batch
+              description: Distinct `change_id` values in each extractor observation day. This collection-time level is useful for spotting fetch coverage but should not be read as source activity; missing fetch days are absent rather than zero.
+              width: half
+  columns:
+  - name: open_library_change_key
+    description: Stable hash of the source name, change identifier, and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Open library change key
+          hidden: true
+  - name: source_relation
+    description: Raw loader relation that supplied the retained change record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source relation
+          hidden: false
+  - name: source_name
+    description: Open Library source label reported by the change feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: change_id
+    description: Open Library identifier assigned to the change event.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct change
+            description: Distinct `change_id` values by `change_kind` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Change id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the change feed event.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: change_kind
+    description: Open Library operation kind, such as edit-book or new-account.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Change kind
+          hidden: false
+  - name: event_timestamp
+    description: UTC timestamp assigned to the change by Open Library.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Event timestamp
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: comment
+    description: Human-readable comment supplied with the Open Library change.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Comment
+          hidden: false
+  - name: author
+    description: Open Library user path or actor that authored the change.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Author
+          hidden: false
+  - name: change_count
+    description: Number of changed keys reported by Open Library for the event.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_change_count:
+            type: average
+            label: Mean changed keys
+            description: Mean reported `change_count` in each time and breakdown group. This is an observation-weighted event-size measure and must not be read as total changed keys.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Change count
+          hidden: false
+          format: '#,##0'
+  - name: changed_keys
+    description: JSON array of Open Library paths affected by the change.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Changed keys
+          hidden: true
+          sql: CAST(${TABLE}.changed_keys AS VARCHAR)
+  - name: source_row_id
+    description: Raw loader row identifier for the retained change event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained change event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained change event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained change event in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date for the retained change event.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction began for the retained change event.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Load operation identifier that inserted the retained change event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained change event.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained raw change record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_job_feed_arbeitnow_posted_at_day
+          yRef:
+            field: fct_job_feed_arbeitnow_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Day)
+      yAxis:
+      - name: Distinct job
+    layout:
+      stack: true
+      xField: fct_job_feed_arbeitnow_posted_at_day
+      yField:
+      - fct_job_feed_arbeitnow_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values grouped by the source `posted_at` day and stacked across the eight
+  largest `employment_type` values. All supplied timestamps fall on 1970-01-21, so this is one event-time
+  snapshot rather than a longitudinal posting history; smaller types are excluded.
+metricQuery:
+  dimensions:
+  - fct_job_feed_arbeitnow_posted_at_day
+  - fct_job_feed_arbeitnow_employment_type
+  exploreName: fct_job_feed_arbeitnow
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_feed_arbeitnow_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_arbeitnow_distinct_entities
+  - descending: false
+    fieldId: fct_job_feed_arbeitnow_posted_at_day
+  tableCalculations: []
+name: Source-posted jobs by employment type
+pivotConfig:
+  columns:
+  - fct_job_feed_arbeitnow_employment_type
+slug: fct-job-feed-arbeitnow-posted-jobs-by-employment
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_feed_arbeitnow_posted_at_day
+  - fct_job_feed_arbeitnow_employment_type
+  - fct_job_feed_arbeitnow_distinct_entities
+tableName: fct_job_feed_arbeitnow
+version: 1

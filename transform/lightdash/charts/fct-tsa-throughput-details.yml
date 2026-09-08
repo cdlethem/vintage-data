@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical observation fact for the U.S. Transportation Security Administration passenger-throughput
+  table. Each row represents one TSA throughput date from one extractor fetch, retaining passenger totals,
+  the publisher's update marker, and raw-load lineage. Repeated ingestion of the same source, identifier,
+  date, and observation timestamp is reduced to the latest loaded record.
+metricQuery:
+  dimensions: &id001
+  - fct_tsa_throughput_observed_at
+  - fct_tsa_throughput_throughput_id
+  - fct_tsa_throughput_throughput_date
+  - fct_tsa_throughput_passengers
+  - fct_tsa_throughput_source_loaded_at
+  exploreName: fct_tsa_throughput
+  filters:
+    dimensions:
+      and:
+      - id: 1a18ef7b-3d3a-5e80-800a-30b61033d00e
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_tsa_throughput_observed_at
+        values:
+        - 30
+      id: fb828385-5660-5eb7-acfa-d5f96a851278
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_tsa_throughput_observed_at
+  tableCalculations: []
+name: Tsa throughput — observations
+slug: fct-tsa-throughput-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_tsa_throughput
+version: 1

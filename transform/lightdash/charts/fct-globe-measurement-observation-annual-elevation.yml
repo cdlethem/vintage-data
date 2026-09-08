@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_globe_measurement_observation_measured_date_year
+          yRef:
+            field: fct_globe_measurement_observation_average_elevation
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Measured date (Year)
+      yAxis:
+      - name: Mean site elevation
+    layout:
+      xField: fct_globe_measurement_observation_measured_date_year
+      yField:
+      - fct_globe_measurement_observation_average_elevation
+  type: cartesian
+description: Average reported site elevation in each measurement year. The value is observation-weighted
+  and reflects where measurements were taken, not a global elevation estimate; years with no source rows
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_globe_measurement_observation_measured_date_year
+  exploreName: fct_globe_measurement_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_globe_measurement_observation_average_elevation
+  sorts:
+  - descending: false
+    fieldId: fct_globe_measurement_observation_measured_date_year
+  tableCalculations: []
+name: Mean measurement-site elevation per year
+slug: fct-globe-measurement-observation-annual-elevation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_globe_measurement_observation_measured_date_year
+  - fct_globe_measurement_observation_average_elevation
+tableName: fct_globe_measurement_observation
+version: 1

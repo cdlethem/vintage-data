@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ofac_sanction_observation_entity_type
+          yRef:
+            field: fct_ofac_sanction_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_ofac_sanction_observation_entity_type
+      yField:
+      - fct_ofac_sanction_observation_distinct_entities
+  type: cartesian
+description: Distinct `sanction_id` values by `entity_type` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_ofac_sanction_observation_entity_type
+  exploreName: fct_ofac_sanction_observation
+  filters:
+    dimensions:
+      and:
+      - id: a4335dfd-ec08-55a1-a7ea-c4335cd8f777
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_ofac_sanction_observation_observed_at
+        values:
+        - 30
+      id: 6714681a-331b-5334-adaa-eea70ca1546a
+  limit: 20
+  metrics:
+  - fct_ofac_sanction_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_ofac_sanction_observation_distinct_entities
+  tableCalculations: []
+name: Distinct sanction by entity type
+slug: fct-ofac-sanction-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ofac_sanction_observation_entity_type
+  - fct_ofac_sanction_observation_distinct_entities
+tableName: fct_ofac_sanction_observation
+version: 1

@@ -1,0 +1,42 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical daily fact of NOAA catch-share quota observations. Each row is the latest loaded
+  record for one quota identifier at one source-fetch timestamp; repeated raw loads of the same observation
+  are reduced using load lineage. The source's display-formatted quota fields are retained alongside its
+  typed numeric value fields, while quota_increase_value remains text because the source can report multiple
+  comma-separated values in that field.
+metricQuery:
+  dimensions: &id001
+  - fct_noaa_catch_quotas_observed_at
+  - fct_noaa_catch_quotas_quota_id
+  - fct_noaa_catch_quotas_share_category
+  - fct_noaa_catch_quotas_quota_remaining_value
+  - fct_noaa_catch_quotas_source_loaded_at
+  exploreName: fct_noaa_catch_quotas
+  filters:
+    dimensions:
+      and:
+      - id: d159cf6b-fe2c-5e02-908f-3e6726b87051
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_noaa_catch_quotas_observed_at
+        values:
+        - 30
+      id: 10edeb22-686b-58b3-a027-85a6f30d502b
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_noaa_catch_quotas_observed_at
+  tableCalculations: []
+name: Noaa catch quotas — observations
+slug: fct-noaa-catch-quotas-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_noaa_catch_quotas
+version: 1

@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_bluesky_appview_post_observation_created_at_day
+          yRef:
+            field: fct_bluesky_appview_post_observation_distinct_posts
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct posts
+    layout:
+      xField: fct_bluesky_appview_post_observation_created_at_day
+      yField:
+      - fct_bluesky_appview_post_observation_distinct_posts
+  type: cartesian
+description: Distinct `post_uri` values by the source `created_at` day. The retained history covers 25
+  populated days across five months and is sparse; days without posts are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_bluesky_appview_post_observation_created_at_day
+  exploreName: fct_bluesky_appview_post_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_bluesky_appview_post_observation_distinct_posts
+  sorts:
+  - descending: false
+    fieldId: fct_bluesky_appview_post_observation_created_at_day
+  tableCalculations: []
+name: Distinct posts by creation day
+slug: fct-bluesky-appview-post-observation-created-posts
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_bluesky_appview_post_observation_created_at_day
+  - fct_bluesky_appview_post_observation_distinct_posts
+tableName: fct_bluesky_appview_post_observation
+version: 1

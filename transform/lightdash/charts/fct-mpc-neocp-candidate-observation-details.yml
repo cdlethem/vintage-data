@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical history of Minor Planet Center near-Earth-object candidate reports.
+  Each row is one candidate identifier observed at one upstream fetch timestamp, with parsed numeric discovery
+  measures and raw load lineage retained for replay and audit. Rows are deduplicated by the candidate
+  observation grain, retaining the latest loaded copy.
+metricQuery:
+  dimensions: &id001
+  - fct_mpc_neocp_candidate_observation_observed_at
+  - fct_mpc_neocp_candidate_observation_candidate_id
+  - fct_mpc_neocp_candidate_observation_temporary_designation
+  - fct_mpc_neocp_candidate_observation_visual_magnitude
+  - fct_mpc_neocp_candidate_observation_source_loaded_at
+  exploreName: fct_mpc_neocp_candidate_observation
+  filters:
+    dimensions:
+      and:
+      - id: 7e8147bf-d5b8-54b0-9e2c-848f3e5af5cc
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_mpc_neocp_candidate_observation_observed_at
+        values:
+        - 30
+      id: 34cf7027-ab86-5029-ae67-2c8b7bce3abc
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_mpc_neocp_candidate_observation_observed_at
+  tableCalculations: []
+name: Mpc neocp candidate observation — observations
+slug: fct-mpc-neocp-candidate-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_mpc_neocp_candidate_observation
+version: 1

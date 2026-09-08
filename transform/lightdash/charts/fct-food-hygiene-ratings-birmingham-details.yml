@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical snapshot of Birmingham food-hygiene ratings. Each row is one food business
+  from one publisher snapshot, identified by source, business_id, and observed_at. The six duplicate source
+  rows observed in the initial load are reduced deterministically by source load lineage; source business
+  attributes and the three nested FHRS scores are exposed as typed columns while loader lineage is retained.
+metricQuery:
+  dimensions: &id001
+  - fct_food_hygiene_ratings_birmingham_observed_at
+  - fct_food_hygiene_ratings_birmingham_business_id
+  - fct_food_hygiene_ratings_birmingham_business_type
+  - fct_food_hygiene_ratings_birmingham_source_loaded_at
+  exploreName: fct_food_hygiene_ratings_birmingham
+  filters:
+    dimensions:
+      and:
+      - id: d0163fea-be12-53de-9082-249bb63f2673
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_food_hygiene_ratings_birmingham_observed_at
+        values:
+        - 30
+      id: e0631a6b-687f-5e0b-a899-b21594c2710c
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_food_hygiene_ratings_birmingham_observed_at
+  tableCalculations: []
+name: Food hygiene ratings birmingham — observations
+slug: fct-food-hygiene-ratings-birmingham-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_food_hygiene_ratings_birmingham
+version: 1

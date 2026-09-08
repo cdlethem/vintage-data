@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_discourse_meta_topic_observation_title
+          yRef:
+            field: fct_discourse_meta_topic_observation_average_views
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_discourse_meta_topic_observation_title
+      yField:
+      - fct_discourse_meta_topic_observation_average_views
+  type: cartesian
+description: Mean observed views by `title` in the selected observation window. Number of views reported
+  by Discourse at observation time. Each retained observation has equal weight; polling frequency and
+  repeated snapshots can affect the mean. This is not a latest-value measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_discourse_meta_topic_observation_title
+  exploreName: fct_discourse_meta_topic_observation
+  filters:
+    dimensions:
+      and:
+      - id: 3331fb1a-f1a8-5e35-8908-ec70543ac47c
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_discourse_meta_topic_observation_observed_at
+        values:
+        - 30
+      id: 5e1e2a73-6086-5b65-b36e-edff9719312e
+  limit: 20
+  metrics:
+  - fct_discourse_meta_topic_observation_average_views
+  sorts:
+  - descending: true
+    fieldId: fct_discourse_meta_topic_observation_average_views
+  tableCalculations: []
+name: Mean observed views by title
+slug: fct-discourse-meta-topic-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_discourse_meta_topic_observation_title
+  - fct_discourse_meta_topic_observation_average_views
+tableName: fct_discourse_meta_topic_observation
+version: 1

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 10
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_jolpica_f1_observed_at_day
+          yRef:
+            field: fct_jolpica_f1_distinct_drivers
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct driver
+    layout:
+      stack: true
+      xField: fct_jolpica_f1_observed_at_day
+      yField:
+      - fct_jolpica_f1_distinct_drivers
+  type: cartesian
+description: Distinct drivers per observation day stacked by the ten nationalities with the largest observed
+  driver totals. The remainder is excluded rather than aggregated; this shows snapshot composition, not
+  a nationality-weighted championship total.
+metricQuery:
+  dimensions:
+  - fct_jolpica_f1_observed_at_day
+  - fct_jolpica_f1_nationality
+  exploreName: fct_jolpica_f1
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_jolpica_f1_distinct_drivers
+  sorts:
+  - descending: true
+    fieldId: fct_jolpica_f1_distinct_drivers
+  - descending: false
+    fieldId: fct_jolpica_f1_observed_at_day
+  tableCalculations: []
+name: Driver mix by nationality and observation day
+pivotConfig:
+  columns:
+  - fct_jolpica_f1_nationality
+slug: fct-jolpica-f1-driver-mix-by-nationality
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_jolpica_f1_observed_at_day
+  - fct_jolpica_f1_nationality
+  - fct_jolpica_f1_distinct_drivers
+tableName: fct_jolpica_f1
+version: 1

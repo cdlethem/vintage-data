@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_drivebc_event_observations_event_updated_at_week
+          yRef:
+            field: fct_drivebc_event_observations_average_linear_km
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event updated at (Week)
+      yAxis:
+      - name: Mean linear reference km
+    layout:
+      xField: fct_drivebc_event_observations_event_updated_at_week
+      yField:
+      - fct_drivebc_event_observations_average_linear_km
+  type: cartesian
+description: Average `linear_reference_km` reported for events grouped by source update week. The source
+  retains sentinel positions such as -1, so the average can be pulled toward sentinel values; weeks without
+  represented updates are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_drivebc_event_observations_event_updated_at_week
+  exploreName: fct_drivebc_event_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_drivebc_event_observations_average_linear_km
+  sorts:
+  - descending: false
+    fieldId: fct_drivebc_event_observations_event_updated_at_week
+  tableCalculations: []
+name: Mean linear reference at update week
+slug: fct-drivebc-event-observations-updated-distance
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_drivebc_event_observations_event_updated_at_week
+  - fct_drivebc_event_observations_average_linear_km
+tableName: fct_drivebc_event_observations
+version: 1

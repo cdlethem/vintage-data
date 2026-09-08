@@ -1,0 +1,373 @@
+version: 2
+models:
+- name: fct_ted_procurement
+  description: Daily physical history of procurement notices published through the Tenders Electronic
+    Daily (TED) source. Each row is one notice identifier observed at one extractor timestamp, retaining
+    the source's publication, buyer, category, value, deadline, and place-of-performance attributes with
+    raw-load lineage. Repeated rows for the same notice and observation timestamp are reduced to the latest
+    loaded record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: notice_id, observed_at
+      label: Ted procurement
+      group_label: Ted procurement
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: ted_procurement_key
+      vintage:
+        visualization:
+          dimension: notice_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct notice by notice type
+          description: Distinct `notice_id` values by `notice_type` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - notice_id
+          - notice_type
+          - source_loaded_at
+          sources:
+          - '`ted_procurement` — licence: EU Official Journal — open reuse with source acknowledgement;
+            attribution required: True. Source configuration: `extract/sources/ted_procurement.yml`.'
+          analysis:
+            headline: how procurement notice volume and reported values shift across publication days and
+              notice categories.
+            event_time: publication_date
+            grain: DAY
+            controls:
+            - notice_type
+            - buyer_name_lang
+            - buyer_name
+            trends:
+            - slug: published-notices
+              kind: total
+              metric: distinct_entities
+              time: publication_date
+              grain: DAY
+              title: Procurement notices published per day
+              description: Distinct `notice_id` values by TED publication day. This is a short four-day
+                extract window rather than a long publication history; days with no extract or no notices
+                are absent rather than zero.
+              width: half
+            - slug: published-value
+              kind: total
+              metric: average_total_value
+              time: publication_date
+              grain: DAY
+              title: Mean reported procurement value per publication day
+              description: Average non-null `total_value` reported on each TED publication day. Values
+                remain in their source-reported currencies, so the line is a within-feed diagnostic and
+                must not be read as a comparable cross-currency total; days without values are absent.
+              width: half
+            - slug: notice-type-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: notice_type
+              top_n: 6
+              time: publication_date
+              grain: DAY
+              title: Published notices by notice type
+              description: Distinct `notice_id` values per publication day stacked by `notice_type`.
+                Bars show the composition of this four-day extract; only the six largest notice types
+                are shown and the remainder is excluded rather than aggregated.
+              width: full
+            - slug: buyer-language-trends
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: buyer_name_lang
+              top_n: 6
+              time: publication_date
+              grain: DAY
+              title: Published notices by buyer-name language
+              description: Distinct `notice_id` values per publication day split by reported buyer-name
+                language. The extract has only four publication days; the six largest languages are shown
+                and smaller groups are excluded rather than treated as zero.
+              width: full
+  columns:
+  - name: ted_procurement_key
+    description: Stable hash of the TED notice identifier and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Ted procurement key
+          hidden: true
+  - name: notice_id
+    description: Identifier assigned to the procurement notice by TED.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct notice
+            description: Distinct `notice_id` values by `notice_type` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Notice id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed this TED notice.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_name
+    description: Upstream source label carried by the procurement record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: publication_number
+    description: TED publication number assigned to the notice.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publication number
+          hidden: false
+  - name: publication_date
+    description: Calendar date on which TED published the notice.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Publication date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: publication_utc_offset
+    description: UTC offset reported by TED for the publication timestamp or date.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publication utc offset
+          hidden: false
+  - name: deadline
+    description: JSON array of deadline values reported by TED for the notice, when supplied.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Deadline
+          hidden: true
+          sql: CAST(${TABLE}.deadline AS VARCHAR)
+  - name: notice_type
+    description: TED notice type code, such as a contract or contract-award notice.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Notice type
+          hidden: false
+  - name: title_en
+    description: English title of the procurement notice.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title en
+          hidden: false
+  - name: n_title_languages
+    description: Number of title languages reported by TED.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: N title languages
+          hidden: false
+          format: '#,##0'
+  - name: buyer_name
+    description: Contracting buyer name reported by TED.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Buyer name
+          hidden: false
+  - name: buyer_name_lang
+    description: Language code for the reported buyer name.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Buyer name lang
+          hidden: false
+  - name: buyer_country
+    description: JSON array of buyer country codes reported by TED.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Buyer country
+          hidden: true
+          sql: CAST(${TABLE}.buyer_country AS VARCHAR)
+  - name: contract_nature
+    description: JSON array of contract nature categories reported by TED.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Contract nature
+          hidden: true
+          sql: CAST(${TABLE}.contract_nature AS VARCHAR)
+  - name: cpv_codes
+    description: JSON array of Common Procurement Vocabulary codes for the notice.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Cpv codes
+          hidden: true
+          sql: CAST(${TABLE}.cpv_codes AS VARCHAR)
+  - name: total_value
+    description: Reported total procurement value in the source's stated currency, when supplied.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_total_value:
+            type: average
+            label: Mean reported procurement value
+            description: Average non-null `total_value` per publication day. The source does not provide a
+              common currency field, so this diagnostic must not be interpreted as a cross-currency total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Total value
+          hidden: false
+          format: '#,##0.00'
+  - name: place_of_performance
+    description: JSON array of place-of-performance codes reported by TED.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Place of performance
+          hidden: true
+          sql: CAST(${TABLE}.place_of_performance AS VARCHAR)
+  - name: xml_url
+    description: URL of the source XML representation of the TED notice.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Xml url
+          hidden: false
+  - name: _batch_id
+    description: Load batch identifier assigned by the raw ingestion layer.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Load operation identifier assigned by the raw ingestion layer.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing this procurement notice observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position of this observation within its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw procurement notice content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

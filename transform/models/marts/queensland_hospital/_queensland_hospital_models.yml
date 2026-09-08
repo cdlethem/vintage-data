@@ -1,0 +1,434 @@
+version: 2
+models:
+- name: fct_queensland_hospital_observation
+  description: Twice-hourly physical history of Queensland hospital emergency-pressure observations. Each
+    row records one facility snapshot at an extractor fetch time, including source-published wait-time
+    values, normalized minute and count measures, facility metadata, and raw-load lineage. The model grain
+    is source, hospital_id, observed_at.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, hospital_id, observed_at
+      label: Queensland hospital observation
+      group_label: Queensland hospital
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: hospital_observation_key
+      vintage:
+        visualization:
+          dimension: facility_name
+          metric: m_3993bc09
+          time: observed_at
+          window_days: 30
+          title: Mean observed wait time all patients minutes by facility name
+          description: Mean observed wait time all patients minutes by `facility_name` in the selected
+            observation window. Numeric wait time for all patients in minutes when the source text is
+            numeric. Each retained observation has equal weight; polling frequency and repeated snapshots
+            can affect the mean. This is not a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - hospital_id
+          - facility_name
+          - wait_time_all_patients_minutes
+          - source_loaded_at
+          sources:
+          - '`queensland_hospital` — licence: Queensland Health terms; attribution required: True. Source
+            configuration: `extract/sources/queensland_hospital.yml`.'
+          filters:
+          - field: live_data_available
+            values:
+            - true
+          analysis:
+            headline: how Queensland hospitals' emergency wait and capacity levels move across observed days
+              while published space dates remain sparse reference points.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - facility_name
+            - currently_closed
+            - live_data_available
+            - opening_hours
+            trends:
+            - slug: hospitals-reporting
+              kind: total
+              metric: hospital_count
+              time: observed_at
+              grain: DAY
+              title: Hospitals reporting per day
+              description: Distinct non-null `hospital_id` values present in each extractor observation
+                day. This is a coverage level for the live status feed rather than a patient flow; days
+                without a successful extract are absent rather than zero.
+              width: half
+            - slug: all-patient-wait
+              kind: total
+              metric: m_3993bc09
+              time: observed_at
+              grain: DAY
+              title: Mean all-patient wait per day
+              description: Mean non-null `wait_time_all_patients_minutes` across retained hospital rows on
+                each observation day. Each snapshot has equal weight, so polling frequency can influence
+                this level; the four observed days are a gauge window, not a long historical flow.
+              width: half
+            - slug: patients-waiting
+              kind: total
+              metric: avg_patients_waiting
+              time: observed_at
+              grain: DAY
+              title: Mean patients waiting per day
+              description: Mean non-null `patients_waiting` across hospital snapshots on each observation
+                day. This is a current-state level rather than an additive count; missing or non-numeric
+                source values and absent observation days are not treated as zero.
+              width: half
+            - slug: wait-by-facility
+              kind: breakdown
+              metric: m_3993bc09
+              breakdown: facility_name
+              top_n: 6
+              time: observed_at
+              grain: DAY
+              title: All-patient wait by facility
+              description: Mean non-null all-patient wait minutes per observation day for the six largest
+                `facility_name` series. Remaining facilities are excluded rather than aggregated; this
+                keeps the four-day operational gauge readable.
+              width: full
+            - slug: spaces-by-source-date
+              kind: total
+              metric: avg_treatment_spaces
+              time: treatment_spaces_updated_date
+              time_dimension: spaces_date
+              grain: DAY
+              title: Treatment spaces by publisher reference date
+              description: Mean `treatment_spaces` by the source-published `treatment_spaces_updated_date`.
+                Only four reference dates are present from 2024-12-24 through 2025-01-15, so this is a
+                sparse source-level comparison rather than a continuous operational history; missing
+                dates are absent rather than zero.
+              width: full
+  columns:
+  - name: hospital_observation_key
+    description: Stable hash of source, hospital identifier, and observed timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Hospital observation key
+          hidden: true
+  - name: source
+    description: Extractor source identifier that published the hospital observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: hospital_id
+    description: Upstream identifier for the hospital or satellite health centre.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          hospital_count:
+            type: count_distinct
+            label: Distinct hospitals
+            description: Distinct non-null `hospital_id` values present in each observation time group.
+              Repeated snapshots of one hospital count once per group; this measures reporting coverage,
+              not a patient total.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Hospital id
+          hidden: false
+  - name: facility_slug
+    description: Canonical Queensland Health slug for the reporting facility.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Facility slug
+          hidden: false
+  - name: facility_name
+    description: Human-readable name of the reporting hospital or health centre.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Facility name
+          hidden: false
+  - name: facility_address
+    description: Address text published for the reporting facility.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Facility address
+          hidden: false
+  - name: opening_hours
+    description: Opening-hours text published for the reporting facility.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Opening hours
+          hidden: false
+  - name: publisher_updated_text
+    description: Verbatim publisher update text, when supplied by Queensland Health.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publisher updated text
+          hidden: false
+  - name: publisher_updated_at
+    description: Publisher update timestamp parsed from the source text without timezone information.
+    data_type: timestamp
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Publisher updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: publisher_up_0d8a22
+  - name: currently_closed
+    description: Whether the facility is currently marked closed by the publisher.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Currently closed
+          hidden: false
+  - name: live_data_available
+    description: Whether live emergency-pressure data is available for the facility.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Live data available
+          hidden: false
+  - name: api_code
+    description: Upstream API code identifying the reporting facility.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Api code
+          hidden: false
+  - name: wait_time_all_patients_text
+    description: Verbatim published wait-time text for all patients.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Wait time all patients text
+          hidden: false
+  - name: wait_time_all_patients_minutes
+    description: Numeric wait time for all patients in minutes when the source text is numeric.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          m_3993bc09:
+            type: average
+            label: Mean observed wait time all patients minutes
+            description: Mean observed wait time all patients minutes by `facility_name` in the selected
+              observation window. Numeric wait time for all patients in minutes when the source text is
+              numeric. Each retained observation has equal weight; polling frequency and repeated snapshots
+              can affect the mean. This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Wait time all patients minutes
+          hidden: false
+          format: '#,##0'
+          name: wait_time_all_patien_fd504c
+  - name: wait_time_non_critical_text
+    description: Verbatim published wait-time text for non-critical patients.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Wait time non critical text
+          hidden: false
+  - name: wait_time_non_critical_minutes
+    description: Numeric non-critical wait time in minutes when the source text is numeric.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Wait time non critical minutes
+          hidden: false
+          format: '#,##0'
+          name: wait_time_non_critic_2a07ac
+  - name: patients_waiting
+    description: Number of patients waiting, parsed from the source value when available.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          avg_patients_waiting:
+            type: average
+            label: Mean patients waiting
+            description: Mean non-null `patients_waiting` across retained hospital snapshots in each time
+              group. Each snapshot has equal weight; this is a current-state level rather than an
+              additive count, and non-numeric source values remain absent.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Patients waiting
+          hidden: false
+          format: '#,##0'
+  - name: treatment_spaces
+    description: Number of treatment spaces reported for the facility.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          avg_treatment_spaces:
+            type: average
+            label: Mean treatment spaces
+            description: Mean `treatment_spaces` reported across retained hospital snapshots in each time
+              group. This is a published capacity level, not an additive space total; repeated polling
+              gives each snapshot equal weight.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Treatment spaces
+          hidden: false
+          format: '#,##0'
+  - name: treatment_spaces_updated_text
+    description: Verbatim date text associated with the treatment-space count.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Treatment spaces updated text
+          hidden: false
+          name: treatment_spaces_upd_519c50
+  - name: treatment_spaces_updated_date
+    description: Treatment-space count date parsed from the source day/month/year text.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Treatment spaces updated date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: treatment_sp_95dafe
+        additional_dimensions:
+          spaces_date:
+            type: date
+            label: Treatment spaces updated
+            description: Publisher treatment-space reference date, exposed under a short dimension key so
+              its date-truncated variants stay inside Postgres's 63-byte identifier limit.
+            sql: ${TABLE}.treatment_spaces_updated_date
+            time_intervals:
+            - DAY
+            - WEEK
+            - MONTH
+            - YEAR
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the facility observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _row_id
+    description: Raw row identifier retained for lineage and audit.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained facility observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position in the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the raw observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the normalized raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

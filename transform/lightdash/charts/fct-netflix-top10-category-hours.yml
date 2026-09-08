@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_netflix_top10_fetched_at_day
+          yRef:
+            field: fct_netflix_top10_average_weekly_hours_viewed
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Mean observed weekly hours viewed
+    layout:
+      xField: fct_netflix_top10_fetched_at_day
+      yField:
+      - fct_netflix_top10_average_weekly_hours_viewed
+  type: cartesian
+description: Mean reported `weekly_hours_viewed` per fetch day compared across the four observed `category`
+  values. All four categories are retained; any category outside the selected top four would be excluded
+  rather than aggregated.
+metricQuery:
+  dimensions:
+  - fct_netflix_top10_fetched_at_day
+  - fct_netflix_top10_category
+  exploreName: fct_netflix_top10
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_netflix_top10_average_weekly_hours_viewed
+  sorts:
+  - descending: true
+    fieldId: fct_netflix_top10_average_weekly_hours_viewed
+  - descending: false
+    fieldId: fct_netflix_top10_fetched_at_day
+  tableCalculations: []
+name: Viewing hours by category
+pivotConfig:
+  columns:
+  - fct_netflix_top10_category
+slug: fct-netflix-top10-category-hours
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_netflix_top10_fetched_at_day
+  - fct_netflix_top10_category
+  - fct_netflix_top10_average_weekly_hours_viewed
+tableName: fct_netflix_top10
+version: 1

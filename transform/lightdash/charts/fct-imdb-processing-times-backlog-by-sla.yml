@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_imdb_processing_times_observed_at_day
+          yRef:
+            field: fct_imdb_processing_times_average_unprocessed_items
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean unprocessed items
+    layout:
+      xField: fct_imdb_processing_times_observed_at_day
+      yField:
+      - fct_imdb_processing_times_average_unprocessed_items
+  type: cartesian
+description: Mean unprocessed items per observation day for the three service tiers. This compares category
+  levels rather than adding queues; absent observation days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_imdb_processing_times_observed_at_day
+  - fct_imdb_processing_times_sla
+  exploreName: fct_imdb_processing_times
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_imdb_processing_times_average_unprocessed_items
+  sorts:
+  - descending: true
+    fieldId: fct_imdb_processing_times_average_unprocessed_items
+  - descending: false
+    fieldId: fct_imdb_processing_times_observed_at_day
+  tableCalculations: []
+name: Mean backlog by service tier
+pivotConfig:
+  columns:
+  - fct_imdb_processing_times_sla
+slug: fct-imdb-processing-times-backlog-by-sla
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_imdb_processing_times_observed_at_day
+  - fct_imdb_processing_times_sla
+  - fct_imdb_processing_times_average_unprocessed_items
+tableName: fct_imdb_processing_times
+version: 1

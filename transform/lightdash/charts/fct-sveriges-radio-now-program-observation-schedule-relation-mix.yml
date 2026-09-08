@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_sveriges_radio_now_program_observation_observed_at_day
+          yRef:
+            field: fct_sveriges_radio_now_program_observation_distinct_programs
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct programmes
+    layout:
+      stack: true
+      xField: fct_sveriges_radio_now_program_observation_observed_at_day
+      yField:
+      - fct_sveriges_radio_now_program_observation_distinct_programs
+  type: cartesian
+description: Distinct programmes in each current, previous, or next schedule relation, stacked by observation
+  day. The three relation segments show mix rather than additive broadcast volume; any relation absent
+  from a fetch is absent, and no remainder is aggregated.
+metricQuery:
+  dimensions:
+  - fct_sveriges_radio_now_program_observation_observed_at_day
+  - fct_sveriges_radio_now_program_observation_schedule_relation
+  exploreName: fct_sveriges_radio_now_program_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sveriges_radio_now_program_observation_distinct_programs
+  sorts:
+  - descending: true
+    fieldId: fct_sveriges_radio_now_program_observation_distinct_programs
+  - descending: false
+    fieldId: fct_sveriges_radio_now_program_observation_observed_at_day
+  tableCalculations: []
+name: Programme coverage by schedule relation
+pivotConfig:
+  columns:
+  - fct_sveriges_radio_now_program_observation_schedule_relation
+slug: fct-sveriges-radio-now-program-observation-schedule-relation-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sveriges_radio_now_program_observation_observed_at_day
+  - fct_sveriges_radio_now_program_observation_schedule_relation
+  - fct_sveriges_radio_now_program_observation_distinct_programs
+tableName: fct_sveriges_radio_now_program_observation
+version: 1

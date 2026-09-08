@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_stac_imagery_collection
+          yRef:
+            field: fct_stac_imagery_average_cloud_cover
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_stac_imagery_collection
+      yField:
+      - fct_stac_imagery_average_cloud_cover
+  type: cartesian
+description: Mean observed cloud cover by `collection` in the selected observation window. Cloud-cover
+  percentage reported by the STAC item. Each retained observation has equal weight; polling frequency
+  and repeated snapshots can affect the mean. This is not a latest-value measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_stac_imagery_collection
+  exploreName: fct_stac_imagery
+  filters:
+    dimensions:
+      and:
+      - id: 2001c72b-8df7-527e-a9ea-626ea15f9065
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_stac_imagery_observed_at
+        values:
+        - 30
+      id: 78c4abd9-0013-5331-8e3d-25ae8089392f
+  limit: 20
+  metrics:
+  - fct_stac_imagery_average_cloud_cover
+  sorts:
+  - descending: true
+    fieldId: fct_stac_imagery_average_cloud_cover
+  tableCalculations: []
+name: Mean observed cloud cover by collection
+slug: fct-stac-imagery
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_stac_imagery_collection
+  - fct_stac_imagery_average_cloud_cover
+tableName: fct_stac_imagery
+version: 1

@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_drivebc_event_observations_event_created_at_week
+          yRef:
+            field: fct_drivebc_event_observations_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event created at (Week)
+      yAxis:
+      - name: Distinct event
+    layout:
+      xField: fct_drivebc_event_observations_event_created_at_week
+      yField:
+      - fct_drivebc_event_observations_distinct_entities
+  type: cartesian
+description: Distinct `event_id` values grouped by the source `event_created_at` week. This is a source-event
+  flow rather than a polling total; sparse weeks with no represented events are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_drivebc_event_observations_event_created_at_week
+  exploreName: fct_drivebc_event_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_drivebc_event_observations_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_drivebc_event_observations_event_created_at_week
+  tableCalculations: []
+name: Distinct events by creation week
+slug: fct-drivebc-event-observations-created-events
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_drivebc_event_observations_event_created_at_week
+  - fct_drivebc_event_observations_distinct_entities
+tableName: fct_drivebc_event_observations
+version: 1

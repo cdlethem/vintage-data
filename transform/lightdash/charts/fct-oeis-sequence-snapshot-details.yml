@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of OEIS sequence records. Each row is one sequence identifier observed
+  in one OEIS fetch, retaining sequence metadata and raw load lineage; repeated ingestion of the same
+  observation is reduced to the latest loaded copy.
+metricQuery:
+  dimensions: &id001
+  - fct_oeis_sequence_snapshot_observed_at
+  - fct_oeis_sequence_snapshot_sequence_id
+  - fct_oeis_sequence_snapshot_keywords
+  - fct_oeis_sequence_snapshot_source_loaded_at
+  exploreName: fct_oeis_sequence_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: fbdd7624-f5c8-5d81-ba46-d9d32440f11e
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_oeis_sequence_snapshot_observed_at
+        values:
+        - 30
+      id: 931e1128-a34c-5bab-82a7-8afde8b49a32
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_oeis_sequence_snapshot_observed_at
+  tableCalculations: []
+name: Oeis sequence snapshot — observations
+slug: fct-oeis-sequence-snapshot-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_oeis_sequence_snapshot
+version: 1

@@ -1,0 +1,42 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of Malaysia PriceCatcher observations. Each row represents one source
+  price observation identified by the source observation id and fetch timestamp; repeated insert-only
+  loads of that observation are reduced to the latest loaded copy while source and loader lineage are
+  retained. The model is incremental because the raw source contains 126 million loaded rows and receives
+  new daily extracts, making a full rebuild unnecessarily expensive for the daily cadence.
+metricQuery:
+  dimensions: &id001
+  - fct_malaysia_pricecatcher_observed_at
+  - fct_malaysia_pricecatcher_price_observation_id
+  - fct_malaysia_pricecatcher_item_code
+  - fct_malaysia_pricecatcher_price_amount
+  - fct_malaysia_pricecatcher_source_loaded_at
+  exploreName: fct_malaysia_pricecatcher
+  filters:
+    dimensions:
+      and:
+      - id: 91757b74-6ad3-54ff-935b-dd3c3a02aa43
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_malaysia_pricecatcher_observed_at
+        values:
+        - 1
+      id: 49a5c599-0901-57da-b2fd-82e9cae8522d
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_malaysia_pricecatcher_observed_at
+  tableCalculations: []
+name: Malaysia pricecatcher — observations
+slug: fct-malaysia-pricecatcher-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_malaysia_pricecatcher
+version: 1

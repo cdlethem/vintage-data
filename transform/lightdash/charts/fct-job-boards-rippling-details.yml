@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of job observations returned by named-company Rippling applicant-tracking-system
+  boards. Each row represents one upstream source, job identifier, and extractor observation timestamp;
+  repeated raw copies of an observation are reduced to the latest loaded lineage record while listing
+  attributes and load metadata remain available for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_job_boards_rippling_observed_at
+  - fct_job_boards_rippling_job_id
+  - fct_job_boards_rippling_company
+  - fct_job_boards_rippling_source_loaded_at
+  exploreName: fct_job_boards_rippling
+  filters:
+    dimensions:
+      and:
+      - id: 848e8b0c-9222-54df-8776-9c2406ae1030
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_boards_rippling_observed_at
+        values:
+        - 30
+      id: b386b9f3-b881-5444-82e0-0ef9916762a2
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_job_boards_rippling_observed_at
+  tableCalculations: []
+name: Job boards rippling — observations
+slug: fct-job-boards-rippling-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_job_boards_rippling
+version: 1

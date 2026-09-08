@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 8d5e785c-c721-5674-bb86-af0f77e1f112
+    label: 'Job feed remoteok: Company'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_remoteok_company
+      tableName: fct_job_feed_remoteok
+    values: []
+  - disabled: true
+    id: 217b2d88-0841-5d4c-bc84-574b68b8d05b
+    label: 'Job feed remoteok: Department'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_remoteok_department
+      tableName: fct_job_feed_remoteok
+    values: []
+  - disabled: true
+    id: 60313375-5bed-5752-8ae1-46e42e50fca9
+    label: 'Job feed remoteok: Location'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_remoteok_location
+      tableName: fct_job_feed_remoteok
+    values: []
+  - disabled: true
+    id: d6639077-a2e5-5458-9f86-5ac4508935f8
+    label: 'Job feed remoteok: Location country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_remoteok_location_country
+      tableName: fct_job_feed_remoteok
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Feed Remoteok
+slug: job-feed-remoteok
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of Remote OK job observations. Each row represents one Remote OK
+      job identifier as observed in one extractor response at an observed timestamp; repeated raw ingestion
+      of the same observation is reduced to the latest loaded copy while load-layer lineage is retained
+      for audit and replay.
+
+
+      **Grain:** source, job_id, observed_at
+
+
+      **What changes here:** how the four-day Remote OK catalogue level and recent posting mix change
+      across companies and locations.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_feed_remoteok` — licence: Remote OK public API terms; attribution required: True. Source
+      configuration: `extract/sources/job_feed_remoteok.yml`.'
+    hideFrame: false
+    title: Job feed remoteok
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed remoteok — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Jobs present in the catalogue each day
+    chartSlug: fct-job-feed-remoteok-catalogue-level
+    hideTitle: false
+    title: Jobs present in the catalogue each day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Jobs by publisher posted day
+    chartSlug: fct-job-feed-remoteok-posted-day-history
+    hideTitle: false
+    title: Jobs by publisher posted day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Catalogue jobs by leading company
+    chartSlug: fct-job-feed-remoteok-company-levels
+    hideTitle: false
+    title: Catalogue jobs by leading company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Hiring-company mix by posting day and department
+    chartSlug: fct-job-feed-remoteok-department-mix
+    hideTitle: false
+    title: Hiring-company mix by posting day and department
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed remoteok — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-feed-remoteok
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Job feed remoteok — observations
+    chartSlug: fct-job-feed-remoteok-details
+    hideTitle: false
+    title: Job feed remoteok — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

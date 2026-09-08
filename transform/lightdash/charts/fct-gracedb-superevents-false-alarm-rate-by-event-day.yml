@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_gracedb_superevents_event_time_utc_day
+          yRef:
+            field: fct_gracedb_superevents_average_false_alarm
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event time utc (Day)
+      yAxis:
+      - name: Mean false-alarm rate
+    layout:
+      xField: fct_gracedb_superevents_event_time_utc_day
+      yField:
+      - fct_gracedb_superevents_average_false_alarm
+  type: cartesian
+description: Average reported `false_alarm_rate_hz` for observations whose event timestamp falls on each
+  UTC day. Repeated observations are equally weighted, so polling frequency can affect the mean; absent
+  event days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_gracedb_superevents_event_time_utc_day
+  exploreName: fct_gracedb_superevents
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gracedb_superevents_average_false_alarm
+  sorts:
+  - descending: false
+    fieldId: fct_gracedb_superevents_event_time_utc_day
+  tableCalculations: []
+name: Mean false-alarm rate by event day
+slug: fct-gracedb-superevents-false-alarm-rate-by-event-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gracedb_superevents_event_time_utc_day
+  - fct_gracedb_superevents_average_false_alarm
+tableName: fct_gracedb_superevents
+version: 1

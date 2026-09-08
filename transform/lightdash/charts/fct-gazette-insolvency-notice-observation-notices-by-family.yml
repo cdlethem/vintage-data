@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_gazette_insolvency_notice_observation_published_at_day
+          yRef:
+            field: fct_gazette_insolvency_notice_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Published at (Day)
+      yAxis:
+      - name: Distinct notice
+    layout:
+      stack: true
+      xField: fct_gazette_insolvency_notice_observation_published_at_day
+      yField:
+      - fct_gazette_insolvency_notice_observation_distinct_entities
+  type: cartesian
+description: Distinct `notice_id` values per source publication day stacked by `family_name`. Bars show
+  how the published notice mix shifts; this is not a cumulative total and the eight largest families are
+  shown while smaller families are excluded. Days without published records are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_gazette_insolvency_notice_observation_published_at_day
+  - fct_gazette_insolvency_notice_observation_family_name
+  exploreName: fct_gazette_insolvency_notice_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gazette_insolvency_notice_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_gazette_insolvency_notice_observation_distinct_entities
+  - descending: false
+    fieldId: fct_gazette_insolvency_notice_observation_published_at_day
+  tableCalculations: []
+name: Published notices by family name
+pivotConfig:
+  columns:
+  - fct_gazette_insolvency_notice_observation_family_name
+slug: fct-gazette-insolvency-notice-observation-notices-by-family
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gazette_insolvency_notice_observation_published_at_day
+  - fct_gazette_insolvency_notice_observation_family_name
+  - fct_gazette_insolvency_notice_observation_distinct_entities
+tableName: fct_gazette_insolvency_notice_observation
+version: 1

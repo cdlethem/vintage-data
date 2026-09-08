@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_swpc_space_weather_observation_at
+          yRef:
+            field: fct_swpc_space_weather_average_kp_index
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_swpc_space_weather_observation_at
+      yField:
+      - fct_swpc_space_weather_average_kp_index
+  type: cartesian
+description: Mean observed kp index by `observation_at` in the selected observation window. Planetary
+  K-index value reported by SWPC for the observation interval. Each retained observation has equal weight;
+  polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure or
+  an additive total.
+metricQuery:
+  dimensions:
+  - fct_swpc_space_weather_observation_at
+  exploreName: fct_swpc_space_weather
+  filters:
+    dimensions:
+      and:
+      - id: 0afa8a6f-19a7-52e4-98e8-91a3168b1495
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_swpc_space_weather_fetched_at
+        values:
+        - 30
+      id: dfbcfcaa-cbe1-5bc6-8497-e73e07a347ec
+  limit: 20
+  metrics:
+  - fct_swpc_space_weather_average_kp_index
+  sorts:
+  - descending: true
+    fieldId: fct_swpc_space_weather_average_kp_index
+  tableCalculations: []
+name: Mean observed kp index by observation at
+slug: fct-swpc-space-weather
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_swpc_space_weather_observation_at
+  - fct_swpc_space_weather_average_kp_index
+tableName: fct_swpc_space_weather
+version: 1

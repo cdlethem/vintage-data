@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_food_hygiene_ratings_glasgow_rating_date_month
+          yRef:
+            field: fct_food_hygiene_ratings_glasgow_distinct_rating_values
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Rating date (Month)
+      yAxis:
+      - name: Distinct rating labels
+    layout:
+      xField: fct_food_hygiene_ratings_glasgow_rating_date_month
+      yField:
+      - fct_food_hygiene_ratings_glasgow_distinct_rating_values
+  type: cartesian
+description: Distinct publisher rating labels per month for the eight largest business types. This compares
+  label variety, not inspection volume — the remainder is excluded rather than aggregated and months without
+  labels are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_food_hygiene_ratings_glasgow_rating_date_month
+  - fct_food_hygiene_ratings_glasgow_business_type
+  exploreName: fct_food_hygiene_ratings_glasgow
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_food_hygiene_ratings_glasgow_distinct_rating_values
+  sorts:
+  - descending: true
+    fieldId: fct_food_hygiene_ratings_glasgow_distinct_rating_values
+  - descending: false
+    fieldId: fct_food_hygiene_ratings_glasgow_rating_date_month
+  tableCalculations: []
+name: Rating-label variety by business type
+pivotConfig:
+  columns:
+  - fct_food_hygiene_ratings_glasgow_business_type
+slug: fct-food-hygiene-ratings-glasgow-label-variety-by-business-type
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_food_hygiene_ratings_glasgow_rating_date_month
+  - fct_food_hygiene_ratings_glasgow_business_type
+  - fct_food_hygiene_ratings_glasgow_distinct_rating_values
+tableName: fct_food_hygiene_ratings_glasgow
+version: 1

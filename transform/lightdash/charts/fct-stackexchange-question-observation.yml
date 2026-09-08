@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_stackexchange_question_observation_is_answered
+          yRef:
+            field: fct_stackexchange_question_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_stackexchange_question_observation_is_answered
+      yField:
+      - fct_stackexchange_question_observation_distinct_entities
+  type: cartesian
+description: Distinct `question_id` values by `is_answered` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_stackexchange_question_observation_is_answered
+  exploreName: fct_stackexchange_question_observation
+  filters:
+    dimensions:
+      and:
+      - id: f55eb3d2-5de7-5677-8ded-2bd343053814
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_stackexchange_question_observation_observed_at
+        values:
+        - 30
+      id: d62c9420-5107-5c2f-83bc-c0773aa69565
+  limit: 20
+  metrics:
+  - fct_stackexchange_question_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_stackexchange_question_observation_distinct_entities
+  tableCalculations: []
+name: Distinct question by is answered
+slug: fct-stackexchange-question-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_stackexchange_question_observation_is_answered
+  - fct_stackexchange_question_observation_distinct_entities
+tableName: fct_stackexchange_question_observation
+version: 1

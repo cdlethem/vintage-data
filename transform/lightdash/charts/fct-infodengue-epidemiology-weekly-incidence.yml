@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_infodengue_epidemiology_week_start_date_week
+          yRef:
+            field: fct_infodengue_epidemiology_average_incidence_per_100k
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Week start date (Week)
+      yAxis:
+      - name: Mean observed incidence per 100k
+    layout:
+      xField: fct_infodengue_epidemiology_week_start_date_week
+      yField:
+      - fct_infodengue_epidemiology_average_incidence_per_100k
+  type: cartesian
+description: Mean reported incidence per 100,000 across retained municipality observations in each epidemiological
+  week over the latest three years. Incidence is a rate and is averaged, never summed; weeks with no retained
+  observations are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_infodengue_epidemiology_week_start_date_week
+  exploreName: fct_infodengue_epidemiology
+  filters:
+    dimensions:
+      and:
+      - id: f61525db-dfd4-500b-89d2-d59a2ac7b631
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_infodengue_epidemiology_week_start_date
+        values:
+        - 1095
+      id: cd8e4765-0466-5f3c-9c75-9ae0c794335a
+  limit: 5000
+  metrics:
+  - fct_infodengue_epidemiology_average_incidence_per_100k
+  sorts:
+  - descending: false
+    fieldId: fct_infodengue_epidemiology_week_start_date_week
+  tableCalculations: []
+name: Mean incidence per 100k by epidemiological week
+slug: fct-infodengue-epidemiology-weekly-incidence
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_infodengue_epidemiology_week_start_date_week
+  - fct_infodengue_epidemiology_average_incidence_per_100k
+tableName: fct_infodengue_epidemiology
+version: 1

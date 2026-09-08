@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_bike_station_status_daily_observation_date_day
+          yRef:
+            field: fct_bike_station_status_daily_average_avg_docks_available
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observation date (Day)
+      yAxis:
+      - name: Mean observed avg docks available
+    layout:
+      xField: fct_bike_station_status_daily_observation_date_day
+      yField:
+      - fct_bike_station_status_daily_average_avg_docks_available
+  type: cartesian
+description: Mean of station-level `avg_docks_available` values on each observation date. This reported
+  capacity level is not summed across stations, and a missing date is absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_bike_station_status_daily_observation_date_day
+  exploreName: fct_bike_station_status_daily
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_bike_station_status_daily_average_avg_docks_available
+  sorts:
+  - descending: false
+    fieldId: fct_bike_station_status_daily_observation_date_day
+  tableCalculations: []
+name: Mean daily available docks
+slug: fct-bike-station-status-daily-daily-dock-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_bike_station_status_daily_observation_date_day
+  - fct_bike_station_status_daily_average_avg_docks_available
+tableName: fct_bike_station_status_daily
+version: 1

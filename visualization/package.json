@@ -1,0 +1,7 @@
+{
+  "name": "vintage-data-lightdash",
+  "private": true,
+  "version": "1.0.0",
+  "engines": {"node": ">=24 <25"},
+  "dependencies": {"@lightdash/cli": "2.140.0"}
+}

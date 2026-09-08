@@ -27,6 +27,7 @@ feed failed. Feeds are CC BY 4.0 from their respective providers.
 Stdlib only.
 """
 
+import hashlib
 import argparse
 import json
 import os
@@ -143,48 +144,59 @@ def walk_feed(provider: str, url: str, feed_type: str, fetched_at: str, cursor: 
 
 
 def fetch_openactive(feed_type: str = "Slot", budget_seconds: int = 2700, timeout: int = 60,
-                     state: dict | None = None, max_feeds: int = 0):
-    """Yield records for one feed type, updating ``state`` cursors in place."""
+                     state: dict | None = None, max_feeds: int = 0, shard_count: int = 1,
+                     shard_index: int = 0):
+    """Yield records for one feed type, updating cursors and run counters in ``state``."""
     fetched_at = datetime.now(timezone.utc).isoformat()
     state = state if state is not None else {"cursors": {}, "rotate": {}}
     cursors = state.setdefault("cursors", {})
     rotate = state.setdefault("rotate", {})
-
     feeds = list(discover_feeds(feed_type, timeout))
+    discovered = len(feeds)
+    if shard_count < 1 or not 0 <= shard_index < shard_count:
+        raise ValueError("invalid shard selection")
+    feeds = [(provider, url) for provider, url in feeds
+             if int.from_bytes(hashlib.sha256(url.encode()).digest(), "big") % shard_count == shard_index]
     if max_feeds > 0:
         feeds = feeds[:max_feeds]
-    # Resume the round-robin after the last feed we finished, so the initial backfill
-    # works through every provider instead of restarting on the same big feed forever.
+    if not feeds:
+        state["last_summary"] = {"health": "healthy", "completeness": "complete", "records": 0,
+                                 "requests": {"attempted": 0}, "coverage": {"feeds_discovered": discovered, "feeds_attempted": 0}}
+        return
     start = rotate.get(feed_type, 0) % len(feeds)
     ordered = feeds[start:] + feeds[:start]
-
     deadline = time.monotonic() + budget_seconds
-    failures, produced, completed = 0, 0, 0
+    failures = produced = completed = updated = deleted = cursor_advances = 0
+    failure_samples = []
     for offset, (provider, url) in enumerate(ordered):
-        if time.monotonic() >= deadline:
-            break
+        if time.monotonic() >= deadline: break
         key = f"{feed_type}|{url}"
         try:
             reached_end = False
-            for record, next_cursor, at_end in walk_feed(
-                provider, url, feed_type, fetched_at, cursors.get(key, ""), deadline, timeout
-            ):
+            prior_cursor = cursors.get(key, "")
+            for record, next_cursor, at_end in walk_feed(provider, url, feed_type, fetched_at, prior_cursor, deadline, timeout):
                 produced += 1
-                cursors[key] = next_cursor
-                reached_end = at_end
+                updated += record["state"] == "updated"; deleted += record["state"] == "deleted"
+                if next_cursor != cursors.get(key, ""): cursor_advances += 1
+                cursors[key] = next_cursor; reached_end = at_end
                 yield record
-            if reached_end:
-                completed = offset + 1
-        except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError,
-                json.JSONDecodeError, OSError) as error:
+            if reached_end: completed = offset + 1
+        except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError, json.JSONDecodeError, OSError) as error:
             failures += 1
+            if len(failure_samples) < 100: failure_samples.append({"provider": provider, "feed_url": url, "error": f"{type(error).__name__}: {error}"})
             print(f"{provider} <{url}>: {type(error).__name__}: {error}", file=sys.stderr)
     rotate[feed_type] = (start + completed) % len(feeds)
-
-    if failures and not produced:
-        raise RuntimeError(f"all {failures} {feed_type} feeds failed")
-    if failures:
-        print(f"{failures} of {len(feeds)} {feed_type} feeds failed", file=sys.stderr)
+    broad_failure = failures and not produced
+    state["last_summary"] = {
+        "health": "failed" if broad_failure else ("degraded" if failures else "healthy"),
+        "completeness": "failed" if broad_failure else ("partial" if failures else "complete"),
+        "records": produced, "requests": {"attempted": len(ordered)},
+        "partitions": {"attempted": len(ordered), "succeeded": len(ordered)-failures, "failed": failures, "failures": failure_samples},
+        "coverage": {"feeds_discovered": discovered, "feeds_attempted": len(ordered), "feeds_completed": completed},
+        "state_change": {"cursor_advances": cursor_advances},
+        "metrics": {"updated": updated, "deleted": deleted, "shard_count": shard_count, "shard_index": shard_index},
+    }
+    if broad_failure: raise RuntimeError(f"all {failures} {feed_type} feeds failed")
 
 
 def main():
@@ -193,6 +205,9 @@ def main():
     parser.add_argument("--budget-seconds", type=int, default=2700,
                         help="wall-clock walking budget; progress is checkpointed and resumed")
     parser.add_argument("--max-feeds", type=int, default=0, help="0 harvests every discovered feed")
+    parser.add_argument("--feed-catalog", action="store_true", help="experimental: select deterministic feed shard")
+    parser.add_argument("--shard-count", type=int, default=1)
+    parser.add_argument("--shard-index", type=int, default=0)
     parser.add_argument("--state-file", help="cursor file; defaults under $EXTRACT_DATA_ROOT/state")
     parser.add_argument("--no-state", action="store_true",
                         help="ignore and do not write cursors (one-off full walk)")
@@ -201,12 +216,18 @@ def main():
 
     path = state_path(args.state_file)
     state = {"cursors": {}, "rotate": {}} if args.no_state else load_state(path)
-    for record in fetch_openactive(args.feed_type, args.budget_seconds, args.timeout,
-                                   state, args.max_feeds):
-        print(json.dumps(record, ensure_ascii=False))
-    # Only after every record is written: an aborted run re-fetches instead of skipping.
+    try:
+        for record in fetch_openactive(args.feed_type, args.budget_seconds, args.timeout, state, args.max_feeds,
+                                       args.shard_count, args.shard_index):
+            print(json.dumps(record, ensure_ascii=False))
+    except Exception as exc:
+        print("VINTAGE_RUN_SUMMARY\t" + json.dumps(state.get("last_summary", {
+            "health": "failed", "completeness": "failed", "records": 0, "error": str(exc)})), file=sys.stderr)
+        return 1
     if not args.no_state:
         save_state(path, state)
+    print("VINTAGE_RUN_SUMMARY\t" + json.dumps(state["last_summary"]), file=sys.stderr)
+    return 0
 
 
 if __name__ == "__main__":

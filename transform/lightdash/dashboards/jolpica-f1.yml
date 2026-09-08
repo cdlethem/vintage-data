@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: e6251fbf-8b33-59c7-899f-a62597a569c6
+    label: 'Jolpica f1: Season'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_jolpica_f1_season
+      tableName: fct_jolpica_f1
+    values: []
+  - disabled: true
+    id: 93e6d977-19ed-5c4d-a1d9-7b029b26594e
+    label: 'Jolpica f1: Round'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_jolpica_f1_round
+      tableName: fct_jolpica_f1
+    values: []
+  - disabled: true
+    id: 92b37415-5726-5d0c-a949-58f4bca35618
+    label: 'Jolpica f1: Constructor'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_jolpica_f1_constructor
+      tableName: fct_jolpica_f1
+    values: []
+  - disabled: true
+    id: ca305623-4f33-5841-a814-c70c74cfdf49
+    label: 'Jolpica f1: Nationality'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_jolpica_f1_nationality
+      tableName: fct_jolpica_f1
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Jolpica F1
+slug: jolpica-f1
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of Jolpica Formula 1 driver-standing observations. Each row is one
+      driver championship standing for a season and round at one extractor observation timestamp; duplicate
+      raw replays of that observation are reduced to the latest loaded row while raw-load lineage is retained.
+
+
+      **Grain:** season, round, driver_id, observed_at
+
+
+      **What changes here:** how the five-day championship snapshot changes in driver coverage, constructor
+      mix, and accumulated points.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `jolpica_f1` — licence: Jolpica-F1 — Ergast-compatible, respect ToS; attribution required: False.
+      Source configuration: `extract/sources/jolpica_f1.yml`.'
+    hideFrame: false
+    title: Jolpica f1
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Jolpica f1 — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Drivers represented by observation day
+    chartSlug: fct-jolpica-f1-drivers-observed
+    hideTitle: false
+    title: Drivers represented by observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Highest championship points by observation day
+    chartSlug: fct-jolpica-f1-championship-points
+    hideTitle: false
+    title: Highest championship points by observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Constructor points by observation day
+    chartSlug: fct-jolpica-f1-points-by-constructor
+    hideTitle: false
+    title: Constructor points by observation day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Driver mix by nationality and observation day
+    chartSlug: fct-jolpica-f1-driver-mix-by-nationality
+    hideTitle: false
+    title: Driver mix by nationality and observation day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Jolpica f1 — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Maximum observed championship points by driver name
+    chartSlug: fct-jolpica-f1
+    hideTitle: false
+    title: Maximum observed championship points by driver name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Jolpica f1 — observations
+    chartSlug: fct-jolpica-f1-details
+    hideTitle: false
+    title: Jolpica f1 — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

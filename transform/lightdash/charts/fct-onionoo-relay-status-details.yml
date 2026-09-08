@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly incremental physical history of Tor relays reported by the Onionoo feed. Each
+  row represents one relay from one upstream source at one fetched observation timestamp. Re-ingested
+  copies of an observation are reduced to the latest raw-load record while source lineage is retained
+  for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_onionoo_relay_status_observed_at
+  - fct_onionoo_relay_status_relay_id
+  - fct_onionoo_relay_status_running
+  - fct_onionoo_relay_status_source_loaded_at
+  exploreName: fct_onionoo_relay_status
+  filters:
+    dimensions:
+      and:
+      - id: a73d1b55-7a61-59c2-858e-0108f9a9c521
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_onionoo_relay_status_observed_at
+        values:
+        - 30
+      id: fcf808b1-57cc-5e85-be29-da905615560e
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_onionoo_relay_status_observed_at
+  tableCalculations: []
+name: Onionoo relay status — observations
+slug: fct-onionoo-relay-status-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_onionoo_relay_status
+version: 1

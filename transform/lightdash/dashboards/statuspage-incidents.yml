@@ -1,0 +1,154 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 7bc040c1-5b20-55ec-9430-292a4fbd73c7
+    label: 'Statuspage incident observation: Impact'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_statuspage_incident_observation_impact
+      tableName: fct_statuspage_incident_observation
+    values: []
+  - disabled: true
+    id: 7413d222-0e83-55fb-b0b8-698ce1d89e47
+    label: 'Statuspage incident observation: Incident status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_statuspage_incident_observation_incident_status
+      tableName: fct_statuspage_incident_observation
+    values: []
+  - disabled: true
+    id: ef330975-9a88-501f-a94e-8fd39156dc4a
+    label: 'Statuspage incident observation: Incident name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_statuspage_incident_observation_incident_name
+      tableName: fct_statuspage_incident_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Statuspage Incidents
+slug: statuspage-incidents
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of incidents reported by the Statuspage API. Each row represents
+      one upstream status page incident at one extractor observation timestamp, retaining incident lifecycle,
+      impact, nested update and component details, page context, and complete load lineage. Repeated insert-only
+      copies of the same source, incident, and observation timestamp are reduced to the latest loaded
+      copy.
+
+
+      **Grain:** source_name, incident_id, observed_at
+
+
+      **What changes here:** how incident intake and impact mix change across the three-month lifecycle
+      history while the latest feed level remains steady.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `statuspage_incidents` — licence: public status page; attribution required: False. Source configuration:
+      `extract/sources/statuspage_incidents.yml`.'
+    hideFrame: false
+    title: Statuspage incident observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Statuspage incident observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct incidents in the observed feed
+    chartSlug: fct-statuspage-incident-observation-observed-incidents-by-day
+    hideTitle: false
+    title: Distinct incidents in the observed feed
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct incident names in the observed feed
+    chartSlug: fct-statuspage-incident-observation-observed-names-by-day
+    hideTitle: false
+    title: Distinct incident names in the observed feed
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Incidents created per source day
+    chartSlug: fct-statuspage-incident-observation-incidents-created-by-day
+    hideTitle: false
+    title: Incidents created per source day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Incident intake mix by impact
+    chartSlug: fct-statuspage-incident-observation-impact-mix-by-created-day
+    hideTitle: false
+    title: Incident intake mix by impact
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Statuspage incident observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct incident by impact
+    chartSlug: fct-statuspage-incident-observation
+    hideTitle: false
+    title: Distinct incident by impact
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Statuspage incident observation — observations
+    chartSlug: fct-statuspage-incident-observation-details
+    hideTitle: false
+    title: Statuspage incident observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

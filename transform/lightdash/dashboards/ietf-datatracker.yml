@@ -1,0 +1,154 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: f77568ce-f22f-58a0-9a11-61fd602deefe
+    label: 'Ietf datatracker event observation: Event type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ietf_datatracker_event_observation_event_type
+      tableName: fct_ietf_datatracker_event_observation
+    values: []
+  - disabled: true
+    id: 95e9c930-fd3c-561c-84c2-4de73790b0c5
+    label: 'Ietf datatracker event observation: Revision'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ietf_datatracker_event_observation_revision
+      tableName: fct_ietf_datatracker_event_observation
+    values: []
+  - disabled: true
+    id: 14b9364a-7eae-5387-8296-e180e99c2cac
+    label: 'Ietf datatracker event observation: Draft name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ietf_datatracker_event_observation_draft_name
+      tableName: fct_ietf_datatracker_event_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Ietf Datatracker
+slug: ietf-datatracker
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Incremental physical observation fact for IETF Datatracker activity events. Each row represents
+      one Datatracker event identifier from the source stream at one extractor observation timestamp,
+      retaining event classification, draft and revision context, event text and timing, and raw-load
+      lineage. The twice-hourly incremental merge replays the latest atomic load and reduces repeated
+      copies of the same source event observation to its latest loaded record.
+
+
+      **Grain:** source_system, event_id, observed_at
+
+
+      **What changes here:** how Datatracker event volume and draft coverage shift across event and observation
+      days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `ietf_datatracker` — licence: IETF Datatracker — public; attribution required: False. Source configuration:
+      `extract/sources/ietf_datatracker.yml`.'
+    hideFrame: false
+    title: Ietf datatracker event observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Ietf datatracker event observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Events recorded per day
+    chartSlug: fct-ietf-datatracker-event-observation-event-volume
+    hideTitle: false
+    title: Events recorded per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Drafts represented per observation day
+    chartSlug: fct-ietf-datatracker-event-observation-draft-coverage
+    hideTitle: false
+    title: Drafts represented per observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Events per day by event type
+    chartSlug: fct-ietf-datatracker-event-observation-by-event-type
+    hideTitle: false
+    title: Events per day by event type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Event mix per day by revision
+    chartSlug: fct-ietf-datatracker-event-observation-revision-mix
+    hideTitle: false
+    title: Event mix per day by revision
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Ietf datatracker event observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct event by event type
+    chartSlug: fct-ietf-datatracker-event-observation
+    hideTitle: false
+    title: Distinct event by event type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Ietf datatracker event observation — observations
+    chartSlug: fct-ietf-datatracker-event-observation-details
+    hideTitle: false
+    title: Ietf datatracker event observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

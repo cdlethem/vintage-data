@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_hk_parking_vacancy_publisher_updated_at_day
+          yRef:
+            field: fct_hk_parking_vacancy_average_vacancy_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Publisher updated at (Day)
+      yAxis:
+      - name: Mean observed vacancy count
+    layout:
+      xField: fct_hk_parking_vacancy_publisher_updated_at_day
+      yField:
+      - fct_hk_parking_vacancy_average_vacancy_count
+  type: cartesian
+description: Mean `vacancy_count` across retained parking observations grouped by the publisher-supplied
+  `publisher_updated_at` day. The source has ten populated days spread across five years, so gaps are
+  absent rather than zero and the series is a sparse update history rather than continuous occupancy.
+metricQuery:
+  dimensions:
+  - fct_hk_parking_vacancy_publisher_updated_at_day
+  exploreName: fct_hk_parking_vacancy
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_hk_parking_vacancy_average_vacancy_count
+  sorts:
+  - descending: false
+    fieldId: fct_hk_parking_vacancy_publisher_updated_at_day
+  tableCalculations: []
+name: Mean vacancy reported on publisher update days
+slug: fct-hk-parking-vacancy-updated-vacancy
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hk_parking_vacancy_publisher_updated_at_day
+  - fct_hk_parking_vacancy_average_vacancy_count
+tableName: fct_hk_parking_vacancy
+version: 1

@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_gazette_insolvency_notice_observation_notice_code
+          yRef:
+            field: fct_gazette_insolvency_notice_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_gazette_insolvency_notice_observation_notice_code
+      yField:
+      - fct_gazette_insolvency_notice_observation_distinct_entities
+  type: cartesian
+description: Distinct `notice_id` values by `notice_code` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_gazette_insolvency_notice_observation_notice_code
+  exploreName: fct_gazette_insolvency_notice_observation
+  filters:
+    dimensions:
+      and:
+      - id: 6721fd7e-a27f-555d-9813-028e1fe50788
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_gazette_insolvency_notice_observation_observed_at
+        values:
+        - 30
+      id: 4fec5088-8170-56d8-967a-f23f885d5e31
+  limit: 20
+  metrics:
+  - fct_gazette_insolvency_notice_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_gazette_insolvency_notice_observation_distinct_entities
+  tableCalculations: []
+name: Distinct notice by notice code
+slug: fct-gazette-insolvency-notice-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gazette_insolvency_notice_observation_notice_code
+  - fct_gazette_insolvency_notice_observation_distinct_entities
+tableName: fct_gazette_insolvency_notice_observation
+version: 1

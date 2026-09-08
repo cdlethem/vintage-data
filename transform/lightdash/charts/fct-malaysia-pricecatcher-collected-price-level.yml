@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_malaysia_pricecatcher_observed_at_day
+          yRef:
+            field: fct_malaysia_pricecatcher_average_price_amount
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed price amount
+    layout:
+      xField: fct_malaysia_pricecatcher_observed_at_day
+      yField:
+      - fct_malaysia_pricecatcher_average_price_amount
+  type: cartesian
+description: Observation-weighted mean `price_amount` for rows fetched on each extractor day in the recent
+  14-day window. This is an average price level, not a sum across items or premises; days with no successful
+  extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_malaysia_pricecatcher_observed_at_day
+  exploreName: fct_malaysia_pricecatcher
+  filters:
+    dimensions:
+      and:
+      - id: ba9f7eda-6fa7-5bf2-b317-92c944ae5498
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_malaysia_pricecatcher_observed_at
+        values:
+        - 14
+      id: 659d81b3-e349-5622-a965-1ee3540f6c77
+  limit: 5000
+  metrics:
+  - fct_malaysia_pricecatcher_average_price_amount
+  sorts:
+  - descending: false
+    fieldId: fct_malaysia_pricecatcher_observed_at_day
+  tableCalculations: []
+name: Mean collected price by extractor day
+slug: fct-malaysia-pricecatcher-collected-price-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_malaysia_pricecatcher_observed_at_day
+  - fct_malaysia_pricecatcher_average_price_amount
+tableName: fct_malaysia_pricecatcher
+version: 1

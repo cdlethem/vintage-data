@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ireland_bathing_alerts_county_name
+          yRef:
+            field: fct_ireland_bathing_alerts_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_ireland_bathing_alerts_county_name
+      yField:
+      - fct_ireland_bathing_alerts_distinct_entities
+  type: cartesian
+description: Distinct `alert_id` values by `county_name` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_ireland_bathing_alerts_county_name
+  exploreName: fct_ireland_bathing_alerts
+  filters:
+    dimensions:
+      and:
+      - id: 7f55cc7f-6f67-584c-929e-437116ffe13c
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_ireland_bathing_alerts_fetched_at
+        values:
+        - 30
+      id: 0c69eb41-539d-5f03-9764-d4288a1ee63a
+  limit: 20
+  metrics:
+  - fct_ireland_bathing_alerts_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_ireland_bathing_alerts_distinct_entities
+  tableCalculations: []
+name: Distinct alert by county name
+slug: fct-ireland-bathing-alerts
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ireland_bathing_alerts_county_name
+  - fct_ireland_bathing_alerts_distinct_entities
+tableName: fct_ireland_bathing_alerts
+version: 1

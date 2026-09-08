@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_celestrak_socrates_conjunction_events_tca_day
+          yRef:
+            field: fct_celestrak_socrates_conjunction_events_distinct_events
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Tca (Day)
+      yAxis:
+      - name: Distinct conjunction events
+    layout:
+      xField: fct_celestrak_socrates_conjunction_events_tca_day
+      yField:
+      - fct_celestrak_socrates_conjunction_events_distinct_events
+  type: cartesian
+description: Distinct `conjunction_id` values scheduled on each `tca` day. This is event volume on the
+  publisher's closest-approach horizon, not extractor polling volume; days with no scheduled events are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_celestrak_socrates_conjunction_events_tca_day
+  exploreName: fct_celestrak_socrates_conjunction_events
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_celestrak_socrates_conjunction_events_distinct_events
+  sorts:
+  - descending: false
+    fieldId: fct_celestrak_socrates_conjunction_events_tca_day
+  tableCalculations: []
+name: Conjunction events by closest-approach day
+slug: fct-celestrak-socrates-conjunction-events-daily-conjunctions
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_celestrak_socrates_conjunction_events_tca_day
+  - fct_celestrak_socrates_conjunction_events_distinct_events
+tableName: fct_celestrak_socrates_conjunction_events
+version: 1

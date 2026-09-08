@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_radio_browser_station_snapshot_last_changed_at_month
+          yRef:
+            field: fct_radio_browser_station_snapshot_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Last changed at (Month)
+      yAxis:
+      - name: Distinct station
+    layout:
+      stack: true
+      xField: fct_radio_browser_station_snapshot_last_changed_at_month
+      yField:
+      - fct_radio_browser_station_snapshot_distinct_entities
+  type: cartesian
+description: Distinct stations by the month of source `last_changed_at`, stacked by country code. This
+  source-event view is sparse with five populated months; the eight largest countries are shown and months
+  without reported changes are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_radio_browser_station_snapshot_last_changed_at_month
+  - fct_radio_browser_station_snapshot_country_code
+  exploreName: fct_radio_browser_station_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_radio_browser_station_snapshot_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_radio_browser_station_snapshot_distinct_entities
+  - descending: false
+    fieldId: fct_radio_browser_station_snapshot_last_changed_at_month
+  tableCalculations: []
+name: Stations with metadata changes by month
+pivotConfig:
+  columns:
+  - fct_radio_browser_station_snapshot_country_code
+slug: fct-radio-browser-station-snapshot-changed-stations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_radio_browser_station_snapshot_last_changed_at_month
+  - fct_radio_browser_station_snapshot_country_code
+  - fct_radio_browser_station_snapshot_distinct_entities
+tableName: fct_radio_browser_station_snapshot
+version: 1

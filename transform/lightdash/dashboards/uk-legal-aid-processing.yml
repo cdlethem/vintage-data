@@ -1,0 +1,152 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 585bfe5f-b804-5fde-b534-9f6613bd74f0
+    label: 'Uk legal aid processing: Processing stream'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_legal_aid_processing_processing_stream
+      tableName: fct_uk_legal_aid_processing
+    values: []
+  - disabled: true
+    id: 455c96bb-9e9e-5fc6-9059-b668d098a5e7
+    label: 'Uk legal aid processing: Processing item'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_legal_aid_processing_processing_item
+      tableName: fct_uk_legal_aid_processing
+    values: []
+  - disabled: true
+    id: a2bcdd37-d888-5abd-b49a-87fb0b7070ec
+    label: 'Uk legal aid processing: Publisher updated date'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_legal_aid_processing_publisher_updated_date
+      tableName: fct_uk_legal_aid_processing
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Uk Legal Aid Processing
+slug: uk-legal-aid-processing
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily observations of UK legal-aid processing backlogs by processing item. Each row represents
+      one processing item in one published feed snapshot, preserving the source percentage text alongside
+      its normalized proportion and the dates reported by the publisher.
+
+
+      **Grain:** source, processing_stream, processing_item, observed_at
+
+
+      **What changes here:** backlog proportions move across processing streams as the publisher advances
+      its current date.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `uk_legal_aid_processing` — licence: Open Government Licence; attribution required: True. Source
+      configuration: `extract/sources/uk_legal_aid_processing.yml`.'
+    hideFrame: false
+    title: Uk legal aid processing
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Uk legal aid processing — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean backlog proportion by current processing date
+    chartSlug: fct-uk-legal-aid-processing-backlog-proportion-daily
+    hideTitle: false
+    title: Mean backlog proportion by current processing date
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Processing items represented by current date
+    chartSlug: fct-uk-legal-aid-processing-processing-items-daily
+    hideTitle: false
+    title: Processing items represented by current date
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Backlog proportion by processing stream
+    chartSlug: fct-uk-legal-aid-processing-backlog-by-stream
+    hideTitle: false
+    title: Backlog proportion by processing stream
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Processing-item mix by stream and current date
+    chartSlug: fct-uk-legal-aid-processing-items-by-stream
+    hideTitle: false
+    title: Processing-item mix by stream and current date
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Uk legal aid processing — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed backlog older than current processing date pct by processing stream
+    chartSlug: fct-uk-legal-aid-processing
+    hideTitle: false
+    title: Mean observed backlog older than current processing date pct by processing stream
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Uk legal aid processing — observations
+    chartSlug: fct-uk-legal-aid-processing-details
+    hideTitle: false
+    title: Uk legal aid processing — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

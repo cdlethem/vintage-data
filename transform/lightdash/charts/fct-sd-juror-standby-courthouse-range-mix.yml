@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_sd_juror_standby_observed_at_day
+          yRef:
+            field: fct_sd_juror_standby_average_group_range_count
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed group range count
+    layout:
+      stack: true
+      xField: fct_sd_juror_standby_observed_at_day
+      yField:
+      - fct_sd_juror_standby_average_group_range_count
+  type: cartesian
+description: Average parsed group-range count per observation day, stacked by courthouse. The four courthouses
+  are retained; this is a snapshot level rather than an additive total, and missing courthouse-day observations
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_sd_juror_standby_observed_at_day
+  - fct_sd_juror_standby_courthouse
+  exploreName: fct_sd_juror_standby
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sd_juror_standby_average_group_range_count
+  sorts:
+  - descending: true
+    fieldId: fct_sd_juror_standby_average_group_range_count
+  - descending: false
+    fieldId: fct_sd_juror_standby_observed_at_day
+  tableCalculations: []
+name: Mean group ranges by courthouse and day
+pivotConfig:
+  columns:
+  - fct_sd_juror_standby_courthouse
+slug: fct-sd-juror-standby-courthouse-range-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sd_juror_standby_observed_at_day
+  - fct_sd_juror_standby_courthouse
+  - fct_sd_juror_standby_average_group_range_count
+tableName: fct_sd_juror_standby
+version: 1

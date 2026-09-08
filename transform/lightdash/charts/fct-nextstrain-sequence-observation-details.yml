@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of Nextstrain phylogenetic sequence observations. Each row represents
+  one source, sequence identifier, and extractor fetch timestamp, retaining the reported sample, tree,
+  clade, geography, mutation, and provenance attributes together with complete load lineage. Because the
+  raw source is append-only, repeated copies of a source sequence at the same fetch timestamp are reduced
+  to the latest loaded record.
+metricQuery:
+  dimensions: &id001
+  - fct_nextstrain_sequence_observation_fetched_at
+  - fct_nextstrain_sequence_observation_sequence_id
+  - fct_nextstrain_sequence_observation_clade
+  - fct_nextstrain_sequence_observation_source_loaded_at
+  exploreName: fct_nextstrain_sequence_observation
+  filters:
+    dimensions:
+      and:
+      - id: acf72243-8e41-5761-b1c0-074560507d83
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nextstrain_sequence_observation_fetched_at
+        values:
+        - 30
+      id: d58166b3-8625-5135-b123-c3d020a2c060
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_nextstrain_sequence_observation_fetched_at
+  tableCalculations: []
+name: Nextstrain sequence observation — observations
+slug: fct-nextstrain-sequence-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_nextstrain_sequence_observation
+version: 1

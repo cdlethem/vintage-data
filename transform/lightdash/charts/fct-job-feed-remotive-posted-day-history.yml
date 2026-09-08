@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_job_feed_remotive_posted_day
+          yRef:
+            field: fct_job_feed_remotive_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted (Day)
+      yAxis:
+      - name: Distinct job
+    layout:
+      xField: fct_job_feed_remotive_posted_day
+      yField:
+      - fct_job_feed_remotive_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values grouped by the publisher's posted day across retained observations.
+  This is not a new-posting count because a listing can recur in later snapshots; posted days with no
+  matching records are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_job_feed_remotive_posted_day
+  exploreName: fct_job_feed_remotive
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_feed_remotive_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_job_feed_remotive_posted_day
+  tableCalculations: []
+name: Jobs by publisher posted day
+slug: fct-job-feed-remotive-posted-day-history
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_feed_remotive_posted_day
+  - fct_job_feed_remotive_distinct_entities
+tableName: fct_job_feed_remotive
+version: 1

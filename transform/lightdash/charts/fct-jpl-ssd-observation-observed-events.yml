@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_jpl_ssd_observation_observed_at_day
+          yRef:
+            field: fct_jpl_ssd_observation_distinct_observations
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct fireball event
+    layout:
+      xField: fct_jpl_ssd_observation_observed_at_day
+      yField:
+      - fct_jpl_ssd_observation_distinct_observations
+  type: cartesian
+description: Distinct `observation_id` values represented in each daily feed snapshot. This is a short
+  collection-time level because the publisher supplies no source event timestamp; days without a snapshot
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_jpl_ssd_observation_observed_at_day
+  exploreName: fct_jpl_ssd_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_jpl_ssd_observation_distinct_observations
+  sorts:
+  - descending: false
+    fieldId: fct_jpl_ssd_observation_observed_at_day
+  tableCalculations: []
+name: Distinct fireball events by observation day
+slug: fct-jpl-ssd-observation-observed-events
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_jpl_ssd_observation_observed_at_day
+  - fct_jpl_ssd_observation_distinct_observations
+tableName: fct_jpl_ssd_observation
+version: 1

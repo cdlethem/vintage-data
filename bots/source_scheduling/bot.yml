@@ -1,0 +1,29 @@
+name: source_scheduling
+description: plan one vetted source scheduling task
+schedule: "47 1-23/6 * * *"
+enabled: true
+model: repository_cli
+prompt: prompt.md
+timeout_minutes: 35
+context_budget_minutes: 5
+model_budget_minutes: 25
+cleanup_margin_seconds: 180
+capacity_policy: skip
+retry_on: [transient]
+freshness_sla_minutes: 420
+requires_capabilities: [repository_execute]
+context:
+  SCHEDULING_CONTEXT:
+    command: ["orchestration/.venv/bin/python", "bots/agent_context.py", "scheduling"]
+    cwd: .
+    timeout_s: 300
+triggers: []
+gate:
+  context: SCHEDULING_CONTEXT
+  path: backlog_count
+  operator: equals
+  value: 0
+  reason_code: no_scheduling_work
+output:
+  format: json
+  schema: source_scheduling_v2

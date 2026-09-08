@@ -1,0 +1,160 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 47aab77d-9163-5657-9fc7-f46f3ba1fe55
+    label: 'Chess archives magnuscarlsen games: Player color'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_chess_archives_magnuscarlsen_games_player_color
+      tableName: fct_chess_archives_magnuscarlsen_games
+    values: []
+  - disabled: true
+    id: fab1d9a4-6783-5834-ad9c-14848ae94491
+    label: 'Chess archives magnuscarlsen games: Time class'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_chess_archives_magnuscarlsen_games_time_class
+      tableName: fct_chess_archives_magnuscarlsen_games
+    values: []
+  - disabled: true
+    id: d865682d-460e-5c70-90d5-e96084be9e25
+    label: 'Chess archives magnuscarlsen games: Time control'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_chess_archives_magnuscarlsen_games_time_control
+      tableName: fct_chess_archives_magnuscarlsen_games
+    values: []
+  - disabled: true
+    id: eb8140ec-01d2-57a0-8cb8-6a3226837673
+    label: 'Chess archives magnuscarlsen games: Is rated'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_chess_archives_magnuscarlsen_games_is_rated
+      tableName: fct_chess_archives_magnuscarlsen_games
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Chess Archives Magnuscarlsen
+slug: chess-archives-magnuscarlsen
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical fact of Magnus Carlsen''s Chess.com archive games. Each row is one game at
+      the archive-source and game identifier grain; repeated append-only copies are reduced to the latest
+      loaded row while game attributes and raw-load lineage remain available for audit.
+
+
+      **Grain:** archive_source, game_id
+
+
+      **What changes here:** how game volume, outcomes, time controls, and move timing appear across Magnus
+      Carlsen''s single recorded end day.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `chess_archives_magnuscarlsen` — see dbt raw-source lineage.'
+    hideFrame: false
+    title: Chess archives magnuscarlsen games
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Chess archives magnuscarlsen games — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Games ended per day
+    chartSlug: fct-chess-archives-magnuscarlsen-games-games-ended
+    hideTitle: false
+    title: Games ended per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average median move time per day
+    chartSlug: fct-chess-archives-magnuscarlsen-games-average-move-time
+    hideTitle: false
+    title: Average median move time per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Games ended by player result
+    chartSlug: fct-chess-archives-magnuscarlsen-games-results-by-day
+    hideTitle: false
+    title: Games ended by player result
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Games ended by time class
+    chartSlug: fct-chess-archives-magnuscarlsen-games-time-class-mix
+    hideTitle: false
+    title: Games ended by time class
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Chess archives magnuscarlsen games — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct game by player result
+    chartSlug: fct-chess-archives-magnuscarlsen-games
+    hideTitle: false
+    title: Distinct game by player result
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Chess archives magnuscarlsen games — observations
+    chartSlug: fct-chess-archives-magnuscarlsen-games-details
+    hideTitle: false
+    title: Chess archives magnuscarlsen games — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

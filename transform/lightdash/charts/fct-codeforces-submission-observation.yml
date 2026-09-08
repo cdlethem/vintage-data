@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_codeforces_submission_observation_verdict
+          yRef:
+            field: fct_codeforces_submission_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_codeforces_submission_observation_verdict
+      yField:
+      - fct_codeforces_submission_observation_distinct_entities
+  type: cartesian
+description: Distinct `submission_id` values by `verdict` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_codeforces_submission_observation_verdict
+  exploreName: fct_codeforces_submission_observation
+  filters:
+    dimensions:
+      and:
+      - id: 99108694-c04e-5958-8fbf-d870de9f97d4
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_codeforces_submission_observation_observed_at
+        values:
+        - 30
+      id: 77581dfe-8f19-57ca-9694-7efa26bc9fc9
+  limit: 20
+  metrics:
+  - fct_codeforces_submission_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_codeforces_submission_observation_distinct_entities
+  tableCalculations: []
+name: Distinct submission by verdict
+slug: fct-codeforces-submission-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_codeforces_submission_observation_verdict
+  - fct_codeforces_submission_observation_distinct_entities
+tableName: fct_codeforces_submission_observation
+version: 1

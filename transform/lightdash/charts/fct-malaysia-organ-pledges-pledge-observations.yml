@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_malaysia_organ_pledges_pledge_date_day
+          yRef:
+            field: fct_malaysia_organ_pledges_distinct_pledges
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Pledge date (Day)
+      yAxis:
+      - name: Distinct pledge observations
+    layout:
+      xField: fct_malaysia_organ_pledges_pledge_date_day
+      yField:
+      - fct_malaysia_organ_pledges_distinct_pledges
+  type: cartesian
+description: Distinct `pledge_id` values by reported `pledge_date`. This is the state-level feed's daily
+  observation level, not a sum of pledges across repeated snapshots — dates with no publisher record are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_malaysia_organ_pledges_pledge_date_day
+  exploreName: fct_malaysia_organ_pledges
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_malaysia_organ_pledges_distinct_pledges
+  sorts:
+  - descending: false
+    fieldId: fct_malaysia_organ_pledges_pledge_date_day
+  tableCalculations: []
+name: Distinct pledge observations per day
+slug: fct-malaysia-organ-pledges-pledge-observations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_malaysia_organ_pledges_pledge_date_day
+  - fct_malaysia_organ_pledges_distinct_pledges
+tableName: fct_malaysia_organ_pledges
+version: 1

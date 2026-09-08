@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: b854dade-9430-50ca-b01f-d56d813bd011
+    label: 'Imdb processing times: Data type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_imdb_processing_times_data_type
+      tableName: fct_imdb_processing_times
+    values: []
+  - disabled: true
+    id: 36e22ebf-0e14-5644-a1a5-6fadf3cda1ee
+    label: 'Imdb processing times: Sla'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_imdb_processing_times_sla
+      tableName: fct_imdb_processing_times
+    values: []
+  - disabled: true
+    id: cdb74550-1fdd-556d-92c4-f8309009f38d
+    label: 'Imdb processing times: Oldest item'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_imdb_processing_times_oldest_item
+      tableName: fct_imdb_processing_times
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Imdb Processing Times
+slug: imdb-processing-times
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of IMDb contribution processing observations. Each row records one
+      processing category at one upstream fetch timestamp, with queue age, service-level tier, backlog
+      count, and raw-load lineage retained for operational monitoring and replay.
+
+
+      **Grain:** source, processing_type, observed_at
+
+
+      **What changes here:** how the IMDb processing queue changes by observation day and service tier,
+      with publisher dates offering only a short recent window.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `imdb_processing_times` — licence: IMDb non-commercial-use terms; attribution required: True.
+      Source configuration: `extract/sources/imdb_processing_times.yml`.'
+    hideFrame: false
+    title: Imdb processing times
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Imdb processing times — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean queue age by observation day
+    chartSlug: fct-imdb-processing-times-queue-age-by-day
+    hideTitle: false
+    title: Mean queue age by observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean unprocessed items by observation day
+    chartSlug: fct-imdb-processing-times-backlog-by-day
+    hideTitle: false
+    title: Mean unprocessed items by observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Queue age by service tier
+    chartSlug: fct-imdb-processing-times-queue-age-by-sla
+    hideTitle: false
+    title: Queue age by service tier
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean backlog by service tier
+    chartSlug: fct-imdb-processing-times-backlog-by-sla
+    hideTitle: false
+    title: Mean backlog by service tier
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Queue age by publisher update day
+    chartSlug: fct-imdb-processing-times-publisher-update-age
+    hideTitle: false
+    title: Queue age by publisher update day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Imdb processing times — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed queue age days by processing type
+    chartSlug: fct-imdb-processing-times
+    hideTitle: false
+    title: Mean observed queue age days by processing type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Imdb processing times — observations
+    chartSlug: fct-imdb-processing-times-details
+    hideTitle: false
+    title: Imdb processing times — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

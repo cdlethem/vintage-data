@@ -7,6 +7,14 @@ retries: 1
 timeout_minutes: 10
 sink: local
 
+# Algorithmic scheduling cadence: the load layer steps `schedule` between
+# these bounds from what each run actually brought back (load/README.md).
+# station endpoint floor is once per minute; 5m is already polite
+cadence:
+  auto: true
+  min_minutes: 5
+  max_minutes: 30
+
 # Vetting metadata (documentation only, not read by the DAG factory)
 cadence_note: "live trains calling at station HKI; dwell/cancellation/recovery snapshots"
 rate_limit: "CC BY 4.0; one request per run; station endpoint floor is once per minute"

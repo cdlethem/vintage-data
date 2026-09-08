@@ -1,0 +1,42 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical observation fact for prediction markets returned by Manifold Markets.
+  Each row represents one market at one extractor observation timestamp, retaining market state, probability
+  and activity measures, resolution fields, and raw-load lineage. The incremental table preserves append-only
+  observation history without rescanning prior snapshots on each load; repeated raw copies of the same
+  observation are reduced to the latest loaded row.
+metricQuery:
+  dimensions: &id001
+  - fct_manifold_market_observation_observed_at
+  - fct_manifold_market_observation_market_id
+  - fct_manifold_market_observation_question
+  - fct_manifold_market_observation_probability
+  - fct_manifold_market_observation_source_loaded_at
+  exploreName: fct_manifold_market_observation
+  filters:
+    dimensions:
+      and:
+      - id: 8802f4c1-8b68-5bb5-84a3-f6f5de23739f
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_manifold_market_observation_observed_at
+        values:
+        - 30
+      id: 35686960-197a-5454-9fbd-21a7c4fab662
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_manifold_market_observation_observed_at
+  tableCalculations: []
+name: Manifold market observation — observations
+slug: fct-manifold-market-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_manifold_market_observation
+version: 1

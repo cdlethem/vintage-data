@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_malaysia_organ_pledges_state
+          yRef:
+            field: fct_malaysia_organ_pledges_average_pledge_count
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_malaysia_organ_pledges_state
+      yField:
+      - fct_malaysia_organ_pledges_average_pledge_count
+  type: cartesian
+description: Mean observed pledge count by `state` in the selected observation window. Number of organ-donor
+  pledges reported for the state and pledge date. Each retained observation has equal weight; polling
+  frequency and repeated snapshots can affect the mean. This is not a latest-value measure or an additive
+  total.
+metricQuery:
+  dimensions:
+  - fct_malaysia_organ_pledges_state
+  exploreName: fct_malaysia_organ_pledges
+  filters:
+    dimensions:
+      and:
+      - id: 5061ef5e-5d92-5a04-8927-9e9a8cb3856e
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_malaysia_organ_pledges_observed_at
+        values:
+        - 30
+      id: 31a55605-75b7-5c7d-ac4e-c1d3cdb66683
+  limit: 20
+  metrics:
+  - fct_malaysia_organ_pledges_average_pledge_count
+  sorts:
+  - descending: true
+    fieldId: fct_malaysia_organ_pledges_average_pledge_count
+  tableCalculations: []
+name: Mean observed pledge count by state
+slug: fct-malaysia-organ-pledges
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_malaysia_organ_pledges_state
+  - fct_malaysia_organ_pledges_average_pledge_count
+tableName: fct_malaysia_organ_pledges
+version: 1

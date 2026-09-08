@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of food hygiene ratings returned for Cambridge establishments. Each
+  row is one establishment in one publisher snapshot, keyed by establishment_id and observed_at. Re-ingestion
+  of the same snapshot retains only the latest loaded copy while preserving load lineage.
+metricQuery:
+  dimensions: &id001
+  - fct_food_hygiene_ratings_cambridge_observed_at
+  - fct_food_hygiene_ratings_cambridge_establishment_id
+  - fct_food_hygiene_ratings_cambridge_business_type
+  - fct_food_hygiene_ratings_cambridge_source_loaded_at
+  exploreName: fct_food_hygiene_ratings_cambridge
+  filters:
+    dimensions:
+      and:
+      - id: 56438800-8de1-5e8a-ac66-5edbe94c8c79
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_food_hygiene_ratings_cambridge_observed_at
+        values:
+        - 30
+      id: 6b4bbd5a-0bcc-5a93-a74e-d0c6aa80a690
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_food_hygiene_ratings_cambridge_observed_at
+  tableCalculations: []
+name: Food hygiene ratings cambridge — observations
+slug: fct-food-hygiene-ratings-cambridge-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_food_hygiene_ratings_cambridge
+version: 1

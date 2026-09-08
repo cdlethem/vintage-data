@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical radiation readings published by the Safecast measurement API. Each row represents
+  one immutable Safecast measurement identified by its source and API measurement ID; non-radiation status
+  and temperature records are excluded, and repeated raw ingestion is reduced to the latest loaded copy
+  while preserving the measurement and load timestamps plus source lineage.
+metricQuery:
+  dimensions: &id001
+  - fct_safecast_radiation_measurement_observed_at
+  - fct_safecast_radiation_measurement_measurement_id
+  - fct_safecast_radiation_measurement_measurement_unit
+  - fct_safecast_radiation_measurement_measurement_value
+  - fct_safecast_radiation_measurement_source_loaded_at
+  exploreName: fct_safecast_radiation_measurement
+  filters:
+    dimensions:
+      and:
+      - id: 511e75bc-6898-5b32-8b54-40a42e22483d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_safecast_radiation_measurement_observed_at
+        values:
+        - 30
+      id: 5538978a-07c2-5113-b948-efe0c657a8b7
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_safecast_radiation_measurement_observed_at
+  tableCalculations: []
+name: Safecast radiation measurement — observations
+slug: fct-safecast-radiation-measurement-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_safecast_radiation_measurement
+version: 1

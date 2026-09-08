@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_legal_aid_processing_current_processing_date_day
+          yRef:
+            field: fct_uk_legal_aid_processing_distinct_processing_items
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Current processing date (Day)
+      yAxis:
+      - name: Distinct processing items
+    layout:
+      xField: fct_uk_legal_aid_processing_current_processing_date_day
+      yField:
+      - fct_uk_legal_aid_processing_distinct_processing_items
+  type: cartesian
+description: Distinct `processing_item` values reported for each `current_processing_date`. This shows
+  the breadth of published work types, not the number of cases; sparse dates are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_uk_legal_aid_processing_current_processing_date_day
+  exploreName: fct_uk_legal_aid_processing
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_uk_legal_aid_processing_distinct_processing_items
+  sorts:
+  - descending: false
+    fieldId: fct_uk_legal_aid_processing_current_processing_date_day
+  tableCalculations: []
+name: Processing items represented by current date
+slug: fct-uk-legal-aid-processing-processing-items-daily
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_legal_aid_processing_current_processing_date_day
+  - fct_uk_legal_aid_processing_distinct_processing_items
+tableName: fct_uk_legal_aid_processing
+version: 1

@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of National Snow and Ice Data Center sea-ice observations. Each row
+  is the latest loaded record for one source, source record identifier, and observation date; repeated
+  insert-only raw snapshots are reduced by load lineage while extractor and loader fields remain available
+  for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_nsidc_sea_ice_fetched_at
+  - fct_nsidc_sea_ice_sea_ice_id
+  - fct_nsidc_sea_ice_observation_date
+  - fct_nsidc_sea_ice_extent_million_km2
+  - fct_nsidc_sea_ice_source_loaded_at
+  exploreName: fct_nsidc_sea_ice
+  filters:
+    dimensions:
+      and:
+      - id: 00592571-e36d-5d17-91cc-c96a709d446c
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nsidc_sea_ice_fetched_at
+        values:
+        - 30
+      id: d4e388ac-6921-5049-904b-94f23f3670ad
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_nsidc_sea_ice_fetched_at
+  tableCalculations: []
+name: Nsidc sea ice — observations
+slug: fct-nsidc-sea-ice-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_nsidc_sea_ice
+version: 1

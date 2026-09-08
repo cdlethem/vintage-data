@@ -1,0 +1,42 @@
+chartConfig:
+  config: {}
+  type: table
+description: Incremental physical observation fact for Hacker News API items. Each row is one Hacker News
+  item identifier from the source stream at one fetched_at observation timestamp, preserving the item
+  payload fields and raw-load lineage. Replayed copies of the same source, item, and observation timestamp
+  are reduced to the latest loaded row; this model does not infer parent/child relationships or fill fields
+  omitted by the API.
+metricQuery:
+  dimensions: &id001
+  - fct_hackernews_item_observation_observed_at
+  - fct_hackernews_item_observation_item_id
+  - fct_hackernews_item_observation_item_type
+  - fct_hackernews_item_observation_score
+  - fct_hackernews_item_observation_source_loaded_at
+  exploreName: fct_hackernews_item_observation
+  filters:
+    dimensions:
+      and:
+      - id: b3df802b-62e3-5cc5-82cd-fab329886d27
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_hackernews_item_observation_observed_at
+        values:
+        - 30
+      id: 84f1a896-bf38-514a-b102-1c25376f576e
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_hackernews_item_observation_observed_at
+  tableCalculations: []
+name: Hackernews item observation — observations
+slug: fct-hackernews-item-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_hackernews_item_observation
+version: 1

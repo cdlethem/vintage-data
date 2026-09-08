@@ -78,3 +78,43 @@ def run(max_files: int | None = None, sources=None, **_) -> dict:
             f"load job {job_id} loaded {result['files_loaded']} file(s) but "
             f"{result['files_failed']} failed: {result.get('errors')[:5]}")
     return result
+
+
+def run_cadence(sources=None, timeout_s: float | None = None, **_) -> dict:
+    """Submit one cadence-detection job and wait for the writer to finish it.
+
+    Runs after the load task: the decision is made on data that has just
+    landed, and the published plan is what the extract DAG factory reads on its
+    next parse. A cadence failure is a scheduling-quality problem, not a data
+    problem, so it fails its own task and leaves the load task green.
+    """
+    config = load_config()
+    queue = JobQueue(config.queue_dir)
+
+    age = _heartbeat_age(queue)
+    if age is None or age > STALE_HEARTBEAT_S:
+        raise RuntimeError(
+            f"loader service heartbeat is {'missing' if age is None else f'{age:.0f}s old'} "
+            f"({queue.status_path}). Check: systemctl status extract-loader")
+
+    body = {"kind": "cadence", "load_id": uuid.uuid4().hex}
+    if sources:
+        body["sources"] = list(sources)
+    job_id = queue.submit(body)
+    timeout = timeout_s or config.dag.wait_timeout_s
+    result = queue.wait(job_id, timeout_s=timeout, poll_s=5.0)
+    if result is None:
+        raise RuntimeError(f"cadence job {job_id} did not finish within {timeout}s; "
+                           f"check `journalctl -u extract-loader -f`")
+
+    cadence = result.get("cadence") or {}
+    log.info("cadence job %s: %s", job_id, json.dumps(cadence, indent=2, default=str))
+    for decision in cadence.get("decisions", []):
+        log.info("  %-30s %-6s %4dm -> %4dm  %s",
+                 decision["source"], decision["decision"], decision["from_minutes"],
+                 decision["to_minutes"], decision["reason"])
+    if result.get("status") == "failed":
+        raise RuntimeError(f"cadence job {job_id} failed: {result.get('errors')}")
+    if result.get("errors"):
+        raise RuntimeError(f"cadence job {job_id} had errors: {result['errors'][:5]}")
+    return result

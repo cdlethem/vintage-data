@@ -1,0 +1,28 @@
+vintage_data:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DBT_DEV_WAREHOUSE', 'target/dev.duckdb') }}"
+      schema: transform
+      threads: "{{ env_var('EXTRACT_WAREHOUSE_THREADS', '4') | int }}"
+      settings:
+        memory_limit: "{{ env_var('EXTRACT_WAREHOUSE_MEMORY_LIMIT', '4GB') }}"
+      attach:
+        - path: "{{ env_var('EXTRACT_WAREHOUSE') }}"
+          alias: extract
+          read_only: true
+      retries:
+        connect_attempts: 24
+        retryable_exceptions: [IOException]
+
+    prod:
+      type: duckdb
+      path: "{{ env_var('EXTRACT_WAREHOUSE') }}"
+      schema: transform
+      threads: "{{ env_var('EXTRACT_WAREHOUSE_THREADS', '4') | int }}"
+      settings:
+        memory_limit: "{{ env_var('EXTRACT_WAREHOUSE_MEMORY_LIMIT', '4GB') }}"
+      retries:
+        connect_attempts: 24
+        retryable_exceptions: [IOException]

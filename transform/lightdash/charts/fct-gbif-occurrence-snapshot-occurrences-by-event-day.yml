@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 5
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_gbif_occurrence_snapshot_event_date_day
+          yRef:
+            field: fct_gbif_occurrence_snapshot_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event date (Day)
+      yAxis:
+      - name: Distinct occurrence
+    layout:
+      xField: fct_gbif_occurrence_snapshot_event_date_day
+      yField:
+      - fct_gbif_occurrence_snapshot_distinct_entities
+  type: cartesian
+description: Distinct `occurrence_id` values by reported `event_date` day, compared across taxonomic kingdom.
+  This reads source event timing rather than ingestion timing; the five largest kingdoms are shown and
+  smaller or null kingdoms are excluded, not combined. Event days with no records are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_gbif_occurrence_snapshot_event_date_day
+  - fct_gbif_occurrence_snapshot_kingdom
+  exploreName: fct_gbif_occurrence_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gbif_occurrence_snapshot_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_gbif_occurrence_snapshot_distinct_entities
+  - descending: false
+    fieldId: fct_gbif_occurrence_snapshot_event_date_day
+  tableCalculations: []
+name: Biological occurrences per event day by kingdom
+pivotConfig:
+  columns:
+  - fct_gbif_occurrence_snapshot_kingdom
+slug: fct-gbif-occurrence-snapshot-occurrences-by-event-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gbif_occurrence_snapshot_event_date_day
+  - fct_gbif_occurrence_snapshot_kingdom
+  - fct_gbif_occurrence_snapshot_distinct_entities
+tableName: fct_gbif_occurrence_snapshot
+version: 1

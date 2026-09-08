@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_swpc_space_weather_observation_at_day
+          yRef:
+            field: fct_swpc_space_weather_average_kp_index
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observation at (Day)
+      yAxis:
+      - name: Mean observed kp index
+    layout:
+      xField: fct_swpc_space_weather_observation_at_day
+      yField:
+      - fct_swpc_space_weather_average_kp_index
+  type: cartesian
+description: Mean `kp_index` across SWPC observations assigned to each source observation day. This is
+  an observation-weighted activity level rather than an additive storm total; days with no source observations
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_swpc_space_weather_observation_at_day
+  exploreName: fct_swpc_space_weather
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_swpc_space_weather_average_kp_index
+  sorts:
+  - descending: false
+    fieldId: fct_swpc_space_weather_observation_at_day
+  tableCalculations: []
+name: Mean planetary K-index by observation day
+slug: fct-swpc-space-weather-kp-activity
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_swpc_space_weather_observation_at_day
+  - fct_swpc_space_weather_average_kp_index
+tableName: fct_swpc_space_weather
+version: 1

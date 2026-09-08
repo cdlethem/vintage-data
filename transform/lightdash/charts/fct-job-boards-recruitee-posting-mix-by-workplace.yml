@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_job_boards_recruitee_posted_at_month
+          yRef:
+            field: fct_job_boards_recruitee_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Month)
+      yAxis:
+      - name: Distinct job
+    layout:
+      stack: true
+      xField: fct_job_boards_recruitee_posted_at_month
+      yField:
+      - fct_job_boards_recruitee_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values by `posted_at` month stacked by `workplace_type`. Bars show how
+  the work arrangement mix changes; all three observed workplace types are retained. Missing workplace
+  values are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_job_boards_recruitee_posted_at_month
+  - fct_job_boards_recruitee_workplace_type
+  exploreName: fct_job_boards_recruitee
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_boards_recruitee_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_boards_recruitee_distinct_entities
+  - descending: false
+    fieldId: fct_job_boards_recruitee_posted_at_month
+  tableCalculations: []
+name: Monthly posting mix by workplace type
+pivotConfig:
+  columns:
+  - fct_job_boards_recruitee_workplace_type
+slug: fct-job-boards-recruitee-posting-mix-by-workplace
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_boards_recruitee_posted_at_month
+  - fct_job_boards_recruitee_workplace_type
+  - fct_job_boards_recruitee_distinct_entities
+tableName: fct_job_boards_recruitee
+version: 1

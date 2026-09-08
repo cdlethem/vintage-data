@@ -1,0 +1,377 @@
+version: 2
+models:
+- name: fct_uk_police_crime_observation
+  description: Daily incremental physical fact of UK Police street-level crime snapshots for the Leicester-area
+    API extract. Each row records one crime identifier from one publishing source at one extractor fetch
+    timestamp, preserving the source's monthly crime period and outcome status. The append-only raw loads
+    are deduplicated by this observation grain, retaining the latest loaded copy and complete load lineage
+    so later outcome revisions remain queryable as observations rather than overwriting history. Coordinates
+    are anonymised nearby map points supplied by the publisher, not precise crime addresses.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, crime_id, observed_at
+      label: Uk police crime observation
+      group_label: Uk police
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: uk_police_crime_observation_key
+      vintage:
+        visualization:
+          dimension: category
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct crime by category
+          description: Distinct `crime_id` values by `category` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - crime_id
+          - category
+          - source_loaded_at
+          sources:
+          - '`uk_police` — licence: Open Government Licence — attribution required; attribution required:
+            True. Source configuration: `extract/sources/uk_police.yml`.'
+          analysis:
+            headline: how recorded crime volume and outcome mix change across source crime months.
+            event_time: crime_month
+            grain: MONTH
+            controls:
+            - category
+            - location_type
+            - outcome
+            trends:
+            - slug: monthly-crime-volume
+              kind: total
+              metric: distinct_entities
+              time: crime_month
+              grain: MONTH
+              title: Recorded crimes per source month
+              description: Distinct `crime_id` values by source `crime_month` — this is a monthly flow of
+                reported records, not a count of offences independent of the publisher's category revisions.
+                Months with no source rows are absent rather than zero.
+              width: half
+            - slug: monthly-street-coverage
+              kind: total
+              metric: distinct_streets
+              time: crime_month
+              grain: MONTH
+              title: Street labels represented per source month
+              description: Distinct non-null `street` labels among crimes by source `crime_month` — this
+                coverage proxy can move independently of crime volume because one anonymised label can carry
+                multiple nearby records. Empty months are absent rather than zero.
+              width: half
+            - slug: category-trajectories
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: category
+              top_n: 6
+              time: crime_month
+              grain: MONTH
+              title: Crime trajectories by leading category
+              description: Distinct `crime_id` values per source `crime_month`, pivoted by the six largest
+                categories across the full history — the remaining categories are excluded rather than
+                aggregated. This compares category trajectories, not additive totals when records change
+                category.
+              width: full
+            - slug: outcome-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: outcome
+              top_n: 8
+              time: outcome_month
+              grain: MONTH
+              title: Crime outcomes by source month
+              description: Distinct `crime_id` values per `outcome_month`, stacked by the eight most common
+                outcome values — other outcomes are excluded rather than aggregated. Missing outcomes have
+                no outcome-month event and therefore do not appear; absent months are not zero.
+              width: full
+            - slug: location-type-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: location_type
+              top_n: 2
+              time: crime_month
+              grain: MONTH
+              title: Crime mix by location type
+              description: Distinct `crime_id` values per source `crime_month`, stacked by the two
+                publisher-supplied `location_type` values — both observed values are retained. The stack
+                describes composition of reported records, not independent offence totals.
+              width: full
+  columns:
+  - name: uk_police_crime_observation_key
+    description: Stable hash of the publishing source, crime identifier, and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Uk police crime observation key
+          hidden: true
+  - name: source
+    description: Source-system label identifying the UK Police API crime feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: crime_id
+    description: Persistent crime identifier supplied by the UK Police API.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct crime
+            description: Distinct `crime_id` values by `category` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Crime id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this crime snapshot from the source API.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: crime_month
+    description: First day of the source-reported month in which the crime was recorded.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Crime month
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: category
+    description: UK Police crime category assigned to the reported crime.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Category
+          hidden: false
+  - name: latitude
+    description: Anonymised nearby latitude supplied by the publisher for mapping; not the precise crime
+      location.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: longitude
+    description: Anonymised nearby longitude supplied by the publisher for mapping; not the precise crime
+      location.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: street
+    description: Anonymised nearby street label supplied by the UK Police API; not a precise address.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_streets:
+            type: count_distinct
+            label: Distinct street
+            description: Distinct non-null `street` labels represented by crimes in each selected group. An
+              anonymised label can cover multiple nearby crime points, so this is a coverage proxy rather
+              than a street-level crime count.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Street
+          hidden: false
+  - name: location_type
+    description: Location classification supplied by the UK Police API, such as Force.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location type
+          hidden: false
+  - name: outcome
+    description: Latest outcome category supplied for the crime at this observation, when one has been
+      recorded.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Outcome
+          hidden: false
+  - name: outcome_month
+    description: First day of the source-reported month in which the crime outcome was recorded, when
+      supplied.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Outcome month
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _row_id
+    description: Load-layer row identifier for the retained crime snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _source
+    description: Loader source name for the raw relation containing the retained crime snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source'
+          hidden: true
+  - name: _batch_id
+    description: Extract batch identifier that produced the retained crime snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained crime snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained crime snapshot in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: _dt
+    description: Load-layer partition date associated with the retained crime snapshot.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: UTC timestamp when extraction began for the retained crime snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _load_id
+    description: Load operation identifier that inserted the retained crime snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained crime snapshot into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the retained raw crime snapshot for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 45b346b6-3140-51f4-a5d3-3cebcf09bef2
+    label: 'Job feed workingnomads: Department'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_workingnomads_department
+      tableName: fct_job_feed_workingnomads
+    values: []
+  - disabled: true
+    id: 7f0852de-75a2-5609-81cf-1f1f9a5c294c
+    label: 'Job feed workingnomads: Location'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_workingnomads_location
+      tableName: fct_job_feed_workingnomads
+    values: []
+  - disabled: true
+    id: fe7188c1-6fe6-5154-9c76-840b9a80007b
+    label: 'Job feed workingnomads: Location country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_workingnomads_location_country
+      tableName: fct_job_feed_workingnomads
+    values: []
+  - disabled: true
+    id: 974a8cf9-0004-572f-8299-0b14e41d1527
+    label: 'Job feed workingnomads: Company'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_workingnomads_company
+      tableName: fct_job_feed_workingnomads
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Feed Workingnomads
+slug: job-feed-workingnomads
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of Working Nomads job-listing observations. Each row is one job identifier
+      as observed by the extractor at a fetched timestamp, with listing attributes and raw-load lineage
+      retained for audit and replay.
+
+
+      **Grain:** job_id, observed_at
+
+
+      **What changes here:** how the feed''s posted-job flow and four-day observed catalogue change across
+      departments, employers, and locations.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_feed_workingnomads` — licence: public Working Nomads exposed jobs API; attribution required:
+      True. Source configuration: `extract/sources/job_feed_workingnomads.yml`.'
+    hideFrame: false
+    title: Job feed workingnomads
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed workingnomads — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct jobs by posting day
+    chartSlug: fct-job-feed-workingnomads-posted-jobs
+    hideTitle: false
+    title: Distinct jobs by posting day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct jobs present by observation day
+    chartSlug: fct-job-feed-workingnomads-observed-catalogue
+    hideTitle: false
+    title: Distinct jobs present by observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Jobs by department and posting day
+    chartSlug: fct-job-feed-workingnomads-jobs-by-department
+    hideTitle: false
+    title: Jobs by department and posting day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Company mix by posting day and country
+    chartSlug: fct-job-feed-workingnomads-companies-by-location
+    hideTitle: false
+    title: Company mix by posting day and country
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed workingnomads — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-feed-workingnomads
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Job feed workingnomads — observations
+    chartSlug: fct-job-feed-workingnomads-details
+    hideTitle: false
+    title: Job feed workingnomads — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

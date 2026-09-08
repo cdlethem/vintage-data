@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_environment_agency_floods_severity_changed_at_hour
+          yRef:
+            field: fct_environment_agency_floods_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Severity changed at (Hour)
+      yAxis:
+      - name: Distinct flood
+    layout:
+      xField: fct_environment_agency_floods_severity_changed_at_hour
+      yField:
+      - fct_environment_agency_floods_distinct_entities
+  type: cartesian
+description: Distinct `flood_id` values whose warning severity changed in each source timestamp hour.
+  This is an event-time flow over the two-day observed history; hours with no source changes are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_environment_agency_floods_severity_changed_at_hour
+  exploreName: fct_environment_agency_floods
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_environment_agency_floods_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_environment_agency_floods_severity_changed_at_hour
+  tableCalculations: []
+name: Flood warnings by severity-change hour
+slug: fct-environment-agency-floods-severity-events
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_environment_agency_floods_severity_changed_at_hour
+  - fct_environment_agency_floods_distinct_entities
+tableName: fct_environment_agency_floods
+version: 1

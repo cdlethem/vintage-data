@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_codeforces_submission_observation_submitted_at_day
+          yRef:
+            field: fct_codeforces_submission_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Submitted at (Day)
+      yAxis:
+      - name: Distinct submission
+    layout:
+      xField: fct_codeforces_submission_observation_submitted_at_day
+      yField:
+      - fct_codeforces_submission_observation_distinct_entities
+  type: cartesian
+description: Distinct `submission_id` values per `submitted_at` day, pivoted by the six largest observed
+  `verdict` values. Null verdicts and smaller categories are excluded rather than aggregated, so lines
+  compare outcome trajectories and are not additive across verdict changes.
+metricQuery:
+  dimensions:
+  - fct_codeforces_submission_observation_submitted_at_day
+  - fct_codeforces_submission_observation_verdict
+  exploreName: fct_codeforces_submission_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_codeforces_submission_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_codeforces_submission_observation_distinct_entities
+  - descending: false
+    fieldId: fct_codeforces_submission_observation_submitted_at_day
+  tableCalculations: []
+name: Submissions by judge verdict
+pivotConfig:
+  columns:
+  - fct_codeforces_submission_observation_verdict
+slug: fct-codeforces-submission-observation-verdict-trajectories
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_codeforces_submission_observation_submitted_at_day
+  - fct_codeforces_submission_observation_verdict
+  - fct_codeforces_submission_observation_distinct_entities
+tableName: fct_codeforces_submission_observation
+version: 1

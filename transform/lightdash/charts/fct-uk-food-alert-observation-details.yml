@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of food safety alerts published by the UK Food Standards Agency.
+  Each row is one alert at one extractor fetch timestamp, identified by the publisher source, alert identifier,
+  and fetched_at. Repeated copies from later insert-only raw loads are reduced to the latest loaded record
+  while the nested alert payload and load lineage remain available for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_uk_food_alert_observation_fetched_at
+  - fct_uk_food_alert_observation_alert_id
+  - fct_uk_food_alert_observation_status_label
+  - fct_uk_food_alert_observation_source_loaded_at
+  exploreName: fct_uk_food_alert_observation
+  filters:
+    dimensions:
+      and:
+      - id: ec72c637-27ff-52ed-ba01-9381ac24c788
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_food_alert_observation_fetched_at
+        values:
+        - 30
+      id: ee655c69-dafe-5631-8513-efadda4b2644
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_uk_food_alert_observation_fetched_at
+  tableCalculations: []
+name: Uk food alert observation — observations
+slug: fct-uk-food-alert-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_uk_food_alert_observation
+version: 1

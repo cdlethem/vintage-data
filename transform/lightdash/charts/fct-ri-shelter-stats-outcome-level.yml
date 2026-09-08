@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ri_shelter_stats_observed_at_day
+          yRef:
+            field: fct_ri_shelter_stats_average_outcome_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed outcome count
+    layout:
+      xField: fct_ri_shelter_stats_observed_at_day
+      yField:
+      - fct_ri_shelter_stats_average_outcome_count
+  type: cartesian
+description: Mean `outcome_count` reported across shelter-species records in each observation day. This
+  is a snapshot level with equal weight per retained row, not a count of new outcomes; repeated records
+  and polling frequency can affect it, and absent days are absent.
+metricQuery:
+  dimensions:
+  - fct_ri_shelter_stats_observed_at_day
+  exploreName: fct_ri_shelter_stats
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ri_shelter_stats_average_outcome_count
+  sorts:
+  - descending: false
+    fieldId: fct_ri_shelter_stats_observed_at_day
+  tableCalculations: []
+name: Mean reported outcome level per observation day
+slug: fct-ri-shelter-stats-outcome-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ri_shelter_stats_observed_at_day
+  - fct_ri_shelter_stats_average_outcome_count
+tableName: fct_ri_shelter_stats
+version: 1

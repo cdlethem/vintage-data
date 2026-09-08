@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nc_lab_turnaround_lab
+          yRef:
+            field: fct_nc_lab_turnaround_average_processing_days
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_nc_lab_turnaround_lab
+      yField:
+      - fct_nc_lab_turnaround_average_processing_days
+  type: cartesian
+description: Mean observed processing days by `lab` in the selected observation window. Typed processing
+  duration in days reported by the upstream feed. Each retained observation has equal weight; polling
+  frequency and repeated snapshots can affect the mean. This is not a latest-value measure or an additive
+  total.
+metricQuery:
+  dimensions:
+  - fct_nc_lab_turnaround_lab
+  exploreName: fct_nc_lab_turnaround
+  filters:
+    dimensions:
+      and:
+      - id: 177e6240-74e4-5dc1-b90f-950f91d5064a
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nc_lab_turnaround_fetched_at
+        values:
+        - 30
+      id: 4bf3ef80-e643-55dd-a549-3b5614fdb695
+  limit: 20
+  metrics:
+  - fct_nc_lab_turnaround_average_processing_days
+  sorts:
+  - descending: true
+    fieldId: fct_nc_lab_turnaround_average_processing_days
+  tableCalculations: []
+name: Mean observed processing days by lab
+slug: fct-nc-lab-turnaround
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nc_lab_turnaround_lab
+  - fct_nc_lab_turnaround_average_processing_days
+tableName: fct_nc_lab_turnaround
+version: 1

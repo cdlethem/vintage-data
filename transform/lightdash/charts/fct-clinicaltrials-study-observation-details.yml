@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of ClinicalTrials.gov study records. Each row is one study observed
+  at one extractor timestamp, preserving publication attributes, eligibility and intervention details,
+  and raw-load lineage. Repeated copies of the same study observation are reduced to the latest loaded
+  row.
+metricQuery:
+  dimensions: &id001
+  - fct_clinicaltrials_study_observation_observed_at
+  - fct_clinicaltrials_study_observation_study_id
+  - fct_clinicaltrials_study_observation_status
+  - fct_clinicaltrials_study_observation_source_loaded_at
+  exploreName: fct_clinicaltrials_study_observation
+  filters:
+    dimensions:
+      and:
+      - id: 6284d783-c2e6-554b-8a15-54d808398efe
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_clinicaltrials_study_observation_observed_at
+        values:
+        - 30
+      id: d8aea761-e4b0-5882-b9c3-8bef6140ea0b
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_clinicaltrials_study_observation_observed_at
+  tableCalculations: []
+name: Clinicaltrials study observation — observations
+slug: fct-clinicaltrials-study-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_clinicaltrials_study_observation
+version: 1

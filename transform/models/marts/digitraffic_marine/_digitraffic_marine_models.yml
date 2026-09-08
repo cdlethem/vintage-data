@@ -1,0 +1,477 @@
+version: 2
+models:
+- name: fct_digitraffic_marine_aton_fault_observation
+  description: Twice-hourly physical history of Finnish Digitraffic AtoN fault observations. Each row
+    is one reported fault identified by its upstream source and fault identifier at an extractor observation
+    timestamp; normalized fault status, AtoN and fairway attributes, point coordinates, and raw-load lineage
+    are retained for analysis and replay auditing.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, fault_id, observed_at
+      label: Digitraffic marine aton fault observation
+      group_label: Digitraffic marine
+      default_time_dimension:
+        field: ob_a6ee05
+        interval: DAY
+      primary_key: digitraffi_b5e572
+      vintage:
+        visualization:
+          dimension: fault_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct fault by fault type
+          description: Distinct `fault_id` values by `fault_type` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - fault_id
+          - fault_type
+          - source_loaded_at
+          sources:
+          - '`digitraffic_marine` — licence: CC BY 4.0; attribution required: True. Source configuration:
+            `extract/sources/digitraffic_marine.yml`.'
+          analysis:
+            headline: how reported AtoN fault entries, affected aids, and status mix change across the publisher's fault-entry history.
+            event_time: entered_at
+            grain: MONTH
+            controls:
+            - fault_type
+            - domain
+            - state
+            - aton_type
+            trends:
+            - slug: monthly-fault-entries
+              kind: total
+              metric: distinct_entities
+              time: entered_at
+              grain: MONTH
+              title: Faults entered per month
+              description: Distinct `fault_id` values by publisher `entered_at` month. This is a fault-entry
+                flow deduplicated across repeated observations, and months with no entered faults are absent
+                rather than zero.
+              width: half
+            - slug: monthly-affected-atons
+              kind: total
+              metric: distinct_atons
+              time: entered_at
+              grain: MONTH
+              title: Aids affected by entered faults per month
+              description: Distinct `aton_id` values associated with faults by `entered_at` month. This shows
+                affected-aid breadth rather than fault volume; sparse months without entered faults are absent
+                rather than zero.
+              width: half
+            - slug: fault-type-composition
+              kind: composition
+              metric: distinct_entities
+              breakdown: fault_type
+              top_n: 7
+              time: entered_at
+              grain: MONTH
+              title: Entered faults by fault type
+              description: Distinct `fault_id` values per `entered_at` month, stacked by the seven observed
+                `fault_type` values. All observed types are retained, and the stack describes entry cohorts
+                using the latest reported labels rather than reconstructing status changes.
+              width: full
+            - slug: domain-composition
+              kind: composition
+              metric: distinct_entities
+              breakdown: domain
+              top_n: 3
+              time: entered_at
+              grain: MONTH
+              title: Entered faults by navigation domain
+              description: Distinct `fault_id` values per `entered_at` month, stacked by the three observed
+                `domain` values. This compares domain mix among sparse fault-entry cohorts; months with no
+                entries are absent rather than zero.
+              width: full
+            - slug: state-composition
+              kind: composition
+              metric: distinct_entities
+              breakdown: state
+              top_n: 3
+              time: entered_at
+              grain: MONTH
+              title: Entered faults by reported state
+              description: Distinct `fault_id` values per `entered_at` month, stacked by the three observed
+                `state` values. The state is the publisher's current label on each observation, not a
+                reconstructed transition history; missing months are absent rather than zero.
+              width: full
+  columns:
+  - name: digitraffic_marine_aton_fault_observation_key
+    description: Stable hash of the Digitraffic source, fault identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Digitraffic marine aton fault observation key
+          hidden: true
+          name: digitraffi_b5e572
+  - name: source_name
+    description: Digitraffic endpoint label that published the AtoN fault observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: fault_id
+    description: Upstream identifier assigned to the reported AtoN fault.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct fault
+            description: Distinct `fault_id` values by `fault_type` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Fault id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this AtoN fault observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: ob_a6ee05
+  - name: fault_type
+    description: Upstream type of the reported AtoN fault.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Fault type
+          hidden: false
+  - name: domain
+    description: Digitraffic navigational domain containing the reported fault.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Domain
+          hidden: false
+  - name: state
+    description: Current upstream state of the AtoN fault.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: State
+          hidden: false
+  - name: is_fixed
+    description: Whether Digitraffic reports that the AtoN fault has been fixed.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is fixed
+          hidden: false
+  - name: entered_at
+    description: UTC timestamp when the fault was entered in the publisher system.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Entered at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: en_08e93e
+  - name: fixed_at
+    description: UTC timestamp when the publisher recorded the fault as fixed, when available.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fixed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: aton_id
+    description: Numeric identifier of the affected aid to navigation.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          distinct_atons:
+            type: count_distinct
+            label: Distinct affected aids
+            description: Distinct non-null `aton_id` values associated with faults in the selected window.
+              Repeated observations of one aid count once within each time and filter group.
+            format: '#,##0'
+        dimension:
+          type: number
+          label: Aton id
+          hidden: false
+          format: '#,##0'
+  - name: aton_name_fi
+    description: Finnish name of the affected aid to navigation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Aton name fi
+          hidden: false
+  - name: aton_name_sv
+    description: Swedish name of the affected aid to navigation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Aton name sv
+          hidden: false
+  - name: aton_type
+    description: Publisher classification of the affected aid to navigation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Aton type
+          hidden: false
+  - name: fairway_number
+    description: Numeric fairway identifier associated with the fault.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Fairway number
+          hidden: false
+          format: '#,##0'
+  - name: fairway_name_fi
+    description: Finnish name of the fairway associated with the fault.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Fairway name fi
+          hidden: false
+  - name: fairway_name_sv
+    description: Swedish name of the fairway associated with the fault.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Fairway name sv
+          hidden: false
+  - name: area_number
+    description: Numeric navigation area identifier associated with the fault.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Area number
+          hidden: false
+          format: '#,##0'
+  - name: area_description
+    description: Publisher description of the navigation area associated with the fault.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Area description
+          hidden: false
+  - name: geometry_type
+    description: GeoJSON geometry type supplied for the fault location.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Geometry type
+          hidden: false
+  - name: longitude
+    description: WGS84 longitude from the first coordinate in the supplied GeoJSON point.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: latitude
+    description: WGS84 latitude from the second coordinate in the supplied GeoJSON point.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: publisher_updated_at
+    description: UTC timestamp when the publisher last updated the raw feature, when available.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Publisher updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: pu_0d8a22
+  - name: source_row_id
+    description: Load-layer row identifier of the retained AtoN fault observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the load batch that supplied the retained AtoN fault observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained AtoN fault observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+          name: source_fil_36bd5c
+  - name: source_date
+    description: Load-layer partition date associated with the retained observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: so_59f4a3
+  - name: extract_started_at
+    description: UTC timestamp when the extract job that produced the retained observation started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: ex_51074f
+  - name: source_load_id
+    description: Identifier of the load job that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: so_2059e1
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Stable load-layer hash of the retained raw observation content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

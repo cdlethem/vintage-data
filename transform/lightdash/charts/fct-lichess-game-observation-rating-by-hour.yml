@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_lichess_game_observation_observed_at_hour
+          yRef:
+            field: fct_lichess_game_observation_average_rating
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Mean observed rating
+    layout:
+      xField: fct_lichess_game_observation_observed_at_hour
+      yField:
+      - fct_lichess_game_observation_average_rating
+  type: cartesian
+description: Mean `rating` of retained featured-player observations in each observed hour. Each row has
+  equal weight, so irregular polling and repeated snapshots can influence the average; this is a level,
+  not an additive score, and missing hours are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_lichess_game_observation_observed_at_hour
+  exploreName: fct_lichess_game_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_lichess_game_observation_average_rating
+  sorts:
+  - descending: false
+    fieldId: fct_lichess_game_observation_observed_at_hour
+  tableCalculations: []
+name: Mean featured-player rating each hour
+slug: fct-lichess-game-observation-rating-by-hour
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_lichess_game_observation_observed_at_hour
+  - fct_lichess_game_observation_average_rating
+tableName: fct_lichess_game_observation
+version: 1

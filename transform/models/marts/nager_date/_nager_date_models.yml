@@ -1,0 +1,294 @@
+version: 2
+models:
+- name: fct_nager_date_holiday_observation
+  description: Daily physical history of Nager.Date holiday calendar observations. Grain is one source
+    and publisher-derived holiday variant per UTC fetch timestamp. Replay copies are deduplicated while
+    later observations remain auditable. Identity includes holiday types and subdivisions, so same-date
+    variants survive. Event-time analysis includes future published dates and all observed versions; it
+    is not a latest-only authoritative calendar or a guarantee of business closures.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, holiday_id, observed_at
+      label: Holiday calendar observations
+      group_label: Nager.Date holidays
+      primary_key: holiday_observation_key
+      default_time_dimension:
+        field: holiday_date
+        interval: MONTH
+      vintage:
+        visualization:
+          dimension: observance_scope
+          metric: distinct_holidays
+          time: observed_at
+          window_days: 30
+          title: Holiday variants by observance scope
+          description: Distinct holiday variants observed in the last 30 collection days, grouped by applicability.
+            Repeated polls count once. Variants can overlap on a calendar date; this is not a count of
+            days off or a current-state census.
+          detail_fields:
+          - holiday_date
+          - country_code
+          - holiday_name
+          - observance_scope
+          - holiday_types
+          - subdivision_codes
+          - observed_at
+          sources:
+          - "Nager.Date public holiday API \u2014 https://date.nager.at. Scheduled source: extract/sources/nager_date.yml;\
+            \ currently US upcoming holidays only. Source configuration records licence as unstated; no\
+            \ broader coverage or reuse rights are implied."
+          analysis:
+            headline: See when holidays fall and distinguish nationwide observance from regional calendar
+              variants. Future dates are published calendar entries, not forecasts. Snapshot history starts
+              when collection began; it is not a complete historical calendar.
+            event_time: holiday_date
+            grain: MONTH
+            controls:
+            - country_code
+            - observance_scope
+            - holiday_types
+            trends:
+            - slug: holiday-variants-by-month
+              kind: total
+              metric: distinct_holidays
+              time: holiday_date
+              grain: MONTH
+              title: Published holiday variants by month
+              description: Distinct holiday identities by published holiday month across the observed
+                calendar, including future months. Repeated polls count once. Different names or regional/type
+                variants on one date remain distinct. Months without records are absent, not zero; this
+                is not a count of days off.
+              width: half
+            - slug: holiday-dates-by-month
+              kind: total
+              metric: distinct_holiday_dates
+              time: holiday_date
+              grain: MONTH
+              title: Calendar dates with a holiday by month
+              description: Distinct country/date pairs by published holiday month. Overlapping observance
+                variants count once within a country. The observed rolling upcoming calendar is incomplete
+                outside its collection coverage; missing months are not zero.
+              width: half
+            - slug: holiday-scope-by-month
+              kind: composition
+              metric: distinct_holidays
+              time: holiday_date
+              grain: MONTH
+              breakdown: observance_scope
+              top_n: 3
+              title: Nationwide and regional holidays by month
+              description: Observed holiday variants by published month, stacked by nationwide, regional
+                or unspecified applicability. Repeated polls count once within each group. A variant whose
+                scope changes can appear in multiple groups across snapshots; categories describe recorded
+                coverage, not guaranteed closures.
+              width: full
+  columns:
+  - name: holiday_observation_key
+    description: Stable hash of source, publisher holiday identity and UTC observation timestamp.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Holiday observation key
+          hidden: true
+    data_tests:
+    - not_null
+    - unique
+  - name: source
+    description: Source identifier carried by the raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: holiday_id
+    description: Publisher-derived identity including country, date, name, holiday types and subdivision
+      scope.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Holiday id
+          hidden: false
+        metrics:
+          distinct_holidays:
+            type: count_distinct
+            label: Distinct holiday variants
+            description: Distinct publisher holiday identities, including country, date, name, holiday
+              types and subdivisions. Repeated snapshots count once; different observance variants on
+              the same date count separately. This is observed calendar coverage, not days off work.
+            format: '#,##0'
+    data_tests:
+    - not_null
+  - name: observed_at
+    description: UTC collection timestamp for this calendar snapshot. Later snapshots are retained.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - QUARTER
+          - YEAR
+    data_tests:
+    - not_null
+  - name: country_code
+    description: ISO country code requested by the extractor. Current scheduled coverage is the US; this
+      is not a worldwide census.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Country code
+          hidden: false
+    data_tests:
+    - not_null
+  - name: holiday_date
+    description: Published holiday date in the country calendar, including future dates. This is event
+      time, not collection time.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Holiday date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - QUARTER
+          - YEAR
+    data_tests:
+    - not_null
+  - name: country_date_key
+    description: Country/date identity for counting calendar dates independently of overlapping holiday
+      variants.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Country date key
+          hidden: true
+        metrics:
+          distinct_holiday_dates:
+            type: count_distinct
+            label: Distinct holiday dates
+            description: Distinct country/date pairs with at least one observed holiday. Multiple observance
+              variants on one date count once, as do repeated polls. A regional holiday does not imply
+              nationwide closure.
+            format: '#,##0'
+  - name: holiday_name
+    description: English holiday name returned by Nager.Date.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Holiday name
+          hidden: false
+  - name: local_name
+    description: Local-language holiday name returned by Nager.Date.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local name
+          hidden: false
+  - name: holiday_types
+    description: Publisher holiday-type array preserved as JSON text. A variant may have multiple types.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Holiday types
+          hidden: false
+  - name: is_nationwide
+    description: Publisher global flag indicating country-wide observance; false indicates regional applicability.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is nationwide
+          hidden: false
+  - name: observance_scope
+    description: Nationwide or regional applicability from the publisher global flag, or Unspecified if
+      missing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Observance scope
+          hidden: false
+  - name: subdivision_codes
+    description: Publisher subdivision array preserved as JSON text; null is not an empty list of regional
+      observations.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Subdivision codes
+          hidden: false
+  - name: source_loaded_at
+    description: UTC time the retained raw copy was loaded. Used for lineage, not chart time.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - QUARTER
+          - YEAR
+  - name: source_file
+    description: Raw source file retained for audit.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: load_id
+    description: Load-job identity of the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: raw_row_id
+    description: Retained raw row identifier.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Raw row id
+          hidden: true

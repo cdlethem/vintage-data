@@ -1,0 +1,8 @@
+FROM lightdash/lightdash:2.140.0@sha256:802aabc9e66f6cb0b2929c85944401375ecf07c11f7384b635ff0d1ae136d487
+USER root
+WORKDIR /opt/vintage-cli
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts --omit=dev --no-audit --no-fund
+ENV PATH="/opt/vintage-cli/node_modules/.bin:${PATH}"
+WORKDIR /state
+ENTRYPOINT ["lightdash"]

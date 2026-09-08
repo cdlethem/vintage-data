@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_gh_archive_events_created_at_day
+          yRef:
+            field: fct_gh_archive_events_distinct_actors
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct actor
+    layout:
+      xField: fct_gh_archive_events_created_at_day
+      yField:
+      - fct_gh_archive_events_distinct_actors
+  type: cartesian
+description: Distinct non-null `actor_login` values by GitHub event creation day. A creator can produce
+  several events, so this line is not an event count; days absent from the source are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_gh_archive_events_created_at_day
+  exploreName: fct_gh_archive_events
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gh_archive_events_distinct_actors
+  sorts:
+  - descending: false
+    fieldId: fct_gh_archive_events_created_at_day
+  tableCalculations: []
+name: Distinct actors creating events per day
+slug: fct-gh-archive-events-actors-by-created-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gh_archive_events_created_at_day
+  - fct_gh_archive_events_distinct_actors
+tableName: fct_gh_archive_events
+version: 1

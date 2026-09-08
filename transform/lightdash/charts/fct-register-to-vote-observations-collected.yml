@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_register_to_vote_observed_at_day
+          yRef:
+            field: fct_register_to_vote_distinct_observations
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct registration observations
+    layout:
+      xField: fct_register_to_vote_observed_at_day
+      yField:
+      - fct_register_to_vote_distinct_observations
+  type: cartesian
+description: Distinct `registration_observation_id` values present on each collection day. This is a feed
+  level rather than an additive application total; the four-day collection window is short and days with
+  no successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_register_to_vote_observed_at_day
+  exploreName: fct_register_to_vote
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_register_to_vote_distinct_observations
+  sorts:
+  - descending: false
+    fieldId: fct_register_to_vote_observed_at_day
+  tableCalculations: []
+name: Distinct registration observations collected each day
+slug: fct-register-to-vote-observations-collected
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_register_to_vote_observed_at_day
+  - fct_register_to_vote_distinct_observations
+tableName: fct_register_to_vote
+version: 1

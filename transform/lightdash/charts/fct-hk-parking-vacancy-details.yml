@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical observation fact for Hong Kong parking-vacancy snapshots. Each row
+  records one parking facility, vehicle type, vacancy category, and extractor observation time, retaining
+  publisher counts and raw load lineage. Repeated copies of the same observation grain retain the latest
+  loaded row.
+metricQuery:
+  dimensions: &id001
+  - fct_hk_parking_vacancy_observed_at
+  - fct_hk_parking_vacancy_parking_id
+  - fct_hk_parking_vacancy_vehicle_type
+  - fct_hk_parking_vacancy_vacancy_count
+  - fct_hk_parking_vacancy_source_loaded_at
+  exploreName: fct_hk_parking_vacancy
+  filters:
+    dimensions:
+      and:
+      - id: 983a2b9f-a0c5-57dd-8f5c-7b57b746e400
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_hk_parking_vacancy_observed_at
+        values:
+        - 30
+      id: 016535bb-a924-5884-9bdf-8bed3a974224
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_hk_parking_vacancy_observed_at
+  tableCalculations: []
+name: Hk parking vacancy — observations
+slug: fct-hk-parking-vacancy-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_hk_parking_vacancy
+version: 1

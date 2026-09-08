@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 4c2da8a2-9230-5615-bbca-10fea1312dae
+    label: 'Irs exempt organizations: State'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_irs_exempt_organizations_state
+      tableName: fct_irs_exempt_organizations
+    values: []
+  - disabled: true
+    id: 7c9ce275-32af-5b58-b349-67aee2f918a3
+    label: 'Irs exempt organizations: Subsection code'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_irs_exempt_organizations_subsection_code
+      tableName: fct_irs_exempt_organizations
+    values: []
+  - disabled: true
+    id: f4404e50-52ee-5480-8f85-524a3acd0813
+    label: 'Irs exempt organizations: Affiliation code'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_irs_exempt_organizations_affiliation_code
+      tableName: fct_irs_exempt_organizations
+    values: []
+  - disabled: true
+    id: 96473c07-2f38-58d0-83b5-6e9c2286c294
+    label: 'Irs exempt organizations: Status code'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_irs_exempt_organizations_status_code
+      tableName: fct_irs_exempt_organizations
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Irs Exempt Organizations
+slug: irs-exempt-organizations
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical snapshot of organizations recognized as tax-exempt by the United States Internal
+      Revenue Service. Each row is one employer identification number observed at one extractor fetch
+      timestamp; repeated raw copies of a snapshot row are reduced to the latest loaded copy while source
+      lineage is retained for audit.
+
+
+      **Grain:** ein, fetched_at
+
+
+      **What changes here:** how the one-day IRS exempt-organization snapshot''s population and reported
+      financial levels differ by state and classification.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `irs_exempt_organizations` — licence: US federal public data; attribution required: False. Source
+      configuration: `extract/sources/irs_exempt_organizations.yml`.'
+    hideFrame: false
+    title: Irs exempt organizations
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Irs exempt organizations — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Organizations in the fetched snapshot
+    chartSlug: fct-irs-exempt-organizations-organizations-in-snapshot
+    hideTitle: false
+    title: Organizations in the fetched snapshot
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average reported assets in the snapshot
+    chartSlug: fct-irs-exempt-organizations-average-assets
+    hideTitle: false
+    title: Average reported assets in the snapshot
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Snapshot organizations by state
+    chartSlug: fct-irs-exempt-organizations-organizations-by-state
+    hideTitle: false
+    title: Snapshot organizations by state
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Average income by subsection
+    chartSlug: fct-irs-exempt-organizations-organizations-by-subsection
+    hideTitle: false
+    title: Average income by subsection
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Irs exempt organizations — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct organization by state
+    chartSlug: fct-irs-exempt-organizations
+    hideTitle: false
+    title: Distinct organization by state
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Irs exempt organizations — observations
+    chartSlug: fct-irs-exempt-organizations-details
+    hideTitle: false
+    title: Irs exempt organizations — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

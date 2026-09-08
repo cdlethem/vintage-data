@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_fcc_uls_license_observation_effective_date_month
+          yRef:
+            field: fct_fcc_uls_license_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Effective date (Month)
+      yAxis:
+      - name: Distinct license
+    layout:
+      stack: true
+      xField: fct_fcc_uls_license_observation_effective_date_month
+      yField:
+      - fct_fcc_uls_license_observation_distinct_entities
+  type: cartesian
+description: Distinct `license_id` values by `effective_date` month, stacked across the six operator classes.
+  Null or smaller classes are excluded rather than aggregated; the bars describe action-event mix, not
+  the number of currently valid licenses.
+metricQuery:
+  dimensions:
+  - fct_fcc_uls_license_observation_effective_date_month
+  - fct_fcc_uls_license_observation_operator_class
+  exploreName: fct_fcc_uls_license_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_fcc_uls_license_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_fcc_uls_license_observation_distinct_entities
+  - descending: false
+    fieldId: fct_fcc_uls_license_observation_effective_date_month
+  tableCalculations: []
+name: Effective license actions by operator class
+pivotConfig:
+  columns:
+  - fct_fcc_uls_license_observation_operator_class
+slug: fct-fcc-uls-license-observation-operator-class-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_fcc_uls_license_observation_effective_date_month
+  - fct_fcc_uls_license_observation_operator_class
+  - fct_fcc_uls_license_observation_distinct_entities
+tableName: fct_fcc_uls_license_observation
+version: 1

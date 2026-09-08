@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_lichess_game_observation_variant
+          yRef:
+            field: fct_lichess_game_observation_average_rating
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_lichess_game_observation_variant
+      yField:
+      - fct_lichess_game_observation_average_rating
+  type: cartesian
+description: Mean observed rating by `variant` in the selected observation window. Lichess rating of the
+  featured player at the observation timestamp. Each retained observation has equal weight; polling frequency
+  and repeated snapshots can affect the mean. This is not a latest-value measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_lichess_game_observation_variant
+  exploreName: fct_lichess_game_observation
+  filters:
+    dimensions:
+      and:
+      - id: 28c84fe6-61e4-5a18-8b0b-0c5394ecef21
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_lichess_game_observation_observed_at
+        values:
+        - 30
+      id: fe1124ac-d6a2-5a8a-ad12-cbff9fea6365
+  limit: 20
+  metrics:
+  - fct_lichess_game_observation_average_rating
+  sorts:
+  - descending: true
+    fieldId: fct_lichess_game_observation_average_rating
+  tableCalculations: []
+name: Mean observed rating by variant
+slug: fct-lichess-game-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_lichess_game_observation_variant
+  - fct_lichess_game_observation_average_rating
+tableName: fct_lichess_game_observation
+version: 1

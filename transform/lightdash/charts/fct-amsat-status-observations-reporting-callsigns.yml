@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_amsat_status_observations_reported_time_hour
+          yRef:
+            field: fct_amsat_status_observations_distinct_callsigns
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Reported time (Hour)
+      yAxis:
+      - name: Distinct callsigns
+    layout:
+      xField: fct_amsat_status_observations_reported_time_hour
+      yField:
+      - fct_amsat_status_observations_distinct_callsigns
+  type: cartesian
+description: Distinct non-null `callsign` values represented in each reported-time hour. This tracks reporting
+  identities rather than unique satellite observations; hours without reports are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_amsat_status_observations_reported_time_hour
+  exploreName: fct_amsat_status_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_amsat_status_observations_distinct_callsigns
+  sorts:
+  - descending: false
+    fieldId: fct_amsat_status_observations_reported_time_hour
+  tableCalculations: []
+name: Distinct reporting callsigns by hour
+slug: fct-amsat-status-observations-reporting-callsigns
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_amsat_status_observations_reported_time_hour
+  - fct_amsat_status_observations_distinct_callsigns
+tableName: fct_amsat_status_observations
+version: 1

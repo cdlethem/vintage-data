@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: ee7df9b4-551b-5559-82c8-db45e70a81d9
+    label: 'Federal register rule publication observation: Document type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_federal_register_rule_publication_observation_document_type
+      tableName: fct_federal_register_rule_publication_observation
+    values: []
+  - disabled: true
+    id: d840392c-e76e-50a2-bd8f-d1d827a009b3
+    label: 'Federal register rule publication observation: Title'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_federal_register_rule_publication_observation_title
+      tableName: fct_federal_register_rule_publication_observation
+    values: []
+  - disabled: true
+    id: e51694fa-e1ba-54ab-a925-bb01d1cd1381
+    label: 'Federal register rule publication observation: Public inspection'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_federal_register_rule_publication_observation_public_c818fe
+      tableName: fct_federal_register_rule_publication_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Federal Register
+slug: federal-register
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical observation fact for Federal Register rule and publication records. Each row records
+      one document identifier at one extractor observation timestamp, preserving publication metadata,
+      public-inspection state, and raw-load lineage. Repeated copies of the same source, document, and
+      observation timestamp retain the latest loaded row.
+
+
+      **Grain:** document_id, observed_at
+
+
+      **What changes here:** how Federal Register publication volume and agency mix change across publication
+      and fetch time.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `federal_register` — licence: US Government work, public domain; attribution required: False.
+      Source configuration: `extract/sources/federal_register.yml`.'
+    hideFrame: false
+    title: Federal register rule publication observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Federal register rule publication observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Documents published per day
+    chartSlug: fct-federal-register-rule-publication-observation-published-documents
+    hideTitle: false
+    title: Documents published per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Published documents by document type
+    chartSlug: fct-federal-register-rule-publication-observation-type-volume
+    hideTitle: false
+    title: Published documents by document type
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Publication agency mix by day
+    chartSlug: fct-federal-register-rule-publication-observation-agency-composition
+    hideTitle: false
+    title: Publication agency mix by day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Documents present in each fetch hour
+    chartSlug: fct-federal-register-rule-publication-observation-observed-catalogue
+    hideTitle: false
+    title: Documents present in each fetch hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Federal register rule publication observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct document by document type
+    chartSlug: fct-federal-register-rule-publication-observation
+    hideTitle: false
+    title: Distinct document by document type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Federal register rule publication observation — observations
+    chartSlug: fct-federal-register-rule-publication-observation-details
+    hideTitle: false
+    title: Federal register rule publication observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

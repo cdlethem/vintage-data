@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_mpc_neocp_candidate_observation_observed_at_day
+          yRef:
+            field: fct_mpc_neocp_candidate_observation_distinct_candidates
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct candidate
+    layout:
+      xField: fct_mpc_neocp_candidate_observation_observed_at_day
+      yField:
+      - fct_mpc_neocp_candidate_observation_distinct_candidates
+  type: cartesian
+description: Distinct `candidate_id` values present on each extractor observation day. This is a catalogue
+  level rather than a discovery flow because the feed republishes candidates; changes reflect additions
+  or withdrawals. Days with no successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_mpc_neocp_candidate_observation_observed_at_day
+  exploreName: fct_mpc_neocp_candidate_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_mpc_neocp_candidate_observation_distinct_candidates
+  sorts:
+  - descending: false
+    fieldId: fct_mpc_neocp_candidate_observation_observed_at_day
+  tableCalculations: []
+name: Distinct candidates observed per day
+slug: fct-mpc-neocp-candidate-observation-candidate-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_mpc_neocp_candidate_observation_observed_at_day
+  - fct_mpc_neocp_candidate_observation_distinct_candidates
+tableName: fct_mpc_neocp_candidate_observation
+version: 1

@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of epidemiological surveillance observations for Belo Horizonte from
+  the Infodengue city-alerts feed. Each row is one provider source relation and record identifier; insert-only
+  replays are reduced to the latest loaded copy while typed measures and raw-load lineage remain available
+  for audit and reproducible downstream analysis.
+metricQuery:
+  dimensions: &id001
+  - fct_infodengue_belohorizonte_epidemiology_fetched_at
+  - fct_infodengue_belohorizonte_epidemiology_record_id
+  - fct_infodengue_belohorizonte_epidemiology_municipality_name
+  - fct_infodengue_belohorizonte_epidemiology_incidence_per_100k
+  - fct_infodengue_belohorizonte_epidemiology_source_2059e1
+  exploreName: fct_infodengue_belohorizonte_epidemiology
+  filters:
+    dimensions:
+      and:
+      - id: 84ab46bf-214f-50e5-bfba-4814681fd9a4
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_infodengue_belohorizonte_epidemiology_fetched_at
+        values:
+        - 30
+      id: ff8a75e1-7e3d-5b76-86d0-a98ccf29a736
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_infodengue_belohorizonte_epidemiology_fetched_at
+  tableCalculations: []
+name: Infodengue belohorizonte epidemiology — observations
+slug: fct-infodengue-belohorizonte-epidemiology-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_infodengue_belohorizonte_epidemiology
+version: 1

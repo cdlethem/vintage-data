@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_wspr_live_spot_signal_at_day
+          yRef:
+            field: fct_wspr_live_spot_distinct_spots
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Signal at (Day)
+      yAxis:
+      - name: Distinct WSPR spots
+    layout:
+      stack: true
+      xField: fct_wspr_live_spot_signal_at_day
+      yField:
+      - fct_wspr_live_spot_distinct_spots
+  type: cartesian
+description: Distinct `spot_id` values per UTC signal day stacked by the eight busiest observed bands.
+  Each spot belongs to one reported band, so the stack shows the mix among displayed bands; remaining
+  bands are excluded rather than aggregated.
+metricQuery:
+  dimensions:
+  - fct_wspr_live_spot_signal_at_day
+  - fct_wspr_live_spot_band
+  exploreName: fct_wspr_live_spot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_wspr_live_spot_distinct_spots
+  sorts:
+  - descending: true
+    fieldId: fct_wspr_live_spot_distinct_spots
+  - descending: false
+    fieldId: fct_wspr_live_spot_signal_at_day
+  tableCalculations: []
+name: Spot mix by band and signal day
+pivotConfig:
+  columns:
+  - fct_wspr_live_spot_band
+slug: fct-wspr-live-spot-spot-mix-by-band
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_wspr_live_spot_signal_at_day
+  - fct_wspr_live_spot_band
+  - fct_wspr_live_spot_distinct_spots
+tableName: fct_wspr_live_spot
+version: 1

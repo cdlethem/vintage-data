@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 80285249-b52d-5f2b-918f-ad9728726b02
+    label: 'Hk library computers: Library name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_hk_library_computers_library_name
+      tableName: fct_hk_library_computers
+    values: []
+  - disabled: true
+    id: f3331104-8cd8-56c6-b08b-a266811e0c37
+    label: 'Hk library computers: Record type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_hk_library_computers_record_type
+      tableName: fct_hk_library_computers
+    values: []
+  - disabled: true
+    id: 64bc3cef-93d2-5849-9f73-81328e888d76
+    label: 'Hk library computers: Group name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_hk_library_computers_group_name
+      tableName: fct_hk_library_computers
+    values: []
+  - disabled: true
+    id: bdce1947-e16f-57fc-92b6-f4ee46bedb0b
+    label: 'Hk library computers: Is open'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_hk_library_computers_is_open
+      tableName: fct_hk_library_computers
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Hk Library Computers
+slug: hk-library-computers
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical observation fact for the Hong Kong Public Libraries computer-availability
+      feed. Each row records one library or availability entry identified by the source record id at one
+      extractor observation timestamp, retaining published availability fields and raw-load lineage. Repeated
+      copies of the same source, record id, and observation timestamp retain the latest loaded row.
+
+
+      **Grain:** source, computer_id, observed_at
+
+
+      **What changes here:** how reported workstation capacity varies by library and how the publisher
+      refreshes availability.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `hk_library_computers` — licence: DATA.GOV.HK reuse terms; attribution required: True. Source
+      configuration: `extract/sources/hk_library_computers.yml`.'
+    hideFrame: false
+    title: Hk library computers
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Hk library computers — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct computer entries observed each day
+    chartSlug: fct-hk-library-computers-daily-computers
+    hideTitle: false
+    title: Distinct computer entries observed each day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean available workstations observed each day
+    chartSlug: fct-hk-library-computers-daily-capacity
+    hideTitle: false
+    title: Mean available workstations observed each day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Observed computer entries by leading libraries
+    chartSlug: fct-hk-library-computers-library-mix
+    hideTitle: false
+    title: Observed computer entries by leading libraries
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Computer entries by publisher update day
+    chartSlug: fct-hk-library-computers-publisher-refreshes
+    hideTitle: false
+    title: Computer entries by publisher update day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Hk library computers — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed available workstations by library name
+    chartSlug: fct-hk-library-computers
+    hideTitle: false
+    title: Mean observed available workstations by library name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Hk library computers — observations
+    chartSlug: fct-hk-library-computers-details
+    hideTitle: false
+    title: Hk library computers — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

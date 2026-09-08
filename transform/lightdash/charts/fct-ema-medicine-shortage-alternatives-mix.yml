@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_ema_medicine_shortage_first_published_date_month
+          yRef:
+            field: fct_ema_medicine_shortage_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: First published date (Month)
+      yAxis:
+      - name: Distinct shortage
+    layout:
+      stack: true
+      xField: fct_ema_medicine_shortage_first_published_date_month
+      yField:
+      - fct_ema_medicine_shortage_distinct_entities
+  type: cartesian
+description: Distinct `shortage_id` values by first-publication month stacked by the six observed alternative-availability
+  values. Null availability and any excluded remainder are not aggregated; months without records are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_ema_medicine_shortage_first_published_date_month
+  - fct_ema_medicine_shortage_availability_of_alternatives
+  exploreName: fct_ema_medicine_shortage
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ema_medicine_shortage_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_ema_medicine_shortage_distinct_entities
+  - descending: false
+    fieldId: fct_ema_medicine_shortage_first_published_date_month
+  tableCalculations: []
+name: Published shortages by alternative availability
+pivotConfig:
+  columns:
+  - fct_ema_medicine_shortage_availability_of_alternatives
+slug: fct-ema-medicine-shortage-alternatives-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ema_medicine_shortage_first_published_date_month
+  - fct_ema_medicine_shortage_availability_of_alternatives
+  - fct_ema_medicine_shortage_distinct_entities
+tableName: fct_ema_medicine_shortage
+version: 1

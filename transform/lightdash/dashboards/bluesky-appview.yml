@@ -1,0 +1,155 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 290bf12b-9275-5c81-a6c7-cb3d0365e5fe
+    label: 'Bluesky appview post observation: Author handle'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_bluesky_appview_post_observation_author_handle
+      tableName: fct_bluesky_appview_post_observation
+    values: []
+  - disabled: true
+    id: c2dd7f3e-82cd-5533-bd02-b2e4603d823d
+    label: 'Bluesky appview post observation: Source name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_bluesky_appview_post_observation_source_name
+      tableName: fct_bluesky_appview_post_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Bluesky Appview
+slug: bluesky-appview
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical observation fact for posts returned by the Bluesky AppView feed. Each
+      row represents one post URI at one extractor observation timestamp, retaining the engagement snapshot,
+      post text metadata, and raw-load lineage. The incremental table preserves the append-only observation
+      history without rescanning prior raw snapshots on each 15-minute load. Repeated raw copies of the
+      same observation are reduced to the latest loaded row.
+
+
+      **Grain:** source_name, post_uri, observed_at
+
+
+      **What changes here:** how the observed Bluesky catalogue and engagement levels change across posts''
+      creation dates and polling days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `bluesky_appview` — licence: Bluesky/AT Protocol — public posts; attribution required: False.
+      Source configuration: `extract/sources/bluesky_appview.yml`.'
+    hideFrame: false
+    title: Bluesky appview post observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Bluesky appview post observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct posts observed per day
+    chartSlug: fct-bluesky-appview-post-observation-observed-posts
+    hideTitle: false
+    title: Distinct posts observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean observed likes per polling day
+    chartSlug: fct-bluesky-appview-post-observation-observed-engagement
+    hideTitle: false
+    title: Mean observed likes per polling day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct posts by creation day
+    chartSlug: fct-bluesky-appview-post-observation-created-posts
+    hideTitle: false
+    title: Distinct posts by creation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean likes by leading author and creation day
+    chartSlug: fct-bluesky-appview-post-observation-author-engagement
+    hideTitle: false
+    title: Mean likes by leading author and creation day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Post mix by author and creation day
+    chartSlug: fct-bluesky-appview-post-observation-author-mix
+    hideTitle: false
+    title: Post mix by author and creation day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Bluesky appview post observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed like count by author handle
+    chartSlug: fct-bluesky-appview-post-observation
+    hideTitle: false
+    title: Mean observed like count by author handle
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Bluesky appview post observation — observations
+    chartSlug: fct-bluesky-appview-post-observation-details
+    hideTitle: false
+    title: Bluesky appview post observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

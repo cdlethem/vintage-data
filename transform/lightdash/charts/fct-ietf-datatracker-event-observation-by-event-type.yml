@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_ietf_datatracker_event_observation_event_time_day
+          yRef:
+            field: fct_ietf_datatracker_event_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event time (Day)
+      yAxis:
+      - name: Distinct event
+    layout:
+      xField: fct_ietf_datatracker_event_observation_event_time_day
+      yField:
+      - fct_ietf_datatracker_event_observation_distinct_entities
+  type: cartesian
+description: Distinct `event_id` values by event day for the six event types with the largest recent totals.
+  Remaining event types are excluded rather than aggregated; absent days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_ietf_datatracker_event_observation_event_time_day
+  - fct_ietf_datatracker_event_observation_event_type
+  exploreName: fct_ietf_datatracker_event_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ietf_datatracker_event_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_ietf_datatracker_event_observation_distinct_entities
+  - descending: false
+    fieldId: fct_ietf_datatracker_event_observation_event_time_day
+  tableCalculations: []
+name: Events per day by event type
+pivotConfig:
+  columns:
+  - fct_ietf_datatracker_event_observation_event_type
+slug: fct-ietf-datatracker-event-observation-by-event-type
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ietf_datatracker_event_observation_event_time_day
+  - fct_ietf_datatracker_event_observation_event_type
+  - fct_ietf_datatracker_event_observation_distinct_entities
+tableName: fct_ietf_datatracker_event_observation
+version: 1

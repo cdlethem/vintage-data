@@ -1,0 +1,151 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 7f5cbb1c-77d5-5ad9-a306-e53cdd45b559
+    label: 'Seed lab queue: Queue entry type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_seed_lab_queue_queue_entry_type
+      tableName: fct_seed_lab_queue
+    values: []
+  - disabled: true
+    id: 7620d236-861f-5bd7-992f-1afddc6e92a9
+    label: 'Seed lab queue: Queue label'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_seed_lab_queue_queue_label
+      tableName: fct_seed_lab_queue
+    values: []
+  - disabled: true
+    id: c7303766-3e43-59b7-9811-1fb2f612d272
+    label: 'Seed lab queue: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_seed_lab_queue_source
+      tableName: fct_seed_lab_queue
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Seed Lab Queue
+slug: seed-lab-queue
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical snapshot fact for the Oregon seed-lab processing queue. Each row records one queue
+      category observed in a source snapshot, including the reported sample count, completion estimate,
+      and raw-load lineage.
+
+
+      **Grain:** source, queue_id, observed_at
+
+
+      **What changes here:** how reported queue load and completion outlook move across daily snapshots.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `seed_lab_queue` — licence: Oregon State University website terms; attribution required: True.
+      Source configuration: `extract/sources/seed_lab_queue.yml`.'
+    hideFrame: false
+    title: Seed lab queue
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Seed lab queue — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean reported sample count by snapshot day
+    chartSlug: fct-seed-lab-queue-queue-sample-level
+    hideTitle: false
+    title: Mean reported sample count by snapshot day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Estimated completion days by snapshot day
+    chartSlug: fct-seed-lab-queue-completion-outlook
+    hideTitle: false
+    title: Estimated completion days by snapshot day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Reported samples by queue entry type
+    chartSlug: fct-seed-lab-queue-queue-type-mix
+    hideTitle: false
+    title: Reported samples by queue entry type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Largest queue labels by snapshot day
+    chartSlug: fct-seed-lab-queue-queue-label-levels
+    hideTitle: false
+    title: Largest queue labels by snapshot day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Seed lab queue — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed estimated days to complete by queue label
+    chartSlug: fct-seed-lab-queue
+    hideTitle: false
+    title: Mean observed estimated days to complete by queue label
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Seed lab queue — observations
+    chartSlug: fct-seed-lab-queue-details
+    hideTitle: false
+    title: Seed lab queue — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

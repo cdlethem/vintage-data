@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_opensky_flight_observation_observed_at_hour
+          yRef:
+            field: fct_opensky_flight_observation_distinct_aircraft
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct aircraft
+    layout:
+      xField: fct_opensky_flight_observation_observed_at_hour
+      yField:
+      - fct_opensky_flight_observation_distinct_aircraft
+  type: cartesian
+description: Distinct `aircraft_id` values in each OpenSky observation hour. This is a snapshot level
+  rather than a flight count because the feed republishes aircraft states; hours with no successful snapshot
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_opensky_flight_observation_observed_at_hour
+  exploreName: fct_opensky_flight_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_opensky_flight_observation_distinct_aircraft
+  sorts:
+  - descending: false
+    fieldId: fct_opensky_flight_observation_observed_at_hour
+  tableCalculations: []
+name: Distinct aircraft observed each hour
+slug: fct-opensky-flight-observation-aircraft-by-hour
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_opensky_flight_observation_observed_at_hour
+  - fct_opensky_flight_observation_distinct_aircraft
+tableName: fct_opensky_flight_observation
+version: 1

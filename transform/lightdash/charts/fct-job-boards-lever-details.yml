@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of job observations returned by Lever-hosted job boards. Each row
+  represents one source label, Lever job identifier, and extractor observation timestamp; repeated raw
+  copies of an observation are reduced to the latest loaded lineage record while prior observations remain
+  available for history.
+metricQuery:
+  dimensions: &id001
+  - fct_job_boards_lever_observed_at
+  - fct_job_boards_lever_job_id
+  - fct_job_boards_lever_company
+  - fct_job_boards_lever_source_loaded_at
+  exploreName: fct_job_boards_lever
+  filters:
+    dimensions:
+      and:
+      - id: c4d1d47f-91fd-5000-9a9c-459f3ffd67ea
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_boards_lever_observed_at
+        values:
+        - 30
+      id: 69158023-2b52-51fd-b103-029cafabf459
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_job_boards_lever_observed_at
+  tableCalculations: []
+name: Job boards lever — observations
+slug: fct-job-boards-lever-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_job_boards_lever
+version: 1

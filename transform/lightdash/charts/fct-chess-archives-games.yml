@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_chess_archives_games_player_result
+          yRef:
+            field: fct_chess_archives_games_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_chess_archives_games_player_result
+      yField:
+      - fct_chess_archives_games_distinct_entities
+  type: cartesian
+description: Distinct `game_id` values by `player_result` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_chess_archives_games_player_result
+  exploreName: fct_chess_archives_games
+  filters:
+    dimensions:
+      and:
+      - id: d10abf83-ff9d-555e-9c38-67e61cd83791
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_chess_archives_games_fetched_at
+        values:
+        - 30
+      id: c9d5ff35-f886-571a-b7ae-680a1db15f3f
+  limit: 20
+  metrics:
+  - fct_chess_archives_games_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_chess_archives_games_distinct_entities
+  tableCalculations: []
+name: Distinct game by player result
+slug: fct-chess-archives-games
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_chess_archives_games_player_result
+  - fct_chess_archives_games_distinct_entities
+tableName: fct_chess_archives_games
+version: 1

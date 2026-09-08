@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_iana_dns_record_observation_observed_at_day
+          yRef:
+            field: fct_iana_dns_record_observation_average_ttl_seconds
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean TTL seconds
+    layout:
+      xField: fct_iana_dns_record_observation_observed_at_day
+      yField:
+      - fct_iana_dns_record_observation_average_ttl_seconds
+  type: cartesian
+description: Mean reported `ttl_seconds` across DNS records on each collection day. This is a snapshot
+  level and not an additive total; repeated observations and polling frequency give each retained row
+  equal weight. Days without a successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_iana_dns_record_observation_observed_at_day
+  exploreName: fct_iana_dns_record_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_iana_dns_record_observation_average_ttl_seconds
+  sorts:
+  - descending: false
+    fieldId: fct_iana_dns_record_observation_observed_at_day
+  tableCalculations: []
+name: Mean TTL observed each day
+slug: fct-iana-dns-record-observation-ttl-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_iana_dns_record_observation_observed_at_day
+  - fct_iana_dns_record_observation_average_ttl_seconds
+tableName: fct_iana_dns_record_observation
+version: 1

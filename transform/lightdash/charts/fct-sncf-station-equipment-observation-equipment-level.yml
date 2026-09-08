@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sncf_station_equipment_observation_observed_at_hour
+          yRef:
+            field: fct_sncf_station_equipment_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct equipment
+    layout:
+      xField: fct_sncf_station_equipment_observation_observed_at_hour
+      yField:
+      - fct_sncf_station_equipment_observation_distinct_entities
+  type: cartesian
+description: Distinct `equipment_id` values present in the republished catalogue at each observation hour.
+  This is a level rather than a flow — the publisher republishes equipment, so changes indicate coverage
+  or catalogue revisions; hours without a successful poll are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_sncf_station_equipment_observation_observed_at_hour
+  exploreName: fct_sncf_station_equipment_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sncf_station_equipment_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_sncf_station_equipment_observation_observed_at_hour
+  tableCalculations: []
+name: Distinct equipment observed each hour
+slug: fct-sncf-station-equipment-observation-equipment-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sncf_station_equipment_observation_observed_at_hour
+  - fct_sncf_station_equipment_observation_distinct_entities
+tableName: fct_sncf_station_equipment_observation
+version: 1

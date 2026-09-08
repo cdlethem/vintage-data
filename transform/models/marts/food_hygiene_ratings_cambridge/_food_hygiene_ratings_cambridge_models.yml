@@ -1,0 +1,507 @@
+version: 2
+models:
+- name: fct_food_hygiene_ratings_cambridge
+  description: Daily physical history of food hygiene ratings returned for Cambridge establishments. Each
+    row is one establishment in one publisher snapshot, keyed by establishment_id and observed_at. Re-ingestion
+    of the same snapshot retains only the latest loaded copy while preserving load lineage.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: establishment_id, observed_at
+      label: Food hygiene ratings cambridge
+      group_label: Food hygiene ratings cambridge
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: food_hygiene_ratings__28c093
+      vintage:
+        visualization:
+          dimension: business_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct establishment by business type
+          description: Distinct `establishment_id` values by `business_type` among observations in the
+            selected window. Repeated observations of an entity count once within each group. An entity
+            that changed category can appear in multiple groups; these groups are not additive and do
+            not represent a current-state census.
+          detail_fields:
+          - observed_at
+          - establishment_id
+          - business_type
+          - source_loaded_at
+          sources:
+          - '`food_hygiene_ratings_cambridge` — see dbt raw-source lineage.'
+          analysis:
+            headline: how published Cambridge ratings and their component scores shift across business types over rating history.
+            event_time: rating_date
+            grain: MONTH
+            controls:
+            - business_type
+            - rating_value
+            - new_rating_pending
+            - scheme_type
+            trends:
+            - slug: rating-volume
+              kind: total
+              metric: distinct_entities
+              time: rating_date
+              grain: MONTH
+              title: Establishments rated per month
+              description: Distinct `establishment_id` values whose published rating date falls in each month.
+                This is an event flow rather than a current catalogue level — months with no rated records are
+                absent rather than zero, and the early 1901 records are retained.
+              width: half
+            - slug: hygiene-score
+              kind: total
+              metric: avg_hygiene
+              time: rating_date
+              grain: MONTH
+              title: Average hygiene component score per month
+              description: Average non-null `hygiene_score` among establishments by their published rating
+                month. This is a reported component score, not a pass rate — null scores and months without
+                scored records are absent rather than zero.
+              width: half
+            - slug: business-type-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: business_type
+              top_n: 8
+              time: rating_date
+              grain: MONTH
+              title: Rated establishments by business type
+              description: Distinct establishments per rating month stacked by `business_type`. The eight
+                largest business types by this metric are shown; the remainder is excluded rather than
+                aggregated, and an empty month is absent rather than zero.
+              width: full
+            - slug: score-by-business-type
+              kind: breakdown
+              metric: avg_hygiene
+              breakdown: business_type
+              top_n: 8
+              time: rating_date
+              grain: MONTH
+              title: Hygiene score by business type
+              description: Average non-null `hygiene_score` per rating month for the eight largest business
+                types. The lines compare reported component levels, not the number of inspections — null
+                scores and months without scores are absent rather than zero.
+              width: full
+  columns:
+  - name: food_hygiene_ratings_cambridge_key
+    description: Stable hash of source, establishment identifier, and snapshot observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '7 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '7 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Food hygiene ratings cambridge key
+          hidden: true
+          name: food_hygiene_ratings__28c093
+  - name: source
+    description: Publisher source identifier supplied by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: establishment_id
+    description: Stable food-hygiene establishment identifier supplied by the publisher.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct establishment
+            description: Distinct `establishment_id` values by `business_type` among observations in the
+              selected window. Repeated observations of an entity count once within each group. An entity
+              that changed category can appear in multiple groups; these groups are not additive and do
+              not represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Establishment id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the publisher snapshot was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: rating_date
+    description: UTC date and time of the establishment's published rating.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Rating date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: rating_key
+    description: Publisher rating scheme key for the retained rating.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Rating key
+          hidden: true
+  - name: rating_value
+    description: Publisher rating value, including numeric and pending or exempt values.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Rating value
+          hidden: false
+  - name: business_name
+    description: Trading name of the rated establishment.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Business name
+          hidden: false
+  - name: business_type
+    description: Publisher business-type label for the establishment.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Business type
+          hidden: false
+  - name: business_type_id
+    description: Publisher numeric identifier for the business type.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Business type id
+          hidden: false
+          format: '#,##0'
+  - name: address_line_1
+    description: First address line reported for the establishment.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Address line 1
+          hidden: false
+  - name: address_line_2
+    description: Second address line reported for the establishment.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Address line 2
+          hidden: false
+  - name: address_line_3
+    description: Third address line reported for the establishment.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Address line 3
+          hidden: false
+  - name: address_line_4
+    description: Fourth address line reported for the establishment.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Address line 4
+          hidden: false
+  - name: postcode
+    description: Postal code reported for the establishment.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Postcode
+          hidden: false
+  - name: phone
+    description: Telephone number reported for the establishment.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Phone
+          hidden: false
+  - name: local_authority_business_id
+    description: Local authority identifier for the establishment.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local authority business id
+          hidden: false
+  - name: local_authority_code
+    description: Local authority code reported for the establishment.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local authority code
+          hidden: false
+  - name: local_authority_name
+    description: Local authority name reported for the establishment.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local authority name
+          hidden: false
+  - name: local_authority_email
+    description: Local authority contact email reported by the publisher.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local authority email
+          hidden: false
+  - name: local_authority_website
+    description: Local authority website reported by the publisher.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local authority website
+          hidden: false
+  - name: new_rating_pending
+    description: Whether the publisher indicates that a new rating is pending.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: New rating pending
+          hidden: false
+  - name: right_to_reply
+    description: Publisher right-to-reply text or status for the rating.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Right to reply
+          hidden: false
+  - name: scheme_type
+    description: Food hygiene rating scheme type supplied by the publisher.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Scheme type
+          hidden: false
+  - name: latitude
+    description: Establishment latitude parsed from the publisher geocode, when available.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: longitude
+    description: Establishment longitude parsed from the publisher geocode, when available.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: hygiene_score
+    description: Numeric hygiene component of the publisher score, when reported.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          avg_hygiene:
+            type: average
+            label: Average hygiene score
+            description: Average non-null `hygiene_score` among establishments in each rating period. Null
+              component scores are excluded rather than treated as zero.
+            format: '0.00'
+        dimension:
+          type: number
+          label: Hygiene score
+          hidden: false
+          format: '#,##0'
+  - name: structural_score
+    description: Numeric structural component of the publisher score, when reported.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Structural score
+          hidden: false
+          format: '#,##0'
+  - name: confidence_in_management_score
+    description: Numeric confidence-in-management component of the publisher score, when reported.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Confidence in management score
+          hidden: false
+          format: '#,##0'
+          name: confidence_in_managem_8c7be8
+  - name: geocode
+    description: Original publisher geocode object retained as typed JSON.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Geocode
+          hidden: true
+          sql: CAST(${TABLE}.geocode AS VARCHAR)
+  - name: scores
+    description: Original publisher component-score object retained as typed JSON.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Scores
+          hidden: true
+          sql: CAST(${TABLE}.scores AS VARCHAR)
+  - name: fhrs_id
+    description: Publisher numeric food hygiene rating service identifier.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Fhrs id
+          hidden: false
+          format: '#,##0'
+  - name: changes_by_server_id
+    description: Publisher server identifier associated with the rating change.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Changes by server id
+          hidden: false
+          format: '#,##0'
+  - name: publisher_updated_at
+    description: UTC timestamp when the publisher last updated this record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Publisher updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _batch_id
+    description: Extract batch identifier that supplied the retained snapshot row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained snapshot row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained row in its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained snapshot row.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

@@ -60,6 +60,33 @@ dag:
   timeout_minutes: 45
   wait_timeout_s: 2400
 
+# Algorithmic scheduling cadence. After each load pass, every managed source's
+# newest run is compared with the run before it: genuinely new records step the
+# schedule one rung faster, nothing new steps it one rung slower. Sources opt in
+# per config (`cadence: {auto: true}` in extract/sources/<name>.yml), which is
+# also where their bounds belong — next to the rate limit they have to respect.
+cadence:
+  enabled: true
+  plan_path: ${EXTRACT_DATA_ROOT:-~/.local/share/vintage-data/extract}/state/cadence/plan.json
+  # Rungs the schedule may sit on. Each must be expressible as a cron: a
+  # divisor of an hour, or a whole number of hours dividing a day.
+  ladder_minutes: [5, 10, 15, 30, 60, 120, 240, 360, 720, 1440]
+  floor_minutes: 5           # repo rule: nothing polls faster than every 5 minutes
+  min_minutes: 15            # default per-source floor, overridden in the source yml
+  max_minutes: 1440          # default per-source ceiling
+  # Fraction of the newest run's distinct records that must be new for the run
+  # to count as "changed". 0 = a single genuinely new record is enough.
+  change_ratio: 0.0
+  speed_up_after: 1          # consecutive changed runs before stepping faster
+  slow_down_after: 1         # consecutive unchanged runs before stepping slower
+  # A batch bigger than this is not compared record by record; the arrival of
+  # rows is taken as the signal instead, and the observation records that.
+  max_probe_rows: 500000
+  # Per-run envelope keys, excluded before hashing a record: they change on
+  # every run even when the upstream published nothing.
+  volatile_keys: [fetched_at]
+  auto_default: false        # opt in per source, never wholesale
+
 # Applied to every source unless its block below overrides them.
 defaults:
   enabled: true

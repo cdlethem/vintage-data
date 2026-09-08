@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_open_collective_account_observation_observed_at_day
+          yRef:
+            field: fct_open_collective_account_observation_distinct_accounts
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct account
+    layout:
+      stack: true
+      xField: fct_open_collective_account_observation_observed_at_day
+      yField:
+      - fct_open_collective_account_observation_distinct_accounts
+  type: cartesian
+description: Distinct `account_id` values per fetch day stacked by the eight most common `currency_code`
+  values. The remainder is excluded rather than aggregated; this is a catalogue level and not a financial
+  total.
+metricQuery:
+  dimensions:
+  - fct_open_collective_account_observation_observed_at_day
+  - fct_open_collective_account_observation_currency_code
+  exploreName: fct_open_collective_account_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_open_collective_account_observation_distinct_accounts
+  sorts:
+  - descending: true
+    fieldId: fct_open_collective_account_observation_distinct_accounts
+  - descending: false
+    fieldId: fct_open_collective_account_observation_observed_at_day
+  tableCalculations: []
+name: Account population mix by currency
+pivotConfig:
+  columns:
+  - fct_open_collective_account_observation_currency_code
+slug: fct-open-collective-account-observation-accounts-by-currency
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_open_collective_account_observation_observed_at_day
+  - fct_open_collective_account_observation_currency_code
+  - fct_open_collective_account_observation_distinct_accounts
+tableName: fct_open_collective_account_observation
+version: 1

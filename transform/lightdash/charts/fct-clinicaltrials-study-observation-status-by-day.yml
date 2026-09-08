@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_clinicaltrials_study_observation_last_update_day
+          yRef:
+            field: fct_clinicaltrials_study_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Last update (Day)
+      yAxis:
+      - name: Distinct study
+    layout:
+      xField: fct_clinicaltrials_study_observation_last_update_day
+      yField:
+      - fct_clinicaltrials_study_observation_distinct_entities
+  type: cartesian
+description: Distinct studies per source update date pivoted by recruitment `status`. The eight largest
+  status series are shown, while smaller statuses are excluded rather than aggregated.
+metricQuery:
+  dimensions:
+  - fct_clinicaltrials_study_observation_last_update_day
+  - fct_clinicaltrials_study_observation_status
+  exploreName: fct_clinicaltrials_study_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_clinicaltrials_study_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_clinicaltrials_study_observation_distinct_entities
+  - descending: false
+    fieldId: fct_clinicaltrials_study_observation_last_update_day
+  tableCalculations: []
+name: Studies by status and update date
+pivotConfig:
+  columns:
+  - fct_clinicaltrials_study_observation_status
+slug: fct-clinicaltrials-study-observation-status-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_clinicaltrials_study_observation_last_update_day
+  - fct_clinicaltrials_study_observation_status
+  - fct_clinicaltrials_study_observation_distinct_entities
+tableName: fct_clinicaltrials_study_observation
+version: 1

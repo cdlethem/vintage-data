@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical history of OpenSky aircraft state observations. Each row is one source,
+  aircraft, and fetch timestamp, preserving the reported position, motion, flight identity, and raw-load
+  lineage. Replayed copies of the same observation grain are reduced to the latest loaded row; this model
+  does not interpolate tracks or infer flights between snapshots.
+metricQuery:
+  dimensions: &id001
+  - fct_opensky_flight_observation_observed_at
+  - fct_opensky_flight_observation_aircraft_id
+  - fct_opensky_flight_observation_origin_country
+  - fct_opensky_flight_observation_baro_altitude_m
+  - fct_opensky_flight_observation_source_loaded_at
+  exploreName: fct_opensky_flight_observation
+  filters:
+    dimensions:
+      and:
+      - id: 3d8c2c34-4c07-53d7-94ec-134f1cecf1e3
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_opensky_flight_observation_observed_at
+        values:
+        - 30
+      id: 49e53248-ee58-55a5-a7fb-f943e1d3a7dd
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_opensky_flight_observation_observed_at
+  tableCalculations: []
+name: Opensky flight observation — observations
+slug: fct-opensky-flight-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_opensky_flight_observation
+version: 1

@@ -1,0 +1,405 @@
+version: 2
+models:
+- name: fct_job_feed_himalayas
+  description: Daily physical history of Himalayas job observations. Each row represents one job identifier
+    from one upstream observation timestamp; repeated ingestion of the same observation is reduced to
+    the latest loaded copy while published job attributes and load-layer lineage remain available for
+    analysis, audit, and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, job_id, observed_at
+      label: Job feed himalayas
+      group_label: Job feed himalayas
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: job_feed_himalayas_key
+      vintage:
+        visualization:
+          dimension: company
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct job by company
+          description: Distinct `job_id` values by `company` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - job_id
+          - company
+          - source_loaded_at
+          sources:
+          - '`job_feed_himalayas` — licence: public Himalayas jobs API; attribution required: True. Source
+            configuration: `extract/sources/job_feed_himalayas.yml`.'
+          analysis:
+            headline: how the Himalayas catalogue level and employment mix change across observation days.
+            event_time: posted_at
+            grain: DAY
+            controls:
+            - employment_type
+            - location_country
+            - salary_currency
+            - salary_interval
+            trends:
+            - slug: jobs-observed
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct jobs observed per day
+              description: Distinct `job_id` values present in the Himalayas feed on each observation day. This
+                is a level rather than a flow because the feed republishes its catalogue; days with no successful
+                extract are absent rather than zero.
+              width: half
+            - slug: companies-observed
+              kind: total
+              metric: distinct_companies
+              time: observed_at
+              grain: DAY
+              title: Hiring companies observed per day
+              description: Distinct non-null `company` values represented in the feed on each observation day.
+                This is a catalogue level, not a count of newly hiring companies, and absent extract days are
+                absent rather than zero.
+              width: half
+            - slug: locations-observed
+              kind: total
+              metric: distinct_locations
+              time: observed_at
+              grain: DAY
+              title: Job locations observed per day
+              description: Distinct non-null `location` values represented in the feed on each observation day.
+                This is a level of the republished catalogue rather than a count of newly opened locations; absent
+                extract days are absent rather than zero.
+              width: half
+            - slug: jobs-by-employment
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: employment_type
+              top_n: 7
+              time: observed_at
+              grain: DAY
+              title: Distinct jobs by employment type
+              description: Distinct `job_id` values per observation day split across the seven supplied
+                `employment_type` values. No category is excluded, and the lines show catalogue levels rather
+                than new postings.
+              width: full
+            - slug: posted-jobs-by-country
+              kind: composition
+              metric: distinct_entities
+              breakdown: location_country
+              top_n: 8
+              time: posted_at
+              grain: DAY
+              title: Source-posted jobs by location country
+              description: Distinct `job_id` values grouped by the source `posted_at` day and stacked across the
+                eight largest `location_country` values. All supplied timestamps fall on 1970-01-21, so this is
+                one event-time snapshot rather than a longitudinal posting history; smaller countries are excluded.
+              width: full
+  columns:
+  - name: job_feed_himalayas_key
+    description: Stable hash of the Himalayas source, job identifier, and upstream observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job feed himalayas key
+          hidden: true
+  - name: source
+    description: Upstream source identifier carried by the Himalayas response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: job_id
+    description: Identifier assigned by Himalayas to the advertised job listing.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct job
+            description: Distinct `job_id` values by `company` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Job id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed this job in the Himalayas feed.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: provider
+    description: Provider label carried by the Himalayas job record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider
+          hidden: false
+  - name: company
+    description: Hiring company name reported for the job listing.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_companies:
+            type: count_distinct
+            label: Distinct hiring companies
+            description: Distinct non-null `company` values present on each observation day. This is a catalogue
+              level and does not count newly hiring companies.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Company
+          hidden: false
+  - name: title
+    description: Public title of the advertised job.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: department
+    description: Comma-separated department or discipline labels reported for the job.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Department
+          hidden: false
+  - name: employment_type
+    description: Employment arrangement reported for the job, such as full time or contractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Employment type
+          hidden: false
+  - name: experience_level
+    description: JSON array of experience or seniority labels reported for the job.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Experience level
+          hidden: true
+          sql: CAST(${TABLE}.experience_level AS VARCHAR)
+  - name: location
+    description: Free-text location reported for the advertised job.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_locations:
+            type: count_distinct
+            label: Distinct job locations
+            description: Distinct non-null `location` values present on each observation day. This is a catalogue
+              level and does not count newly opened locations.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Location
+          hidden: false
+  - name: location_country
+    description: Country associated with the reported job location when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location country
+          hidden: false
+  - name: workplace_type
+    description: Workplace arrangement reported for the job, such as remote.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Workplace type
+          hidden: false
+  - name: is_remote
+    description: Whether Himalayas marks the advertised job as remote.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is remote
+          hidden: false
+  - name: posted_at
+    description: UTC publication timestamp supplied by Himalayas for the job posting.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Posted at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: job_url
+    description: Canonical public URL for the Himalayas job posting.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job url
+          hidden: false
+  - name: salary_min
+    description: Lower bound of the advertised salary range in the reported currency and interval, when
+      supplied.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Salary min
+          hidden: false
+          format: '#,##0.00'
+  - name: salary_max
+    description: Upper bound of the advertised salary range in the reported currency and interval, when
+      supplied.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Salary max
+          hidden: false
+          format: '#,##0.00'
+  - name: salary_currency
+    description: Currency code for the advertised salary range, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Salary currency
+          hidden: false
+  - name: salary_interval
+    description: Payment interval for the advertised salary range, such as annual or hourly.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Salary interval
+          hidden: false
+  - name: description
+    description: Job description text supplied by Himalayas.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Description
+          hidden: true
+  - name: _batch_id
+    description: Extract batch identifier associated with the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Load job identifier associated with the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Content hash of the retained raw observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

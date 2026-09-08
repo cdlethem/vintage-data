@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical history of WSPR radio spots returned by the live feed. Each row is
+  one source, spot identifier, and feed observation timestamp; repeated insert-only copies are reduced
+  to the latest raw load while complete source lineage and the radio measurement are retained.
+metricQuery:
+  dimensions: &id001
+  - fct_wspr_live_spot_observed_at
+  - fct_wspr_live_spot_spot_id
+  - fct_wspr_live_spot_band
+  - fct_wspr_live_spot_distance_km
+  - fct_wspr_live_spot_source_loaded_at
+  exploreName: fct_wspr_live_spot
+  filters:
+    dimensions:
+      and:
+      - id: fefea989-36e9-54df-93ce-9f0760b866b4
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_wspr_live_spot_observed_at
+        values:
+        - 30
+      id: 0802a5eb-c42a-5032-b9ba-328f521a4bc6
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_wspr_live_spot_observed_at
+  tableCalculations: []
+name: Radio propagation spots — observations
+slug: fct-wspr-live-spot-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_wspr_live_spot
+version: 1

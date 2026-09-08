@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_job_feed_workingnomads_company
+          yRef:
+            field: fct_job_feed_workingnomads_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_job_feed_workingnomads_company
+      yField:
+      - fct_job_feed_workingnomads_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values by `company` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_job_feed_workingnomads_company
+  exploreName: fct_job_feed_workingnomads
+  filters:
+    dimensions:
+      and:
+      - id: db92e775-7594-53f6-a82c-e58c2489e778
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_feed_workingnomads_observed_at
+        values:
+        - 30
+      id: b2297540-b28a-5575-b9e7-335dfdc43264
+  limit: 20
+  metrics:
+  - fct_job_feed_workingnomads_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_workingnomads_distinct_entities
+  tableCalculations: []
+name: Distinct job by company
+slug: fct-job-feed-workingnomads
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_feed_workingnomads_company
+  - fct_job_feed_workingnomads_distinct_entities
+tableName: fct_job_feed_workingnomads
+version: 1

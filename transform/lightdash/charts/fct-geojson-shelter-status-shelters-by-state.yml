@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_geojson_shelter_status_observed_at_day
+          yRef:
+            field: fct_geojson_shelter_status_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct feature
+    layout:
+      xField: fct_geojson_shelter_status_observed_at_day
+      yField:
+      - fct_geojson_shelter_status_distinct_entities
+  type: cartesian
+description: Distinct `feature_id` values per observation day pivoted by reported `state`. This compares
+  catalogue coverage across states rather than shelter openings; all eight observed states fit the readable
+  chart. Days without observations are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_geojson_shelter_status_observed_at_day
+  - fct_geojson_shelter_status_state
+  exploreName: fct_geojson_shelter_status
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_geojson_shelter_status_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_geojson_shelter_status_distinct_entities
+  - descending: false
+    fieldId: fct_geojson_shelter_status_observed_at_day
+  tableCalculations: []
+name: Shelters observed per day by state
+pivotConfig:
+  columns:
+  - fct_geojson_shelter_status_state
+slug: fct-geojson-shelter-status-shelters-by-state
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_geojson_shelter_status_observed_at_day
+  - fct_geojson_shelter_status_state
+  - fct_geojson_shelter_status_distinct_entities
+tableName: fct_geojson_shelter_status
+version: 1

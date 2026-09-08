@@ -1,0 +1,404 @@
+version: 2
+models:
+- name: fct_ireland_bathing_alerts
+  description: Twice-hourly physical history of bathing-water alerts published for Irish beaches. Each
+    row is one source alert at one extractor fetch timestamp, identified by source, alert identifier,
+    and fetched_at. Repeated copies from later insert-only raw loads are reduced to the latest loaded
+    record, while load lineage is retained for replay and audit.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, alert_id, fetched_at
+      label: Ireland bathing alerts
+      group_label: Ireland bathing alerts
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: ireland_bathing_alert_key
+      vintage:
+        visualization:
+          dimension: county_name
+          metric: distinct_entities
+          time: fetched_at
+          window_days: 30
+          title: Distinct alert by county name
+          description: Distinct `alert_id` values by `county_name` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - fetched_at
+          - alert_id
+          - county_name
+          - source_loaded_at
+          sources:
+          - '`ireland_bathing_alerts` — licence: Ireland EPA open-data terms; attribution required: True.
+            Source configuration: `extract/sources/ireland_bathing_alerts.yml`.'
+          analysis:
+            headline: how bathing-alert levels and expected durations differ across Irish counties over sparse
+              incident dates.
+            event_time: incident_start_date
+            grain: DAY
+            controls:
+            - county_name
+            - local_authority_name
+            - restriction_in_place
+            - restriction_type
+            trends:
+            - slug: incident-alerts
+              kind: total
+              metric: distinct_entities
+              time: incident_start_date
+              grain: DAY
+              title: Alerts by incident start day
+              description: Distinct `alert_id` values grouped by the source-reported `incident_start_date`
+                day. Only eight incident dates are populated in the observed history; other dates are
+                absent rather than zero, and repeated fetches do not inflate the count.
+              width: half
+            - slug: expected-duration
+              kind: total
+              metric: average_duration
+              time: incident_start_date
+              grain: DAY
+              title: Expected duration by incident start day
+              description: Average `incident_expected_duration_days` for alerts by source-reported incident
+                start day. This is a reported-duration average, not elapsed time; dates without alerts are
+                absent rather than zero.
+              width: half
+            - slug: alerts-by-county
+              kind: composition
+              metric: distinct_entities
+              breakdown: county_name
+              top_n: 4
+              time: incident_start_date
+              grain: DAY
+              title: Incident alerts by county
+              description: Distinct `alert_id` values stacked by county on each incident start day. Bars
+                keep all four observed counties because incident dates are sparse; an absent date means no
+                alert was recorded, not zero.
+              width: full
+            - slug: fetched-alert-levels
+              kind: breakdown
+              metric: average_duration
+              breakdown: restriction_type
+              top_n: 3
+              time: fetched_at
+              grain: DAY
+              title: Expected duration by restriction type and fetch day
+              description: Average expected duration per restriction type on each extractor fetch day. The
+                four-day collection series describes the observed snapshot level, not new incidents; absent
+                fetch days are absent rather than zero.
+              width: full
+  columns:
+  - name: ireland_bathing_alert_key
+    description: Stable hash of the publishing source, alert identifier, and extractor fetch timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Ireland bathing alert key
+          hidden: true
+  - name: source
+    description: Upstream source label that published the bathing-water alert.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: alert_id
+    description: Upstream alert identifier for the bathing-water incident.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct alert
+            description: Distinct `alert_id` values by `county_name` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Alert id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp when the extractor fetched the upstream alert snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: incident_id
+    description: Numeric identifier assigned to the bathing-water incident by the source.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Incident id
+          hidden: false
+          format: '#,##0'
+  - name: bathing_water_incident_id
+    description: Public bathing-water incident identifier assigned by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Bathing water incident id
+          hidden: false
+  - name: beach_id
+    description: Stable identifier of the beach affected by the alert.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Beach id
+          hidden: false
+  - name: beach_name
+    description: Human-readable beach name supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Beach name
+          hidden: false
+  - name: county_name
+    description: Irish county containing the affected beach, as reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: County name
+          hidden: false
+  - name: local_authority_name
+    description: Local authority responsible for the affected bathing water, as reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Local authority name
+          hidden: false
+  - name: restriction_in_place
+    description: Source text indicating whether a bathing restriction is currently in place.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Restriction in place
+          hidden: false
+  - name: incident_start_date
+    description: UTC timestamp when the source reports that the bathing-water incident started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Incident start date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: incident_expected_duration_days
+    description: Expected incident duration reported by the source, in days.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_duration:
+            type: average
+            label: Average expected duration
+            description: Average `incident_expected_duration_days` reported for alerts in each selected
+              group. This is an observation-weighted source-reported duration, not elapsed time.
+            format: '#,##0.0'
+        dimension:
+          type: number
+          label: Incident expected duration days
+          hidden: false
+          format: '#,##0'
+  - name: restriction_type
+    description: Bathing restriction classification published for the incident.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Restriction type
+          hidden: false
+  - name: incident_description
+    description: Human-readable explanation of the bathing-water incident supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Incident description
+          hidden: false
+  - name: bathing_notice_url
+    description: URL of the bathing notice PDF associated with the incident, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Bathing notice url
+          hidden: false
+  - name: last_updated
+    description: UTC timestamp when the source last updated the bathing-water alert.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Last updated
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _row_id
+    description: Raw warehouse row identifier for the retained alert snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _source
+    description: Loader source name for the raw relation containing the retained alert snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source'
+          hidden: true
+  - name: _batch_id
+    description: Extract batch identifier that produced the retained alert snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained alert snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained alert snapshot in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: _dt
+    description: Load-layer partition date associated with the retained alert snapshot.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: UTC timestamp when extraction began for the retained alert snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _load_id
+    description: Load operation identifier that inserted the retained alert snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained alert snapshot into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the retained raw alert snapshot for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

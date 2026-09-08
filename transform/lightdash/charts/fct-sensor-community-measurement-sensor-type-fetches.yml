@@ -1,0 +1,64 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_sensor_community_measurement_fetched_at_day
+          yRef:
+            field: fct_sensor_community_measurement_distinct_sensors
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Distinct reporting sensors
+    layout:
+      xField: fct_sensor_community_measurement_fetched_at_day
+      yField:
+      - fct_sensor_community_measurement_distinct_sensors
+  type: cartesian
+description: Distinct sensors fetched on each upstream `fetched_at` day, split by the six largest sensor
+  types. The remaining types are excluded rather than aggregated; this axis shows retrieval activity over
+  the five-day source-fetch span, not sensor emission history.
+metricQuery:
+  dimensions:
+  - fct_sensor_community_measurement_fetched_at_day
+  - fct_sensor_community_measurement_sensor_type
+  exploreName: fct_sensor_community_measurement
+  filters:
+    dimensions:
+      and:
+      - id: f608fa52-b8aa-5d75-8587-7be96d8b3de9
+        operator: equals
+        target:
+          fieldId: fct_sensor_community_measurement_is_clean
+        values:
+        - true
+      id: a803245c-45e7-54d7-8d51-6cd2be6bd1bf
+  limit: 5000
+  metrics:
+  - fct_sensor_community_measurement_distinct_sensors
+  sorts:
+  - descending: true
+    fieldId: fct_sensor_community_measurement_distinct_sensors
+  - descending: false
+    fieldId: fct_sensor_community_measurement_fetched_at_day
+  tableCalculations: []
+name: Distinct sensors fetched by sensor type
+pivotConfig:
+  columns:
+  - fct_sensor_community_measurement_sensor_type
+slug: fct-sensor-community-measurement-sensor-type-fetches
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sensor_community_measurement_fetched_at_day
+  - fct_sensor_community_measurement_sensor_type
+  - fct_sensor_community_measurement_distinct_sensors
+tableName: fct_sensor_community_measurement
+version: 1

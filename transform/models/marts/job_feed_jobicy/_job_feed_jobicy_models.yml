@@ -1,0 +1,371 @@
+version: 2
+models:
+- name: fct_job_feed_jobicy
+  description: Daily physical history of jobs published by the Jobicy remote-jobs feed. Each row is one
+    job identifier at one upstream observation timestamp; repeated copies of that observation are reduced
+    to the latest loaded lineage record while the published job attributes and source payload lineage
+    remain available for analysis and audit.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: job_id, observed_at
+      label: Job feed jobicy
+      group_label: Job feed jobicy
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: jobicy_job_key
+      vintage:
+        visualization:
+          dimension: company
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct job by company
+          description: Distinct `job_id` values by `company` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - job_id
+          - company
+          - source_loaded_at
+          sources:
+          - '`job_feed_jobicy` — licence: Jobicy public API terms; attribution required: True. Source
+            configuration: `extract/sources/job_feed_jobicy.yml`.'
+          analysis:
+            headline: how the four-day catalogue level and recent posting mix change across jobicy's remote-job feed.
+            event_time: posted_at
+            grain: DAY
+            controls:
+            - company
+            - experience_level
+            - location_country
+            - salary_currency
+            trends:
+            - slug: catalogue-level
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Jobs present in the catalogue each day
+              description: Distinct `job_id` values present in the feed on each observation day. This is a
+                catalogue level rather than a count of new postings because the feed republishes listings
+                and repeated observations are deduplicated within each day. Days without a successful extract
+                are absent rather than zero.
+              width: half
+            - slug: posted-day-history
+              kind: total
+              metric: distinct_entities
+              time: posted_at
+              grain: DAY
+              title: Jobs by publisher posted day
+              description: Distinct `job_id` values grouped by the publisher's posted day across retained
+                observations. This is not a new-posting count because a listing can recur in later snapshots;
+                posted days with no matching records are absent rather than zero.
+              width: half
+            - slug: experience-levels
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: experience_level
+              top_n: 5
+              time: observed_at
+              grain: DAY
+              title: Catalogue jobs by experience level
+              description: Distinct `job_id` values per observation day, compared across the five experience
+                levels. The remainder is excluded rather than aggregated, and this is a catalogue level
+                rather than a flow of new postings; days without an extract are absent rather than zero.
+              width: half
+            - slug: country-mix
+              kind: composition
+              metric: distinct_companies
+              breakdown: location_country
+              top_n: 8
+              time: posted_at
+              grain: DAY
+              title: Hiring-company mix by posting day and country
+              description: Distinct non-null `company` values per publisher posted day, stacked by the eight
+                largest `location_country` values. The remainder is excluded rather than aggregated; repeated
+                listings can recur, so this shows observed mix rather than unique hiring organizations over
+                the full history. Empty posted days are absent rather than zero.
+              width: full
+  columns:
+  - name: jobicy_job_key
+    description: Stable hash of the Jobicy job identifier and upstream observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Jobicy job key
+          hidden: true
+  - name: job_id
+    description: Job identifier assigned by the Jobicy feed.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct job
+            description: Distinct `job_id` values by `company` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Job id
+          hidden: false
+  - name: observed_at
+    description: Timestamp when the extractor observed the Jobicy feed containing this job.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_name
+    description: Source endpoint name reported by the raw Jobicy record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: provider
+    description: Job provider label reported by the upstream feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider
+          hidden: false
+  - name: company
+    description: Hiring company name reported by the upstream feed.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_companies:
+            type: count_distinct
+            label: Distinct hiring company
+            description: Distinct non-null `company` values represented in the selected observations. This
+              counts organizations rather than postings and can repeat an organization across snapshots.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Company
+          hidden: false
+  - name: title
+    description: Published job title.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: department
+    description: JSON array of departments assigned to the job by Jobicy.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Department
+          hidden: true
+          sql: CAST(${TABLE}.department AS VARCHAR)
+  - name: employment_type
+    description: JSON array of employment-type labels assigned by Jobicy.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Employment type
+          hidden: true
+          sql: CAST(${TABLE}.employment_type AS VARCHAR)
+  - name: experience_level
+    description: Experience-level label reported for the job.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Experience level
+          hidden: false
+  - name: location
+    description: Free-text job location reported by the feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location
+          hidden: false
+  - name: location_country
+    description: Country or country code associated with the job location.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location country
+          hidden: false
+  - name: workplace_type
+    description: Workplace arrangement reported for the job, such as remote.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Workplace type
+          hidden: false
+  - name: is_remote
+    description: Whether the upstream record marks the job as remote.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is remote
+          hidden: false
+  - name: posted_at
+    description: Timestamp when the job was posted according to the upstream feed.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Posted at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: job_url
+    description: Canonical public URL for the Jobicy job posting.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job url
+          hidden: false
+  - name: salary_min
+    description: Lower bound of the published salary range, when provided.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Salary min
+          hidden: false
+          format: '#,##0'
+  - name: salary_max
+    description: Upper bound of the published salary range, when provided.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Salary max
+          hidden: false
+          format: '#,##0'
+  - name: salary_currency
+    description: Currency code for the published salary range, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Salary currency
+          hidden: false
+  - name: salary_interval
+    description: Salary payment interval reported by the upstream feed, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Salary interval
+          hidden: false
+  - name: description
+    description: Verbatim job description published by Jobicy.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Description
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained Jobicy observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted the raw Jobicy observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw Jobicy record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

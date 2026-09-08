@@ -1,0 +1,322 @@
+version: 2
+models:
+- name: fct_lichess_game_observation
+  description: Twice-hourly physical history of games and featured players observed in the Lichess TV
+    feed. Each row represents one source, game, variant, player, color, and feed observation timestamp;
+    duplicate append-only rows for that observation are reduced to the latest loaded record while the
+    source-load lineage is retained for replay and audit.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, game_id, variant, player, color, observed_at
+      label: Lichess game observation
+      group_label: Lichess
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: lichess_game_observation_key
+      vintage:
+        visualization:
+          dimension: variant
+          metric: average_rating
+          time: observed_at
+          window_days: 30
+          title: Mean observed rating by variant
+          description: Mean observed rating by `variant` in the selected observation window. Lichess rating
+            of the featured player at the observation timestamp. Each retained observation has equal weight;
+            polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure
+            or an additive total.
+          detail_fields:
+          - observed_at
+          - game_id
+          - variant
+          - rating
+          - source_loaded_at
+          sources:
+          - '`lichess` — licence: unstated; attribution required: False. Source configuration: `extract/sources/lichess.yml`.'
+          analysis:
+            headline: how the observed Lichess TV game roster and featured-player rating move through the feed.
+            event_time: observed_at
+            grain: HOUR
+            controls:
+            - variant
+            - color
+            - title
+            trends:
+            - slug: games-observed
+              kind: total
+              metric: distinct_games
+              time: observed_at
+              grain: HOUR
+              title: Distinct games observed each hour
+              description: Distinct `game_id` values in each observed hour. This is a feed level rather than
+                a count of newly played games — repeated TV snapshots can show the same game again, and hours
+                without a successful poll are absent rather than zero.
+              width: half
+            - slug: rating-by-hour
+              kind: total
+              metric: average_rating
+              time: observed_at
+              grain: HOUR
+              title: Mean featured-player rating each hour
+              description: Mean `rating` of retained featured-player observations in each observed hour.
+                Each row has equal weight, so irregular polling and repeated snapshots can influence the
+                average; this is a level, not an additive score, and missing hours are absent rather than zero.
+              width: half
+            - slug: games-by-variant
+              kind: breakdown
+              metric: distinct_games
+              breakdown: variant
+              top_n: 8
+              time: observed_at
+              grain: HOUR
+              title: Observed games by variant
+              description: Distinct games per observed hour, pivoted to the eight largest `variant` series by
+                the selected metric. The remaining eight variants are excluded rather than aggregated; this
+                compares feed coverage, not unique games newly created in the hour.
+              width: full
+            - slug: rating-by-color
+              kind: composition
+              metric: distinct_games
+              breakdown: color
+              top_n: 2
+              time: observed_at
+              grain: HOUR
+              title: Observed games by chess color
+              description: Distinct `game_id` values per observed hour stacked by `color`. The two observed
+                colors are retained and bars show the mix of feed coverage rather than newly played games;
+                repeated snapshots can show the same game again, while absent polling hours are absent rather than zero.
+              width: full
+            - slug: games-by-title
+              kind: composition
+              metric: distinct_games
+              breakdown: title
+              top_n: 7
+              time: observed_at
+              grain: HOUR
+              title: Observed games by player title
+              description: Distinct `game_id` values per observed hour stacked by player `title`. The seven
+                non-null title values are retained; untitled observations are excluded rather than grouped
+                into a synthetic category, and hours without a poll are absent rather than zero.
+              width: full
+  columns:
+  - name: lichess_game_observation_key
+    description: Stable hash of the Lichess source, game, variant, player, color, and feed observation
+      timestamp defining the row grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Lichess game observation key
+          hidden: true
+  - name: source
+    description: Lichess feed source label supplied by the extractor, currently lichess_tv.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: game_id
+    description: Lichess game identifier for the observed game.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_games:
+            type: count_distinct
+            label: Distinct games observed
+            description: Distinct `game_id` values among matching Lichess TV observations. This is a feed
+              coverage level because repeated snapshots can contain the same game across polling intervals.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Game id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the Lichess TV game observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: variant
+    description: Lichess chess variant reported for the observed game.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Variant
+          hidden: false
+  - name: player
+    description: Lichess account name of the featured player in the observed game.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Player
+          hidden: false
+  - name: title
+    description: Lichess title or bot marker for the featured player, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: rating
+    description: Lichess rating of the featured player at the observation timestamp.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_rating:
+            type: average
+            label: Mean observed rating
+            description: Mean observed rating by `variant` in the selected observation window. Lichess
+              rating of the featured player at the observation timestamp. Each retained observation has
+              equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+              a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Rating
+          hidden: false
+          format: '#,##0'
+  - name: color
+    description: Chess color played by the featured player in the observed game.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Color
+          hidden: false
+  - name: source_row_id
+    description: Raw warehouse row identifier for the retained Lichess observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained Lichess observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Raw partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the retained source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw Lichess record for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

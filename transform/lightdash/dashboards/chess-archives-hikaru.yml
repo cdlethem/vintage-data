@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 18a53101-b1fd-53a6-95d5-af6a28592c9d
+    label: 'Chess archives hikaru games: Player color'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_chess_archives_hikaru_games_player_color
+      tableName: fct_chess_archives_hikaru_games
+    values: []
+  - disabled: true
+    id: 049f1b2b-3279-5436-b09e-361e1df40e67
+    label: 'Chess archives hikaru games: Time class'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_chess_archives_hikaru_games_time_class
+      tableName: fct_chess_archives_hikaru_games
+    values: []
+  - disabled: true
+    id: a0e01526-2d17-5d4d-b627-a65e35b40dc1
+    label: 'Chess archives hikaru games: Time control'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_chess_archives_hikaru_games_time_control
+      tableName: fct_chess_archives_hikaru_games
+    values: []
+  - disabled: true
+    id: 6caa9054-9abe-50da-be8f-70a10b375ab8
+    label: 'Chess archives hikaru games: Is rated'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_chess_archives_hikaru_games_is_rated
+      tableName: fct_chess_archives_hikaru_games
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Chess Archives Hikaru
+slug: chess-archives-hikaru
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical fact of Hikaru Nakamura''s Chess.com archive games. Each row is one
+      game for the Hikaru archive at the archive-source and game identifier grain; repeated raw copies
+      are reduced to the latest loaded row while game attributes and raw-load lineage remain available
+      for audit.
+
+
+      **Grain:** archive_source, game_id
+
+
+      **What changes here:** how game volume, outcomes, time controls, and move timing shift across the
+      archive''s recorded end days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `chess_archives_hikaru` — see dbt raw-source lineage.'
+    hideFrame: false
+    title: Chess archives hikaru games
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Chess archives hikaru games — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Games ended per day
+    chartSlug: fct-chess-archives-hikaru-games-games-ended
+    hideTitle: false
+    title: Games ended per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average median move time per day
+    chartSlug: fct-chess-archives-hikaru-games-average-move-time
+    hideTitle: false
+    title: Average median move time per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Games ended by player result
+    chartSlug: fct-chess-archives-hikaru-games-results-by-day
+    hideTitle: false
+    title: Games ended by player result
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Games ended by time class
+    chartSlug: fct-chess-archives-hikaru-games-time-class-mix
+    hideTitle: false
+    title: Games ended by time class
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Chess archives hikaru games — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct game by player result
+    chartSlug: fct-chess-archives-hikaru-games
+    hideTitle: false
+    title: Distinct game by player result
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Chess archives hikaru games — observations
+    chartSlug: fct-chess-archives-hikaru-games-details
+    hideTitle: false
+    title: Chess archives hikaru games — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

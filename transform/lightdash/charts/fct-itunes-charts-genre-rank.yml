@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_itunes_charts_fetched_at_day
+          yRef:
+            field: fct_itunes_charts_average_rank
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Mean observed rank
+    layout:
+      xField: fct_itunes_charts_fetched_at_day
+      yField:
+      - fct_itunes_charts_average_rank
+  type: cartesian
+description: Average chart rank per genre for the eight largest genre series in each daily snapshot. Lower
+  is better; other genres are excluded rather than aggregated, and missing fetch days are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_itunes_charts_fetched_at_day
+  - fct_itunes_charts_genre
+  exploreName: fct_itunes_charts
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_itunes_charts_average_rank
+  sorts:
+  - descending: true
+    fieldId: fct_itunes_charts_average_rank
+  - descending: false
+    fieldId: fct_itunes_charts_fetched_at_day
+  tableCalculations: []
+name: Mean rank by genre and fetch day
+pivotConfig:
+  columns:
+  - fct_itunes_charts_genre
+slug: fct-itunes-charts-genre-rank
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_itunes_charts_fetched_at_day
+  - fct_itunes_charts_genre
+  - fct_itunes_charts_average_rank
+tableName: fct_itunes_charts
+version: 1

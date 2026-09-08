@@ -1,0 +1,46 @@
+chartConfig:
+  config: {}
+  type: table
+description: Historical snapshots of PubChem PUG-REST compound lookups. Each row represents one source,
+  requested query, returned compound identifier, and API observation timestamp; repeated raw ingestion
+  of the same lookup is reduced to the latest loaded copy while not-found lookup rows remain observable.
+metricQuery:
+  dimensions: &id001
+  - fct_pubchem_compound_snapshot_fetched_at
+  - fct_pubchem_compound_snapshot_compound_id
+  - fct_pubchem_compound_snapshot_query
+  - fct_pubchem_compound_snapshot_molecular_weight
+  - fct_pubchem_compound_snapshot_source_loaded_at
+  exploreName: fct_pubchem_compound_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: cb60fec5-7f07-5a21-bc7b-84ff128c85e1
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_pubchem_compound_snapshot_fetched_at
+        values:
+        - 30
+      - id: 0510fe62-8da0-5d5b-919b-5a3f38e6f4a2
+        operator: equals
+        target:
+          fieldId: fct_pubchem_compound_snapshot_found
+        values:
+        - true
+      id: dc561984-4d39-5a88-910c-37fa25b30560
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_pubchem_compound_snapshot_fetched_at
+  tableCalculations: []
+name: Pubchem compound snapshot — observations
+slug: fct-pubchem-compound-snapshot-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_pubchem_compound_snapshot
+version: 1

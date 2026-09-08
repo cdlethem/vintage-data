@@ -1,0 +1,152 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 321be39b-29a5-58ab-8a05-5d2ee8d0be90
+    label: 'Gbif occurrence snapshot: Kingdom'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gbif_occurrence_snapshot_kingdom
+      tableName: fct_gbif_occurrence_snapshot
+    values: []
+  - disabled: true
+    id: e8a5f60b-cf04-5d58-9433-7382f54884ec
+    label: 'Gbif occurrence snapshot: Basis of record'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gbif_occurrence_snapshot_basis_of_record
+      tableName: fct_gbif_occurrence_snapshot
+    values: []
+  - disabled: true
+    id: c476d84e-a47f-569f-8b97-6f470c1f1dd8
+    label: 'Gbif occurrence snapshot: Species'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gbif_occurrence_snapshot_species
+      tableName: fct_gbif_occurrence_snapshot
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Gbif Occurrences
+slug: gbif-occurrences
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical snapshot of GBIF occurrence records returned by the configured occurrence
+      search. Each row represents one occurrence identifier from one GBIF API observation timestamp, with
+      taxonomy, event, location, and raw-load lineage retained for reproducibility.
+
+
+      **Grain:** source, occurrence_id, fetched_at
+
+
+      **What changes here:** how the three-day fetched catalogue compares with the month of biological
+      event dates and its changing taxonomic mix.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `gbif_occurrences` — licence: per-record, mostly CC-friendly; attribution required: False. Source
+      configuration: `extract/sources/gbif_occurrences.yml`.'
+    hideFrame: false
+    title: Gbif occurrence snapshot
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Gbif occurrence snapshot — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct occurrences fetched per day
+    chartSlug: fct-gbif-occurrence-snapshot-occurrences-fetched
+    hideTitle: false
+    title: Distinct occurrences fetched per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct species represented per fetch day
+    chartSlug: fct-gbif-occurrence-snapshot-species-fetched
+    hideTitle: false
+    title: Distinct species represented per fetch day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Biological occurrences per event day by kingdom
+    chartSlug: fct-gbif-occurrence-snapshot-occurrences-by-event-day
+    hideTitle: false
+    title: Biological occurrences per event day by kingdom
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Occurrence mix by event day and basis of record
+    chartSlug: fct-gbif-occurrence-snapshot-observation-method-mix
+    hideTitle: false
+    title: Occurrence mix by event day and basis of record
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Gbif occurrence snapshot — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct occurrence by country
+    chartSlug: fct-gbif-occurrence-snapshot
+    hideTitle: false
+    title: Distinct occurrence by country
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Gbif occurrence snapshot — observations
+    chartSlug: fct-gbif-occurrence-snapshot-details
+    hideTitle: false
+    title: Gbif occurrence snapshot — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

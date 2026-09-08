@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sensor_community_measurement_observed_at_day
+          yRef:
+            field: fct_sensor_community_measurement_distinct_sensors
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct reporting sensors
+    layout:
+      xField: fct_sensor_community_measurement_observed_at_day
+      yField:
+      - fct_sensor_community_measurement_distinct_sensors
+  type: cartesian
+description: Distinct `sensor_id` values present on each observation day. This is a collection level over
+  five observed days rather than a long-run sensor flow; repeated measurement rows do not inflate the
+  count, and absent days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_sensor_community_measurement_observed_at_day
+  exploreName: fct_sensor_community_measurement
+  filters:
+    dimensions:
+      and:
+      - id: 0ae5b8d3-9963-5eb3-8767-f86fe7ff9dec
+        operator: equals
+        target:
+          fieldId: fct_sensor_community_measurement_is_clean
+        values:
+        - true
+      id: a7ddd2f1-0fc5-5096-9133-ac7f7a35a0ad
+  limit: 5000
+  metrics:
+  - fct_sensor_community_measurement_distinct_sensors
+  sorts:
+  - descending: false
+    fieldId: fct_sensor_community_measurement_observed_at_day
+  tableCalculations: []
+name: Distinct reporting sensors by observation day
+slug: fct-sensor-community-measurement-sensor-coverage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sensor_community_measurement_observed_at_day
+  - fct_sensor_community_measurement_distinct_sensors
+tableName: fct_sensor_community_measurement
+version: 1

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_federal_register_rule_publication_observation_pub_day
+          yRef:
+            field: fct_federal_register_rule_publication_observation_agency_count
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Publication date (Day)
+      yAxis:
+      - name: Distinct agency values
+    layout:
+      stack: true
+      xField: fct_federal_register_rule_publication_observation_pub_day
+      yField:
+      - fct_federal_register_rule_publication_observation_agency_count
+  type: cartesian
+description: Distinct `document_id` values stacked by the eight most common published agency values on
+  each publication date. Less common agencies and null values are excluded rather than aggregated, so
+  the stack is not the full publication count.
+metricQuery:
+  dimensions:
+  - fct_federal_register_rule_publication_observation_pub_day
+  - fct_federal_register_rule_publication_observation_agencies
+  exploreName: fct_federal_register_rule_publication_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_federal_register_rule_publication_observation_agency_count
+  sorts:
+  - descending: true
+    fieldId: fct_federal_register_rule_publication_observation_agency_count
+  - descending: false
+    fieldId: fct_federal_register_rule_publication_observation_pub_day
+  tableCalculations: []
+name: Publication agency mix by day
+pivotConfig:
+  columns:
+  - fct_federal_register_rule_publication_observation_agencies
+slug: fct-federal-register-rule-publication-observation-agency-composition
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_federal_register_rule_publication_observation_pub_day
+  - fct_federal_register_rule_publication_observation_agencies
+  - fct_federal_register_rule_publication_observation_agency_count
+tableName: fct_federal_register_rule_publication_observation
+version: 1

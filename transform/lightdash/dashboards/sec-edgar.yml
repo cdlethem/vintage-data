@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: bfc84cc4-5b83-5faf-86f1-8681e2d95f23
+    label: 'Sec edgar filing observation: Form type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sec_edgar_filing_observation_form_type
+      tableName: fct_sec_edgar_filing_observation
+    values: []
+  - disabled: true
+    id: 6e4d2a8d-2f1d-51a2-9326-0ae1321433b0
+    label: 'Sec edgar filing observation: Party role'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sec_edgar_filing_observation_party_role
+      tableName: fct_sec_edgar_filing_observation
+    values: []
+  - disabled: true
+    id: 93f9b805-83d6-5b99-acd9-5acbe36033b4
+    label: 'Sec edgar filing observation: Filing size'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sec_edgar_filing_observation_filing_size
+      tableName: fct_sec_edgar_filing_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Sec Edgar
+slug: sec-edgar
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical observation fact for SEC EDGAR filing-party records. Each row is one accession
+      number, party role, CIK, and extractor observation timestamp; repeated raw copies of the same observation
+      are reduced to the latest loaded copy while source and load lineage remain available for audit and
+      replay.
+
+
+      **Grain:** accession_number, party_role, cik, observed_at
+
+
+      **What changes here:** how filing activity and represented parties shift across filed dates and
+      SEC form roles.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `sec_edgar` — licence: US Government work, public domain; attribution required: False. Source
+      configuration: `extract/sources/sec_edgar.yml`.'
+    hideFrame: false
+    title: Sec edgar filing observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Sec edgar filing observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct filings by filed day
+    chartSlug: fct-sec-edgar-filing-observation-filed-filings
+    hideTitle: false
+    title: Distinct filings by filed day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct filing parties by filed day
+    chartSlug: fct-sec-edgar-filing-observation-filed-parties
+    hideTitle: false
+    title: Distinct filing parties by filed day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct parties by filing role and filed day
+    chartSlug: fct-sec-edgar-filing-observation-role-trajectory
+    hideTitle: false
+    title: Distinct parties by filing role and filed day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Filing mix by SEC form type and filed day
+    chartSlug: fct-sec-edgar-filing-observation-form-mix
+    hideTitle: false
+    title: Filing mix by SEC form type and filed day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Sec edgar filing observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct filing party by form type
+    chartSlug: fct-sec-edgar-filing-observation
+    hideTitle: false
+    title: Distinct filing party by form type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Sec edgar filing observation — observations
+    chartSlug: fct-sec-edgar-filing-observation-details
+    hideTitle: false
+    title: Sec edgar filing observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 9
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_iana_dns_record_observation_observed_at_day
+          yRef:
+            field: fct_iana_dns_record_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct record
+    layout:
+      stack: true
+      xField: fct_iana_dns_record_observation_observed_at_day
+      yField:
+      - fct_iana_dns_record_observation_distinct_entities
+  type: cartesian
+description: Distinct `record_id` values per collection day stacked by record type. All nine record types
+  are shown because the dimension has nine values; segments can overlap when a record has multiple types,
+  so the stack is not a unique-record total.
+metricQuery:
+  dimensions:
+  - fct_iana_dns_record_observation_observed_at_day
+  - fct_iana_dns_record_observation_record_type
+  exploreName: fct_iana_dns_record_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_iana_dns_record_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_iana_dns_record_observation_distinct_entities
+  - descending: false
+    fieldId: fct_iana_dns_record_observation_observed_at_day
+  tableCalculations: []
+name: Observed DNS records by record type
+pivotConfig:
+  columns:
+  - fct_iana_dns_record_observation_record_type
+slug: fct-iana-dns-record-observation-record-type-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_iana_dns_record_observation_observed_at_day
+  - fct_iana_dns_record_observation_record_type
+  - fct_iana_dns_record_observation_distinct_entities
+tableName: fct_iana_dns_record_observation
+version: 1

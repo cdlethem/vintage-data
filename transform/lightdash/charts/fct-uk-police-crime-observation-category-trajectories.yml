@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_police_crime_observation_crime_month_month
+          yRef:
+            field: fct_uk_police_crime_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Crime month (Month)
+      yAxis:
+      - name: Distinct crime
+    layout:
+      xField: fct_uk_police_crime_observation_crime_month_month
+      yField:
+      - fct_uk_police_crime_observation_distinct_entities
+  type: cartesian
+description: Distinct `crime_id` values per source `crime_month`, pivoted by the six largest categories
+  across the full history — the remaining categories are excluded rather than aggregated. This compares
+  category trajectories, not additive totals when records change category.
+metricQuery:
+  dimensions:
+  - fct_uk_police_crime_observation_crime_month_month
+  - fct_uk_police_crime_observation_category
+  exploreName: fct_uk_police_crime_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_uk_police_crime_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_uk_police_crime_observation_distinct_entities
+  - descending: false
+    fieldId: fct_uk_police_crime_observation_crime_month_month
+  tableCalculations: []
+name: Crime trajectories by leading category
+pivotConfig:
+  columns:
+  - fct_uk_police_crime_observation_category
+slug: fct-uk-police-crime-observation-category-trajectories
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_police_crime_observation_crime_month_month
+  - fct_uk_police_crime_observation_category
+  - fct_uk_police_crime_observation_distinct_entities
+tableName: fct_uk_police_crime_observation
+version: 1

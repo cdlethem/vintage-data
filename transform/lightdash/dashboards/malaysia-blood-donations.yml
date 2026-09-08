@@ -1,0 +1,146 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: ad00df52-8216-5cca-bc05-840014cded8e
+    label: 'Malaysia blood donations: State'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_malaysia_blood_donations_state
+      tableName: fct_malaysia_blood_donations
+    values: []
+  - disabled: true
+    id: 738095d4-915b-5ee2-a1dc-d8f09ccfda05
+    label: 'Malaysia blood donations: Blood type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_malaysia_blood_donations_blood_type
+      tableName: fct_malaysia_blood_donations
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Malaysia Blood Donations
+slug: malaysia-blood-donations
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of Malaysia blood-donation observations. Each row records one source
+      observation identifier and fetch timestamp, with its reported date, state, blood type, and donation
+      count. Insert-only reloads of the same observation are reduced to the latest loaded copy while extractor
+      and load lineage are kept for audit and replay. The publisher timestamp is retained as source text
+      because the feed emits an RFC-style GMT string that is not consistently parseable as a warehouse
+      timestamp.
+
+
+      **Grain:** source, observation_id, fetched_at
+
+
+      **What changes here:** how reported blood-donation volume changes by donation date across the published
+      feed.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `malaysia_blood_donations` — licence: CC BY 4.0; attribution required: True. Source configuration:
+      `extract/sources/malaysia_blood_donations.yml`.'
+    hideFrame: false
+    title: Malaysia blood donations
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Malaysia blood donations — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct donation observations per day
+    chartSlug: fct-malaysia-blood-donations-donation-observations
+    hideTitle: false
+    title: Distinct donation observations per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported donations per day
+    chartSlug: fct-malaysia-blood-donations-donation-level
+    hideTitle: false
+    title: Mean reported donations per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Donation observations by state
+    chartSlug: fct-malaysia-blood-donations-observations-by-state
+    hideTitle: false
+    title: Donation observations by state
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Donation observations by blood type
+    chartSlug: fct-malaysia-blood-donations-observations-by-blood-type
+    hideTitle: false
+    title: Donation observations by blood type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Malaysia blood donations — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed donation count by state
+    chartSlug: fct-malaysia-blood-donations
+    hideTitle: false
+    title: Mean observed donation count by state
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Malaysia blood donations — observations
+    chartSlug: fct-malaysia-blood-donations-details
+    hideTitle: false
+    title: Malaysia blood donations — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

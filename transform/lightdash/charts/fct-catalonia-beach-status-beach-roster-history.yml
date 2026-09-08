@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_catalonia_beach_status_status_updated_at_day
+          yRef:
+            field: fct_catalonia_beach_status_distinct_beaches
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Status updated at (Day)
+      yAxis:
+      - name: Distinct beaches
+    layout:
+      xField: fct_catalonia_beach_status_status_updated_at_day
+      yField:
+      - fct_catalonia_beach_status_distinct_beaches
+  type: cartesian
+description: Distinct `beach_id` values in each publisher `status_updated_at` snapshot. This is a catalogue
+  level rather than a flow of new beaches, and the three earlier snapshots are sparse annual points rather
+  than continuous daily history.
+metricQuery:
+  dimensions:
+  - fct_catalonia_beach_status_status_updated_at_day
+  exploreName: fct_catalonia_beach_status
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_catalonia_beach_status_distinct_beaches
+  sorts:
+  - descending: false
+    fieldId: fct_catalonia_beach_status_status_updated_at_day
+  tableCalculations: []
+name: Distinct beaches reported by status date
+slug: fct-catalonia-beach-status-beach-roster-history
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_catalonia_beach_status_status_updated_at_day
+  - fct_catalonia_beach_status_distinct_beaches
+tableName: fct_catalonia_beach_status
+version: 1

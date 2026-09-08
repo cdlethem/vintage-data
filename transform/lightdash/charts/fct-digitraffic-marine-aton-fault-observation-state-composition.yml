@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_digitraffic_marine_aton_fault_observation_entered_at_month
+          yRef:
+            field: fct_digitraffic_marine_aton_fault_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Entered at (Month)
+      yAxis:
+      - name: Distinct fault
+    layout:
+      stack: true
+      xField: fct_digitraffic_marine_aton_fault_observation_entered_at_month
+      yField:
+      - fct_digitraffic_marine_aton_fault_observation_distinct_entities
+  type: cartesian
+description: Distinct `fault_id` values per `entered_at` month, stacked by the three observed `state`
+  values. The state is the publisher's current label on each observation, not a reconstructed transition
+  history; missing months are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_digitraffic_marine_aton_fault_observation_entered_at_month
+  - fct_digitraffic_marine_aton_fault_observation_state
+  exploreName: fct_digitraffic_marine_aton_fault_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_digitraffic_marine_aton_fault_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_digitraffic_marine_aton_fault_observation_distinct_entities
+  - descending: false
+    fieldId: fct_digitraffic_marine_aton_fault_observation_entered_at_month
+  tableCalculations: []
+name: Entered faults by reported state
+pivotConfig:
+  columns:
+  - fct_digitraffic_marine_aton_fault_observation_state
+slug: fct-digitraffic-marine-aton-fault-observation-state-composition
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_digitraffic_marine_aton_fault_observation_entered_at_month
+  - fct_digitraffic_marine_aton_fault_observation_state
+  - fct_digitraffic_marine_aton_fault_observation_distinct_entities
+tableName: fct_digitraffic_marine_aton_fault_observation
+version: 1

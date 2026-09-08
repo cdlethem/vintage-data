@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: e5fa07bc-2f99-51a2-9896-ea9a91aa31a3
+    label: 'Food hygiene ratings: Business type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_business_type
+      tableName: fct_food_hygiene_ratings
+    values: []
+  - disabled: true
+    id: b75fa644-c977-5d1c-a504-d5472260435d
+    label: 'Food hygiene ratings: Local authority name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_local_authority_name
+      tableName: fct_food_hygiene_ratings
+    values: []
+  - disabled: true
+    id: e003e0c3-697d-5423-adca-c35dafd53cd3
+    label: 'Food hygiene ratings: Rating value'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_rating_value
+      tableName: fct_food_hygiene_ratings
+    values: []
+  - disabled: true
+    id: 6bbb7445-1e6f-57bd-ae9a-f675e495ad80
+    label: 'Food hygiene ratings: New rating pending'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_food_hygiene_ratings_new_rating_pending
+      tableName: fct_food_hygiene_ratings
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Food Hygiene Ratings
+slug: food-hygiene-ratings
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Incremental physical snapshot fact of Food Standards Agency food hygiene ratings. Each row
+      is one source, food-business rating identifier, and fetch timestamp; repeated rows for that grain
+      are resolved to the latest raw load record. Source rating labels and score JSON are retained alongside
+      typed score and geocode fields and raw-load lineage.
+
+
+      **Grain:** source, rating_id, observed_at
+
+
+      **What changes here:** how the food rating volume and score mix changes across business types and
+      local authorities.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `food_hygiene_ratings` — licence: Open Government Licence (FSA); attribution required: True. Source
+      configuration: `extract/sources/food_hygiene_ratings.yml`.'
+    hideFrame: false
+    title: Food hygiene ratings
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Food hygiene ratings — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Food ratings assigned per month
+    chartSlug: fct-food-hygiene-ratings-ratings-assigned
+    hideTitle: false
+    title: Food ratings assigned per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average numeric rating score by month
+    chartSlug: fct-food-hygiene-ratings-average-score
+    hideTitle: false
+    title: Average numeric rating score by month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Ratings assigned by business type
+    chartSlug: fct-food-hygiene-ratings-business-type-volume
+    hideTitle: false
+    title: Ratings assigned by business type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Ratings assigned by local authority
+    chartSlug: fct-food-hygiene-ratings-authority-mix
+    hideTitle: false
+    title: Ratings assigned by local authority
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Food hygiene ratings — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct rating by business type
+    chartSlug: fct-food-hygiene-ratings
+    hideTitle: false
+    title: Distinct rating by business type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Food hygiene ratings — observations
+    chartSlug: fct-food-hygiene-ratings-details
+    hideTitle: false
+    title: Food hygiene ratings — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

@@ -1,0 +1,67 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_food_hygiene_ratings_rating_at_month
+          yRef:
+            field: fct_food_hygiene_ratings_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Rating at (Month)
+      yAxis:
+      - name: Distinct rating
+    layout:
+      xField: fct_food_hygiene_ratings_rating_at_month
+      yField:
+      - fct_food_hygiene_ratings_distinct_entities
+  type: cartesian
+description: Distinct `rating_id` values per source `rating_at` month over the last ten years, pivoted
+  to the six largest `business_type` groups. Smaller groups are excluded rather than aggregated; repeated
+  observations within a month count once per group.
+metricQuery:
+  dimensions:
+  - fct_food_hygiene_ratings_rating_at_month
+  - fct_food_hygiene_ratings_business_type
+  exploreName: fct_food_hygiene_ratings
+  filters:
+    dimensions:
+      and:
+      - id: 847a089f-2762-5b76-960f-2a2b3eaefee3
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_food_hygiene_ratings_rating_at
+        values:
+        - 3650
+      id: f6c4a9b5-fff1-5943-bb60-06086819b237
+  limit: 5000
+  metrics:
+  - fct_food_hygiene_ratings_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_food_hygiene_ratings_distinct_entities
+  - descending: false
+    fieldId: fct_food_hygiene_ratings_rating_at_month
+  tableCalculations: []
+name: Ratings assigned by business type
+pivotConfig:
+  columns:
+  - fct_food_hygiene_ratings_business_type
+slug: fct-food-hygiene-ratings-business-type-volume
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_food_hygiene_ratings_rating_at_month
+  - fct_food_hygiene_ratings_business_type
+  - fct_food_hygiene_ratings_distinct_entities
+tableName: fct_food_hygiene_ratings
+version: 1

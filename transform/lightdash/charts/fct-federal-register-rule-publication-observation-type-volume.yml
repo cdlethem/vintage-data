@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_federal_register_rule_publication_observation_pub_day
+          yRef:
+            field: fct_federal_register_rule_publication_observation_m_a6e4e251
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Publication date (Day)
+      yAxis:
+      - name: Distinct document
+    layout:
+      xField: fct_federal_register_rule_publication_observation_pub_day
+      yField:
+      - fct_federal_register_rule_publication_observation_m_a6e4e251
+  type: cartesian
+description: Distinct `document_id` values per publication date, split across the four observed document
+  types. All observed types are retained; dates without publications are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_federal_register_rule_publication_observation_pub_day
+  - fct_federal_register_rule_publication_observation_document_type
+  exploreName: fct_federal_register_rule_publication_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_federal_register_rule_publication_observation_m_a6e4e251
+  sorts:
+  - descending: true
+    fieldId: fct_federal_register_rule_publication_observation_m_a6e4e251
+  - descending: false
+    fieldId: fct_federal_register_rule_publication_observation_pub_day
+  tableCalculations: []
+name: Published documents by document type
+pivotConfig:
+  columns:
+  - fct_federal_register_rule_publication_observation_document_type
+slug: fct-federal-register-rule-publication-observation-type-volume
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_federal_register_rule_publication_observation_pub_day
+  - fct_federal_register_rule_publication_observation_document_type
+  - fct_federal_register_rule_publication_observation_m_a6e4e251
+tableName: fct_federal_register_rule_publication_observation
+version: 1

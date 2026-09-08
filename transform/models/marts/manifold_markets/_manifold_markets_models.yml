@@ -1,0 +1,428 @@
+version: 2
+models:
+- name: fct_manifold_market_observation
+  description: Twice-hourly physical observation fact for prediction markets returned by Manifold Markets.
+    Each row represents one market at one extractor observation timestamp, retaining market state, probability
+    and activity measures, resolution fields, and raw-load lineage. The incremental table preserves append-only
+    observation history without rescanning prior snapshots on each load; repeated raw copies of the same
+    observation are reduced to the latest loaded row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, market_id, observed_at
+      label: Manifold market observation
+      group_label: Manifold markets
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: manifold_market_observation_key
+      vintage:
+        visualization:
+          dimension: question
+          metric: average_probability
+          time: observed_at
+          window_days: 30
+          title: Mean observed probability by question
+          description: Mean observed probability by `question` in the selected observation window. Market-implied
+            probability reported at observation time. Each retained observation has equal weight; polling
+            frequency and repeated snapshots can affect the mean. This is not a latest-value measure or
+            an additive total.
+          detail_fields:
+          - observed_at
+          - market_id
+          - question
+          - probability
+          - source_loaded_at
+          sources:
+          - '`manifold_markets` — licence: Manifold Markets API — public; attribution required: False.
+            Source configuration: `extract/sources/manifold_markets.yml`.'
+          analysis:
+            headline: how market participation and implied probabilities shift across observation days and
+              scheduled close months.
+            event_time: close_time
+            grain: MONTH
+            controls:
+            - outcome_type
+            - creator
+            - is_resolved
+            - resolution
+            trends:
+            - slug: market-level
+              kind: total
+              metric: distinct_markets
+              time: observed_at
+              grain: DAY
+              title: Distinct markets observed per day
+              description: Distinct `market_id` values present on each extractor observation day. This is a
+                level rather than a flow because the feed republishes market state; changes indicate markets
+                entering or leaving the published catalogue. Days with no successful extract are absent rather
+                than zero.
+              width: half
+            - slug: probability-level
+              kind: total
+              metric: average_probability
+              time: observed_at
+              grain: DAY
+              title: Mean market-implied probability per day
+              description: Average non-null `probability` across retained observations on each observation day.
+                Each snapshot has equal weight, so irregular polling and repeated market states can influence
+                the mean. This is a level, not a probability sum; days without non-null probabilities are
+                absent rather than zero.
+              width: half
+            - slug: scheduled-close-mix
+              kind: composition
+              metric: distinct_markets
+              breakdown: outcome_type
+              top_n: 6
+              time: close_time
+              grain: MONTH
+              title: Markets by scheduled close month and outcome type
+              description: Distinct `market_id` values grouped by their scheduled `close_time` month and
+                `outcome_type`. Bars show the composition of scheduled horizons; far-future dates can represent
+                open markets and are not realized closures. All six outcome types fit this bounded pivot, and
+                no categories are silently aggregated.
+              width: full
+            - slug: activity-by-type
+              kind: breakdown
+              metric: average_volume_24h
+              breakdown: outcome_type
+              top_n: 6
+              time: observed_at
+              grain: DAY
+              title: Mean 24-hour volume by outcome type
+              description: Average publisher-reported `volume_24h` per observation day, pivoted by
+                `outcome_type`. This is a snapshot level and must not be read as traded volume accumulated
+                during the day; each retained observation has equal weight. All six outcome types are shown,
+                with no remainder category.
+              width: full
+  columns:
+  - name: manifold_market_observation_key
+    description: Stable hash of the source label, market identifier, and observation timestamp defining
+      the row grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Manifold market observation key
+          hidden: true
+  - name: source_name
+    description: Upstream source label reported by the Manifold Markets extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: market_id
+    description: Manifold Markets identifier for the observed prediction market.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_markets:
+            type: count_distinct
+            label: Distinct market
+            description: Distinct `market_id` values present per observation period. Repeated snapshots of
+              the same market count once within each period, so this measures catalogue breadth rather than
+              row volume.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Market id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the market record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: question
+    description: Question text posed by the prediction market.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Question
+          hidden: false
+  - name: creator
+    description: Manifold Markets username or identifier of the market creator.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Creator
+          hidden: false
+  - name: created_at
+    description: UTC timestamp when the market was created according to Manifold Markets.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Created at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: close_time
+    description: UTC timestamp when the market is scheduled to close, if supplied.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Close time
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: outcome_type
+    description: Manifold Markets outcome type, such as binary, date, or multiple choice.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Outcome type
+          hidden: false
+  - name: probability
+    description: Market-implied probability reported at observation time.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_probability:
+            type: average
+            label: Mean observed probability
+            description: Mean observed probability by `question` in the selected observation window. Market-implied
+              probability reported at observation time. Each retained observation has equal weight; polling
+              frequency and repeated snapshots can affect the mean. This is not a latest-value measure
+              or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Probability
+          hidden: false
+          format: '#,##0.00'
+  - name: volume
+    description: Cumulative market trading volume reported at observation time.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Volume
+          hidden: false
+          format: '#,##0.00'
+  - name: volume_24h
+    description: Market trading volume over the preceding 24 hours reported at observation time.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_volume_24h:
+            type: average
+            label: Mean 24-hour volume
+            description: Mean publisher-reported `volume_24h` per observation period. This is a snapshot
+              level with equal weight per retained observation; it is not additive traded volume.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Volume 24h
+          hidden: false
+          format: '#,##0.00'
+  - name: bettor_count
+    description: Number of bettors reported for the market at observation time.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Bettor count
+          hidden: false
+          format: '#,##0'
+  - name: is_resolved
+    description: Whether Manifold Markets reports that the market has been resolved at observation time.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is resolved
+          hidden: false
+  - name: resolution
+    description: Resolution outcome reported for a resolved market, if available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Resolution
+          hidden: false
+  - name: resolution_probability
+    description: Resolution probability reported by Manifold Markets, if available.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Resolution probability
+          hidden: false
+          format: '#,##0.00'
+  - name: last_bet_at
+    description: UTC timestamp of the most recent bet reported for the market, if available.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Last bet at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: market_url
+    description: Canonical Manifold Markets URL for the market.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Market url
+          hidden: false
+  - name: source_row_id
+    description: Raw warehouse row identifier for the retained market observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained market observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained market observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Raw partition date assigned by the load layer for the retained observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction began for the retained market observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_load_id
+    description: Identifier of the load operation that inserted the retained market observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained market observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw market observation content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

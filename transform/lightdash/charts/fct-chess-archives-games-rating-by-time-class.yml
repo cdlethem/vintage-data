@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_chess_archives_games_ended_at_month
+          yRef:
+            field: fct_chess_archives_games_average_player_rating
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Ended at (Month)
+      yAxis:
+      - name: Mean player rating
+    layout:
+      xField: fct_chess_archives_games_ended_at_month
+      yField:
+      - fct_chess_archives_games_average_player_rating
+  type: cartesian
+description: Mean reported `player_rating` by `time_class` and game `ended_at` month. This is an observation-weighted
+  rating level, not a rating change for a fixed player; absent rows are missing rather than zero.
+metricQuery:
+  dimensions:
+  - fct_chess_archives_games_ended_at_month
+  - fct_chess_archives_games_time_class
+  exploreName: fct_chess_archives_games
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_chess_archives_games_average_player_rating
+  sorts:
+  - descending: true
+    fieldId: fct_chess_archives_games_average_player_rating
+  - descending: false
+    fieldId: fct_chess_archives_games_ended_at_month
+  tableCalculations: []
+name: Mean player rating by time class
+pivotConfig:
+  columns:
+  - fct_chess_archives_games_time_class
+slug: fct-chess-archives-games-rating-by-time-class
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_chess_archives_games_ended_at_month
+  - fct_chess_archives_games_time_class
+  - fct_chess_archives_games_average_player_rating
+tableName: fct_chess_archives_games
+version: 1

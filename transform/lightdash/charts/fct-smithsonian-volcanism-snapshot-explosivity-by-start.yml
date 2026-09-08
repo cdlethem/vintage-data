@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_smithsonian_volcanism_snapshot_event_start_date_day
+          yRef:
+            field: fct_smithsonian_volcanism_snapshot_max_explosivity_index_max
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event start date (Day)
+      yAxis:
+      - name: Maximum observed explosivity index max
+    layout:
+      xField: fct_smithsonian_volcanism_snapshot_event_start_date_day
+      yField:
+      - fct_smithsonian_volcanism_snapshot_max_explosivity_index_max
+  type: cartesian
+description: Maximum reported `explosivity_index_max` among snapshots whose eruption has the reported
+  `event_start_date` day. This is an event attribute level, not a summed intensity or daily flow — dates
+  without a reported start are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_smithsonian_volcanism_snapshot_event_start_date_day
+  exploreName: fct_smithsonian_volcanism_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_smithsonian_volcanism_snapshot_max_explosivity_index_max
+  sorts:
+  - descending: false
+    fieldId: fct_smithsonian_volcanism_snapshot_event_start_date_day
+  tableCalculations: []
+name: Maximum explosivity by reported start date
+slug: fct-smithsonian-volcanism-snapshot-explosivity-by-start
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_smithsonian_volcanism_snapshot_event_start_date_day
+  - fct_smithsonian_volcanism_snapshot_max_explosivity_index_max
+tableName: fct_smithsonian_volcanism_snapshot
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_swpc_space_weather_observation_at_day
+          yRef:
+            field: fct_swpc_space_weather_average_a_running_index
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observation at (Day)
+      yAxis:
+      - name: Mean running A-index
+    layout:
+      xField: fct_swpc_space_weather_observation_at_day
+      yField:
+      - fct_swpc_space_weather_average_a_running_index
+  type: cartesian
+description: Mean `a_running_index` across SWPC observations assigned to each source observation day.
+  This is an observation-weighted level, not a cumulative index; days with no source observations are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_swpc_space_weather_observation_at_day
+  exploreName: fct_swpc_space_weather
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_swpc_space_weather_average_a_running_index
+  sorts:
+  - descending: false
+    fieldId: fct_swpc_space_weather_observation_at_day
+  tableCalculations: []
+name: Mean running A-index by observation day
+slug: fct-swpc-space-weather-a-index-activity
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_swpc_space_weather_observation_at_day
+  - fct_swpc_space_weather_average_a_running_index
+tableName: fct_swpc_space_weather
+version: 1

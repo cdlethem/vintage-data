@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Incremental physical history of Seattle Fire 911 incidents published through the Socrata
+  civic feed. Each row is one source record at one fetch timestamp (source, record_id, observed_at), with
+  typed event and location attributes, and raw-load lineage. Replayed records at the same grain retain
+  only the latest loaded copy.
+metricQuery:
+  dimensions: &id001
+  - fct_socrata_civic_incident_observed_at
+  - fct_socrata_civic_incident_record_id
+  - fct_socrata_civic_incident_incident_type
+  - fct_socrata_civic_incident_source_loaded_at
+  exploreName: fct_socrata_civic_incident
+  filters:
+    dimensions:
+      and:
+      - id: ce00197e-7ad8-5b60-ad66-b35fbd581a50
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_socrata_civic_incident_observed_at
+        values:
+        - 30
+      id: 1d767590-253f-516c-80d2-d5284583b4ae
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_socrata_civic_incident_observed_at
+  tableCalculations: []
+name: Socrata civic incident — observations
+slug: fct-socrata-civic-incident-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_socrata_civic_incident
+version: 1

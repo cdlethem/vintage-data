@@ -1,0 +1,351 @@
+version: 2
+models:
+- name: fct_hk_parking_vacancy
+  description: Twice-hourly physical observation fact for Hong Kong parking-vacancy snapshots. Each row
+    records one parking facility, vehicle type, vacancy category, and extractor observation time, retaining
+    publisher counts and raw load lineage. Repeated copies of the same observation grain retain the latest
+    loaded row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, park_id, vehicle_type, vacancy_type, category, observed_at
+      label: Hk parking vacancy
+      group_label: Hk parking vacancy
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: parking_vacancy_observation_key
+      vintage:
+        visualization:
+          dimension: vehicle_type
+          metric: average_vacancy_count
+          time: observed_at
+          window_days: 30
+          title: Mean observed vacancy count by vehicle type
+          description: Mean observed vacancy count by `vehicle_type` in the selected observation window.
+            Total vacancies reported by the publisher for the facility and vehicle class. Each retained
+            observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+            This is not a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - parking_id
+          - vehicle_type
+          - vacancy_count
+          - source_loaded_at
+          sources:
+          - '`hk_parking_vacancy` — licence: DATA.GOV.HK reuse terms; attribution required: True. Source
+            configuration: `extract/sources/hk_parking_vacancy.yml`.'
+          analysis:
+            headline: how parking vacancy levels vary by vehicle class and when the publisher refreshes
+              facility records.
+            event_time: publisher_updated_at
+            grain: DAY
+            controls:
+            - vehicle_type
+            - vacancy_type
+            - category
+            trends:
+            - slug: updated-vacancy
+              kind: total
+              metric: average_vacancy_count
+              time: publisher_updated_at
+              grain: DAY
+              title: Mean vacancy reported on publisher update days
+              description: Mean `vacancy_count` across retained parking observations grouped by the
+                publisher-supplied `publisher_updated_at` day. The source has ten populated days spread
+                across five years, so gaps are absent rather than zero and the series is a sparse update
+                history rather than continuous occupancy.
+              width: half
+            - slug: observed-vacancy
+              kind: total
+              metric: average_vacancy_count
+              time: observed_at
+              grain: DAY
+              title: Mean vacancy observed each collection day
+              description: Mean `vacancy_count` across retained snapshots on each extractor observation
+                day. This is a level of the republished parking feed, not an additive total; days without
+                a successful extract are absent rather than zero.
+              width: half
+            - slug: vehicle-vacancy-mix
+              kind: composition
+              metric: average_vacancy_count
+              breakdown: vehicle_type
+              top_n: 6
+              time: observed_at
+              grain: DAY
+              title: Vacancy level by vehicle type
+              description: Mean reported `vacancy_count` per observation day stacked by vehicle type. All
+                six vehicle types are shown because this dimension has six values; segments compare
+                reported levels and must not be summed across repeated snapshots.
+              width: full
+            - slug: vehicle-coverage
+              kind: composition
+              metric: distinct_parks
+              breakdown: vehicle_type
+              top_n: 6
+              time: observed_at
+              grain: DAY
+              title: Distinct facilities represented by vehicle type
+              description: Distinct `park_id` values per collection day stacked by vehicle type. This
+                describes catalogue coverage in the four-day observation window; vehicle classes can
+                overlap within a facility, so stack segments are not a unique-facility total.
+              width: full
+  columns:
+  - name: parking_vacancy_observation_key
+    description: Stable hash of the source, parking facility, vehicle and vacancy dimensions, category,
+      and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Parking vacancy observation key
+          hidden: true
+  - name: source
+    description: Publisher source identifier supplied in the parking-vacancy record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: parking_id
+    description: Publisher parking observation identifier, normally combining facility, vehicle type,
+      and vacancy type.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Parking id
+          hidden: false
+  - name: park_id
+    description: Publisher identifier of the parking facility.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_parks:
+            type: count_distinct
+            label: Distinct parking facilities
+            description: Distinct `park_id` values represented at each time point. Repeated vehicle and
+              vacancy observations within a facility are not counted as additional facilities.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Park id
+          hidden: false
+  - name: vehicle_type
+    description: Vehicle class for which vacancy is reported, such as privateCar, motorCycle, LGV, or
+      HGV.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Vehicle type
+          hidden: false
+  - name: vacancy_type
+    description: Publisher vacancy classification for the parking facility observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Vacancy type
+          hidden: false
+  - name: category
+    description: Publisher reporting category, including HOURLY where supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Category
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the parking-vacancy snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: electric_vacancy_count
+    description: Number of electric-vehicle vacancies reported by the publisher; null when not supplied
+      for the vehicle class.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Electric vacancy count
+          hidden: false
+          format: '#,##0'
+  - name: disabled_vacancy_count
+    description: Number of disabled-access vacancies reported by the publisher; null when not supplied
+      for the vehicle class.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Disabled vacancy count
+          hidden: false
+          format: '#,##0'
+  - name: vacancy_count
+    description: Total vacancies reported by the publisher for the facility and vehicle class.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_vacancy_count:
+            type: average
+            label: Mean observed vacancy count
+            description: Mean observed vacancy count by `vehicle_type` in the selected observation window.
+              Total vacancies reported by the publisher for the facility and vehicle class. Each retained
+              observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+              This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Vacancy count
+          hidden: false
+          format: '#,##0'
+  - name: publisher_updated_at
+    description: UTC timestamp of the publisher's last update for the parking record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Publisher updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _row_id
+    description: Raw loader row identifier retained for lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Load batch identifier that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Load job identifier that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: UTC calendar date assigned by the load layer to the source record.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source file began.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content for lineage and replay.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

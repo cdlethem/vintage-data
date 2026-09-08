@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_itunes_charts_release_date_month
+          yRef:
+            field: fct_itunes_charts_distinct_tracks
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Release date (Month)
+      yAxis:
+      - name: Distinct track
+    layout:
+      stack: true
+      xField: fct_itunes_charts_release_date_month
+      yField:
+      - fct_itunes_charts_distinct_tracks
+  type: cartesian
+description: Distinct `id` values stacked by genre for each populated release month. Bars show the sparse
+  event-time catalogue mix; only the eight largest genre series are kept and the remainder is excluded
+  rather than aggregated.
+metricQuery:
+  dimensions:
+  - fct_itunes_charts_release_date_month
+  - fct_itunes_charts_genre
+  exploreName: fct_itunes_charts
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_itunes_charts_distinct_tracks
+  sorts:
+  - descending: true
+    fieldId: fct_itunes_charts_distinct_tracks
+  - descending: false
+    fieldId: fct_itunes_charts_release_date_month
+  tableCalculations: []
+name: Represented tracks by release month and genre
+pivotConfig:
+  columns:
+  - fct_itunes_charts_genre
+slug: fct-itunes-charts-genre-release-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_itunes_charts_release_date_month
+  - fct_itunes_charts_genre
+  - fct_itunes_charts_distinct_tracks
+tableName: fct_itunes_charts
+version: 1

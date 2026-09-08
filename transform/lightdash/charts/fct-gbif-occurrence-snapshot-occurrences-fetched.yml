@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_gbif_occurrence_snapshot_fetched_at_day
+          yRef:
+            field: fct_gbif_occurrence_snapshot_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Distinct occurrence
+    layout:
+      xField: fct_gbif_occurrence_snapshot_fetched_at_day
+      yField:
+      - fct_gbif_occurrence_snapshot_distinct_entities
+  type: cartesian
+description: Distinct `occurrence_id` values present in each GBIF API snapshot day. This is a level of
+  the returned catalogue rather than a flow of newly recorded observations; changes can reflect the API
+  result set. Days without a fetch are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_gbif_occurrence_snapshot_fetched_at_day
+  exploreName: fct_gbif_occurrence_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gbif_occurrence_snapshot_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_gbif_occurrence_snapshot_fetched_at_day
+  tableCalculations: []
+name: Distinct occurrences fetched per day
+slug: fct-gbif-occurrence-snapshot-occurrences-fetched
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gbif_occurrence_snapshot_fetched_at_day
+  - fct_gbif_occurrence_snapshot_distinct_entities
+tableName: fct_gbif_occurrence_snapshot
+version: 1

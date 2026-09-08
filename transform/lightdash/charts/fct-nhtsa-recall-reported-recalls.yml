@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nhtsa_recall_report_received_date_month
+          yRef:
+            field: fct_nhtsa_recall_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Report received date (Month)
+      yAxis:
+      - name: Distinct recall
+    layout:
+      xField: fct_nhtsa_recall_report_received_date_month
+      yField:
+      - fct_nhtsa_recall_distinct_entities
+  type: cartesian
+description: Distinct `recall_id` values by NHTSA report month. This is a sparse historical flow with
+  five observed months, so months without a report are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_nhtsa_recall_report_received_date_month
+  exploreName: fct_nhtsa_recall
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nhtsa_recall_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_nhtsa_recall_report_received_date_month
+  tableCalculations: []
+name: Reported recalls by month
+slug: fct-nhtsa-recall-reported-recalls
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nhtsa_recall_report_received_date_month
+  - fct_nhtsa_recall_distinct_entities
+tableName: fct_nhtsa_recall
+version: 1

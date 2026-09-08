@@ -1,0 +1,42 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of job-listing observations collected from the combined Greenhouse,
+  Ashby, and Lever job-board feeds. The table is materialized as a physical relation so the append-only
+  source history can be queried repeatedly without rescanning the raw payloads. Each row represents one
+  source, job identifier, and extractor observation timestamp; repeated raw copies of that observation
+  are reduced to the latest loaded lineage record while listing attributes and load metadata remain available
+  for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_job_boards_observed_at
+  - fct_job_boards_job_id
+  - fct_job_boards_company
+  - fct_job_boards_source_loaded_at
+  exploreName: fct_job_boards
+  filters:
+    dimensions:
+      and:
+      - id: 2e297af9-cf3f-5459-be58-0376c3188fb0
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_boards_observed_at
+        values:
+        - 30
+      id: 1946fc94-c0ba-5cad-9030-3f896963c294
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_job_boards_observed_at
+  tableCalculations: []
+name: Job boards — observations
+slug: fct-job-boards-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_job_boards
+version: 1

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_huggingface_model_snapshot_observed_at_day
+          yRef:
+            field: fct_huggingface_model_snapshot_distinct_models
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct models
+    layout:
+      stack: true
+      xField: fct_huggingface_model_snapshot_observed_at_day
+      yField:
+      - fct_huggingface_model_snapshot_distinct_models
+  type: cartesian
+description: Distinct `model_id` values per observation day stacked by the six authors with the largest
+  recent catalogue presence. Remaining authors are excluded rather than aggregated; repeated snapshots
+  are deduplicated within each author and day.
+metricQuery:
+  dimensions:
+  - fct_huggingface_model_snapshot_observed_at_day
+  - fct_huggingface_model_snapshot_author
+  exploreName: fct_huggingface_model_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_huggingface_model_snapshot_distinct_models
+  sorts:
+  - descending: true
+    fieldId: fct_huggingface_model_snapshot_distinct_models
+  - descending: false
+    fieldId: fct_huggingface_model_snapshot_observed_at_day
+  tableCalculations: []
+name: Observed models by leading authors
+pivotConfig:
+  columns:
+  - fct_huggingface_model_snapshot_author
+slug: fct-huggingface-model-snapshot-author-catalogue
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_huggingface_model_snapshot_observed_at_day
+  - fct_huggingface_model_snapshot_author
+  - fct_huggingface_model_snapshot_distinct_models
+tableName: fct_huggingface_model_snapshot
+version: 1

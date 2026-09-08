@@ -1,0 +1,507 @@
+version: 2
+models:
+- name: fct_quebec_emergency_department_observation
+  description: Hourly physical history of Quebec emergency-department status observations. Each row represents
+    one department or published regional total at one upstream fetch timestamp. Source text is retained
+    alongside null-safe typed patient, stretcher, and length-of-stay measures, with raw load lineage for
+    replay and audit.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, department_id, observed_at
+      label: Quebec emergency department observation
+      group_label: Quebec emergency departments
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: quebec_emerg_7b76d2
+      vintage:
+        visualization:
+          dimension: facility_name
+          metric: m_cc9d5e94
+          time: observed_at
+          window_days: 30
+          title: Mean observed patients waiting for care count by facility name
+          description: Mean observed patients waiting for care count by `facility_name` in the selected
+            observation window. Total number of patients waiting for care; unreported source text is null.
+            Each retained observation has equal weight; polling frequency and repeated snapshots can affect
+            the mean. This is not a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - department_id
+          - facility_name
+          - patients_waiting_for_care_count
+          - source_loaded_at
+          sources:
+          - '`quebec_emergency_departments` — licence: Quebec open-government reuse terms; attribution
+            required: True. Source configuration: `extract/sources/quebec_emergency_departments.yml`.'
+          analysis:
+            headline: how emergency-department waiting and stretcher pressure moves through observed hours
+              across Quebec facilities and health regions.
+            event_time: observed_at
+            grain: HOUR
+            controls:
+            - health_region
+            - facility_name
+            - reporting_level
+            - establishment_name
+            trends:
+            - slug: departments-observed
+              kind: total
+              metric: dept_count
+              time: observed_at
+              grain: HOUR
+              title: Departments reporting per hour
+              description: Distinct non-null `department_id` values present in each observed hour. This is
+                a coverage level for the status feed, not a count of patients; hours without a successful
+                extract are absent rather than zero.
+              width: half
+            - slug: patients-waiting
+              kind: total
+              metric: m_cc9d5e94
+              time: observed_at
+              grain: HOUR
+              title: Mean patients waiting per hour
+              description: Mean non-null `patients_waiting_for_care_count` across retained department and
+                regional-total rows in each observed hour. Each snapshot has equal weight, so polling
+                frequency can influence this level; absent hours are absent rather than zero.
+              width: half
+            - slug: occupied-stretchers
+              kind: total
+              metric: avg_occupied
+              time: observed_at
+              grain: HOUR
+              title: Mean occupied stretchers per hour
+              description: Mean non-null `occupied_stretcher_count` across retained status rows in each
+                observed hour. This is a snapshot level rather than an additive patient total; hours with
+                no successful extract are absent rather than zero.
+              width: half
+            - slug: waiting-by-region
+              kind: breakdown
+              metric: m_cc9d5e94
+              breakdown: health_region
+              top_n: 8
+              time: observed_at
+              grain: HOUR
+              title: Patients waiting by health region
+              description: Mean non-null `patients_waiting_for_care_count` per observed hour for the eight
+                largest `health_region` series. Remaining regions are excluded rather than aggregated;
+                facility and regional-total records remain distinct reporting rows.
+              width: full
+            - slug: stretcher-mix
+              kind: composition
+              metric: avg_occupied
+              breakdown: reporting_level
+              top_n: 2
+              time: observed_at
+              grain: HOUR
+              title: Occupied stretchers by reporting level
+              description: Mean occupied stretchers per observed hour stacked by `reporting_level`, showing
+                the mix of facility and regional-total status rows. This is not a sum of stretchers; missing
+                hours or unreported measures are absent rather than zero.
+              width: full
+  columns:
+  - name: quebec_emergency_department_observation_key
+    description: Stable hash of source, department identifier, and upstream fetch timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Quebec emergency department observation key
+          hidden: true
+          name: quebec_emerg_7b76d2
+  - name: source_relation
+    description: Raw relation identifier from which this observation was loaded.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source relation
+          hidden: false
+  - name: source
+    description: Upstream source label reported by the emergency-department feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: department_id
+    description: Upstream identifier for a facility or a regional total record.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          dept_count:
+            type: count_distinct
+            label: Distinct departments
+            description: Distinct non-null `department_id` values present in each observed time group.
+              Facility and regional-total identifiers are both counted as reporting departments; this is
+              coverage, not a patient total.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Department id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the emergency-department status feed.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: rss_url
+    description: RSS or feed reference supplied by the upstream source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Rss url
+          hidden: false
+  - name: health_region
+    description: Quebec health region reported for the department or regional total.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Health region
+          hidden: false
+  - name: establishment_name
+    description: Health establishment name supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Establishment name
+          hidden: false
+  - name: facility_name
+    description: Facility name supplied by the source; regional totals use the source's Total régional
+      label.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Facility name
+          hidden: false
+  - name: facility_permit_number
+    description: Quebec facility permit number supplied by the source, when applicable.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Facility permit number
+          hidden: false
+          name: facility_per_aaa8f3
+  - name: reporting_level
+    description: Whether the record describes an individual facility or a published regional total.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Reporting level
+          hidden: false
+  - name: functional_stretcher_count
+    description: Number of functional stretchers reported by the department; unreported source text is
+      null.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Functional stretcher count
+          hidden: false
+          format: '#,##0'
+          name: functional_s_3a66f3
+  - name: occupied_stretcher_count
+    description: Number of occupied stretchers reported by the department; unreported source text is null.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          avg_occupied:
+            type: average
+            label: Mean occupied stretchers
+            description: Mean non-null `occupied_stretcher_count` across retained emergency-department
+              status rows in each time group. Each snapshot has equal weight; this is a status level rather
+              than an additive stretcher or patient total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Occupied stretcher count
+          hidden: false
+          format: '#,##0'
+          name: occupied_str_7051e7
+  - name: patients_over_24_hours
+    description: Number of patients on stretchers for more than 24 hours; unreported source text is null.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Patients over 24 hours
+          hidden: false
+          format: '#,##0'
+          name: patients_ove_78e97a
+  - name: patients_over_48_hours
+    description: Number of patients on stretchers for more than 48 hours; unreported source text is null.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Patients over 48 hours
+          hidden: false
+          format: '#,##0'
+          name: patients_ove_b86bc7
+  - name: patients_present_count
+    description: Total number of patients present in the emergency department; unreported source text
+      is null.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Patients present count
+          hidden: false
+          format: '#,##0'
+          name: patients_pre_3930c6
+  - name: patients_waiting_for_care_count
+    description: Total number of patients waiting for care; unreported source text is null.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          m_cc9d5e94:
+            type: average
+            label: Mean observed patients waiting for care count
+            description: Mean observed patients waiting for care count by `facility_name` in the selected
+              observation window. Total number of patients waiting for care; unreported source text is
+              null. Each retained observation has equal weight; polling frequency and repeated snapshots
+              can affect the mean. This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Patients waiting for care count
+          hidden: false
+          format: '#,##0'
+          name: patients_wai_2f6dd8
+  - name: stretcher_length_of_stay_hours
+    description: Average stretcher length of stay in hours as reported by the source; unreported source
+      text is null.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Stretcher length of stay hours
+          hidden: false
+          format: '#,##0.00'
+          name: stretcher_le_4e8d79
+  - name: ambulatory_length_of_stay_hours
+    description: Average ambulatory length of stay in hours as reported by the source; unreported source
+      text is null.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Ambulatory length of stay hours
+          hidden: false
+          format: '#,##0.00'
+          name: ambulatory_l_c18bb1
+  - name: stretcher_length_of_stay_hourly_text
+    description: Verbatim hourly stretcher length-of-stay value, commonly formatted as hours and minutes.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Stretcher length of stay hourly text
+          hidden: false
+          name: stretcher_le_927878
+  - name: ambulatory_length_of_stay_hourly_text
+    description: Verbatim hourly ambulatory length-of-stay value, commonly formatted as hours and minutes.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Ambulatory length of stay hourly text
+          hidden: false
+          name: ambulatory_l_62ca4f
+  - name: stretcher_length_of_stay_hourly_minutes
+    description: Hourly stretcher length-of-stay text parsed into whole minutes when formatted as HH:MM.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Stretcher length of stay hourly minutes
+          hidden: false
+          format: '#,##0'
+          name: stretcher_le_07f3a4
+  - name: ambulatory_length_of_stay_hourly_minutes
+    description: Hourly ambulatory length-of-stay text parsed into whole minutes when formatted as HH:MM.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Ambulatory length of stay hourly minutes
+          hidden: false
+          format: '#,##0'
+          name: ambulatory_l_39c2ba
+  - name: extraction_image_time_text
+    description: Verbatim extraction time associated with the source image, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Extraction image time text
+          hidden: false
+          name: extraction_i_6df38c
+  - name: published_update_text
+    description: Verbatim publisher update value supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Published update text
+          hidden: false
+          name: published_up_581755
+  - name: _row_id
+    description: Raw warehouse row identifier for the retained source record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Extract batch identifier that produced the retained source record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained source record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained source record in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: _dt
+    description: Raw source partition date associated with the retained source record.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: UTC timestamp when extraction of the source file started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: _ext_81163b
+  - name: _load_id
+    description: Load operation identifier that inserted the retained source record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained source record into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: sour_2059e1
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the retained raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

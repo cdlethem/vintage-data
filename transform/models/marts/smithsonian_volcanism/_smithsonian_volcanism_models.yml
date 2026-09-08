@@ -1,0 +1,311 @@
+version: 2
+models:
+- name: fct_smithsonian_volcanism_snapshot
+  description: Daily physical snapshots of Smithsonian Global Volcanism Program eruption events. Each
+    row represents one source event identifier observed at one API fetch timestamp, with volcano identity,
+    event dates, eruption attributes, and raw-load lineage retained. Repeated ingestion of the same source,
+    event, and observation timestamp is reduced to the latest loaded record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, event_id, observed_at
+      label: Smithsonian volcanism snapshot
+      group_label: Smithsonian volcanism
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: smithsonian_volcanism_6aedcf
+      vintage:
+        visualization:
+          dimension: volcano_name
+          metric: max_explosivity_index_max
+          time: observed_at
+          window_days: 30
+          title: Maximum observed explosivity index max by volcano name
+          description: Maximum observed explosivity index max by `volcano_name` in the selected observation
+            window. Maximum volcanic explosivity index reported for the eruption event. Uses the largest
+            retained value within each group and window, not the latest value or a sum of snapshots.
+          detail_fields:
+          - observed_at
+          - event_id
+          - volcano_name
+          - explosivity_index_max
+          - source_loaded_at
+          sources:
+          - '`smithsonian_volcanism` — licence: Smithsonian GVP — public; attribution required: False.
+            Source configuration: `extract/sources/smithsonian_volcanism.yml`.'
+          analysis:
+            headline: how eruption events start, how reported explosivity changes, and which eruptions remain
+              marked as continuing.
+            event_time: event_start_date
+            grain: DAY
+            controls:
+            - volcano_name
+            - continuing
+            trends:
+            - slug: event-starts
+              kind: total
+              metric: distinct_entities
+              time: event_start_date
+              grain: DAY
+              title: Eruption events by reported start date
+              description: Distinct `event_id` values by reported `event_start_date` day. This is a sparse
+                event history rather than a daily flow — dates with no reported starts are absent rather
+                than zero, and repeated snapshots do not increase the count.
+              width: half
+            - slug: explosivity-by-start
+              kind: total
+              metric: max_explosivity_index_max
+              time: event_start_date
+              grain: DAY
+              title: Maximum explosivity by reported start date
+              description: Maximum reported `explosivity_index_max` among snapshots whose eruption has the
+                reported `event_start_date` day. This is an event attribute level, not a summed intensity
+                or daily flow — dates without a reported start are absent rather than zero.
+              width: half
+            - slug: volcano-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: volcano_name
+              top_n: 8
+              time: event_start_date
+              grain: DAY
+              title: Eruption starts by volcano
+              description: Distinct `event_id` values by reported start day, stacked by `volcano_name`.
+                The eight largest volcano series by metric are shown; remaining volcanoes are excluded
+                rather than aggregated. Dates with no reported starts are absent rather than zero.
+              width: full
+            - slug: event-end-status
+              kind: composition
+              metric: distinct_entities
+              breakdown: continuing
+              top_n: 2
+              time: event_end_date
+              grain: DAY
+              title: Eruption end dates by continuing status
+              description: Distinct `event_id` values by reported `event_end_date` day, stacked by the
+                source's `continuing` flag. Both status series are retained; dates with no reported ends
+                are absent rather than zero, and this does not measure eruption duration.
+              width: full
+  columns:
+  - name: smithsonian_volcanism_snapshot_key
+    description: Stable hash of the Smithsonian source, event identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '7 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '7 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Smithsonian volcanism snapshot key
+          hidden: true
+          name: smithsonian_volcanism_6aedcf
+  - name: source
+    description: Source relation identifier for the Smithsonian Global Volcanism Program records.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: event_id
+    description: Smithsonian identifier assigned to the volcanic eruption event.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct eruption events
+            description: Distinct `event_id` values by reported eruption date. Repeated snapshots of an
+              event count once within each time and breakdown group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Event id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed this Smithsonian event snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: volcano_number
+    description: Smithsonian numeric identifier for the volcano associated with the event.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Volcano number
+          hidden: false
+          format: '#,##0'
+  - name: volcano_name
+    description: Volcano name supplied by the Smithsonian source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Volcano name
+          hidden: false
+  - name: event_start_date
+    description: Calendar date on which the Smithsonian source reports the eruption event began.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Event start date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: event_end_date
+    description: Calendar date on which the Smithsonian source reports the eruption event ended.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Event end date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: continuing
+    description: Whether the Smithsonian source reports that the eruption event is continuing.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Continuing
+          hidden: false
+  - name: explosivity_index_max
+    description: Maximum volcanic explosivity index reported for the eruption event.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          max_explosivity_index_max:
+            type: max
+            label: Maximum observed explosivity index max
+            description: Maximum observed explosivity index max by `volcano_name` in the selected observation
+              window. Maximum volcanic explosivity index reported for the eruption event. Uses the largest
+              retained value within each group and window, not the latest value or a sum of snapshots.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Explosivity index max
+          hidden: false
+          format: '#,##0'
+  - name: latitude
+    description: Latitude in decimal degrees of the volcano associated with the event.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: longitude
+    description: Longitude in decimal degrees of the volcano associated with the event.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained raw event snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load operation that inserted the retained raw event snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained event snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained event snapshot in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained raw event snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Content hash of the retained raw event snapshot for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

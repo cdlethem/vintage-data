@@ -29,3 +29,22 @@ discovery/*.ndjson
 __pycache__/
 *.pyc
 .ruff_cache/
+
+# dbt transform runtime and generated artifacts
+transform/.venv/
+transform/target/
+transform/logs/
+transform/dbt_packages/
+
+# Lightdash dependencies, local CLI state and generated serving bundles
+visualization/.venv/
+visualization/node_modules/
+**/.lightdash-metadata.json
+**/.lightdash/
+
+# Provider UI dependencies and local Python build outputs
+node_modules/
+orchestration/provider_bot_dashboard/dist/
+orchestration/provider_bot_dashboard/build/
+*.egg-info/
+transform/.user.yml

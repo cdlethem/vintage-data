@@ -1,0 +1,29 @@
+name: source_discovery
+description: find novel viable public time-series sources
+schedule: "17 */6 * * *"
+enabled: true
+model: research_cli
+prompt: prompt.md
+timeout_minutes: 30
+context_budget_minutes: 5
+model_budget_minutes: 20
+cleanup_margin_seconds: 120
+capacity_policy: skip
+retry_on: [transient]
+freshness_sla_minutes: 390
+requires_capabilities: [web_search]
+context:
+  DISCOVERY_CONTEXT:
+    command: ["orchestration/.venv/bin/python", "bots/agent_context.py", "discovery"]
+    cwd: .
+    timeout_s: 300
+triggers: [source_vetting]
+gate:
+  context: DISCOVERY_CONTEXT
+  path: backpressure
+  operator: equals
+  value: true
+  reason_code: vetting_backpressure
+output:
+  format: json
+  schema: source_discovery_v2

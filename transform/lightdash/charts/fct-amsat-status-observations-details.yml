@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical history of amateur-radio satellite status reports. Each row represents
+  one source satellite report identified by its upstream source, report identifier, and fetched_at observation
+  timestamp. Duplicate raw observations are reduced to the latest loaded record while raw-load lineage
+  is retained for replay and audit.
+metricQuery:
+  dimensions: &id001
+  - fct_amsat_status_observations_fetched_at
+  - fct_amsat_status_observations_observation_id
+  - fct_amsat_status_observations_satellite_name
+  - fct_amsat_status_observations_source_loaded_at
+  exploreName: fct_amsat_status_observations
+  filters:
+    dimensions:
+      and:
+      - id: 388a1990-f713-50b6-b58d-8053f89a3563
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_amsat_status_observations_fetched_at
+        values:
+        - 30
+      id: 59ad4469-fb61-5f1b-a329-66d000684209
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_amsat_status_observations_fetched_at
+  tableCalculations: []
+name: Amsat status observations — observations
+slug: fct-amsat-status-observations-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_amsat_status_observations
+version: 1

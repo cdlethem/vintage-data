@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_hk_parking_vacancy_observed_at_day
+          yRef:
+            field: fct_hk_parking_vacancy_distinct_parks
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct parking facilities
+    layout:
+      stack: true
+      xField: fct_hk_parking_vacancy_observed_at_day
+      yField:
+      - fct_hk_parking_vacancy_distinct_parks
+  type: cartesian
+description: Distinct `park_id` values per collection day stacked by vehicle type. This describes catalogue
+  coverage in the four-day observation window; vehicle classes can overlap within a facility, so stack
+  segments are not a unique-facility total.
+metricQuery:
+  dimensions:
+  - fct_hk_parking_vacancy_observed_at_day
+  - fct_hk_parking_vacancy_vehicle_type
+  exploreName: fct_hk_parking_vacancy
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_hk_parking_vacancy_distinct_parks
+  sorts:
+  - descending: true
+    fieldId: fct_hk_parking_vacancy_distinct_parks
+  - descending: false
+    fieldId: fct_hk_parking_vacancy_observed_at_day
+  tableCalculations: []
+name: Distinct facilities represented by vehicle type
+pivotConfig:
+  columns:
+  - fct_hk_parking_vacancy_vehicle_type
+slug: fct-hk-parking-vacancy-vehicle-coverage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hk_parking_vacancy_observed_at_day
+  - fct_hk_parking_vacancy_vehicle_type
+  - fct_hk_parking_vacancy_distinct_parks
+tableName: fct_hk_parking_vacancy
+version: 1

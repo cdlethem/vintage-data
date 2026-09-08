@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_food_hygiene_ratings_cambridge_rating_date_month
+          yRef:
+            field: fct_food_hygiene_ratings_cambridge_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Rating date (Month)
+      yAxis:
+      - name: Distinct establishment
+    layout:
+      xField: fct_food_hygiene_ratings_cambridge_rating_date_month
+      yField:
+      - fct_food_hygiene_ratings_cambridge_distinct_entities
+  type: cartesian
+description: Distinct `establishment_id` values whose published rating date falls in each month. This
+  is an event flow rather than a current catalogue level — months with no rated records are absent rather
+  than zero, and the early 1901 records are retained.
+metricQuery:
+  dimensions:
+  - fct_food_hygiene_ratings_cambridge_rating_date_month
+  exploreName: fct_food_hygiene_ratings_cambridge
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_food_hygiene_ratings_cambridge_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_food_hygiene_ratings_cambridge_rating_date_month
+  tableCalculations: []
+name: Establishments rated per month
+slug: fct-food-hygiene-ratings-cambridge-rating-volume
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_food_hygiene_ratings_cambridge_rating_date_month
+  - fct_food_hygiene_ratings_cambridge_distinct_entities
+tableName: fct_food_hygiene_ratings_cambridge
+version: 1

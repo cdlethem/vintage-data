@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_digitraffic_rail_train_observation_train_category
+          yRef:
+            field: fct_digitraffic_rail_train_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_digitraffic_rail_train_observation_train_category
+      yField:
+      - fct_digitraffic_rail_train_observation_distinct_entities
+  type: cartesian
+description: Distinct `train_id` values by `train_category` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_digitraffic_rail_train_observation_train_category
+  exploreName: fct_digitraffic_rail_train_observation
+  filters:
+    dimensions:
+      and:
+      - id: a0fd681f-636d-552d-b42b-77ab813a0e89
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_digitraffic_rail_train_observation_observed_at
+        values:
+        - 30
+      id: 4c8d1738-3673-5144-85ed-a6a18ea38d43
+  limit: 20
+  metrics:
+  - fct_digitraffic_rail_train_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_digitraffic_rail_train_observation_distinct_entities
+  tableCalculations: []
+name: Distinct train by train category
+slug: fct-digitraffic-rail-train-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_digitraffic_rail_train_observation_train_category
+  - fct_digitraffic_rail_train_observation_distinct_entities
+tableName: fct_digitraffic_rail_train_observation
+version: 1

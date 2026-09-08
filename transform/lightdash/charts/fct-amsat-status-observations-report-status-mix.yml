@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_amsat_status_observations_reported_time_hour
+          yRef:
+            field: fct_amsat_status_observations_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Reported time (Hour)
+      yAxis:
+      - name: Distinct observation
+    layout:
+      stack: true
+      xField: fct_amsat_status_observations_reported_time_hour
+      yField:
+      - fct_amsat_status_observations_distinct_entities
+  type: cartesian
+description: Distinct `observation_id` values stacked by upstream `report` status for each reported hour.
+  All three observed statuses fit in the composition; hours without reports are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_amsat_status_observations_reported_time_hour
+  - fct_amsat_status_observations_report
+  exploreName: fct_amsat_status_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_amsat_status_observations_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_amsat_status_observations_distinct_entities
+  - descending: false
+    fieldId: fct_amsat_status_observations_reported_time_hour
+  tableCalculations: []
+name: Report status mix by reported hour
+pivotConfig:
+  columns:
+  - fct_amsat_status_observations_report
+slug: fct-amsat-status-observations-report-status-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_amsat_status_observations_reported_time_hour
+  - fct_amsat_status_observations_report
+  - fct_amsat_status_observations_distinct_entities
+tableName: fct_amsat_status_observations
+version: 1

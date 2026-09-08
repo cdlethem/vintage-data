@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_crossref_new_doi_observation_created_at_day
+          yRef:
+            field: fct_crossref_new_doi_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct doi
+    layout:
+      stack: true
+      xField: fct_crossref_new_doi_observation_created_at_day
+      yField:
+      - fct_crossref_new_doi_observation_distinct_entities
+  type: cartesian
+description: Distinct `doi_id` values per `created_at` day, stacked by the eight publishers with the largest
+  observed DOI volume. All other publishers are excluded rather than aggregated; this highlights the leading
+  publisher mix without implying a complete total.
+metricQuery:
+  dimensions:
+  - fct_crossref_new_doi_observation_created_at_day
+  - fct_crossref_new_doi_observation_publisher
+  exploreName: fct_crossref_new_doi_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_crossref_new_doi_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_crossref_new_doi_observation_distinct_entities
+  - descending: false
+    fieldId: fct_crossref_new_doi_observation_created_at_day
+  tableCalculations: []
+name: DOI registrations by leading publisher
+pivotConfig:
+  columns:
+  - fct_crossref_new_doi_observation_publisher
+slug: fct-crossref-new-doi-observation-publisher-trajectories
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_crossref_new_doi_observation_created_at_day
+  - fct_crossref_new_doi_observation_publisher
+  - fct_crossref_new_doi_observation_distinct_entities
+tableName: fct_crossref_new_doi_observation
+version: 1

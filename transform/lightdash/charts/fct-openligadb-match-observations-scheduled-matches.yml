@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_openligadb_match_observations_scheduled_at_month
+          yRef:
+            field: fct_openligadb_match_observations_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Scheduled at (Month)
+      yAxis:
+      - name: Distinct match
+    layout:
+      xField: fct_openligadb_match_observations_scheduled_at_month
+      yField:
+      - fct_openligadb_match_observations_distinct_entities
+  type: cartesian
+description: Distinct `match_id` values by scheduled kickoff month. This is the published season calendar
+  rather than a match-observation flow; months with no scheduled matches are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_openligadb_match_observations_scheduled_at_month
+  exploreName: fct_openligadb_match_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_openligadb_match_observations_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_openligadb_match_observations_scheduled_at_month
+  tableCalculations: []
+name: Scheduled matches per month
+slug: fct-openligadb-match-observations-scheduled-matches
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openligadb_match_observations_scheduled_at_month
+  - fct_openligadb_match_observations_distinct_entities
+tableName: fct_openligadb_match_observations
+version: 1

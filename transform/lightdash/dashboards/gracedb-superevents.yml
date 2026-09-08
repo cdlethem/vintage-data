@@ -1,0 +1,164 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: e3b1a4ab-bd72-55c4-adba-c9560f60bcc5
+    label: 'Gracedb superevents: Category'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gracedb_superevents_category
+      tableName: fct_gracedb_superevents
+    values: []
+  - disabled: true
+    id: 56aeb269-c7ba-53e7-bb4e-04ada39b94eb
+    label: 'Gracedb superevents: Retracted'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gracedb_superevents_retracted
+      tableName: fct_gracedb_superevents
+    values: []
+  - disabled: true
+    id: 98572e40-934a-5884-864e-59b87b477d2a
+    label: 'Gracedb superevents: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gracedb_superevents_source
+      tableName: fct_gracedb_superevents
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Gracedb Superevents
+slug: gracedb-superevents
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical gravitational-event observation fact from the LIGO/Virgo/KAGRA GraceDB superevent
+      feed. Each row is one superevent observation at one extractor fetch timestamp, retaining event timing,
+      false-alarm and classification fields, retraction state, source links, and raw-load lineage. Duplicate
+      copies of the same source, superevent, and observation timestamp are reduced to the latest loaded
+      record.
+
+
+      **Grain:** source, superevent_id, observed_at
+
+
+      **What changes here:** how the cataloged gravitational-wave event count and reported false-alarm
+      rate vary across event and observation days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `gracedb_superevents` — licence: GraceDB public superevents; attribution required: False. Source
+      configuration: `extract/sources/gracedb_superevents.yml`.'
+    hideFrame: false
+    title: Gracedb superevents
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Gracedb superevents — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Superevents by reported event day
+    chartSlug: fct-gracedb-superevents-events-by-event-day
+    hideTitle: false
+    title: Superevents by reported event day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean false-alarm rate by event day
+    chartSlug: fct-gracedb-superevents-false-alarm-rate-by-event-day
+    hideTitle: false
+    title: Mean false-alarm rate by event day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Superevents by category and event day
+    chartSlug: fct-gracedb-superevents-events-by-category
+    hideTitle: false
+    title: Superevents by category and event day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Superevent retraction mix by event day
+    chartSlug: fct-gracedb-superevents-retraction-composition
+    hideTitle: false
+    title: Superevent retraction mix by event day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Distinct superevents observed per fetch day
+    chartSlug: fct-gracedb-superevents-observations-by-fetch-day
+    hideTitle: false
+    title: Distinct superevents observed per fetch day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Gracedb superevents — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct superevent by category
+    chartSlug: fct-gracedb-superevents
+    hideTitle: false
+    title: Distinct superevent by category
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Gracedb superevents — observations
+    chartSlug: fct-gracedb-superevents-details
+    hideTitle: false
+    title: Gracedb superevents — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

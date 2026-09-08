@@ -1,82 +1,196 @@
-# Which models this machine can reach, and what to call them.
-#
-#   cp bots/models.example.yml bots/models.yml
-#
-# models.yml is gitignored: model choice is a per-operator decision, and mine
-# should not be yours. Bot definitions (bots/<name>/bot.yml) name an *alias*
-# from this file, never a vendor, endpoint or model id — so switching every
-# bot from a local GPU to OpenRouter is one edit here.
-#
-# API keys are NOT stored here. `api_key_env` names the environment variable
-# holding the key:
-#   * scheduled runs read it from orchestration/airflow.secrets.env (gitignored,
-#     loaded by the systemd units) — add e.g. OPENROUTER_API_KEY=sk-or-...
-#   * manual runs read it from your shell.
-#
-# Providers (bots/providers.py):
-#   openai_chat        - any OpenAI-compatible /v1/chat/completions endpoint
-#                        (OpenRouter, OpenAI, Groq, Together, DeepSeek, vLLM,
-#                        llama-server, Ollama)
-#   anthropic_messages - Anthropic's native /v1/messages
-#   command            - any local program; prompt on stdin (or {prompt} in argv),
-#                        report on stdout, exit 3 = busy/skip
+# Machine-local model wiring. API keys stay in airflow.secrets.env.
+default: local
+pricing:
+  id: "2026-09-08"
+  currency: USD
+  models:
+    gpt-5.6-luna: {input: 0.202, output: 1.195, cached_input: 0.0199, cache_write: 0.25}
+    gpt-5.6-sol: {input: 4.00, output: 20.00, cached_input: 0.40, cache_write: 5.00}
+    gpt-5.6-terra: {input: 2.01, output: 10.00, cached_input: 0.20, cache_write: 2.50}
 
-# The alias a bot gets when its bot.yml names no model.
-default: openrouter
+bots:
+  source_discovery: research_cli
+  source_vetting: vetting_cli
+  source_scheduling: repository_cli
+  cadence_review: audit_cli
+  failure_triage: triage_cli
+  analytics_engineer: analytics_cli
+  data_analyst: analyst_cli
+  manager: [plan_cli, openrouter]
+  task_executor: agent_cli
+  pr_reviewer: reviewer_cli
+
+concurrency:
+  max_active: 2
 
 models:
-  openrouter:
-    provider: openai_chat
-    endpoint: https://openrouter.ai/api/v1/chat/completions
-    model: anthropic/claude-sonnet-4.5
-    api_key_env: OPENROUTER_API_KEY
-    max_tokens: 2000
-    temperature: 0
-    # Optional, and specific to OpenRouter's dashboard attribution.
-    headers:
-      X-Title: vintage-data bots
-
-  openai:
-    provider: openai_chat
-    endpoint: https://api.openai.com/v1/chat/completions
-    model: gpt-4o-mini
-    api_key_env: OPENAI_API_KEY
-    max_tokens: 2000
-
-  claude:
-    provider: anthropic_messages
-    model: claude-sonnet-4-5
-    api_key_env: ANTHROPIC_API_KEY
-    max_tokens: 2000
-
-  # A model server on this host (llama-server, vLLM, Ollama, LM Studio).
-  # `preflight` runs first and a non-zero exit means "busy": the bot writes a
-  # skip report instead of queueing behind a saturated GPU.
   local:
     provider: openai_chat
     endpoint: http://127.0.0.1:8080/v1/chat/completions
     model: local-model
+    capabilities: [repository_read]
     max_tokens: 2000
     temperature: 0
-    timeout_s: 600
-    # A reasoning model bills chain-of-thought against max_tokens and can spend
-    # the whole budget there, returning no report. `params` is passed through to
-    # the request body verbatim, so turn thinking off (Qwen-style template) or
-    # raise max_tokens well above the report length.
+    timeout_s: 900
+    max_concurrency: 1
     params:
       chat_template_kwargs:
         enable_thinking: false
     preflight:
       command: ["bots/bin/free_slots", "http://127.0.0.1:8080/slots"]
       cwd: .
+      timeout_s: 10
 
-  # A coding-agent CLI already configured on this machine. Anything that reads
-  # a prompt and writes text works; use {prompt} when the CLI wants an argument
-  # rather than stdin.
+  openrouter:
+    provider: openai_chat
+    endpoint: https://openrouter.ai/api/v1/chat/completions
+    model: anthropic/claude-sonnet-4.5
+    api_key_env: OPENROUTER_API_KEY
+    capabilities: [repository_read]
+    max_tokens: 2000
+    temperature: 0
+    timeout_s: 1200
+    max_concurrency: 1
+
+  research_cli:
+    provider: command
+    model: "@task"
+    capabilities: [web_search]
+    max_concurrency: 1
+    inherit_env: false
+    pass_env: [HOME, PATH, USER, SHELL, LANG, LC_ALL, TERM, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME]
+    argv: ["omp", "-p", "--mode", "text", "--model", "{model}", "--max-time", "18m", "--session-dir", "{usage_dir}", "--no-title", "--auto-approve", "--tools", "read,grep,glob,web_search,browser", "--usage-file", "{usage_file}", "{prompt}"]
+    timeout_s: 1200
+    usage:
+      source: file
+      format: openai
+      path: "{usage_file}"
+
+  vetting_cli:
+    provider: command
+    model: "@task"
+    capabilities: [web_search]
+    max_concurrency: 1
+    inherit_env: false
+    pass_env: [HOME, PATH, USER, SHELL, LANG, LC_ALL, TERM, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME]
+    argv: ["omp", "-p", "--mode", "text", "--model", "{model}", "--max-time", "23m", "--session-dir", "{usage_dir}", "--no-title", "--auto-approve", "--tools", "read,grep,glob,web_search,browser", "{prompt}"]
+    timeout_s: 1500
+    usage:
+      source: session_dir
+      format: omp_session
+      dir: "{usage_dir}"
+
+  repository_cli:
+    provider: command
+    model: "@task"
+    capabilities: [repository_execute]
+    max_concurrency: 1
+    inherit_env: false
+    pass_env: [HOME, PATH, USER, SHELL, LANG, LC_ALL, TERM, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME]
+    argv: ["omp", "-p", "--mode", "text", "--model", "{model}", "--max-time", "23m", "--session-dir", "{usage_dir}", "--no-title", "--auto-approve", "--tools", "read,grep,glob,bash", "{prompt}"]
+    timeout_s: 1500
+    usage:
+      source: session_dir
+      format: omp_session
+      dir: "{usage_dir}"
+
+  triage_cli:
+    provider: command
+    model: "@task"
+    capabilities: [repository_execute]
+    max_concurrency: 1
+    inherit_env: false
+    pass_env: [HOME, PATH, USER, SHELL, LANG, LC_ALL, TERM, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME]
+    argv: ["omp", "-p", "--mode", "text", "--model", "{model}", "--max-time", "18m", "--session-dir", "{usage_dir}", "--no-title", "--auto-approve", "--tools", "read,grep,glob,bash", "{prompt}"]
+    timeout_s: 1200
+    usage:
+      source: session_dir
+      format: omp_session
+      dir: "{usage_dir}"
+
+  analytics_cli:
+    provider: command
+    model: "@task"
+    capabilities: [repository_execute]
+    max_concurrency: 1
+    inherit_env: false
+    pass_env: [HOME, PATH, USER, SHELL, LANG, LC_ALL, TERM, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME]
+    argv: ["omp", "-p", "--mode", "text", "--model", "{model}", "--max-time", "28m", "--session-dir", "{usage_dir}", "--no-title", "--auto-approve", "--tools", "read,grep,glob,bash", "{prompt}"]
+    timeout_s: 1800
+    usage:
+      source: session_dir
+      format: omp_session
+      dir: "{usage_dir}"
+
+  # The analyst reads real serving data through visualization/bin/eda, which
+  # holds the reader credential itself, so the agent needs repository execution
+  # only and never receives a warehouse password.
+  analyst_cli:
+    provider: command
+    model: "@task"
+    capabilities: [repository_execute]
+    max_concurrency: 1
+    inherit_env: false
+    pass_env: [HOME, PATH, USER, SHELL, LANG, LC_ALL, TERM, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME]
+    argv: ["omp", "-p", "--mode", "text", "--model", "{model}", "--max-time", "28m", "--session-dir", "{usage_dir}", "--no-title", "--auto-approve", "--tools", "read,grep,glob,bash", "{prompt}"]
+    timeout_s: 1800
+    usage:
+      source: session_dir
+      format: omp_session
+      dir: "{usage_dir}"
+
+  audit_cli:
+    provider: command
+    model: "@task"
+    capabilities: [repository_read]
+    max_concurrency: 1
+    inherit_env: false
+    pass_env: [HOME, PATH, USER, SHELL, LANG, LC_ALL, TERM, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME]
+    argv: ["omp", "-p", "--mode", "text", "--model", "{model}", "--max-time", "13m", "--session-dir", "{usage_dir}", "--no-title", "--auto-approve", "--tools", "read,grep,glob", "{prompt}"]
+    timeout_s: 900
+    usage:
+      source: session_dir
+      format: omp_session
+      dir: "{usage_dir}"
+
+  reviewer_cli:
+    provider: command
+    model: "@plan"
+    capabilities: [repository_read]
+    max_concurrency: 1
+    inherit_env: false
+    pass_env: [HOME, PATH, USER, SHELL, LANG, LC_ALL, TERM, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME]
+    argv: ["omp", "-p", "--mode", "text", "--model", "{model}", "--max-time", "28m", "--session-dir", "{usage_dir}", "--no-title", "--auto-approve", "--tools", "read,grep,glob,bash", "{prompt}"]
+    timeout_s: 1800
+    usage:
+      source: session_dir
+      format: omp_session
+      dir: "{usage_dir}"
+
   agent_cli:
     provider: command
-    model: local
-    argv: ["omp", "-p", "--mode", "text", "--model", "{model}",
-           "--thinking=low", "--max-time", "6m", "--no-session", "--no-title",
-           "{prompt}"]
-    timeout_s: 900
+    model: "@default"
+    capabilities: [workspace_write]
+    max_concurrency: 1
+    inherit_env: false
+    pass_env: [HOME, PATH, USER, SHELL, LANG, LC_ALL, TERM, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME]
+    argv: ["omp", "-p", "--mode", "text", "--model", "{model}", "--max-time", "38m", "--session-dir", "{usage_dir}", "--no-title", "--auto-approve", "{prompt}"]
+    timeout_s: 2400
+    usage:
+      source: session_dir
+      format: omp_session
+      dir: "{usage_dir}"
+
+  plan_cli:
+    provider: command
+    model: "@plan"
+    capabilities: [repository_read]
+    max_concurrency: 1
+    inherit_env: false
+    pass_env: [HOME, PATH, USER, SHELL, LANG, LC_ALL, TERM, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME]
+    argv: ["omp", "-p", "--mode", "text", "--model", "{model}", "--max-time", "18m", "--session-dir", "{usage_dir}", "--no-title", "--auto-approve", "--tools", "read,grep,glob", "{prompt}"]
+    timeout_s: 1200
+    usage:
+      source: session_dir
+      format: omp_session
+      dir: "{usage_dir}"

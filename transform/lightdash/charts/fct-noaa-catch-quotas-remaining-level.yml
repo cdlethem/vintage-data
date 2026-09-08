@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_noaa_catch_quotas_observed_at_day
+          yRef:
+            field: fct_noaa_catch_quotas_average_quota_remaining_value
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed quota remaining value
+    layout:
+      xField: fct_noaa_catch_quotas_observed_at_day
+      yField:
+      - fct_noaa_catch_quotas_average_quota_remaining_value
+  type: cartesian
+description: Observation-weighted mean typed `quota_remaining_value` in source-reported units by collection
+  day. Repeated snapshots and polling frequency can influence the level, so it is not a quota balance
+  total.
+metricQuery:
+  dimensions:
+  - fct_noaa_catch_quotas_observed_at_day
+  exploreName: fct_noaa_catch_quotas
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_noaa_catch_quotas_average_quota_remaining_value
+  sorts:
+  - descending: false
+    fieldId: fct_noaa_catch_quotas_observed_at_day
+  tableCalculations: []
+name: Mean quota remaining by collection day
+slug: fct-noaa-catch-quotas-remaining-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_noaa_catch_quotas_observed_at_day
+  - fct_noaa_catch_quotas_average_quota_remaining_value
+tableName: fct_noaa_catch_quotas
+version: 1

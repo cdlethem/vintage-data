@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Incremental physical observation fact for DriveBC Open511 road events. Each row is one source
+  event at one feed fetch timestamp, preserving the event's status, classification, location JSON, scheduling
+  metadata, and raw-load lineage. Replayed copies of the same source event observation retain the latest
+  loaded row; no current-state inference is applied.
+metricQuery:
+  dimensions: &id001
+  - fct_drivebc_event_observations_observed_at
+  - fct_drivebc_event_observations_event_id
+  - fct_drivebc_event_observations_severity
+  - fct_drivebc_event_observations_source_loaded_at
+  exploreName: fct_drivebc_event_observations
+  filters:
+    dimensions:
+      and:
+      - id: 3dee3b17-5a8e-58a8-a700-e4fe8525bc3d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_drivebc_event_observations_observed_at
+        values:
+        - 30
+      id: 77c2f7a3-5716-5a31-9339-45801a25d153
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_drivebc_event_observations_observed_at
+  tableCalculations: []
+name: Drivebc event observations — observations
+slug: fct-drivebc-event-observations-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_drivebc_event_observations
+version: 1

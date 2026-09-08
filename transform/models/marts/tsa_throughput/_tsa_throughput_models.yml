@@ -1,0 +1,290 @@
+version: 2
+models:
+- name: fct_tsa_throughput
+  description: Daily physical observation fact for the U.S. Transportation Security Administration passenger-throughput
+    table. Each row represents one TSA throughput date from one extractor fetch, retaining passenger totals,
+    the publisher's update marker, and raw-load lineage. Repeated ingestion of the same source, identifier,
+    date, and observation timestamp is reduced to the latest loaded record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, throughput_id, throughput_date, observed_at
+      label: Tsa throughput
+      group_label: Tsa throughput
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: throughput_observation_key
+      vintage:
+        visualization:
+          dimension: throughput_date
+          metric: average_passengers
+          time: observed_at
+          window_days: 30
+          title: Mean observed passengers by throughput date
+          description: Mean observed passengers by `throughput_date` in the selected observation window.
+            Number of passengers reported by TSA for the throughput date. Each retained observation has
+            equal weight; polling frequency and repeated snapshots can affect the mean. This is not a
+            latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - throughput_id
+          - throughput_date
+          - passengers
+          - source_loaded_at
+          sources:
+          - '`tsa_throughput` — licence: US federal public data; attribution required: False. Source configuration:
+            `extract/sources/tsa_throughput.yml`.'
+          analysis:
+            headline: weekly passenger throughput levels and the publisher snapshots that revise them.
+            event_time: throughput_date
+            grain: WEEK
+            controls:
+            - source
+            - publisher_updated_at
+            trends:
+            - slug: weekly-passenger-level
+              kind: total
+              metric: average_passengers
+              time: throughput_date
+              grain: WEEK
+              title: Mean passengers reported each throughput week
+              description: Mean `passengers` reported for throughput dates in each week of the published
+                history. This is an observation-weighted level rather than a summed passenger total, so
+                repeated snapshots and polling frequency affect the mean; weeks without a report are absent
+                rather than zero.
+              width: half
+            - slug: weekly-throughput-days
+              kind: total
+              metric: distinct_throughput
+              time: throughput_date
+              grain: WEEK
+              title: Throughput dates reported each week
+              description: Distinct `throughput_id` values reported on throughput dates in each week. The
+                count shows the breadth of daily coverage, not passenger volume; weeks with no source rows
+                are absent rather than zero.
+              width: half
+            - slug: weekly-passengers-by-source
+              kind: breakdown
+              metric: average_passengers
+              breakdown: source
+              top_n: 2
+              time: throughput_date
+              grain: WEEK
+              title: Mean passengers by source each throughput week
+              description: Mean reported passengers per throughput week, split by source. Only the observed
+                TSA source is present in this mart, so the chart has one populated series rather than an
+                inter-source comparison; this remains a level and is not additive.
+              width: full
+            - slug: weekly-coverage-by-source
+              kind: composition
+              metric: distinct_throughput
+              breakdown: source
+              top_n: 2
+              time: throughput_date
+              grain: WEEK
+              title: Reported throughput dates by source each week
+              description: Distinct throughput identifiers per week stacked by source. The single source
+                currently accounts for all reported dates; missing weeks indicate no source rows and are
+                not zero-valued observations.
+              width: full
+  columns:
+  - name: throughput_observation_key
+    description: Stable hash of the source, throughput identifier, throughput date, and extractor observation
+      timestamp defining the row grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Throughput observation key
+          hidden: true
+  - name: source
+    description: Upstream source label supplied by the TSA throughput extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: throughput_id
+    description: Source identifier for the throughput record; the extractor currently supplies the throughput
+      date as this value.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_throughput:
+            type: count_distinct
+            label: Distinct throughput dates
+            description: Distinct `throughput_id` values reported in each throughput-date period. This
+              counts reported coverage without adding passenger values across repeated observations.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Throughput id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the TSA passenger-volume table.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: throughput_date
+    description: Calendar date for the reported national TSA checkpoint passenger total.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Throughput date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: passengers
+    description: Number of passengers reported by TSA for the throughput date.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_passengers:
+            type: average
+            label: Mean observed passengers
+            description: Mean observed passengers by `throughput_date` in the selected observation window.
+              Number of passengers reported by TSA for the throughput date. Each retained observation
+              has equal weight; polling frequency and repeated snapshots can affect the mean. This is
+              not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Passengers
+          hidden: false
+          format: '#,##0'
+  - name: publisher_updated_at
+    description: HTTP Last-Modified marker supplied by the TSA publisher, when present.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publisher updated at
+          hidden: false
+  - name: source_date
+    description: Raw partition date assigned to the retained TSA observation by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the retained TSA source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained TSA observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained TSA observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained TSA observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained TSA observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained TSA observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw TSA throughput record for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

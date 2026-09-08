@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical observations of UK Parliament petitions. Each row is one petition at one
+  upstream fetch timestamp, retaining the publisher's scalar petition attributes, nested response metadata,
+  and raw loader lineage. Repeated loads of the same petition and timestamp are reduced to the latest
+  loader row, while distinct fetch timestamps remain historical observations.
+metricQuery:
+  dimensions: &id001
+  - fct_uk_petitions_observed_at
+  - fct_uk_petitions_petition_id
+  - fct_uk_petitions_state
+  - fct_uk_petitions_source_loaded_at
+  exploreName: fct_uk_petitions
+  filters:
+    dimensions:
+      and:
+      - id: 3ecb4dfc-9f11-5b9c-8a25-e754c01db3a3
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_petitions_observed_at
+        values:
+        - 30
+      id: 1c973a3a-8939-5a76-b719-42eb924c39ea
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_uk_petitions_observed_at
+  tableCalculations: []
+name: Uk petitions — observations
+slug: fct-uk-petitions-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_uk_petitions
+version: 1

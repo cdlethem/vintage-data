@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical snapshot of organizations recognized as tax-exempt by the United States Internal
+  Revenue Service. Each row is one employer identification number observed at one extractor fetch timestamp;
+  repeated raw copies of a snapshot row are reduced to the latest loaded copy while source lineage is
+  retained for audit.
+metricQuery:
+  dimensions: &id001
+  - fct_irs_exempt_organizations_fetched_at
+  - fct_irs_exempt_organizations_organization_id
+  - fct_irs_exempt_organizations_state
+  - fct_irs_exempt_organizations_source_loaded_at
+  exploreName: fct_irs_exempt_organizations
+  filters:
+    dimensions:
+      and:
+      - id: b392c74e-189e-5e0a-b791-89e2efd091d2
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_irs_exempt_organizations_fetched_at
+        values:
+        - 30
+      id: fd1cc97b-7db3-5c21-b642-469cae58c075
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_irs_exempt_organizations_fetched_at
+  tableCalculations: []
+name: Irs exempt organizations — observations
+slug: fct-irs-exempt-organizations-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_irs_exempt_organizations
+version: 1

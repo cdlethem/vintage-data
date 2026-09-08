@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_ireland_bathing_alerts_incident_start_date_day
+          yRef:
+            field: fct_ireland_bathing_alerts_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Incident start date (Day)
+      yAxis:
+      - name: Distinct alert
+    layout:
+      stack: true
+      xField: fct_ireland_bathing_alerts_incident_start_date_day
+      yField:
+      - fct_ireland_bathing_alerts_distinct_entities
+  type: cartesian
+description: Distinct `alert_id` values stacked by county on each incident start day. Bars keep all four
+  observed counties because incident dates are sparse; an absent date means no alert was recorded, not
+  zero.
+metricQuery:
+  dimensions:
+  - fct_ireland_bathing_alerts_incident_start_date_day
+  - fct_ireland_bathing_alerts_county_name
+  exploreName: fct_ireland_bathing_alerts
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ireland_bathing_alerts_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_ireland_bathing_alerts_distinct_entities
+  - descending: false
+    fieldId: fct_ireland_bathing_alerts_incident_start_date_day
+  tableCalculations: []
+name: Incident alerts by county
+pivotConfig:
+  columns:
+  - fct_ireland_bathing_alerts_county_name
+slug: fct-ireland-bathing-alerts-alerts-by-county
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ireland_bathing_alerts_incident_start_date_day
+  - fct_ireland_bathing_alerts_county_name
+  - fct_ireland_bathing_alerts_distinct_entities
+tableName: fct_ireland_bathing_alerts
+version: 1

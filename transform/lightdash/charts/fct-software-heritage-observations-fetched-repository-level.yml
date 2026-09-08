@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_software_heritage_observations_fetched_at_day
+          yRef:
+            field: fct_software_heritage_observations_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Distinct repository
+    layout:
+      xField: fct_software_heritage_observations_fetched_at_day
+      yField:
+      - fct_software_heritage_observations_distinct_entities
+  type: cartesian
+description: Distinct `repository_id` values present at each extractor `fetched_at` day. This collection-time
+  series is a five-day catalogue level, not repository activity history; days without a successful fetch
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_software_heritage_observations_fetched_at_day
+  exploreName: fct_software_heritage_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_software_heritage_observations_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_software_heritage_observations_fetched_at_day
+  tableCalculations: []
+name: Repositories fetched each day
+slug: fct-software-heritage-observations-fetched-repository-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_software_heritage_observations_fetched_at_day
+  - fct_software_heritage_observations_distinct_entities
+tableName: fct_software_heritage_observations
+version: 1

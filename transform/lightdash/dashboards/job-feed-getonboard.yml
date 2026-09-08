@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 355bb450-9d22-5b7a-b463-e484053c32ef
+    label: 'Job feed getonboard: Department'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_getonboard_department
+      tableName: fct_job_feed_getonboard
+    values: []
+  - disabled: true
+    id: 7f69311d-161d-5271-8a04-c49e718d27c1
+    label: 'Job feed getonboard: Location'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_getonboard_location
+      tableName: fct_job_feed_getonboard
+    values: []
+  - disabled: true
+    id: 44a2e4ce-2c25-5b03-bbf5-4197c8b408a0
+    label: 'Job feed getonboard: Is remote'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_getonboard_is_remote
+      tableName: fct_job_feed_getonboard
+    values: []
+  - disabled: true
+    id: 4e80b8c4-3cb1-54fa-9af5-73a6fc660437
+    label: 'Job feed getonboard: Location country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_getonboard_location_country
+      tableName: fct_job_feed_getonboard
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Feed Getonboard
+slug: job-feed-getonboard
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of GetOnBoard job observations. Each row represents one GetOnBoard
+      job identifier from one extractor observation timestamp; repeated ingestion of the same observation
+      is reduced to the latest loaded copy while load-layer lineage remains available for audit and replay.
+
+
+      **Grain:** source, job_id, observed_at
+
+
+      **What changes here:** how the GetOnBoard catalogue level and department mix change across observation
+      days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_feed_getonboard` — licence: public Get on Board API; attribution required: True. Source configuration:
+      `extract/sources/job_feed_getonboard.yml`.'
+    hideFrame: false
+    title: Job feed getonboard
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed getonboard — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct jobs observed per day
+    chartSlug: fct-job-feed-getonboard-jobs-observed
+    hideTitle: false
+    title: Distinct jobs observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Departments represented per day
+    chartSlug: fct-job-feed-getonboard-departments-observed
+    hideTitle: false
+    title: Departments represented per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct jobs by department
+    chartSlug: fct-job-feed-getonboard-jobs-by-department
+    hideTitle: false
+    title: Distinct jobs by department
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Jobs by source publication day
+    chartSlug: fct-job-feed-getonboard-source-posted-jobs
+    hideTitle: false
+    title: Jobs by source publication day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed getonboard — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct job by department
+    chartSlug: fct-job-feed-getonboard
+    hideTitle: false
+    title: Distinct job by department
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Job feed getonboard — observations
+    chartSlug: fct-job-feed-getonboard-details
+    hideTitle: false
+    title: Job feed getonboard — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

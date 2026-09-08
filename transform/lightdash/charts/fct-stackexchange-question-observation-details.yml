@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Incremental physical observation fact for Stack Exchange questions. Each row is one question
+  from one Stack Exchange site at one API fetch time, retaining the question metadata, engagement counters,
+  and raw-load lineage. Replayed copies of the same site, question, and observation timestamp are reduced
+  to the latest loaded row; this model does not infer question edits or reconstruct omitted API fields.
+metricQuery:
+  dimensions: &id001
+  - fct_stackexchange_question_observation_observed_at
+  - fct_stackexchange_question_observation_question_id
+  - fct_stackexchange_question_observation_is_answered
+  - fct_stackexchange_question_observation_source_loaded_at
+  exploreName: fct_stackexchange_question_observation
+  filters:
+    dimensions:
+      and:
+      - id: f55eb3d2-5de7-5677-8ded-2bd343053814
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_stackexchange_question_observation_observed_at
+        values:
+        - 30
+      id: d62c9420-5107-5c2f-83bc-c0773aa69565
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_stackexchange_question_observation_observed_at
+  tableCalculations: []
+name: Stackexchange question observation — observations
+slug: fct-stackexchange-question-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_stackexchange_question_observation
+version: 1

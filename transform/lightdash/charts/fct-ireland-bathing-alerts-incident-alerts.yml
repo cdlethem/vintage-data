@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ireland_bathing_alerts_incident_start_date_day
+          yRef:
+            field: fct_ireland_bathing_alerts_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Incident start date (Day)
+      yAxis:
+      - name: Distinct alert
+    layout:
+      xField: fct_ireland_bathing_alerts_incident_start_date_day
+      yField:
+      - fct_ireland_bathing_alerts_distinct_entities
+  type: cartesian
+description: Distinct `alert_id` values grouped by the source-reported `incident_start_date` day. Only
+  eight incident dates are populated in the observed history; other dates are absent rather than zero,
+  and repeated fetches do not inflate the count.
+metricQuery:
+  dimensions:
+  - fct_ireland_bathing_alerts_incident_start_date_day
+  exploreName: fct_ireland_bathing_alerts
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ireland_bathing_alerts_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_ireland_bathing_alerts_incident_start_date_day
+  tableCalculations: []
+name: Alerts by incident start day
+slug: fct-ireland-bathing-alerts-incident-alerts
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ireland_bathing_alerts_incident_start_date_day
+  - fct_ireland_bathing_alerts_distinct_entities
+tableName: fct_ireland_bathing_alerts
+version: 1

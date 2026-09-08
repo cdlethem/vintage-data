@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_tokyo_mou_detentions_release_date_day
+          yRef:
+            field: fct_tokyo_mou_detentions_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Release date (Day)
+      yAxis:
+      - name: Distinct detention
+    layout:
+      xField: fct_tokyo_mou_detentions_release_date_day
+      yField:
+      - fct_tokyo_mou_detentions_distinct_entities
+  type: cartesian
+description: Distinct `detention_id` values by reported release date. Only 154 of 318 rows have a release
+  date, so unreleased records and dates with no release are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_tokyo_mou_detentions_release_date_day
+  exploreName: fct_tokyo_mou_detentions
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_tokyo_mou_detentions_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_tokyo_mou_detentions_release_date_day
+  tableCalculations: []
+name: Detentions with a release date
+slug: fct-tokyo-mou-detentions-releases-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_tokyo_mou_detentions_release_date_day
+  - fct_tokyo_mou_detentions_distinct_entities
+tableName: fct_tokyo_mou_detentions
+version: 1

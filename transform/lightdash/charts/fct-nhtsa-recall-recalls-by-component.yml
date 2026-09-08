@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_nhtsa_recall_report_received_date_month
+          yRef:
+            field: fct_nhtsa_recall_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Report received date (Month)
+      yAxis:
+      - name: Distinct recall
+    layout:
+      stack: true
+      xField: fct_nhtsa_recall_report_received_date_month
+      yField:
+      - fct_nhtsa_recall_distinct_entities
+  type: cartesian
+description: Distinct `recall_id` values stacked by the three observed `component` values across report
+  months. Other components would be excluded rather than aggregated, and empty months are absent.
+metricQuery:
+  dimensions:
+  - fct_nhtsa_recall_report_received_date_month
+  - fct_nhtsa_recall_component
+  exploreName: fct_nhtsa_recall
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nhtsa_recall_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_nhtsa_recall_distinct_entities
+  - descending: false
+    fieldId: fct_nhtsa_recall_report_received_date_month
+  tableCalculations: []
+name: Reported recalls by component
+pivotConfig:
+  columns:
+  - fct_nhtsa_recall_component
+slug: fct-nhtsa-recall-recalls-by-component
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nhtsa_recall_report_received_date_month
+  - fct_nhtsa_recall_component
+  - fct_nhtsa_recall_distinct_entities
+tableName: fct_nhtsa_recall
+version: 1

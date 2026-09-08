@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nz_visa_wait_times_observed_at_day
+          yRef:
+            field: fct_nz_visa_wait_times_average_most_completed_within_days
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean most-completed-within days
+    layout:
+      xField: fct_nz_visa_wait_times_observed_at_day
+      yField:
+      - fct_nz_visa_wait_times_average_most_completed_within_days
+  type: cartesian
+description: Mean parsed `most_completed_within_days` by feed observation day. All current values are
+  null because the source text was not converted to numeric days; null is preserved as absent data rather
+  than a zero-day wait.
+metricQuery:
+  dimensions:
+  - fct_nz_visa_wait_times_observed_at_day
+  exploreName: fct_nz_visa_wait_times
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nz_visa_wait_times_average_most_completed_within_days
+  sorts:
+  - descending: false
+    fieldId: fct_nz_visa_wait_times_observed_at_day
+  tableCalculations: []
+name: Most-completed window by observation day
+slug: fct-nz-visa-wait-times-completion-window-days
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nz_visa_wait_times_observed_at_day
+  - fct_nz_visa_wait_times_average_most_completed_within_days
+tableName: fct_nz_visa_wait_times
+version: 1

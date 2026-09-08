@@ -1,0 +1,321 @@
+version: 2
+models:
+- name: fct_iana_dns_record_observation
+  description: Daily incremental observation fact for DNS resource records published by IANA. Each row
+    is one source, record identifier, and fetch timestamp, preserving the published owner, TTL, class,
+    type, record data, publisher update marker, and raw-load lineage. Replayed copies of the same observation
+    grain are reduced to the latest loaded row; this model does not resolve DNS records or infer changes
+    between snapshots.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, record_id, observed_at
+      label: Iana dns record observation
+      group_label: Iana dns
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: iana_dns_record_observation_key
+      vintage:
+        visualization:
+          dimension: record_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct record by record type
+          description: Distinct `record_id` values by `record_type` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - record_id
+          - record_type
+          - source_loaded_at
+          sources:
+          - '`iana_dns` — licence: IANA file-use terms; attribution required: True. Source configuration:
+            `extract/sources/iana_dns.yml`.'
+          analysis:
+            headline: how the published DNS record catalogue and TTL policy vary across collection days
+              and record types.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - record_type
+            - record_class
+            - owner
+            trends:
+            - slug: record-catalogue
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct DNS records observed each day
+              description: Distinct `record_id` values present in the IANA snapshot on each collection
+                day. This is a catalogue level rather than a flow because records recur across snapshots;
+                the first day includes a larger initial load. Days without a successful extract are absent
+                rather than zero.
+              width: half
+            - slug: ttl-level
+              kind: total
+              metric: average_ttl_seconds
+              time: observed_at
+              grain: DAY
+              title: Mean TTL observed each day
+              description: Mean reported `ttl_seconds` across DNS records on each collection day. This is
+                a snapshot level and not an additive total; repeated observations and polling frequency
+                give each retained row equal weight. Days without a successful extract are absent rather
+                than zero.
+              width: half
+            - slug: record-type-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: record_type
+              top_n: 9
+              time: observed_at
+              grain: DAY
+              title: Observed DNS records by record type
+              description: Distinct `record_id` values per collection day stacked by record type. All nine
+                record types are shown because the dimension has nine values; segments can overlap when a
+                record has multiple types, so the stack is not a unique-record total.
+              width: full
+            - slug: record-type-ttl
+              kind: composition
+              metric: average_ttl_seconds
+              breakdown: record_type
+              top_n: 9
+              time: observed_at
+              grain: DAY
+              title: Mean TTL by record type
+              description: Mean reported `ttl_seconds` per collection day stacked by record type. All nine
+                types are shown; stacked segments compare TTL levels and must not be interpreted as a sum.
+              width: full
+  columns:
+  - name: iana_dns_record_observation_key
+    description: Stable hash of the source, DNS record identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '3 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '3 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Iana dns record observation key
+          hidden: true
+  - name: source
+    description: IANA DNS source stream identifier supplied by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: record_id
+    description: Stable identifier for the published DNS record supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct record
+            description: Distinct `record_id` values by `record_type` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Record id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the DNS record snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: owner
+    description: DNS owner name to which the resource record belongs.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Owner
+          hidden: false
+  - name: ttl_seconds
+    description: Time-to-live for the DNS record, in seconds.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_ttl_seconds:
+            type: average
+            label: Mean TTL seconds
+            description: Mean reported `ttl_seconds` at each time point. Each retained DNS observation
+              has equal weight, so repeated snapshots and polling frequency affect this snapshot level;
+              it is not an additive duration.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Ttl seconds
+          hidden: false
+          format: '#,##0'
+  - name: record_class
+    description: DNS class of the resource record, such as IN.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Record class
+          hidden: false
+  - name: record_type
+    description: DNS resource record type, such as A, AAAA, NS, DS, or RRSIG.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Record type
+          hidden: false
+  - name: record_data
+    description: Published DNS record data in the source's presentation format.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Record data
+          hidden: false
+  - name: publisher_updated_at
+    description: Publisher-provided timestamp or marker for the latest IANA DNS publication update.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publisher updated at
+          hidden: false
+  - name: source_row_id
+    description: Raw load row identifier for the retained DNS record observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained DNS record observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained DNS record observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained DNS record observation in its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the retained DNS batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained DNS record observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw DNS record content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

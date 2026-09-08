@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ema_medicine_shortage_supply_shortage_status
+          yRef:
+            field: fct_ema_medicine_shortage_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_ema_medicine_shortage_supply_shortage_status
+      yField:
+      - fct_ema_medicine_shortage_distinct_entities
+  type: cartesian
+description: Distinct `shortage_id` values by `supply_shortage_status` among observations in the selected
+  window. Repeated observations of an entity count once within each group. An entity that changed category
+  can appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_ema_medicine_shortage_supply_shortage_status
+  exploreName: fct_ema_medicine_shortage
+  filters:
+    dimensions:
+      and:
+      - id: 04552118-3b66-53a6-8a98-e8d45bd20e9f
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_ema_medicine_shortage_fetched_at
+        values:
+        - 30
+      id: ecdaaf4e-c078-5be8-ac2d-e5b0a5e21c5b
+  limit: 20
+  metrics:
+  - fct_ema_medicine_shortage_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_ema_medicine_shortage_distinct_entities
+  tableCalculations: []
+name: Distinct shortage by supply shortage status
+slug: fct-ema-medicine-shortage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ema_medicine_shortage_supply_shortage_status
+  - fct_ema_medicine_shortage_distinct_entities
+tableName: fct_ema_medicine_shortage
+version: 1

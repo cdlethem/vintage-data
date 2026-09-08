@@ -1,0 +1,152 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: ed47c12a-b03f-5042-807c-6f729c25ce80
+    label: 'Rcsb pdb structure snapshot: Experimental method'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_rcsb_pdb_structure_snapshot_experimental_method
+      tableName: fct_rcsb_pdb_structure_snapshot
+    values: []
+  - disabled: true
+    id: 9312ed58-42fa-52e3-8035-9c02fa38f230
+    label: 'Rcsb pdb structure snapshot: Keywords'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_rcsb_pdb_structure_snapshot_keywords
+      tableName: fct_rcsb_pdb_structure_snapshot
+    values: []
+  - disabled: true
+    id: 52b20c59-9224-5a27-af4b-e0c62858fcfb
+    label: 'Rcsb pdb structure snapshot: Title'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_rcsb_pdb_structure_snapshot_title
+      tableName: fct_rcsb_pdb_structure_snapshot
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Rcsb Pdb
+slug: rcsb-pdb
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of structures published by the RCSB Protein Data Bank feed. Each
+      row is one structure observed in one source snapshot, retaining publication dimensions and raw-load
+      lineage for replay.
+
+
+      **Grain:** structure_id, observed_at
+
+
+      **What changes here:** how the observed structure catalogue changes by experimental method and which
+      source revision months contribute to its current level.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `rcsb_pdb` — licence: unstated (public structural database); attribution required: False. Source
+      configuration: `extract/sources/rcsb_pdb.yml`.'
+    hideFrame: false
+    title: Rcsb pdb structure snapshot
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Rcsb pdb structure snapshot — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct structures observed each day
+    chartSlug: fct-rcsb-pdb-structure-snapshot-structures-observed
+    hideTitle: false
+    title: Distinct structures observed each day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct structure titles observed each day
+    chartSlug: fct-rcsb-pdb-structure-snapshot-titles-observed
+    hideTitle: false
+    title: Distinct structure titles observed each day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Structure catalogue mix by experimental method
+    chartSlug: fct-rcsb-pdb-structure-snapshot-structures-by-method
+    hideTitle: false
+    title: Structure catalogue mix by experimental method
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Structures by source revision month
+    chartSlug: fct-rcsb-pdb-structure-snapshot-revised-structures
+    hideTitle: false
+    title: Structures by source revision month
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Rcsb pdb structure snapshot — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct structure by experimental method
+    chartSlug: fct-rcsb-pdb-structure-snapshot
+    hideTitle: false
+    title: Distinct structure by experimental method
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Rcsb pdb structure snapshot — observations
+    chartSlug: fct-rcsb-pdb-structure-snapshot-details
+    hideTitle: false
+    title: Rcsb pdb structure snapshot — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

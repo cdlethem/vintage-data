@@ -1,0 +1,347 @@
+version: 2
+models:
+- name: fct_melbourne_pedestrian_observations
+  description: Twice-hourly physical history of Melbourne pedestrian counter observations. Each row is
+    one source feed, counter location, sensing timestamp, and feed fetch timestamp, with directional counts
+    and complete raw-load lineage. Duplicate records for that observation grain are retained by the latest
+    loader file position so replayed source files cannot multiply the fact.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, location_id, sensing_datetime, observed_at
+      label: Melbourne pedestrian observations
+      group_label: Melbourne pedestrians
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: pedestrian_observa_8da2ae
+      vintage:
+        visualization:
+          dimension: location_id
+          metric: m_07ead95e
+          time: observed_at
+          window_days: 30
+          title: Mean observed total of directions by location id
+          description: Mean observed total of directions by `location_id` in the selected observation
+            window. Total pedestrian count reported by the feed across both directions. Each retained
+            observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+            This is not a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - pedestrian_id
+          - location_id
+          - total_of_directions
+          - source_loaded_at
+          sources:
+          - '`melbourne_pedestrians` — licence: City of Melbourne open-data terms; attribution required:
+            True. Source configuration: `extract/sources/melbourne_pedestrians.yml`.'
+          analysis:
+            headline: how pedestrian measurement volume and reported counts vary by hour, feed, and counter
+              location.
+            event_time: sensing_datetime
+            grain: HOUR
+            controls:
+            - source
+            - sensing_time
+            trends:
+            - slug: pedestrian-observations
+              kind: total
+              metric: distinct_pedestrians
+              time: sensing_datetime
+              grain: HOUR
+              title: Distinct pedestrian records sensed per hour
+              description: Distinct `pedestrian_id` values recorded at each sensing hour. This is a count of
+                source measurement records rather than a flow of uniquely tracked people; irregular feed
+                coverage changes the level. Hours with no source rows are absent rather than zero.
+              width: half
+            - slug: mean-count
+              kind: total
+              metric: m_07ead95e
+              time: sensing_datetime
+              grain: HOUR
+              title: Mean reported pedestrians per sensing hour
+              description: Average `total_of_directions` across retained measurements at each sensing hour.
+                Each observation has equal weight, so differing location coverage and feed polling can affect
+                the mean. This is a reported level, not an additive citywide count; empty hours are absent.
+              width: half
+            - slug: feed-comparison
+              kind: breakdown
+              metric: distinct_pedestrians
+              breakdown: source
+              top_n: 2
+              time: sensing_datetime
+              grain: HOUR
+              title: Pedestrian records by source feed per hour
+              description: Distinct `pedestrian_id` values per sensing hour, pivoted by source feed. The two
+                observed feeds are both shown; missing feed-hour combinations are absent rather than zero,
+                and the lines measure coverage as well as pedestrian activity.
+              width: full
+            - slug: busiest-locations
+              kind: composition
+              metric: m_07ead95e
+              breakdown: location_id
+              top_n: 8
+              time: sensing_datetime
+              grain: HOUR
+              title: Mean reported count across busiest locations
+              description: Mean `total_of_directions` per sensing hour stacked by the eight locations with
+                the largest observed metric. This highlights the mix among major counters rather than all
+                99 locations; smaller locations are excluded, not aggregated. A segment is absent when that
+                counter has no measurement in the hour.
+              width: full
+  columns:
+  - name: pedestrian_observation_key
+    description: Stable hash of the source feed, counter location, sensing timestamp, and fetch timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Pedestrian observation key
+          hidden: true
+          name: pedestrian_observa_8da2ae
+  - name: source
+    description: Identifier of the Melbourne pedestrian feed that reported the observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: pedestrian_id
+    description: Upstream identifier assigned to the pedestrian observation record.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_pedestrians:
+            type: count_distinct
+            label: Distinct pedestrian records
+            description: Distinct `pedestrian_id` values per sensing period. The identifier represents a source
+              measurement record, so this count avoids duplicate retained rows but is not a count of uniquely
+              tracked people.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Pedestrian id
+          hidden: false
+  - name: location_id
+    description: Numeric identifier of the pedestrian counter location.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Location id
+          hidden: false
+          format: '#,##0'
+  - name: sensing_datetime
+    description: UTC timestamp at which the counter measurement was sensed.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Sensing datetime
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: sensing_date
+    description: Calendar date supplied by the pedestrian feed for the sensing measurement.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Sensing date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: sensing_time
+    description: Local clock time string supplied by the pedestrian feed for the sensing measurement.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sensing time
+          hidden: false
+  - name: direction_1
+    description: Pedestrian count reported for the first counter direction.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Direction 1
+          hidden: false
+          format: '#,##0'
+  - name: direction_2
+    description: Pedestrian count reported for the second counter direction.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Direction 2
+          hidden: false
+          format: '#,##0'
+  - name: total_of_directions
+    description: Total pedestrian count reported by the feed across both directions.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          m_07ead95e:
+            type: average
+            label: Mean observed total of directions
+            description: Mean observed total of directions by `location_id` in the selected observation
+              window. Total pedestrian count reported by the feed across both directions. Each retained
+              observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+              This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Total of directions
+          hidden: false
+          format: '#,##0'
+  - name: observed_at
+    description: UTC timestamp when the source feed was fetched by the extractor.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_row_id
+    description: Raw load row identifier for the retained pedestrian observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained pedestrian observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the retained source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: extract_st_51074f
+  - name: load_id
+    description: Identifier of the load job that inserted the retained source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained source row.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw record content used for lineage and deduplication.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

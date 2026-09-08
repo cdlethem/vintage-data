@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 7
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_sec_edgar_filing_observation_filed_date_day
+          yRef:
+            field: fct_sec_edgar_filing_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Filed date (Day)
+      yAxis:
+      - name: Distinct filing party
+    layout:
+      xField: fct_sec_edgar_filing_observation_filed_date_day
+      yField:
+      - fct_sec_edgar_filing_observation_distinct_entities
+  type: cartesian
+description: Distinct filing parties per filed day split by party role. All seven observed roles are shown;
+  the lines compare role trajectories, and a party represented in multiple roles is intentionally counted
+  in each role rather than treated as additive.
+metricQuery:
+  dimensions:
+  - fct_sec_edgar_filing_observation_filed_date_day
+  - fct_sec_edgar_filing_observation_party_role
+  exploreName: fct_sec_edgar_filing_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sec_edgar_filing_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_sec_edgar_filing_observation_distinct_entities
+  - descending: false
+    fieldId: fct_sec_edgar_filing_observation_filed_date_day
+  tableCalculations: []
+name: Distinct parties by filing role and filed day
+pivotConfig:
+  columns:
+  - fct_sec_edgar_filing_observation_party_role
+slug: fct-sec-edgar-filing-observation-role-trajectory
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sec_edgar_filing_observation_filed_date_day
+  - fct_sec_edgar_filing_observation_party_role
+  - fct_sec_edgar_filing_observation_distinct_entities
+tableName: fct_sec_edgar_filing_observation
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nager_date_holiday_observation_holiday_date_month
+          yRef:
+            field: fct_nager_date_holiday_observation_distinct_holiday_dates
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Holiday date (Month)
+      yAxis:
+      - name: Distinct holiday dates
+    layout:
+      xField: fct_nager_date_holiday_observation_holiday_date_month
+      yField:
+      - fct_nager_date_holiday_observation_distinct_holiday_dates
+  type: cartesian
+description: Distinct country/date pairs by published holiday month. Overlapping observance variants count
+  once within a country. The observed rolling upcoming calendar is incomplete outside its collection coverage;
+  missing months are not zero.
+metricQuery:
+  dimensions:
+  - fct_nager_date_holiday_observation_holiday_date_month
+  exploreName: fct_nager_date_holiday_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nager_date_holiday_observation_distinct_holiday_dates
+  sorts:
+  - descending: false
+    fieldId: fct_nager_date_holiday_observation_holiday_date_month
+  tableCalculations: []
+name: Calendar dates with a holiday by month
+slug: fct-nager-date-holiday-observation-holiday-dates-by-month
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nager_date_holiday_observation_holiday_date_month
+  - fct_nager_date_holiday_observation_distinct_holiday_dates
+tableName: fct_nager_date_holiday_observation
+version: 1

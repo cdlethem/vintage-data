@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_lichess_game_observation_observed_at_hour
+          yRef:
+            field: fct_lichess_game_observation_distinct_games
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct games observed
+    layout:
+      stack: true
+      xField: fct_lichess_game_observation_observed_at_hour
+      yField:
+      - fct_lichess_game_observation_distinct_games
+  type: cartesian
+description: Distinct `game_id` values per observed hour stacked by `color`. The two observed colors are
+  retained and bars show the mix of feed coverage rather than newly played games; repeated snapshots can
+  show the same game again, while absent polling hours are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_lichess_game_observation_observed_at_hour
+  - fct_lichess_game_observation_color
+  exploreName: fct_lichess_game_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_lichess_game_observation_distinct_games
+  sorts:
+  - descending: true
+    fieldId: fct_lichess_game_observation_distinct_games
+  - descending: false
+    fieldId: fct_lichess_game_observation_observed_at_hour
+  tableCalculations: []
+name: Observed games by chess color
+pivotConfig:
+  columns:
+  - fct_lichess_game_observation_color
+slug: fct-lichess-game-observation-rating-by-color
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_lichess_game_observation_observed_at_hour
+  - fct_lichess_game_observation_color
+  - fct_lichess_game_observation_distinct_games
+tableName: fct_lichess_game_observation
+version: 1

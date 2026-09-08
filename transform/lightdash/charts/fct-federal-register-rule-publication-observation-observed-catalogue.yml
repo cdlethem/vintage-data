@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_federal_register_rule_publication_observation_obs_hour
+          yRef:
+            field: fct_federal_register_rule_publication_observation_m_a6e4e251
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct document
+    layout:
+      xField: fct_federal_register_rule_publication_observation_obs_hour
+      yField:
+      - fct_federal_register_rule_publication_observation_m_a6e4e251
+  type: cartesian
+description: Distinct `document_id` values present in each extractor observation hour. This is a snapshot
+  catalogue level, not a publication flow; hours without a successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_federal_register_rule_publication_observation_obs_hour
+  exploreName: fct_federal_register_rule_publication_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_federal_register_rule_publication_observation_m_a6e4e251
+  sorts:
+  - descending: false
+    fieldId: fct_federal_register_rule_publication_observation_obs_hour
+  tableCalculations: []
+name: Documents present in each fetch hour
+slug: fct-federal-register-rule-publication-observation-observed-catalogue
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_federal_register_rule_publication_observation_obs_hour
+  - fct_federal_register_rule_publication_observation_m_a6e4e251
+tableName: fct_federal_register_rule_publication_observation
+version: 1

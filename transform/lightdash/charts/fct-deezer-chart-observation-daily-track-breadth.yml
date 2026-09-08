@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_deezer_chart_observation_observed_at_day
+          yRef:
+            field: fct_deezer_chart_observation_distinct_tracks
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct tracks
+    layout:
+      xField: fct_deezer_chart_observation_observed_at_day
+      yField:
+      - fct_deezer_chart_observation_distinct_tracks
+  type: cartesian
+description: Distinct `track_id` values present in the Deezer chart on each `observed_at` day. This measures
+  the published chart breadth rather than plays or additions; absent observation days are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_deezer_chart_observation_observed_at_day
+  exploreName: fct_deezer_chart_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_deezer_chart_observation_distinct_tracks
+  sorts:
+  - descending: false
+    fieldId: fct_deezer_chart_observation_observed_at_day
+  tableCalculations: []
+name: Distinct tracks observed per day
+slug: fct-deezer-chart-observation-daily-track-breadth
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_deezer_chart_observation_observed_at_day
+  - fct_deezer_chart_observation_distinct_tracks
+tableName: fct_deezer_chart_observation
+version: 1

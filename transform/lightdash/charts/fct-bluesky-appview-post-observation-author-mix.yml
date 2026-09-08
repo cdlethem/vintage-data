@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_bluesky_appview_post_observation_created_at_day
+          yRef:
+            field: fct_bluesky_appview_post_observation_distinct_posts
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct posts
+    layout:
+      stack: true
+      xField: fct_bluesky_appview_post_observation_created_at_day
+      yField:
+      - fct_bluesky_appview_post_observation_distinct_posts
+  type: cartesian
+description: Distinct `post_uri` values stacked by `author_handle` and source creation day. All eight
+  observed authors fit the bounded pivot; this shows mix, not cumulative author output, and dates without
+  posts are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_bluesky_appview_post_observation_created_at_day
+  - fct_bluesky_appview_post_observation_author_handle
+  exploreName: fct_bluesky_appview_post_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_bluesky_appview_post_observation_distinct_posts
+  sorts:
+  - descending: true
+    fieldId: fct_bluesky_appview_post_observation_distinct_posts
+  - descending: false
+    fieldId: fct_bluesky_appview_post_observation_created_at_day
+  tableCalculations: []
+name: Post mix by author and creation day
+pivotConfig:
+  columns:
+  - fct_bluesky_appview_post_observation_author_handle
+slug: fct-bluesky-appview-post-observation-author-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_bluesky_appview_post_observation_created_at_day
+  - fct_bluesky_appview_post_observation_author_handle
+  - fct_bluesky_appview_post_observation_distinct_posts
+tableName: fct_bluesky_appview_post_observation
+version: 1

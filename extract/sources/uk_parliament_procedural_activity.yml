@@ -1,0 +1,22 @@
+name: uk_parliament_procedural_activity
+script: fetch_uk_parliament_procedural_activity.py
+args: []
+schedule: "24 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 30
+sink: local
+
+# Algorithmic scheduling cadence: the load layer steps `schedule` between
+# these bounds from what each run actually brought back (load/README.md).
+# Procedural records can arrive and be revised during parliamentary business hours.
+cadence:
+  auto: true
+  min_minutes: 15
+  max_minutes: 360
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "hourly initial poll for dated BusinessItems; auto-cadence spans 15 minutes to six hours based on observed novelty"
+rate_limit: "official OData API: throttled at 100 requests/second/IP; one sequential paginated request stream per run"
+licence: "Open Parliament Licence v3.0"
+attribution_required: true

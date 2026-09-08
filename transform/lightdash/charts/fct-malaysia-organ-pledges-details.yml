@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical observation fact for Malaysia's daily organ-donor pledge counts by state. Each row
+  records one state and pledge-date observation from one extractor snapshot, preserving repeated snapshots
+  so historical withdrawals and other publisher revisions remain visible. Duplicate copies of the same
+  source, pledge identifier, and observation timestamp are reduced to the latest loaded record.
+metricQuery:
+  dimensions: &id001
+  - fct_malaysia_organ_pledges_observed_at
+  - fct_malaysia_organ_pledges_pledge_id
+  - fct_malaysia_organ_pledges_state
+  - fct_malaysia_organ_pledges_pledge_count
+  - fct_malaysia_organ_pledges_source_loaded_at
+  exploreName: fct_malaysia_organ_pledges
+  filters:
+    dimensions:
+      and:
+      - id: 5061ef5e-5d92-5a04-8927-9e9a8cb3856e
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_malaysia_organ_pledges_observed_at
+        values:
+        - 30
+      id: 31a55605-75b7-5c7d-ac4e-c1d3cdb66683
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_malaysia_organ_pledges_observed_at
+  tableCalculations: []
+name: Malaysia organ pledges — observations
+slug: fct-malaysia-organ-pledges-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_malaysia_organ_pledges
+version: 1

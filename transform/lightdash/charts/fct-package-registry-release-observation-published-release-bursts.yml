@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_package_registry_release_observation_published_at_day
+          yRef:
+            field: fct_package_registry_release_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Published at (Day)
+      yAxis:
+      - name: Distinct release
+    layout:
+      stack: true
+      xField: fct_package_registry_release_observation_published_at_day
+      yField:
+      - fct_package_registry_release_observation_distinct_entities
+  type: cartesian
+description: Distinct `release_id` values stacked by `package_name` on the registry publication date.
+  The eight packages with the most releases over this shallow five-day history are shown and the remainder
+  is excluded rather than aggregated; sparse dates are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_package_registry_release_observation_published_at_day
+  - fct_package_registry_release_observation_package_name
+  exploreName: fct_package_registry_release_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_package_registry_release_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_package_registry_release_observation_distinct_entities
+  - descending: false
+    fieldId: fct_package_registry_release_observation_published_at_day
+  tableCalculations: []
+name: Published release bursts by leading package
+pivotConfig:
+  columns:
+  - fct_package_registry_release_observation_package_name
+slug: fct-package-registry-release-observation-published-release-bursts
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_package_registry_release_observation_published_at_day
+  - fct_package_registry_release_observation_package_name
+  - fct_package_registry_release_observation_distinct_entities
+tableName: fct_package_registry_release_observation
+version: 1

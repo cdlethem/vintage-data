@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_open_collective_account_observation_observed_at_day
+          yRef:
+            field: fct_open_collective_account_observation_average_balance_amount
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed balance amount
+    layout:
+      xField: fct_open_collective_account_observation_observed_at_day
+      yField:
+      - fct_open_collective_account_observation_average_balance_amount
+  type: cartesian
+description: Mean `balance_amount` across retained account observations on each fetch day. This is a snapshot
+  level, not an additive financial total; currencies are mixed unless filtered, and missing fetch days
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_open_collective_account_observation_observed_at_day
+  exploreName: fct_open_collective_account_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_open_collective_account_observation_average_balance_amount
+  sorts:
+  - descending: false
+    fieldId: fct_open_collective_account_observation_observed_at_day
+  tableCalculations: []
+name: Mean observed account balance by day
+slug: fct-open-collective-account-observation-average-balance-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_open_collective_account_observation_observed_at_day
+  - fct_open_collective_account_observation_average_balance_amount
+tableName: fct_open_collective_account_observation
+version: 1

@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of satellite conjunction events reported by the CelesTrak SOCRATES
+  feed. Each row is one conjunction event as observed at one extractor timestamp, retaining close-approach
+  measures and raw-load lineage for replay and audit.
+metricQuery:
+  dimensions: &id001
+  - fct_celestrak_socrates_conjunction_events_observed_at
+  - fct_celestrak_socrates_conjunction_events_conjunction_id
+  - fct_celestrak_socrates_conjunction_events_object_name_1
+  - fct_celestrak_socrates_conjunction_events_max_probability
+  - fct_celestrak_socrates_conjunction_events_source_2059e1
+  exploreName: fct_celestrak_socrates_conjunction_events
+  filters:
+    dimensions:
+      and:
+      - id: e480191b-0556-57f7-a073-b6f9cc3a9a1c
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_celestrak_socrates_conjunction_events_observed_at
+        values:
+        - 30
+      id: 303f6d5a-832e-51b5-a03a-6fb39b96a657
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_celestrak_socrates_conjunction_events_observed_at
+  tableCalculations: []
+name: Celestrak socrates conjunction events — observations
+slug: fct-celestrak-socrates-conjunction-events-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_celestrak_socrates_conjunction_events
+version: 1

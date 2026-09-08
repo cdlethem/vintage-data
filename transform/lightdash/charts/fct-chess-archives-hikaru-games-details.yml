@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical fact of Hikaru Nakamura's Chess.com archive games. Each row is one
+  game for the Hikaru archive at the archive-source and game identifier grain; repeated raw copies are
+  reduced to the latest loaded row while game attributes and raw-load lineage remain available for audit.
+metricQuery:
+  dimensions: &id001
+  - fct_chess_archives_hikaru_games_fetched_at
+  - fct_chess_archives_hikaru_games_game_id
+  - fct_chess_archives_hikaru_games_player_result
+  - fct_chess_archives_hikaru_games_source_loaded_at
+  exploreName: fct_chess_archives_hikaru_games
+  filters:
+    dimensions:
+      and:
+      - id: 7521ec97-943b-5423-8adc-2b6a6317c82c
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_chess_archives_hikaru_games_fetched_at
+        values:
+        - 30
+      id: 6bfdf8a6-6879-5e81-a805-5b428ccc9c92
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_chess_archives_hikaru_games_fetched_at
+  tableCalculations: []
+name: Chess archives hikaru games — observations
+slug: fct-chess-archives-hikaru-games-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_chess_archives_hikaru_games
+version: 1

@@ -1,0 +1,45 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_safecast_radiation_measurement_observed_at_day
+          yRef:
+            field: fct_safecast_radiation_measurement_average_measurement_value
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed measurement value
+    layout:
+      xField: fct_safecast_radiation_measurement_observed_at_day
+      yField:
+      - fct_safecast_radiation_measurement_average_measurement_value
+  type: cartesian
+description: Mean `measurement_value` across retained readings in each extractor observation day, in their
+  reported `measurement_unit`. Each reading has equal weight and units are not combined meaningfully;
+  the five-day collection series is a level, not a radiation event flow, and absent days are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_safecast_radiation_measurement_observed_at_day
+  exploreName: fct_safecast_radiation_measurement
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_safecast_radiation_measurement_average_measurement_value
+  sorts:
+  - descending: false
+    fieldId: fct_safecast_radiation_measurement_observed_at_day
+  tableCalculations: []
+name: Mean radiation reading per collection day
+slug: fct-safecast-radiation-measurement-radiation-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_safecast_radiation_measurement_observed_at_day
+  - fct_safecast_radiation_measurement_average_measurement_value
+tableName: fct_safecast_radiation_measurement
+version: 1

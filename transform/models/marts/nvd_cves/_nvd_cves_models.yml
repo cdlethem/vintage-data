@@ -1,0 +1,399 @@
+version: 2
+models:
+- name: fct_nvd_cve_observation
+  description: Twice-hourly physical observation fact for National Vulnerability Database CVE records.
+    Each row is one NVD source system, CVE identifier, and extractor observation timestamp, retaining
+    the published vulnerability attributes and raw-load lineage. Replayed copies of the same observation
+    are reduced to the latest loaded row; this model preserves source values and does not infer remediation,
+    severity, or vulnerability relationships.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_system, cve_id, observed_at
+      label: Nvd cve observation
+      group_label: Nvd cves
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: nvd_cve_observation_key
+      vintage:
+        visualization:
+          dimension: cvss_severity
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct cve by cvss severity
+          description: Distinct `cve_id` values by `cvss_severity` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent a
+            current-state census.
+          detail_fields:
+          - observed_at
+          - cve_id
+          - cvss_severity
+          - source_loaded_at
+          sources:
+          - '`nvd_cves` — licence: NVD — US Government work, public domain; attribution required: False.
+            Source configuration: `extract/sources/nvd_cves.yml`.'
+          analysis:
+            headline: how publication volume, severity, and workflow status shift across NVD release months.
+            event_time: published_at
+            grain: MONTH
+            controls:
+            - cvss_severity
+            - status
+            - cvss_version
+            trends:
+            - slug: monthly-publications
+              kind: total
+              metric: distinct_entities
+              time: published_at
+              grain: MONTH
+              title: Vulnerabilities published per month
+              description: Distinct `cve_id` values by NVD `published_at` month — this is a publication flow
+                and not a count of records observed by the extractor. Months with no published CVEs are
+                absent rather than zero.
+              width: half
+            - slug: monthly-average-score
+              kind: total
+              metric: avg_cvss_score
+              time: published_at
+              grain: MONTH
+              title: Average reported CVSS score by publication month
+              description: Average non-null reported `cvss_score` for observations whose CVE `published_at`
+                falls in each month — repeated observations make this observation-weighted and can
+                overweight records polled more often. Missing scores and months are absent, not zero.
+              width: half
+            - slug: severity-trajectories
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: cvss_severity
+              top_n: 5
+              time: published_at
+              grain: MONTH
+              title: Published vulnerabilities by CVSS severity
+              description: Distinct `cve_id` values per NVD `published_at` month, pivoted by the five
+                observed severity values — records without a severity are excluded and no other values
+                remain to aggregate. This compares severity trajectories, not additive snapshot totals.
+              width: full
+            - slug: status-composition
+              kind: composition
+              metric: distinct_entities
+              breakdown: status
+              top_n: 6
+              time: published_at
+              grain: MONTH
+              title: Published vulnerabilities by workflow status
+              description: Distinct `cve_id` values per NVD `published_at` month, stacked by the six
+                observed lifecycle statuses — all observed statuses are retained. A status is the latest
+                reported workflow label in each observation, not a reconstructed state history.
+              width: full
+            - slug: cvss-version-composition
+              kind: composition
+              metric: distinct_entities
+              breakdown: cvss_version
+              top_n: 3
+              time: published_at
+              grain: MONTH
+              title: Published vulnerabilities by CVSS version
+              description: Distinct `cve_id` values per NVD `published_at` month, stacked by the three
+                observed CVSS versions — records without a version are excluded. Stacks show scoring
+                coverage mix rather than a summed score or a complete vulnerability census.
+              width: full
+  columns:
+  - name: nvd_cve_observation_key
+    description: Stable hash of the NVD source system, CVE identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Nvd cve observation key
+          hidden: true
+  - name: source_system
+    description: Raw source relation identifier that supplied the CVE observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source system
+          hidden: false
+  - name: cve_id
+    description: CVE identifier assigned to the vulnerability record by the NVD source.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct cve
+            description: Distinct `cve_id` values by `cvss_severity` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Cve id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the CVE record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_name
+    description: Upstream source label carried by the NVD record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: published_at
+    description: UTC timestamp when the vulnerability was published according to NVD.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Published at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: last_modified_at
+    description: UTC timestamp when NVD last modified the vulnerability record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Last modified at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: status
+    description: NVD lifecycle status reported for the vulnerability record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status
+          hidden: false
+  - name: description
+    description: Vulnerability description text reported by NVD.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Description
+          hidden: true
+  - name: cvss_version
+    description: Common Vulnerability Scoring System version reported for the score.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Cvss version
+          hidden: false
+  - name: cvss_score
+    description: Numeric CVSS base score reported for the vulnerability, when available.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          avg_cvss_score:
+            type: average
+            label: Average CVSS score
+            description: Average non-null reported `cvss_score` among matching observations. Because the
+              mart retains repeated observations, this is observation-weighted and can overweight records
+              polled more often.
+            format: '0.00'
+        dimension:
+          type: number
+          label: Cvss score
+          hidden: false
+          format: '#,##0.00'
+  - name: cvss_severity
+    description: Severity label associated with the reported CVSS score, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Cvss severity
+          hidden: false
+  - name: cvss_vector
+    description: CVSS vector string describing the reported score, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Cvss vector
+          hidden: false
+  - name: cwes
+    description: JSON array of Common Weakness Enumeration identifiers reported for the vulnerability.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Cwes
+          hidden: true
+          sql: CAST(${TABLE}.cwes AS VARCHAR)
+  - name: reference_count
+    description: Number of references reported by NVD for the vulnerability.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Reference count
+          hidden: false
+          format: '#,##0'
+  - name: source_identifier
+    description: NVD source identifier that reported or assigned the vulnerability record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source identifier
+          hidden: false
+  - name: source_row_id
+    description: Raw load row identifier for the retained CVE observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained CVE observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw record content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

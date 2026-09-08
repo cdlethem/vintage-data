@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_wikimedia_change_observation_event_at_day
+          yRef:
+            field: fct_wikimedia_change_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event at (Day)
+      yAxis:
+      - name: Distinct change
+    layout:
+      xField: fct_wikimedia_change_observation_event_at_day
+      yField:
+      - fct_wikimedia_change_observation_distinct_entities
+  type: cartesian
+description: Distinct `change_id` values whose Wikimedia event falls on each UTC day. This is a short
+  five-day event-time slice rather than a long historical trend; absent event days are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_wikimedia_change_observation_event_at_day
+  exploreName: fct_wikimedia_change_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_wikimedia_change_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_wikimedia_change_observation_event_at_day
+  tableCalculations: []
+name: Wikimedia changes by event day
+slug: fct-wikimedia-change-observation-changes-by-event-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_wikimedia_change_observation_event_at_day
+  - fct_wikimedia_change_observation_distinct_entities
+tableName: fct_wikimedia_change_observation
+version: 1

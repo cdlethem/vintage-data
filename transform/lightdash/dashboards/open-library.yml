@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 26937b28-a655-5906-8a1a-794cd41558b4
+    label: 'Open library change: Change kind'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_open_library_change_change_kind
+      tableName: fct_open_library_change
+    values: []
+  - disabled: true
+    id: 1079f34d-a9fd-5fd2-b39e-13c3246de8a5
+    label: 'Open library change: Author'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_open_library_change_author
+      tableName: fct_open_library_change
+    values: []
+  - disabled: true
+    id: 36be4d63-ef27-576e-9399-cd3f4f37a975
+    label: 'Open library change: Source name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_open_library_change_source_name
+      tableName: fct_open_library_change
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Open Library
+slug: open-library
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical history of changes published by the Open Library change feed. Each
+      row represents one change identifier from the Open Library source at one extractor observation time.
+      Insert-only copies of the same source, identifier, and observation timestamp are reduced to the
+      latest loaded copy while raw-load lineage is retained for replay and audit.
+
+
+      **Grain:** source_name, change_id, observed_at
+
+
+      **What changes here:** Open Library change volume rises and falls by operation kind while changed-key
+      depth shows how substantial each burst is.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `open_library` — licence: unstated (Internet Archive project); attribution required: False. Source
+      configuration: `extract/sources/open_library.yml`.'
+    hideFrame: false
+    title: Open library change
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Open library change — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct changes by source event day
+    chartSlug: fct-open-library-change-changes-by-event-day
+    hideTitle: false
+    title: Distinct changes by source event day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean changed keys per event day
+    chartSlug: fct-open-library-change-changed-keys-by-event-day
+    hideTitle: false
+    title: Mean changed keys per event day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Leading change kinds by event day
+    chartSlug: fct-open-library-change-changes-by-kind
+    hideTitle: false
+    title: Leading change kinds by event day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Changed-key depth by operation kind
+    chartSlug: fct-open-library-change-changed-key-depth-by-kind
+    hideTitle: false
+    title: Changed-key depth by operation kind
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Distinct changes present in each fetched batch
+    chartSlug: fct-open-library-change-observed-change-catalogue
+    hideTitle: false
+    title: Distinct changes present in each fetched batch
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Open library change — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct change by change kind
+    chartSlug: fct-open-library-change
+    hideTitle: false
+    title: Distinct change by change kind
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Open library change — observations
+    chartSlug: fct-open-library-change-details
+    hideTitle: false
+    title: Open library change — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

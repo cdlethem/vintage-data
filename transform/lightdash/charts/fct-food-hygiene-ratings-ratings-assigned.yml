@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_food_hygiene_ratings_rating_at_month
+          yRef:
+            field: fct_food_hygiene_ratings_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Rating at (Month)
+      yAxis:
+      - name: Distinct rating
+    layout:
+      xField: fct_food_hygiene_ratings_rating_at_month
+      yField:
+      - fct_food_hygiene_ratings_distinct_entities
+  type: cartesian
+description: Distinct `rating_id` values by the source `rating_at` month over the last ten years. This
+  is an event flow rather than a current catalogue level; the 1900-01-01 sentinel dates fall outside the
+  bounded window and absent months are not zero.
+metricQuery:
+  dimensions:
+  - fct_food_hygiene_ratings_rating_at_month
+  exploreName: fct_food_hygiene_ratings
+  filters:
+    dimensions:
+      and:
+      - id: ec0ec529-ac25-5ea7-94c7-bac1294df5c6
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_food_hygiene_ratings_rating_at
+        values:
+        - 3650
+      id: deaef1dd-5afb-5fdd-8b4f-1d42be904131
+  limit: 5000
+  metrics:
+  - fct_food_hygiene_ratings_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_food_hygiene_ratings_rating_at_month
+  tableCalculations: []
+name: Food ratings assigned per month
+slug: fct-food-hygiene-ratings-ratings-assigned
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_food_hygiene_ratings_rating_at_month
+  - fct_food_hygiene_ratings_distinct_entities
+tableName: fct_food_hygiene_ratings
+version: 1

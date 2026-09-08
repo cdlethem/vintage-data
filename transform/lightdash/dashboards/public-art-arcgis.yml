@@ -1,0 +1,154 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 59173c7a-f41c-5900-822c-e2818a789e4f
+    label: 'Public art arcgis: Category'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_public_art_arcgis_category
+      tableName: fct_public_art_arcgis
+    values: []
+  - disabled: true
+    id: 7808f46e-f375-56bc-bb39-5bd760b207f3
+    label: 'Public art arcgis: Status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_public_art_arcgis_status
+      tableName: fct_public_art_arcgis
+    values: []
+  - disabled: true
+    id: 20a5a95c-3bb2-5fa9-907f-41af5ad28eaa
+    label: 'Public art arcgis: Neighborhood'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_public_art_arcgis_neighborhood
+      tableName: fct_public_art_arcgis
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Public Art Arcgis
+slug: public-art-arcgis
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of public-art features published through ArcGIS. Each row is one
+      source feature at one extractor observation timestamp; repeated copies delivered by later raw loads
+      are reduced to the latest loaded record while raw-load lineage is retained. The two observed municipal
+      feeds are normalized into common artwork, location, geometry, and source-publisher fields without
+      discarding the source layer URL.
+
+
+      **Grain:** source_name, feature_id, observed_at
+
+
+      **What changes here:** how many artworks each municipal district keeps published, and when the publisher
+      revises those records.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `public_art_arcgis` — licence: municipal open-data terms; attribution required: True. Source configuration:
+      `extract/sources/public_art_arcgis.yml`.'
+    hideFrame: false
+    title: Public art arcgis
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Public art arcgis — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Artworks published per day
+    chartSlug: fct-public-art-arcgis-published-features
+    hideTitle: false
+    title: Artworks published per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Artists represented per day
+    chartSlug: fct-public-art-arcgis-artists-per-day
+    hideTitle: false
+    title: Artists represented per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Published artworks by district and collection, stacked per day
+    chartSlug: fct-public-art-arcgis-district-mix
+    hideTitle: false
+    title: Published artworks by district and collection, stacked per day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Artworks revised by the publisher each month, by district
+    chartSlug: fct-public-art-arcgis-revisions-by-district
+    hideTitle: false
+    title: Artworks revised by the publisher each month, by district
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Public art arcgis — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct feature by category
+    chartSlug: fct-public-art-arcgis
+    hideTitle: false
+    title: Distinct feature by category
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Public art arcgis — observations
+    chartSlug: fct-public-art-arcgis-details
+    hideTitle: false
+    title: Public art arcgis — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

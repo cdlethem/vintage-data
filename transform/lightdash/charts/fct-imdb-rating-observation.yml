@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_imdb_rating_observation_change_status
+          yRef:
+            field: fct_imdb_rating_observation_average_average_rating
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_imdb_rating_observation_change_status
+      yField:
+      - fct_imdb_rating_observation_average_average_rating
+  type: cartesian
+description: Mean observed average rating by `change_status` in the selected observation window. IMDb
+  average title rating reported at observation time, on a zero-to-ten scale. Each retained observation
+  has equal weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+  measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_imdb_rating_observation_change_status
+  exploreName: fct_imdb_rating_observation
+  filters:
+    dimensions:
+      and:
+      - id: 6a24b418-1100-5c35-a985-86fe36dea0d9
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_imdb_rating_observation_observed_at
+        values:
+        - 30
+      id: 8a642efd-b48e-584e-92ef-c18c29b82a0b
+  limit: 20
+  metrics:
+  - fct_imdb_rating_observation_average_average_rating
+  sorts:
+  - descending: true
+    fieldId: fct_imdb_rating_observation_average_average_rating
+  tableCalculations: []
+name: Mean observed average rating by change status
+slug: fct-imdb-rating-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_imdb_rating_observation_change_status
+  - fct_imdb_rating_observation_average_average_rating
+tableName: fct_imdb_rating_observation
+version: 1

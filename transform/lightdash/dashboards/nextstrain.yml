@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 7cedc5b3-7ab4-5106-9e30-cde70172729e
+    label: 'Nextstrain sequence observation: Clade'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nextstrain_sequence_observation_clade
+      tableName: fct_nextstrain_sequence_observation
+    values: []
+  - disabled: true
+    id: 2e7721a2-2921-5edf-a328-68cf84aeb068
+    label: 'Nextstrain sequence observation: Subclade'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nextstrain_sequence_observation_subclade
+      tableName: fct_nextstrain_sequence_observation
+    values: []
+  - disabled: true
+    id: 94df5a3c-561a-5b20-9d98-63201b61745d
+    label: 'Nextstrain sequence observation: Region'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nextstrain_sequence_observation_region
+      tableName: fct_nextstrain_sequence_observation
+    values: []
+  - disabled: true
+    id: 80edbb68-bc97-50a9-9309-7c31040c85d2
+    label: 'Nextstrain sequence observation: Date inferred'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nextstrain_sequence_observation_date_inferred
+      tableName: fct_nextstrain_sequence_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Nextstrain
+slug: nextstrain
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of Nextstrain phylogenetic sequence observations. Each row represents
+      one source, sequence identifier, and extractor fetch timestamp, retaining the reported sample, tree,
+      clade, geography, mutation, and provenance attributes together with complete load lineage. Because
+      the raw source is append-only, repeated copies of a source sequence at the same fetch timestamp
+      are reduced to the latest loaded record.
+
+
+      **Grain:** source, sequence_id, fetched_at
+
+
+      **What changes here:** how sampled sequence volume, genetic divergence, clades, and regions shift
+      through time.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `nextstrain` — licence: Nextstrain data CC-BY; GISAID-sourced builds carry GISAID''s stricter
+      terms — check meta.data_provenance; attribution required: True. Source configuration: `extract/sources/nextstrain.yml`.'
+    hideFrame: false
+    title: Nextstrain sequence observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Nextstrain sequence observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct sequences by sample month
+    chartSlug: fct-nextstrain-sequence-observation-sampled-sequences
+    hideTitle: false
+    title: Distinct sequences by sample month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean genetic divergence by sample month
+    chartSlug: fct-nextstrain-sequence-observation-divergence-by-month
+    hideTitle: false
+    title: Mean genetic divergence by sample month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Sampled sequences by leading clade
+    chartSlug: fct-nextstrain-sequence-observation-clade-trajectories
+    hideTitle: false
+    title: Sampled sequences by leading clade
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Sampled sequence composition by region
+    chartSlug: fct-nextstrain-sequence-observation-regional-composition
+    hideTitle: false
+    title: Sampled sequence composition by region
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Nextstrain sequence observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct sequence by clade
+    chartSlug: fct-nextstrain-sequence-observation
+    hideTitle: false
+    title: Distinct sequence by clade
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Nextstrain sequence observation — observations
+    chartSlug: fct-nextstrain-sequence-observation-details
+    hideTitle: false
+    title: Nextstrain sequence observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

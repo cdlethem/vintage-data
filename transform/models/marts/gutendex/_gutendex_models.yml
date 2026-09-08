@@ -1,0 +1,312 @@
+version: 2
+models:
+- name: fct_gutendex_book_snapshot
+  description: Daily physical history of Project Gutenberg book records returned by the Gutendex feed.
+    Each row represents one book identifier observed at one fetched_at timestamp, retaining catalog metadata
+    and raw-load lineage; repeated ingestion of the same source, book, and observation timestamp is reduced
+    to the latest loaded copy.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, book_id, fetched_at
+      label: Gutendex book snapshot
+      group_label: Gutendex
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: gutendex_book_snapshot_key
+      vintage:
+        visualization:
+          dimension: copyright
+          metric: distinct_entities
+          time: fetched_at
+          window_days: 30
+          title: Distinct book by copyright
+          description: Distinct `book_id` values by `copyright` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - fetched_at
+          - book_id
+          - copyright
+          - source_loaded_at
+          sources:
+          - '`gutendex` — licence: the catalog metadata is Gutendex''s own; the underlying texts are Project
+            Gutenberg public domain; attribution required: False. Source configuration: `extract/sources/gutendex.yml`.'
+          analysis:
+            headline: how the size and reported download level of the Gutendex catalog change across fetch
+              days.
+            event_time: fetched_at
+            grain: DAY
+            controls:
+            - copyright
+            - source
+            - title
+            trends:
+            - slug: books-by-fetch-day
+              kind: total
+              metric: distinct_entities
+              time: fetched_at
+              grain: DAY
+              title: Distinct books in each daily snapshot
+              description: Distinct `book_id` values present in each Gutendex fetch day. This is a catalog
+                level rather than a publication flow because the publisher supplies no source event date;
+                days without a successful fetch are absent rather than zero.
+              width: half
+            - slug: downloads-by-fetch-day
+              kind: total
+              metric: average_downloads
+              time: fetched_at
+              grain: DAY
+              title: Mean reported downloads per fetched book
+              description: Average `download_count` across books in each fetch day. This is a publisher-
+                reported snapshot measure with each retained book observation equally weighted, not a sum of
+                downloads or a cumulative flow; absent fetch days are absent rather than zero.
+              width: half
+            - slug: books-by-copyright
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: copyright
+              top_n: 2
+              time: fetched_at
+              grain: DAY
+              title: Snapshot books by copyright flag
+              description: Distinct `book_id` values per fetch day pivoted by the Gutendex `copyright` flag.
+                The current five-day extract has one observed False category, so no remainder is aggregated
+                and a missing category is absent rather than zero.
+              width: full
+            - slug: download-composition
+              kind: composition
+              metric: average_downloads
+              breakdown: copyright
+              top_n: 2
+              time: fetched_at
+              grain: DAY
+              title: Mean downloads by copyright mix
+              description: Average reported `download_count` per fetch day stacked by `copyright`. The source
+                currently contains only False, so this single segment describes the observed catalog and is
+                not a public-versus-copyrighted comparison.
+              width: full
+  columns:
+  - name: gutendex_book_snapshot_key
+    description: Stable hash of the Gutendex source, book identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Gutendex book snapshot key
+          hidden: true
+  - name: source
+    description: Source identifier supplied by the Gutendex extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: book_id
+    description: Project Gutenberg book identifier supplied by Gutendex.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct book
+            description: Distinct `book_id` values by `copyright` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Book id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp when the extractor observed this book record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: title
+    description: Book title supplied by Gutendex at observation time.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: authors
+    description: JSON array of author objects supplied by Gutendex.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Authors
+          hidden: true
+          sql: CAST(${TABLE}.authors AS VARCHAR)
+  - name: author_years
+    description: JSON array of author birth and death years supplied by Gutendex.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Author years
+          hidden: true
+          sql: CAST(${TABLE}.author_years AS VARCHAR)
+  - name: languages
+    description: JSON array of language codes associated with the book.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Languages
+          hidden: true
+          sql: CAST(${TABLE}.languages AS VARCHAR)
+  - name: subjects
+    description: JSON array of subject labels associated with the book.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Subjects
+          hidden: true
+          sql: CAST(${TABLE}.subjects AS VARCHAR)
+  - name: bookshelves
+    description: JSON array of Gutendex bookshelf labels associated with the book.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Bookshelves
+          hidden: true
+          sql: CAST(${TABLE}.bookshelves AS VARCHAR)
+  - name: download_count
+    description: Project Gutenberg download count reported by Gutendex at observation time.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Download count
+          hidden: false
+          format: '#,##0'
+        metrics:
+          average_downloads:
+            type: average
+            label: Mean downloads
+            description: Average publisher-reported `download_count` among matching Gutendex book
+              observations. Each retained book observation has equal weight; this is a snapshot level, not
+              an additive or cumulative download total.
+            format: '#,##0.00'
+  - name: copyright
+    description: Whether Gutendex marks the book as copyrighted at observation time.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Copyright
+          hidden: false
+  - name: text_url
+    description: URL for the UTF-8 plain-text book representation supplied by Gutendex.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Text url
+          hidden: false
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load operation that inserted the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained book observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained book observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Content hash of the retained raw book observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

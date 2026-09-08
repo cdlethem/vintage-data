@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ietf_datatracker_event_observation_observed_at_day
+          yRef:
+            field: fct_ietf_datatracker_event_observation_distinct_drafts
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct draft
+    layout:
+      xField: fct_ietf_datatracker_event_observation_observed_at_day
+      yField:
+      - fct_ietf_datatracker_event_observation_distinct_drafts
+  type: cartesian
+description: Distinct non-null `draft_name` values in each extractor observation day. This is a coverage
+  level of the feed snapshot, not a count of new drafts; days without a successful observation are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_ietf_datatracker_event_observation_observed_at_day
+  exploreName: fct_ietf_datatracker_event_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ietf_datatracker_event_observation_distinct_drafts
+  sorts:
+  - descending: false
+    fieldId: fct_ietf_datatracker_event_observation_observed_at_day
+  tableCalculations: []
+name: Drafts represented per observation day
+slug: fct-ietf-datatracker-event-observation-draft-coverage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ietf_datatracker_event_observation_observed_at_day
+  - fct_ietf_datatracker_event_observation_distinct_drafts
+tableName: fct_ietf_datatracker_event_observation
+version: 1

@@ -1,0 +1,336 @@
+version: 2
+models:
+- name: fct_celestrak_socrates_conjunction_events
+  description: Daily physical history of satellite conjunction events reported by the CelesTrak SOCRATES
+    feed. Each row is one conjunction event as observed at one extractor timestamp, retaining close-approach
+    measures and raw-load lineage for replay and audit.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: conjunction_id, observed_at
+      label: Celestrak socrates conjunction events
+      group_label: Celestrak socrates
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: conjunction_event_key
+      vintage:
+        visualization:
+          dimension: object_name_1
+          metric: max_max_probability
+          time: observed_at
+          window_days: 30
+          title: Maximum observed max probability by object name 1
+          description: Maximum observed max probability by `object_name_1` in the selected observation
+            window. Maximum predicted collision probability reported for the conjunction event. Uses the
+            largest retained value within each group and window, not the latest value or a sum of snapshots.
+          detail_fields:
+          - observed_at
+          - conjunction_id
+          - object_name_1
+          - max_probability
+          - source_loaded_at
+          sources:
+          - '`celestrak_socrates` — licence: unstated; attribution required: True. Source configuration:
+            `extract/sources/celestrak_socrates.yml`.'
+          analysis:
+            headline: how scheduled conjunction volume and close-approach risk vary across the eight-day TCA horizon.
+            event_time: tca
+            grain: DAY
+            controls:
+            - object_name_1
+            - object_name_2
+            trends:
+            - slug: daily-conjunctions
+              kind: total
+              metric: distinct_events
+              time: tca
+              grain: DAY
+              title: Conjunction events by closest-approach day
+              description: Distinct `conjunction_id` values scheduled on each `tca` day. This is event
+                volume on the publisher's closest-approach horizon, not extractor polling volume; days
+                with no scheduled events are absent rather than zero.
+              width: half
+            - slug: daily-risk-maximum
+              kind: total
+              metric: max_max_probability
+              time: tca
+              grain: DAY
+              title: Maximum collision probability by TCA day
+              description: Maximum reported `max_probability` among conjunction events on each `tca` day.
+                This is the highest predicted event risk per day, not a sum of probabilities or a latest
+                snapshot; days without events are absent.
+              width: half
+            - slug: daily-range
+              kind: total
+              metric: average_tca_range_km
+              time: tca
+              grain: DAY
+              title: Mean predicted separation by TCA day
+              description: Mean `tca_range_km` among conjunction events on each `tca` day. Each event has
+                equal weight, so this is a typical predicted separation level rather than a summed
+                distance; days without events are absent rather than zero.
+              width: half
+            - slug: risk-by-primary-object
+              kind: breakdown
+              metric: max_max_probability
+              breakdown: object_name_1
+              top_n: 6
+              time: tca
+              grain: DAY
+              title: Maximum collision probability by primary object
+              description: Maximum reported `max_probability` per TCA day pivoted to the six
+                `object_name_1` values with the largest observed metric. Remaining objects are excluded
+                rather than aggregated; each line represents scheduled event risk, not object counts.
+              width: full
+            - slug: events-by-secondary-object
+              kind: composition
+              metric: distinct_events
+              breakdown: object_name_2
+              top_n: 8
+              time: tca
+              grain: DAY
+              title: Conjunction mix by secondary object
+              description: Distinct `conjunction_id` values per TCA day stacked by the eight
+                `object_name_2` values with the largest observed event counts. Remaining objects are
+                excluded rather than aggregated; the stack is event composition, not collision probability.
+              width: full
+  columns:
+  - name: conjunction_event_key
+    description: Stable hash of the conjunction identifier and SOCRATES observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Conjunction event key
+          hidden: true
+  - name: source
+    description: Upstream source label identifying the CelesTrak SOCRATES feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: conjunction_id
+    description: Stable source identifier composed of the two NORAD catalog identifiers and the time of
+      closest approach.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Conjunction id
+          hidden: false
+        metrics:
+          distinct_events:
+            type: count_distinct
+            label: Distinct conjunction events
+            description: Distinct non-null `conjunction_id` values scheduled in each TCA time and
+              dimension group. This counts events once and does not add collision probabilities.
+            format: '#,##0'
+
+  - name: observed_at
+    description: UTC timestamp when the SOCRATES conjunction snapshot was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: norad_id_1
+    description: NORAD catalog identifier for the first object in the conjunction event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Norad id 1
+          hidden: false
+  - name: object_name_1
+    description: CelesTrak object name for the first object in the conjunction event, including its operational-status
+      suffix when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Object name 1
+          hidden: false
+  - name: norad_id_2
+    description: NORAD catalog identifier for the second object in the conjunction event.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Norad id 2
+          hidden: false
+  - name: object_name_2
+    description: CelesTrak object name for the second object in the conjunction event, including its operational-status
+      suffix when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Object name 2
+          hidden: false
+  - name: tca
+    description: UTC time of closest approach for the two tracked objects.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Tca
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: tca_range_km
+    description: Predicted separation distance at closest approach, in kilometers.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Tca range km
+          hidden: false
+          format: '#,##0.00'
+        metrics:
+          average_tca_range_km:
+            type: average
+            label: Mean TCA range km
+            description: Mean predicted `tca_range_km` among conjunction events in each TCA time and
+              dimension group. Each event has equal weight; this is a reported separation level rather
+              than a sum of distances.
+            format: '#,##0.00'
+  - name: tca_relative_speed_km_s
+    description: Predicted relative speed at closest approach, in kilometers per second.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Tca relative speed km s
+          hidden: false
+          format: '#,##0.00'
+          name: tca_relative_s_f97ff7
+  - name: max_probability
+    description: Maximum predicted collision probability reported for the conjunction event.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          max_max_probability:
+            type: max
+            label: Maximum observed max probability
+            description: Maximum observed max probability by `object_name_1` in the selected observation
+              window. Maximum predicted collision probability reported for the conjunction event. Uses
+              the largest retained value within each group and window, not the latest value or a sum of
+              snapshots.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Max probability
+          hidden: false
+          format: '#,##0.00'
+  - name: dilution_km
+    description: Dilution distance reported for the conjunction event, in kilometers.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Dilution km
+          hidden: false
+          format: '#,##0.00'
+  - name: _batch_id
+    description: Identifier of the raw load batch that supplied this event observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted this event observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing this event observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of this event observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this event observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: source_2059e1
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw event content for lineage and replay.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

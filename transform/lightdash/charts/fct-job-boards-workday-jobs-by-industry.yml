@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_job_boards_workday_observed_at_day
+          yRef:
+            field: fct_job_boards_workday_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct job
+    layout:
+      stack: true
+      xField: fct_job_boards_workday_observed_at_day
+      yField:
+      - fct_job_boards_workday_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values per observation day stacked by the eight largest `company_industry`
+  values. Remaining industries are excluded rather than grouped, and the stack is a level of the republished
+  catalogue rather than a flow of new jobs.
+metricQuery:
+  dimensions:
+  - fct_job_boards_workday_observed_at_day
+  - fct_job_boards_workday_company_industry
+  exploreName: fct_job_boards_workday
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_boards_workday_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_boards_workday_distinct_entities
+  - descending: false
+    fieldId: fct_job_boards_workday_observed_at_day
+  tableCalculations: []
+name: Catalogue mix by company industry
+pivotConfig:
+  columns:
+  - fct_job_boards_workday_company_industry
+slug: fct-job-boards-workday-jobs-by-industry
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_boards_workday_observed_at_day
+  - fct_job_boards_workday_company_industry
+  - fct_job_boards_workday_distinct_entities
+tableName: fct_job_boards_workday
+version: 1

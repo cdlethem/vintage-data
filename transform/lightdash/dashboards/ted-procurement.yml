@@ -1,0 +1,154 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: af8d9dbb-254b-5030-aafc-816dea0c31b7
+    label: 'Ted procurement: Notice type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ted_procurement_notice_type
+      tableName: fct_ted_procurement
+    values: []
+  - disabled: true
+    id: 8963f74d-49d9-59ce-83c6-0008c88fee9e
+    label: 'Ted procurement: Buyer name lang'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ted_procurement_buyer_name_lang
+      tableName: fct_ted_procurement
+    values: []
+  - disabled: true
+    id: 21e48dcc-c22c-52b1-96f3-2081e8bb4868
+    label: 'Ted procurement: Buyer name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_ted_procurement_buyer_name
+      tableName: fct_ted_procurement
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Ted Procurement
+slug: ted-procurement
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of procurement notices published through the Tenders Electronic Daily
+      (TED) source. Each row is one notice identifier observed at one extractor timestamp, retaining the
+      source''s publication, buyer, category, value, deadline, and place-of-performance attributes with
+      raw-load lineage. Repeated rows for the same notice and observation timestamp are reduced to the
+      latest loaded record.
+
+
+      **Grain:** notice_id, observed_at
+
+
+      **What changes here:** how procurement notice volume and reported values shift across publication
+      days and notice categories.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `ted_procurement` — licence: EU Official Journal — open reuse with source acknowledgement; attribution
+      required: True. Source configuration: `extract/sources/ted_procurement.yml`.'
+    hideFrame: false
+    title: Ted procurement
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Ted procurement — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Procurement notices published per day
+    chartSlug: fct-ted-procurement-published-notices
+    hideTitle: false
+    title: Procurement notices published per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported procurement value per publication day
+    chartSlug: fct-ted-procurement-published-value
+    hideTitle: false
+    title: Mean reported procurement value per publication day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Published notices by notice type
+    chartSlug: fct-ted-procurement-notice-type-mix
+    hideTitle: false
+    title: Published notices by notice type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Published notices by buyer-name language
+    chartSlug: fct-ted-procurement-buyer-language-trends
+    hideTitle: false
+    title: Published notices by buyer-name language
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Ted procurement — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct notice by notice type
+    chartSlug: fct-ted-procurement
+    hideTitle: false
+    title: Distinct notice by notice type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Ted procurement — observations
+    chartSlug: fct-ted-procurement-details
+    hideTitle: false
+    title: Ted procurement — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

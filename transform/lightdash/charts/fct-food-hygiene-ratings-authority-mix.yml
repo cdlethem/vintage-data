@@ -1,0 +1,68 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_food_hygiene_ratings_rating_at_month
+          yRef:
+            field: fct_food_hygiene_ratings_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Rating at (Month)
+      yAxis:
+      - name: Distinct rating
+    layout:
+      stack: true
+      xField: fct_food_hygiene_ratings_rating_at_month
+      yField:
+      - fct_food_hygiene_ratings_distinct_entities
+  type: cartesian
+description: Distinct `rating_id` values per source `rating_at` month over the last ten years, stacked
+  for the eight largest local authorities. Remaining authorities are excluded rather than combined; stacked
+  bars show mix, not a national total.
+metricQuery:
+  dimensions:
+  - fct_food_hygiene_ratings_rating_at_month
+  - fct_food_hygiene_ratings_local_authority_name
+  exploreName: fct_food_hygiene_ratings
+  filters:
+    dimensions:
+      and:
+      - id: 5af8db2e-38c9-5fdf-96db-d87d5232275d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_food_hygiene_ratings_rating_at
+        values:
+        - 3650
+      id: 053ddb19-f6d2-5dd7-a73c-4f5ca49467a5
+  limit: 5000
+  metrics:
+  - fct_food_hygiene_ratings_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_food_hygiene_ratings_distinct_entities
+  - descending: false
+    fieldId: fct_food_hygiene_ratings_rating_at_month
+  tableCalculations: []
+name: Ratings assigned by local authority
+pivotConfig:
+  columns:
+  - fct_food_hygiene_ratings_local_authority_name
+slug: fct-food-hygiene-ratings-authority-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_food_hygiene_ratings_rating_at_month
+  - fct_food_hygiene_ratings_local_authority_name
+  - fct_food_hygiene_ratings_distinct_entities
+tableName: fct_food_hygiene_ratings
+version: 1

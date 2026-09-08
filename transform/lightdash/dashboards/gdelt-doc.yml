@@ -1,0 +1,154 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 92e69150-ab92-585f-8b7f-191d8e690896
+    label: 'Gdelt document observation: Language'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gdelt_document_observation_language
+      tableName: fct_gdelt_document_observation
+    values: []
+  - disabled: true
+    id: 8d46628a-b47f-5c85-af02-ce36c0ce458a
+    label: 'Gdelt document observation: Source country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gdelt_document_observation_source_country
+      tableName: fct_gdelt_document_observation
+    values: []
+  - disabled: true
+    id: be0f8db9-c91d-5acd-aeec-320e7539a7ba
+    label: 'Gdelt document observation: Domain'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_gdelt_document_observation_domain
+      tableName: fct_gdelt_document_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Gdelt Doc
+slug: gdelt-doc
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly incremental fact of GDELT DOC article observations. Each row represents one document
+      identifier observed at one extractor fetch timestamp, retaining the article metadata and the raw-load
+      lineage for replay and audit. Replayed copies of the same document observation are reduced to the
+      latest loaded record; this model does not infer article sentiment, topic, or canonical identity
+      beyond the supplied URL.
+
+
+      **Grain:** document_id, observed_at
+
+
+      **What changes here:** how the two-day document feed changes in volume, language, and publisher
+      domain mix.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `gdelt_doc` — licence: GDELT — free for research/non-commercial use; attribution required: True.
+      Source configuration: `extract/sources/gdelt_doc.yml`.'
+    hideFrame: false
+    title: Gdelt document observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Gdelt document observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct documents observed per day
+    chartSlug: fct-gdelt-document-observation-documents-observed
+    hideTitle: false
+    title: Distinct documents observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct publisher domains per publication day
+    chartSlug: fct-gdelt-document-observation-domains-published
+    hideTitle: false
+    title: Distinct publisher domains per publication day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Documents published per day by language
+    chartSlug: fct-gdelt-document-observation-documents-by-language
+    hideTitle: false
+    title: Documents published per day by language
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Published document mix by source country
+    chartSlug: fct-gdelt-document-observation-documents-by-country
+    hideTitle: false
+    title: Published document mix by source country
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Gdelt document observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct document by language
+    chartSlug: fct-gdelt-document-observation
+    hideTitle: false
+    title: Distinct document by language
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Gdelt document observation — observations
+    chartSlug: fct-gdelt-document-observation-details
+    hideTitle: false
+    title: Gdelt document observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

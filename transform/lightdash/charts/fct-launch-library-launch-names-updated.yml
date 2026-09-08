@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_launch_library_last_updated_day
+          yRef:
+            field: fct_launch_library_distinct_names
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Last updated (Day)
+      yAxis:
+      - name: Distinct launch names
+    layout:
+      xField: fct_launch_library_last_updated_day
+      yField:
+      - fct_launch_library_distinct_names
+  type: cartesian
+description: Distinct non-null `name` values on each upstream `last_updated` day. This shows the naming
+  footprint of revisions, not the number of launches scheduled — quiet days are absent rather than zero
+  and one launch name can recur across observations.
+metricQuery:
+  dimensions:
+  - fct_launch_library_last_updated_day
+  exploreName: fct_launch_library
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_launch_library_distinct_names
+  sorts:
+  - descending: false
+    fieldId: fct_launch_library_last_updated_day
+  tableCalculations: []
+name: Distinct launch names updated per day
+slug: fct-launch-library-launch-names-updated
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_launch_library_last_updated_day
+  - fct_launch_library_distinct_names
+tableName: fct_launch_library
+version: 1

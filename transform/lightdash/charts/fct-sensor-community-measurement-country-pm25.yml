@@ -1,0 +1,65 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_sensor_community_measurement_observed_at_day
+          yRef:
+            field: fct_sensor_community_measurement_average_pm25
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed pm25
+    layout:
+      stack: true
+      xField: fct_sensor_community_measurement_observed_at_day
+      yField:
+      - fct_sensor_community_measurement_average_pm25
+  type: cartesian
+description: Mean reported PM2.5 per observation day stacked by the eight countries with the largest observed
+  series. The remaining countries are excluded rather than aggregated; this compares observation levels
+  and does not imply additive particulate mass.
+metricQuery:
+  dimensions:
+  - fct_sensor_community_measurement_observed_at_day
+  - fct_sensor_community_measurement_country
+  exploreName: fct_sensor_community_measurement
+  filters:
+    dimensions:
+      and:
+      - id: 812b286c-5aae-5696-8261-f9f97c22f8ba
+        operator: equals
+        target:
+          fieldId: fct_sensor_community_measurement_is_clean
+        values:
+        - true
+      id: 9bc0f76d-2ebc-533e-9039-47f311c06089
+  limit: 5000
+  metrics:
+  - fct_sensor_community_measurement_average_pm25
+  sorts:
+  - descending: true
+    fieldId: fct_sensor_community_measurement_average_pm25
+  - descending: false
+    fieldId: fct_sensor_community_measurement_observed_at_day
+  tableCalculations: []
+name: PM2.5 mix across the largest countries
+pivotConfig:
+  columns:
+  - fct_sensor_community_measurement_country
+slug: fct-sensor-community-measurement-country-pm25
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sensor_community_measurement_observed_at_day
+  - fct_sensor_community_measurement_country
+  - fct_sensor_community_measurement_average_pm25
+tableName: fct_sensor_community_measurement
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_certificate_transparency_certificate_observation_nb_month
+          yRef:
+            field: fct_certificate_transparency_certificate_observation_serials
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Not before (Month)
+      yAxis:
+      - name: Distinct serial numbers
+    layout:
+      xField: fct_certificate_transparency_certificate_observation_nb_month
+      yField:
+      - fct_certificate_transparency_certificate_observation_serials
+  type: cartesian
+description: Distinct non-null `serial_number` values by certificate `not_before` month — this diversity
+  measure can differ from certificate identifiers when records share serial values. Empty months are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_certificate_transparency_certificate_observation_nb_month
+  exploreName: fct_certificate_transparency_certificate_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_certificate_transparency_certificate_observation_serials
+  sorts:
+  - descending: false
+    fieldId: fct_certificate_transparency_certificate_observation_nb_month
+  tableCalculations: []
+name: Issuer serial numbers per issuance month
+slug: fct-certificate-transparency-certificate-observation-serial-diversity
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_certificate_transparency_certificate_observation_nb_month
+  - fct_certificate_transparency_certificate_observation_serials
+tableName: fct_certificate_transparency_certificate_observation
+version: 1

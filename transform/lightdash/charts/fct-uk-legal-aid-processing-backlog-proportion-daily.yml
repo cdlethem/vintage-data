@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_legal_aid_processing_current_processing_date_day
+          yRef:
+            field: fct_uk_legal_aid_processing_m_1e33419f
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Current processing date (Day)
+      yAxis:
+      - name: Mean observed backlog older than current processing date pct
+    layout:
+      xField: fct_uk_legal_aid_processing_current_processing_date_day
+      yField:
+      - fct_uk_legal_aid_processing_m_1e33419f
+  type: cartesian
+description: Mean non-null `backlog_older_than_current_processing_date_pct` by publisher `current_processing_date`.
+  The proportion is observation-weighted and only 40 of 100 rows report it, so null dates are absent rather
+  than zero and polling frequency can affect the mean; this is a level, not an additive backlog count.
+metricQuery:
+  dimensions:
+  - fct_uk_legal_aid_processing_current_processing_date_day
+  exploreName: fct_uk_legal_aid_processing
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_uk_legal_aid_processing_m_1e33419f
+  sorts:
+  - descending: false
+    fieldId: fct_uk_legal_aid_processing_current_processing_date_day
+  tableCalculations: []
+name: Mean backlog proportion by current processing date
+slug: fct-uk-legal-aid-processing-backlog-proportion-daily
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_legal_aid_processing_current_processing_date_day
+  - fct_uk_legal_aid_processing_m_1e33419f
+tableName: fct_uk_legal_aid_processing
+version: 1

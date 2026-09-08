@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_bike_station_status_daily_network
+          yRef:
+            field: fct_bike_station_status_daily_average_avg_bikes_available
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_bike_station_status_daily_network
+      yField:
+      - fct_bike_station_status_daily_average_avg_bikes_available
+  type: cartesian
+description: Mean observed avg bikes available by `network` in the selected observation window. Average
+  reported available-bike count on the date. Each retained observation has equal weight; polling frequency
+  and repeated snapshots can affect the mean. This is not a latest-value measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_bike_station_status_daily_network
+  exploreName: fct_bike_station_status_daily
+  filters:
+    dimensions:
+      and:
+      - id: c554a390-c5f9-5a93-8c89-74c5eb711784
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_bike_station_status_daily_observation_date
+        values:
+        - 30
+      id: cff98c20-6a26-5a8c-901b-af108599c8fa
+  limit: 20
+  metrics:
+  - fct_bike_station_status_daily_average_avg_bikes_available
+  sorts:
+  - descending: true
+    fieldId: fct_bike_station_status_daily_average_avg_bikes_available
+  tableCalculations: []
+name: Mean observed avg bikes available by network
+slug: fct-bike-station-status-daily
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_bike_station_status_daily_network
+  - fct_bike_station_status_daily_average_avg_bikes_available
+tableName: fct_bike_station_status_daily
+version: 1

@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_chess_archives_games_ended_at_month
+          yRef:
+            field: fct_chess_archives_games_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Ended at (Month)
+      yAxis:
+      - name: Distinct game
+    layout:
+      xField: fct_chess_archives_games_ended_at_month
+      yField:
+      - fct_chess_archives_games_distinct_entities
+  type: cartesian
+description: Distinct `game_id` values by `ended_at` month. This is a completed-game flow rather than
+  a snapshot level; months without archived games are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_chess_archives_games_ended_at_month
+  exploreName: fct_chess_archives_games
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_chess_archives_games_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_chess_archives_games_ended_at_month
+  tableCalculations: []
+name: Distinct games ended per month
+slug: fct-chess-archives-games-games-ended
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_chess_archives_games_ended_at_month
+  - fct_chess_archives_games_distinct_entities
+tableName: fct_chess_archives_games
+version: 1

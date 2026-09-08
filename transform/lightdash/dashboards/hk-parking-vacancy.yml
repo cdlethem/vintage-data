@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 39f4f8ea-a412-55e2-8a00-9c7f4ed1e9f9
+    label: 'Hk parking vacancy: Vehicle type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_hk_parking_vacancy_vehicle_type
+      tableName: fct_hk_parking_vacancy
+    values: []
+  - disabled: true
+    id: 79326499-7233-5236-a351-d6f22a3b7aff
+    label: 'Hk parking vacancy: Vacancy type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_hk_parking_vacancy_vacancy_type
+      tableName: fct_hk_parking_vacancy
+    values: []
+  - disabled: true
+    id: 211fd988-f68d-5428-a0de-012513943687
+    label: 'Hk parking vacancy: Category'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_hk_parking_vacancy_category
+      tableName: fct_hk_parking_vacancy
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Hk Parking Vacancy
+slug: hk-parking-vacancy
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical observation fact for Hong Kong parking-vacancy snapshots. Each row
+      records one parking facility, vehicle type, vacancy category, and extractor observation time, retaining
+      publisher counts and raw load lineage. Repeated copies of the same observation grain retain the
+      latest loaded row.
+
+
+      **Grain:** source, park_id, vehicle_type, vacancy_type, category, observed_at
+
+
+      **What changes here:** how parking vacancy levels vary by vehicle class and when the publisher refreshes
+      facility records.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `hk_parking_vacancy` — licence: DATA.GOV.HK reuse terms; attribution required: True. Source configuration:
+      `extract/sources/hk_parking_vacancy.yml`.'
+    hideFrame: false
+    title: Hk parking vacancy
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Hk parking vacancy — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean vacancy reported on publisher update days
+    chartSlug: fct-hk-parking-vacancy-updated-vacancy
+    hideTitle: false
+    title: Mean vacancy reported on publisher update days
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean vacancy observed each collection day
+    chartSlug: fct-hk-parking-vacancy-observed-vacancy
+    hideTitle: false
+    title: Mean vacancy observed each collection day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Vacancy level by vehicle type
+    chartSlug: fct-hk-parking-vacancy-vehicle-vacancy-mix
+    hideTitle: false
+    title: Vacancy level by vehicle type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Distinct facilities represented by vehicle type
+    chartSlug: fct-hk-parking-vacancy-vehicle-coverage
+    hideTitle: false
+    title: Distinct facilities represented by vehicle type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Hk parking vacancy — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed vacancy count by vehicle type
+    chartSlug: fct-hk-parking-vacancy
+    hideTitle: false
+    title: Mean observed vacancy count by vehicle type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Hk parking vacancy — observations
+    chartSlug: fct-hk-parking-vacancy-details
+    hideTitle: false
+    title: Hk parking vacancy — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

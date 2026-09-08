@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 9b5cfc18-ef0d-54c5-85b8-8ea4e18b64ce
+    label: 'Manifold market observation: Outcome type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_manifold_market_observation_outcome_type
+      tableName: fct_manifold_market_observation
+    values: []
+  - disabled: true
+    id: 98d7dbf2-1514-50e0-b64f-1121838d81e6
+    label: 'Manifold market observation: Creator'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_manifold_market_observation_creator
+      tableName: fct_manifold_market_observation
+    values: []
+  - disabled: true
+    id: 921624ff-1e1b-5bdb-a3de-a9bd33f4de9e
+    label: 'Manifold market observation: Is resolved'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_manifold_market_observation_is_resolved
+      tableName: fct_manifold_market_observation
+    values: []
+  - disabled: true
+    id: 78af311b-d4e7-5d57-9c0a-ddd2487f82c2
+    label: 'Manifold market observation: Resolution'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_manifold_market_observation_resolution
+      tableName: fct_manifold_market_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Manifold Markets
+slug: manifold-markets
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical observation fact for prediction markets returned by Manifold Markets.
+      Each row represents one market at one extractor observation timestamp, retaining market state, probability
+      and activity measures, resolution fields, and raw-load lineage. The incremental table preserves
+      append-only observation history without rescanning prior snapshots on each load; repeated raw copies
+      of the same observation are reduced to the latest loaded row.
+
+
+      **Grain:** source_name, market_id, observed_at
+
+
+      **What changes here:** how market participation and implied probabilities shift across observation
+      days and scheduled close months.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `manifold_markets` — licence: Manifold Markets API — public; attribution required: False. Source
+      configuration: `extract/sources/manifold_markets.yml`.'
+    hideFrame: false
+    title: Manifold market observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Manifold market observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct markets observed per day
+    chartSlug: fct-manifold-market-observation-market-level
+    hideTitle: false
+    title: Distinct markets observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean market-implied probability per day
+    chartSlug: fct-manifold-market-observation-probability-level
+    hideTitle: false
+    title: Mean market-implied probability per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Markets by scheduled close month and outcome type
+    chartSlug: fct-manifold-market-observation-scheduled-close-mix
+    hideTitle: false
+    title: Markets by scheduled close month and outcome type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean 24-hour volume by outcome type
+    chartSlug: fct-manifold-market-observation-activity-by-type
+    hideTitle: false
+    title: Mean 24-hour volume by outcome type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Manifold market observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed probability by question
+    chartSlug: fct-manifold-market-observation
+    hideTitle: false
+    title: Mean observed probability by question
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Manifold market observation — observations
+    chartSlug: fct-manifold-market-observation-details
+    hideTitle: false
+    title: Manifold market observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

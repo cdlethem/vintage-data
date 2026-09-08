@@ -1,0 +1,276 @@
+version: 2
+models:
+- name: fct_nc_lab_turnaround
+  description: Deduplicated laboratory turnaround observations from the North Carolina agronomic laboratory
+    feed. Each row records the observed turnaround estimate for one report identifier at one source fetch
+    timestamp, with typed duration measures and load lineage retained for audit and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, turnaround_id, fetched_at
+      label: Nc lab turnaround
+      group_label: Nc lab turnaround
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: turnaround_key
+      vintage:
+        visualization:
+          dimension: lab
+          metric: average_processing_days
+          time: fetched_at
+          window_days: 30
+          title: Mean observed processing days by lab
+          description: Mean observed processing days by `lab` in the selected observation window. Typed
+            processing duration in days reported by the upstream feed. Each retained observation has equal
+            weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+            measure or an additive total.
+          detail_fields:
+          - fetched_at
+          - turnaround_id
+          - lab
+          - processing_days
+          - source_loaded_at
+          sources:
+          - '`nc_lab_turnaround` — licence: North Carolina public-information terms; attribution required:
+            True. Source configuration: `extract/sources/nc_lab_turnaround.yml`.'
+          analysis:
+            headline: how the observed turnaround level and processing-day estimates vary across labs and report types.
+            event_time: fetched_at
+            grain: DAY
+            controls:
+            - lab
+            - report_type
+            - processing_time
+            trends:
+            - slug: observed-turnarounds
+              kind: total
+              metric: distinct_turnarounds
+              time: fetched_at
+              grain: DAY
+              title: Distinct turnaround reports per fetch day
+              description: Distinct `turnaround_id` values present in each daily feed fetch. This is a
+                snapshot level of the publisher's current estimates rather than a flow of completed reports;
+                days without a fetch are absent rather than zero.
+              width: half
+            - slug: processing-level
+              kind: total
+              metric: average_processing_days
+              time: fetched_at
+              grain: DAY
+              title: Mean observed processing days per fetch day
+              description: Mean `processing_days` reported across retained observations on each fetch day.
+                Each observation has equal weight, so repeated snapshots and polling frequency can affect
+                the mean; this is not an additive total or latest-value measure.
+              width: half
+            - slug: lab-processing
+              kind: breakdown
+              metric: average_processing_days
+              breakdown: lab
+              top_n: 6
+              time: fetched_at
+              grain: DAY
+              title: Processing days by laboratory
+              description: Mean reported `processing_days` per fetch day, compared across the six observed
+                `lab` values. The selected top six are retained; any additional lab would be excluded rather
+                than aggregated.
+              width: full
+            - slug: report-type-mix
+              kind: composition
+              metric: distinct_turnarounds
+              breakdown: report_type
+              top_n: 3
+              time: fetched_at
+              grain: DAY
+              title: Observed turnaround reports by type
+              description: Distinct `turnaround_id` values per fetch day stacked by `report_type`. Bars show
+                the composition of observed reports without summing the repeated processing-day snapshot
+                level; the three largest report types are shown and the remainder is excluded rather than
+                aggregated.
+              width: full
+  columns:
+  - name: turnaround_key
+    description: Stable hash of source, report identifier, and fetch timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Turnaround key
+          hidden: true
+  - name: source
+    description: Upstream feed identifier for the laboratory turnaround observations.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: turnaround_id
+    description: Upstream report identifier for the turnaround observation.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_turnarounds:
+            type: count_distinct
+            label: Distinct turnaround reports
+            description: Distinct `turnaround_id` values present in each fetched feed snapshot. Repeated
+              observations across fetches count once within each time and filter group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Turnaround id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp when the upstream feed observation was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: lab
+    description: Laboratory service area reported by the upstream feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Lab
+          hidden: false
+  - name: report_type
+    description: Type of report for which the turnaround estimate applies.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Report type
+          hidden: false
+  - name: processing_time
+    description: Human-readable upstream processing duration label.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Processing time
+          hidden: false
+  - name: processing_days
+    description: Typed processing duration in days reported by the upstream feed.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_processing_days:
+            type: average
+            label: Mean observed processing days
+            description: Mean observed processing days by `lab` in the selected observation window. Typed
+              processing duration in days reported by the upstream feed. Each retained observation has
+              equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+              a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Processing days
+          hidden: false
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date associated with the upstream observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: file_row_num
+    description: One-based row position in the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: File row num
+          hidden: true
+          format: '#,##0'
+  - name: batch_id
+    description: Identifier of the raw load batch that produced this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Batch id
+          hidden: true
+  - name: load_id
+    description: Identifier of the load job that inserted this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the raw observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Stable hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

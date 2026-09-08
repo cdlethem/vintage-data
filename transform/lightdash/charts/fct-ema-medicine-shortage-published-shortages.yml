@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ema_medicine_shortage_first_published_date_month
+          yRef:
+            field: fct_ema_medicine_shortage_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: First published date (Month)
+      yAxis:
+      - name: Distinct shortage
+    layout:
+      xField: fct_ema_medicine_shortage_first_published_date_month
+      yField:
+      - fct_ema_medicine_shortage_distinct_entities
+  type: cartesian
+description: Distinct `shortage_id` values by EMA `first_published_date` month. This is a source publication
+  flow rather than a current catalogue level; months without a publication are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_ema_medicine_shortage_first_published_date_month
+  exploreName: fct_ema_medicine_shortage
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ema_medicine_shortage_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_ema_medicine_shortage_first_published_date_month
+  tableCalculations: []
+name: Shortages first published each month
+slug: fct-ema-medicine-shortage-published-shortages
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ema_medicine_shortage_first_published_date_month
+  - fct_ema_medicine_shortage_distinct_entities
+tableName: fct_ema_medicine_shortage
+version: 1

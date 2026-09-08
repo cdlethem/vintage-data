@@ -1,0 +1,360 @@
+version: 2
+models:
+- name: fct_imdb_processing_times
+  description: Hourly physical history of IMDb contribution processing observations. Each row records
+    one processing category at one upstream fetch timestamp, with queue age, service-level tier, backlog
+    count, and raw-load lineage retained for operational monitoring and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, processing_type, observed_at
+      label: Imdb processing times
+      group_label: Imdb processing times
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: processing_time_key
+      vintage:
+        visualization:
+          dimension: processing_type
+          metric: average_queue_age_days
+          time: observed_at
+          window_days: 30
+          title: Mean observed queue age days by processing type
+          description: Mean observed queue age days by `processing_type` in the selected observation window.
+            Calendar days between the oldest waiting item and the observation date. Each retained observation
+            has equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+            a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - processing_time_key
+          - processing_type
+          - queue_age_days
+          - source_loaded_at
+          sources:
+          - '`imdb_processing_times` — licence: IMDb non-commercial-use terms; attribution required: True.
+            Source configuration: `extract/sources/imdb_processing_times.yml`.'
+          analysis:
+            headline: how the IMDb processing queue changes by observation day and service tier, with publisher
+              dates offering only a short recent window.
+            event_time: publisher_updated_date
+            grain: DAY
+            controls:
+            - data_type
+            - sla
+            - oldest_item
+            trends:
+            - slug: queue-age-by-day
+              kind: total
+              metric: average_queue_age_days
+              time: observed_at
+              grain: DAY
+              title: Mean queue age by observation day
+              description: Mean `queue_age_days` across processing categories observed on each extractor day.
+                This is a snapshot level with equal weight per retained row, not an additive backlog; the four
+                observed days are sparse history and absent days are absent rather than zero.
+              width: half
+            - slug: backlog-by-day
+              kind: total
+              metric: average_unprocessed_items
+              time: observed_at
+              grain: DAY
+              title: Mean unprocessed items by observation day
+              description: Mean `unprocessed_items` across categories in each extractor observation day. This
+                is a snapshot level rather than a sum of queues; polling and repeated snapshots can affect
+                the mean, and absent days are absent rather than zero.
+              width: half
+            - slug: queue-age-by-sla
+              kind: breakdown
+              metric: average_queue_age_days
+              breakdown: sla
+              top_n: 3
+              time: observed_at
+              grain: DAY
+              title: Queue age by service tier
+              description: Mean queue age per observation day for each of the three IMDb service tiers.
+                Repeated category snapshots have equal row weight; all three tiers are shown and missing
+                observation days are absent rather than zero.
+              width: full
+            - slug: backlog-by-sla
+              kind: breakdown
+              metric: average_unprocessed_items
+              breakdown: sla
+              top_n: 3
+              time: observed_at
+              grain: DAY
+              title: Mean backlog by service tier
+              description: Mean unprocessed items per observation day for the three service tiers. This
+                compares category levels rather than adding queues; absent observation days are absent
+                rather than zero.
+              width: full
+            - slug: publisher-update-age
+              kind: total
+              metric: average_queue_age_days
+              time: publisher_updated_date
+              grain: DAY
+              title: Queue age by publisher update day
+              description: Mean queue age grouped by the publisher update date attached to each record.
+                This source date spans only four recent days, so it is not durable historical depth and
+                should be read as a recent level; absent dates are absent rather than zero.
+              width: half
+  columns:
+  - name: processing_time_key
+    description: Stable hash of the upstream source, processing category, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Processing time key
+          hidden: true
+  - name: source
+    description: Upstream source label reporting the IMDb processing queue.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: processing_type
+    description: IMDb contribution processing category identifier from the upstream feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Processing type
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the upstream processing status was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: data_type
+    description: Upstream data-type label for the processing category.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Data type
+          hidden: false
+  - name: sla
+    description: Service-level tier assigned to the processing category by IMDb.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sla
+          hidden: false
+  - name: oldest_item
+    description: Human-readable upstream date for the oldest item waiting in the category.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Oldest item
+          hidden: false
+  - name: oldest_item_date
+    description: Parsed calendar date of the oldest waiting item, when the upstream value is valid.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Oldest item date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: unprocessed_items
+    description: Number of items currently unprocessed in the category.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_unprocessed_items:
+            type: average
+            label: Mean unprocessed items
+            description: Mean `unprocessed_items` across processing categories in each observation time and
+              dimension group. This is a snapshot backlog level with equal weight per retained row, not an
+              additive queue total; polling frequency and repeated snapshots can affect the mean.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Unprocessed items
+          hidden: false
+          format: '#,##0'
+  - name: publisher_updated_at
+    description: Human-readable upstream date on which the publisher last updated the category.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publisher updated at
+          hidden: false
+  - name: publisher_updated_date
+    description: Parsed calendar date of the publisher update, when the upstream value is valid.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Publisher updated date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: queue_age_days
+    description: Calendar days between the oldest waiting item and the observation date.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_queue_age_days:
+            type: average
+            label: Mean observed queue age days
+            description: Mean observed queue age days by `processing_type` in the selected observation
+              window. Calendar days between the oldest waiting item and the observation date. Each retained
+              observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+              This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Queue age days
+          hidden: false
+          format: '#,##0'
+  - name: source_row_id
+    description: Load-layer row identifier for the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing this processing observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: file_row_num
+    description: One-based row position of this observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: File row num
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the extraction and load layers.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source file began.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: batch_id
+    description: Identifier of the raw load batch that produced this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Batch id
+          hidden: true
+  - name: load_id
+    description: Identifier of the load operation that inserted this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_bike_station_status_daily_observation_date_day
+          yRef:
+            field: fct_bike_station_status_daily_average_avg_bikes_available
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observation date (Day)
+      yAxis:
+      - name: Mean observed avg bikes available
+    layout:
+      xField: fct_bike_station_status_daily_observation_date_day
+      yField:
+      - fct_bike_station_status_daily_average_avg_bikes_available
+  type: cartesian
+description: Mean of station-level `avg_bikes_available` values on each observation date. Each station-day
+  contributes one value, so this is a daily availability level rather than trips or an additive bike count;
+  dates without station aggregates are absent.
+metricQuery:
+  dimensions:
+  - fct_bike_station_status_daily_observation_date_day
+  exploreName: fct_bike_station_status_daily
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_bike_station_status_daily_average_avg_bikes_available
+  sorts:
+  - descending: false
+    fieldId: fct_bike_station_status_daily_observation_date_day
+  tableCalculations: []
+name: Mean daily available bikes
+slug: fct-bike-station-status-daily-daily-bike-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_bike_station_status_daily_observation_date_day
+  - fct_bike_station_status_daily_average_avg_bikes_available
+tableName: fct_bike_station_status_daily
+version: 1

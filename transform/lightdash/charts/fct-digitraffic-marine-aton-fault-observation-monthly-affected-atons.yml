@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_digitraffic_marine_aton_fault_observation_entered_at_month
+          yRef:
+            field: fct_digitraffic_marine_aton_fault_observation_distinct_atons
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Entered at (Month)
+      yAxis:
+      - name: Distinct affected aids
+    layout:
+      xField: fct_digitraffic_marine_aton_fault_observation_entered_at_month
+      yField:
+      - fct_digitraffic_marine_aton_fault_observation_distinct_atons
+  type: cartesian
+description: Distinct `aton_id` values associated with faults by `entered_at` month. This shows affected-aid
+  breadth rather than fault volume; sparse months without entered faults are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_digitraffic_marine_aton_fault_observation_entered_at_month
+  exploreName: fct_digitraffic_marine_aton_fault_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_digitraffic_marine_aton_fault_observation_distinct_atons
+  sorts:
+  - descending: false
+    fieldId: fct_digitraffic_marine_aton_fault_observation_entered_at_month
+  tableCalculations: []
+name: Aids affected by entered faults per month
+slug: fct-digitraffic-marine-aton-fault-observation-monthly-affected-atons
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_digitraffic_marine_aton_fault_observation_entered_at_month
+  - fct_digitraffic_marine_aton_fault_observation_distinct_atons
+tableName: fct_digitraffic_marine_aton_fault_observation
+version: 1

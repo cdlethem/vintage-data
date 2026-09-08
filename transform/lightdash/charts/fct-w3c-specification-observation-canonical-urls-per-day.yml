@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_w3c_specification_observation_observed_at_day
+          yRef:
+            field: fct_w3c_specification_observation_distinct_urls
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct specification URLs
+    layout:
+      xField: fct_w3c_specification_observation_observed_at_day
+      yField:
+      - fct_w3c_specification_observation_distinct_urls
+  type: cartesian
+description: Distinct `specification_url` values present on each extractor observation day. This level
+  moves when canonical links are added or removed, not when a specification is published; days without
+  a successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_w3c_specification_observation_observed_at_day
+  exploreName: fct_w3c_specification_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_w3c_specification_observation_distinct_urls
+  sorts:
+  - descending: false
+    fieldId: fct_w3c_specification_observation_observed_at_day
+  tableCalculations: []
+name: Canonical specification URLs per day
+slug: fct-w3c-specification-observation-canonical-urls-per-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_w3c_specification_observation_observed_at_day
+  - fct_w3c_specification_observation_distinct_urls
+tableName: fct_w3c_specification_observation
+version: 1

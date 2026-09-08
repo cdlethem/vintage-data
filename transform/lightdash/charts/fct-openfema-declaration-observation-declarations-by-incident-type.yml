@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_openfema_declaration_observation_incident_begin_at_day
+          yRef:
+            field: fct_openfema_declaration_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Incident begin at (Day)
+      yAxis:
+      - name: Distinct declaration
+    layout:
+      stack: true
+      xField: fct_openfema_declaration_observation_incident_begin_at_day
+      yField:
+      - fct_openfema_declaration_observation_distinct_entities
+  type: cartesian
+description: Distinct `declaration_id` values by FEMA `incident_type` on the incident start day. The four
+  incident types are all retained; stacked bars show mix rather than a continuous flow, and days without
+  declarations are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_openfema_declaration_observation_incident_begin_at_day
+  - fct_openfema_declaration_observation_incident_type
+  exploreName: fct_openfema_declaration_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_openfema_declaration_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_openfema_declaration_observation_distinct_entities
+  - descending: false
+    fieldId: fct_openfema_declaration_observation_incident_begin_at_day
+  tableCalculations: []
+name: Declaration mix by incident start day and type
+pivotConfig:
+  columns:
+  - fct_openfema_declaration_observation_incident_type
+slug: fct-openfema-declaration-observation-declarations-by-incident-type
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openfema_declaration_observation_incident_begin_at_day
+  - fct_openfema_declaration_observation_incident_type
+  - fct_openfema_declaration_observation_distinct_entities
+tableName: fct_openfema_declaration_observation
+version: 1

@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical history of changes published by the Open Library change feed. Each
+  row represents one change identifier from the Open Library source at one extractor observation time.
+  Insert-only copies of the same source, identifier, and observation timestamp are reduced to the latest
+  loaded copy while raw-load lineage is retained for replay and audit.
+metricQuery:
+  dimensions: &id001
+  - fct_open_library_change_observed_at
+  - fct_open_library_change_change_id
+  - fct_open_library_change_change_kind
+  - fct_open_library_change_source_loaded_at
+  exploreName: fct_open_library_change
+  filters:
+    dimensions:
+      and:
+      - id: 79ef3129-ec6b-5f5c-8ecf-8dbe1c0e1112
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_open_library_change_observed_at
+        values:
+        - 30
+      id: d1c55985-1159-5a49-8668-27b8e51b157c
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_open_library_change_observed_at
+  tableCalculations: []
+name: Open library change — observations
+slug: fct-open-library-change-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_open_library_change
+version: 1

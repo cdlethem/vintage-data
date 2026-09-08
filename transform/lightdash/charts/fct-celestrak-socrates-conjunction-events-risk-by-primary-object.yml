@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_celestrak_socrates_conjunction_events_tca_day
+          yRef:
+            field: fct_celestrak_socrates_conjunction_events_max_max_probability
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Tca (Day)
+      yAxis:
+      - name: Maximum observed max probability
+    layout:
+      xField: fct_celestrak_socrates_conjunction_events_tca_day
+      yField:
+      - fct_celestrak_socrates_conjunction_events_max_max_probability
+  type: cartesian
+description: Maximum reported `max_probability` per TCA day pivoted to the six `object_name_1` values
+  with the largest observed metric. Remaining objects are excluded rather than aggregated; each line represents
+  scheduled event risk, not object counts.
+metricQuery:
+  dimensions:
+  - fct_celestrak_socrates_conjunction_events_tca_day
+  - fct_celestrak_socrates_conjunction_events_object_name_1
+  exploreName: fct_celestrak_socrates_conjunction_events
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_celestrak_socrates_conjunction_events_max_max_probability
+  sorts:
+  - descending: true
+    fieldId: fct_celestrak_socrates_conjunction_events_max_max_probability
+  - descending: false
+    fieldId: fct_celestrak_socrates_conjunction_events_tca_day
+  tableCalculations: []
+name: Maximum collision probability by primary object
+pivotConfig:
+  columns:
+  - fct_celestrak_socrates_conjunction_events_object_name_1
+slug: fct-celestrak-socrates-conjunction-events-risk-by-primary-object
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_celestrak_socrates_conjunction_events_tca_day
+  - fct_celestrak_socrates_conjunction_events_object_name_1
+  - fct_celestrak_socrates_conjunction_events_max_max_probability
+tableName: fct_celestrak_socrates_conjunction_events
+version: 1

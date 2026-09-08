@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 1284b29e-ca7f-51a8-b107-5e57171618c1
+    label: 'Job feed arbeitnow: Employment type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_arbeitnow_employment_type
+      tableName: fct_job_feed_arbeitnow
+    values: []
+  - disabled: true
+    id: fff2502f-ba84-51e4-896c-4d6a9fca9ba3
+    label: 'Job feed arbeitnow: Is remote'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_arbeitnow_is_remote
+      tableName: fct_job_feed_arbeitnow
+    values: []
+  - disabled: true
+    id: 38bf841c-50c7-58d2-8e4d-40d59f3daa5a
+    label: 'Job feed arbeitnow: Location country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_arbeitnow_location_country
+      tableName: fct_job_feed_arbeitnow
+    values: []
+  - disabled: true
+    id: 7ba313ea-92f1-5cfb-9213-da338ecb20c4
+    label: 'Job feed arbeitnow: Company'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_arbeitnow_company
+      tableName: fct_job_feed_arbeitnow
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Feed Arbeitnow
+slug: job-feed-arbeitnow
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of Arbeitnow job observations. Each row represents one Arbeitnow
+      job identifier in one extractor response at an observation timestamp; repeated ingestion of the
+      same observation is reduced to the latest loaded copy while load-layer lineage is retained for audit
+      and replay.
+
+
+      **Grain:** source, job_id, observed_at
+
+
+      **What changes here:** how the Arbeitnow catalogue level and job mix change across observation days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_feed_arbeitnow` — licence: public Arbeitnow Job Board API; attribution required: True. Source
+      configuration: `extract/sources/job_feed_arbeitnow.yml`.'
+    hideFrame: false
+    title: Job feed arbeitnow
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed arbeitnow — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct jobs observed per day
+    chartSlug: fct-job-feed-arbeitnow-jobs-observed
+    hideTitle: false
+    title: Distinct jobs observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Hiring companies observed per day
+    chartSlug: fct-job-feed-arbeitnow-companies-observed
+    hideTitle: false
+    title: Hiring companies observed per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct jobs by remote status
+    chartSlug: fct-job-feed-arbeitnow-jobs-by-remote-status
+    hideTitle: false
+    title: Distinct jobs by remote status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Source-posted jobs by employment type
+    chartSlug: fct-job-feed-arbeitnow-posted-jobs-by-employment
+    hideTitle: false
+    title: Source-posted jobs by employment type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed arbeitnow — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-feed-arbeitnow
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Job feed arbeitnow — observations
+    chartSlug: fct-job-feed-arbeitnow-details
+    hideTitle: false
+    title: Job feed arbeitnow — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

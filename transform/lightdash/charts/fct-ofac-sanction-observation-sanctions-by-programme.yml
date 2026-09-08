@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_ofac_sanction_observation_observed_at_day
+          yRef:
+            field: fct_ofac_sanction_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct sanction
+    layout:
+      stack: true
+      xField: fct_ofac_sanction_observation_observed_at_day
+      yField:
+      - fct_ofac_sanction_observation_distinct_entities
+  type: cartesian
+description: Distinct `sanction_id` values per observation day stacked by the eight most common programme-array
+  values. The remaining programme combinations are excluded rather than aggregated, and a record can carry
+  multiple programmes so segments are not additive.
+metricQuery:
+  dimensions:
+  - fct_ofac_sanction_observation_observed_at_day
+  - fct_ofac_sanction_observation_programs
+  exploreName: fct_ofac_sanction_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ofac_sanction_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_ofac_sanction_observation_distinct_entities
+  - descending: false
+    fieldId: fct_ofac_sanction_observation_observed_at_day
+  tableCalculations: []
+name: Snapshot mix across leading sanction programmes
+pivotConfig:
+  columns:
+  - fct_ofac_sanction_observation_programs
+slug: fct-ofac-sanction-observation-sanctions-by-programme
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ofac_sanction_observation_observed_at_day
+  - fct_ofac_sanction_observation_programs
+  - fct_ofac_sanction_observation_distinct_entities
+tableName: fct_ofac_sanction_observation
+version: 1

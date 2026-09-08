@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: f7e96cb5-1fe4-56cd-89ab-d4fe6a58141e
+    label: 'Queue times: Park'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_queue_times_park
+      tableName: fct_queue_times
+    values: []
+  - disabled: true
+    id: 9104f3f8-ea3b-5003-98f0-c45903446628
+    label: 'Queue times: Land'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_queue_times_land
+      tableName: fct_queue_times
+    values: []
+  - disabled: true
+    id: a1db77dd-2d2a-5810-a3e3-85c1954153b4
+    label: 'Queue times: Ride'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_queue_times_ride
+      tableName: fct_queue_times
+    values: []
+  - disabled: true
+    id: 6f2970dd-60e8-5ec3-9b3e-d9eefd4f4ce2
+    label: 'Queue times: Is open'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_queue_times_is_open
+      tableName: fct_queue_times
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Queue Times
+slug: queue-times
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical history of theme-park attraction queue observations. Each row records
+      one ride''s reported wait at a source snapshot, including park, land, operating status, update timestamp,
+      and raw-load lineage. Repeated insert-only raw records for the same source, ride, and observation
+      timestamp are reduced to the latest loaded record.
+
+
+      **Grain:** source, park_id, land_id, ride_id, observed_at
+
+
+      **What changes here:** how reported queue levels change across rides and park lands during each
+      observation day, while source updates reveal short-term movement.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `queue_times` — licence: Queue-Times.com — free, attribution required; attribution required: True.
+      Source configuration: `extract/sources/queue_times.yml`.'
+    hideFrame: false
+    title: Queue times
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Queue times — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean queue wait observed each day
+    chartSlug: fct-queue-times-observed-queue-level
+    hideTitle: false
+    title: Mean queue wait observed each day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct rides reporting each day
+    chartSlug: fct-queue-times-rides-observed
+    hideTitle: false
+    title: Distinct rides reporting each day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean queue wait by land
+    chartSlug: fct-queue-times-wait-by-land
+    hideTitle: false
+    title: Mean queue wait by land
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Rides with source updates by land
+    chartSlug: fct-queue-times-updates-by-land
+    hideTitle: false
+    title: Rides with source updates by land
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Queue times — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed wait minutes by ride
+    chartSlug: fct-queue-times
+    hideTitle: false
+    title: Mean observed wait minutes by ride
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Queue times — observations
+    chartSlug: fct-queue-times-details
+    hideTitle: false
+    title: Queue times — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

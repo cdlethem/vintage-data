@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical history of Finnish Digitraffic AtoN fault observations. Each row is
+  one reported fault identified by its upstream source and fault identifier at an extractor observation
+  timestamp; normalized fault status, AtoN and fairway attributes, point coordinates, and raw-load lineage
+  are retained for analysis and replay auditing.
+metricQuery:
+  dimensions: &id001
+  - fct_digitraffic_marine_aton_fault_observation_ob_a6ee05
+  - fct_digitraffic_marine_aton_fault_observation_fault_id
+  - fct_digitraffic_marine_aton_fault_observation_fault_type
+  - fct_digitraffic_marine_aton_fault_observation_so_2059e1
+  exploreName: fct_digitraffic_marine_aton_fault_observation
+  filters:
+    dimensions:
+      and:
+      - id: 4b6ab292-0dc6-5b22-a2eb-13dce8d0cbe8
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_digitraffic_marine_aton_fault_observation_ob_a6ee05
+        values:
+        - 30
+      id: b4d05244-4a83-59f6-a33e-3f877b3473fc
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_digitraffic_marine_aton_fault_observation_ob_a6ee05
+  tableCalculations: []
+name: Digitraffic marine aton fault observation — observations
+slug: fct-digitraffic-marine-aton-fault-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_digitraffic_marine_aton_fault_observation
+version: 1

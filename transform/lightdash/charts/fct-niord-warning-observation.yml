@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_niord_warning_observation_warning_type
+          yRef:
+            field: fct_niord_warning_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_niord_warning_observation_warning_type
+      yField:
+      - fct_niord_warning_observation_distinct_entities
+  type: cartesian
+description: Distinct `warning_id` values by `warning_type` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_niord_warning_observation_warning_type
+  exploreName: fct_niord_warning_observation
+  filters:
+    dimensions:
+      and:
+      - id: b6cebc2e-8b39-567c-bc48-7bd94ac6de13
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_niord_warning_observation_observed_at
+        values:
+        - 30
+      id: 5d1a829c-2e83-5165-88a3-1f967f4924a3
+  limit: 20
+  metrics:
+  - fct_niord_warning_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_niord_warning_observation_distinct_entities
+  tableCalculations: []
+name: Distinct warning by warning type
+slug: fct-niord-warning-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_niord_warning_observation_warning_type
+  - fct_niord_warning_observation_distinct_entities
+tableName: fct_niord_warning_observation
+version: 1

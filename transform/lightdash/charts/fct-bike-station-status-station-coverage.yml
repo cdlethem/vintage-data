@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_bike_station_status_observed_at_hour
+          yRef:
+            field: fct_bike_station_status_distinct_stations
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct stations
+    layout:
+      xField: fct_bike_station_status_observed_at_hour
+      yField:
+      - fct_bike_station_status_distinct_stations
+  type: cartesian
+description: Distinct `station_id` values represented in each extractor observation hour. This is a published
+  station-roster level rather than a trip flow — polling gaps are absent rather than zero, and station
+  counts can change when an operator changes its feed.
+metricQuery:
+  dimensions:
+  - fct_bike_station_status_observed_at_hour
+  exploreName: fct_bike_station_status
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_bike_station_status_distinct_stations
+  sorts:
+  - descending: false
+    fieldId: fct_bike_station_status_observed_at_hour
+  tableCalculations: []
+name: Stations reporting by observation hour
+slug: fct-bike-station-status-station-coverage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_bike_station_status_observed_at_hour
+  - fct_bike_station_status_distinct_stations
+tableName: fct_bike_station_status
+version: 1

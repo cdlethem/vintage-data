@@ -1,0 +1,172 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 488681ab-6ecb-5baa-a03a-b6f7310b0f80
+    label: 'Codeforces submission observation: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_codeforces_submission_observation_source
+      tableName: fct_codeforces_submission_observation
+    values: []
+  - disabled: true
+    id: 32d6fc82-4952-5c4d-9cd3-a2734b7cad48
+    label: 'Codeforces submission observation: Verdict'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_codeforces_submission_observation_verdict
+      tableName: fct_codeforces_submission_observation
+    values: []
+  - disabled: true
+    id: 336ff7c5-8073-5d69-a431-a87f2a0f4ced
+    label: 'Codeforces submission observation: Language'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_codeforces_submission_observation_language
+      tableName: fct_codeforces_submission_observation
+    values: []
+  - disabled: true
+    id: f623b234-7d32-5e09-baef-2432cde14191
+    label: 'Codeforces submission observation: Problem rating'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_codeforces_submission_observation_problem_rating
+      tableName: fct_codeforces_submission_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Codeforces
+slug: codeforces
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of Codeforces recent-submission observations. Each row represents
+      one submission from the Codeforces feed at one extractor observation timestamp; repeated ingestion
+      of the same observation is reduced to the latest loaded row while status changes across observations
+      remain visible. Raw-load lineage is retained for replay and audit.
+
+
+      **Grain:** source, submission_id, observed_at
+
+
+      **What changes here:** how submission activity, judge outcomes, and participating users change across
+      the recent Codeforces feed.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `codeforces` — licence: Codeforces API — keyless, public; attribution required: False. Source
+      configuration: `extract/sources/codeforces.yml`.'
+    hideFrame: false
+    title: Codeforces submission observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Codeforces submission observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Submissions made per day
+    chartSlug: fct-codeforces-submission-observation-daily-submissions
+    hideTitle: false
+    title: Submissions made per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Active submitters per day
+    chartSlug: fct-codeforces-submission-observation-daily-users
+    hideTitle: false
+    title: Active submitters per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Submissions by judge verdict
+    chartSlug: fct-codeforces-submission-observation-verdict-trajectories
+    hideTitle: false
+    title: Submissions by judge verdict
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Submission language mix
+    chartSlug: fct-codeforces-submission-observation-language-composition
+    hideTitle: false
+    title: Submission language mix
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Feed submissions observed per day
+    chartSlug: fct-codeforces-submission-observation-observed-volume
+    hideTitle: false
+    title: Feed submissions observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Codeforces submission observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct submission by verdict
+    chartSlug: fct-codeforces-submission-observation
+    hideTitle: false
+    title: Distinct submission by verdict
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Codeforces submission observation — observations
+    chartSlug: fct-codeforces-submission-observation-details
+    hideTitle: false
+    title: Codeforces submission observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

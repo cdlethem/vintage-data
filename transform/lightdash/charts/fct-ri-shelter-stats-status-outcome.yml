@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_ri_shelter_stats_observed_at_day
+          yRef:
+            field: fct_ri_shelter_stats_average_outcome_count
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed outcome count
+    layout:
+      stack: true
+      xField: fct_ri_shelter_stats_observed_at_day
+      yField:
+      - fct_ri_shelter_stats_average_outcome_count
+  type: cartesian
+description: Mean reported `outcome_count` per observation day stacked by the two publisher status codes.
+  The stack compares snapshot levels and is not an additive event total; absent status-days are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_ri_shelter_stats_observed_at_day
+  - fct_ri_shelter_stats_status
+  exploreName: fct_ri_shelter_stats
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ri_shelter_stats_average_outcome_count
+  sorts:
+  - descending: true
+    fieldId: fct_ri_shelter_stats_average_outcome_count
+  - descending: false
+    fieldId: fct_ri_shelter_stats_observed_at_day
+  tableCalculations: []
+name: Outcome level mix by shelter status
+pivotConfig:
+  columns:
+  - fct_ri_shelter_stats_status
+slug: fct-ri-shelter-stats-status-outcome
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ri_shelter_stats_observed_at_day
+  - fct_ri_shelter_stats_status
+  - fct_ri_shelter_stats_average_outcome_count
+tableName: fct_ri_shelter_stats
+version: 1

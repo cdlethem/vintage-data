@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_texas_scratch_prize_observation_publisher_updated_at_day
+          yRef:
+            field: fct_texas_scratch_prize_observation_average_total_prizes
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Publisher updated at (Day)
+      yAxis:
+      - name: Mean original prizes per level
+    layout:
+      stack: true
+      xField: fct_texas_scratch_prize_observation_publisher_updated_at_day
+      yField:
+      - fct_texas_scratch_prize_observation_average_total_prizes
+  type: cartesian
+description: Average `total_prizes_in_level` per publisher update date stacked by ticket price. Bars show
+  the inventory mix across the eight most common price bands; smaller bands are excluded rather than aggregated
+  and repeated snapshots are not additive.
+metricQuery:
+  dimensions:
+  - fct_texas_scratch_prize_observation_publisher_updated_at_day
+  - fct_texas_scratch_prize_observation_ticket_price
+  exploreName: fct_texas_scratch_prize_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_texas_scratch_prize_observation_average_total_prizes
+  sorts:
+  - descending: true
+    fieldId: fct_texas_scratch_prize_observation_average_total_prizes
+  - descending: false
+    fieldId: fct_texas_scratch_prize_observation_publisher_updated_at_day
+  tableCalculations: []
+name: Prize inventory mix by ticket price
+pivotConfig:
+  columns:
+  - fct_texas_scratch_prize_observation_ticket_price
+slug: fct-texas-scratch-prize-observation-inventory-by-price
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_texas_scratch_prize_observation_publisher_updated_at_day
+  - fct_texas_scratch_prize_observation_ticket_price
+  - fct_texas_scratch_prize_observation_average_total_prizes
+tableName: fct_texas_scratch_prize_observation
+version: 1

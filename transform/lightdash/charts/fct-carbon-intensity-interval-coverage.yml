@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_carbon_intensity_observed_at_hour
+          yRef:
+            field: fct_carbon_intensity_distinct_intervals
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct intervals
+    layout:
+      xField: fct_carbon_intensity_observed_at_hour
+      yField:
+      - fct_carbon_intensity_distinct_intervals
+  type: cartesian
+description: Distinct `interval_id` values retained in each extractor observation hour. This is feed coverage
+  rather than energy volume — bursts or missing hours change the line, and an hour with no successful
+  extract is absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_carbon_intensity_observed_at_hour
+  exploreName: fct_carbon_intensity
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_carbon_intensity_distinct_intervals
+  sorts:
+  - descending: false
+    fieldId: fct_carbon_intensity_observed_at_hour
+  tableCalculations: []
+name: Intervals represented by observation hour
+slug: fct-carbon-intensity-interval-coverage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_carbon_intensity_observed_at_hour
+  - fct_carbon_intensity_distinct_intervals
+tableName: fct_carbon_intensity
+version: 1

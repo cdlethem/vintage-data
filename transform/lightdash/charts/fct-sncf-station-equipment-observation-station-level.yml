@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sncf_station_equipment_observation_observed_at_hour
+          yRef:
+            field: fct_sncf_station_equipment_observation_distinct_stations
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct stations
+    layout:
+      xField: fct_sncf_station_equipment_observation_observed_at_hour
+      yField:
+      - fct_sncf_station_equipment_observation_distinct_stations
+  type: cartesian
+description: Distinct `station_id` values represented in the catalogue at each observation hour. This
+  is a reporting-coverage level, not newly added stations; hours without a successful poll are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_sncf_station_equipment_observation_observed_at_hour
+  exploreName: fct_sncf_station_equipment_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sncf_station_equipment_observation_distinct_stations
+  sorts:
+  - descending: false
+    fieldId: fct_sncf_station_equipment_observation_observed_at_hour
+  tableCalculations: []
+name: Distinct stations represented each hour
+slug: fct-sncf-station-equipment-observation-station-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sncf_station_equipment_observation_observed_at_hour
+  - fct_sncf_station_equipment_observation_distinct_stations
+tableName: fct_sncf_station_equipment_observation
+version: 1

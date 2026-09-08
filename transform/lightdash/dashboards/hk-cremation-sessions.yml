@@ -1,0 +1,173 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: b9efed0c-c07b-51be-b4fc-c5d7c06fa076
+    label: 'Hk cremation sessions: Crematorium'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_hk_cremation_sessions_crematorium
+      tableName: fct_hk_cremation_sessions
+    values: []
+  - disabled: true
+    id: a74a9155-675e-527d-9d1c-6678e46d0270
+    label: 'Hk cremation sessions: Service state'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_hk_cremation_sessions_service_state
+      tableName: fct_hk_cremation_sessions
+    values: []
+  - disabled: true
+    id: dfc00ad0-976a-5889-87ac-fbe86b9c8cc1
+    label: 'Hk cremation sessions: Raw value'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_hk_cremation_sessions_raw_value
+      tableName: fct_hk_cremation_sessions
+    values: []
+  - disabled: true
+    id: 8b5cad03-694e-5b73-b313-6a9b15113050
+    label: 'Hk cremation sessions: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_hk_cremation_sessions_source
+      tableName: fct_hk_cremation_sessions
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Hk Cremation Sessions
+slug: hk-cremation-sessions
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical observation fact for the Hong Kong Food and Environmental Hygiene Department
+      cremation-session availability page. Each row records one crematorium and service date in one extractor
+      snapshot, retaining the published availability state, daily total, publisher update time, and raw
+      load lineage. Repeated copies of the same source, session identifier, and observation timestamp
+      retain the latest loaded row.
+
+
+      **Grain:** source, session_id, observed_at
+
+
+      **What changes here:** how published cremation availability and daily capacity vary across service
+      dates and crematoria.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `hk_cremation_sessions` — licence: FEHD terms; attribution required: True. Source configuration:
+      `extract/sources/hk_cremation_sessions.yml`.'
+    hideFrame: false
+    title: Hk cremation sessions
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Hk cremation sessions — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean available sessions by service date
+    chartSlug: fct-hk-cremation-sessions-availability-by-service-day
+    hideTitle: false
+    title: Mean available sessions by service date
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct sessions observed per fetch day
+    chartSlug: fct-hk-cremation-sessions-sessions-by-observation-day
+    hideTitle: false
+    title: Distinct sessions observed per fetch day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean availability by crematorium and service date
+    chartSlug: fct-hk-cremation-sessions-availability-by-crematorium
+    hideTitle: false
+    title: Mean availability by crematorium and service date
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Published daily capacity by crematorium
+    chartSlug: fct-hk-cremation-sessions-daily-capacity-composition
+    hideTitle: false
+    title: Published daily capacity by crematorium
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Mean availability by publisher update day
+    chartSlug: fct-hk-cremation-sessions-availability-by-publisher-update
+    hideTitle: false
+    title: Mean availability by publisher update day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Hk cremation sessions — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed available sessions by crematorium
+    chartSlug: fct-hk-cremation-sessions
+    hideTitle: false
+    title: Mean observed available sessions by crematorium
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Hk cremation sessions — observations
+    chartSlug: fct-hk-cremation-sessions-details
+    hideTitle: false
+    title: Hk cremation sessions — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

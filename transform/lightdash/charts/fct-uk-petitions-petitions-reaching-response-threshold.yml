@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_petitions_response_threshold_reached_at_week
+          yRef:
+            field: fct_uk_petitions_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Response threshold reached at (Week)
+      yAxis:
+      - name: Distinct petition
+    layout:
+      xField: fct_uk_petitions_response_threshold_reached_at_week
+      yField:
+      - fct_uk_petitions_distinct_entities
+  type: cartesian
+description: Distinct petitions whose publisher `response_threshold_reached_at` falls in each week. This
+  is a threshold-event flow; petitions without a recorded threshold timestamp are absent rather than counted
+  as zero.
+metricQuery:
+  dimensions:
+  - fct_uk_petitions_response_threshold_reached_at_week
+  exploreName: fct_uk_petitions
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_uk_petitions_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_uk_petitions_response_threshold_reached_at_week
+  tableCalculations: []
+name: Petitions reaching response threshold each week
+slug: fct-uk-petitions-petitions-reaching-response-threshold
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_petitions_response_threshold_reached_at_week
+  - fct_uk_petitions_distinct_entities
+tableName: fct_uk_petitions
+version: 1

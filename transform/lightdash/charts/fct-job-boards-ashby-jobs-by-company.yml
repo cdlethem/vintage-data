@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_job_boards_ashby_posted_at_month
+          yRef:
+            field: fct_job_boards_ashby_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Month)
+      yAxis:
+      - name: Distinct job
+    layout:
+      stack: true
+      xField: fct_job_boards_ashby_posted_at_month
+      yField:
+      - fct_job_boards_ashby_distinct_entities
+  type: cartesian
+description: Distinct jobs by upstream `posted_at` month, stacked for the eight companies with the most
+  jobs in this mart. Remaining companies are excluded rather than aggregated; sparse source months are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_job_boards_ashby_posted_at_month
+  - fct_job_boards_ashby_company
+  exploreName: fct_job_boards_ashby
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_boards_ashby_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_boards_ashby_distinct_entities
+  - descending: false
+    fieldId: fct_job_boards_ashby_posted_at_month
+  tableCalculations: []
+name: Monthly Ashby postings by leading company
+pivotConfig:
+  columns:
+  - fct_job_boards_ashby_company
+slug: fct-job-boards-ashby-jobs-by-company
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_boards_ashby_posted_at_month
+  - fct_job_boards_ashby_company
+  - fct_job_boards_ashby_distinct_entities
+tableName: fct_job_boards_ashby
+version: 1

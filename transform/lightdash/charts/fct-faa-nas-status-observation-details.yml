@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical observation fact for the FAA National Airspace System status feed.
+  Each row represents one airport identifier at one extractor observation timestamp. Repeated insert-only
+  raw copies of the same airport observation retain the latest loaded row, while source and load lineage
+  remain available for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_faa_nas_status_observation_observed_at
+  - fct_faa_nas_status_observation_airport_id
+  - fct_faa_nas_status_observation_airport
+  - fct_faa_nas_status_observation_ground_delay_avg_min
+  - fct_faa_nas_status_observation_source_loaded_at
+  exploreName: fct_faa_nas_status_observation
+  filters:
+    dimensions:
+      and:
+      - id: e90dd6a7-f6c6-51f8-89ea-46f31ccea613
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_faa_nas_status_observation_observed_at
+        values:
+        - 30
+      id: 0f4539e5-033d-56ad-8efe-4b2ffe088345
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_faa_nas_status_observation_observed_at
+  tableCalculations: []
+name: Faa nas status observation — observations
+slug: fct-faa-nas-status-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_faa_nas_status_observation
+version: 1

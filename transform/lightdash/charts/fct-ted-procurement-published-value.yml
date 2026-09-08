@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ted_procurement_publication_date_day
+          yRef:
+            field: fct_ted_procurement_average_total_value
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Publication date (Day)
+      yAxis:
+      - name: Mean reported procurement value
+    layout:
+      xField: fct_ted_procurement_publication_date_day
+      yField:
+      - fct_ted_procurement_average_total_value
+  type: cartesian
+description: Average non-null `total_value` reported on each TED publication day. Values remain in their
+  source-reported currencies, so the line is a within-feed diagnostic and must not be read as a comparable
+  cross-currency total; days without values are absent.
+metricQuery:
+  dimensions:
+  - fct_ted_procurement_publication_date_day
+  exploreName: fct_ted_procurement
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ted_procurement_average_total_value
+  sorts:
+  - descending: false
+    fieldId: fct_ted_procurement_publication_date_day
+  tableCalculations: []
+name: Mean reported procurement value per publication day
+slug: fct-ted-procurement-published-value
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ted_procurement_publication_date_day
+  - fct_ted_procurement_average_total_value
+tableName: fct_ted_procurement
+version: 1

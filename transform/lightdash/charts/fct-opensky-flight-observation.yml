@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_opensky_flight_observation_origin_country
+          yRef:
+            field: fct_opensky_flight_observation_average_baro_altitude_m
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_opensky_flight_observation_origin_country
+      yField:
+      - fct_opensky_flight_observation_average_baro_altitude_m
+  type: cartesian
+description: Mean observed baro altitude m by `origin_country` in the selected observation window. Barometric
+  altitude reported by OpenSky, in metres, when available. Each retained observation has equal weight;
+  polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure or
+  an additive total.
+metricQuery:
+  dimensions:
+  - fct_opensky_flight_observation_origin_country
+  exploreName: fct_opensky_flight_observation
+  filters:
+    dimensions:
+      and:
+      - id: 3d8c2c34-4c07-53d7-94ec-134f1cecf1e3
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_opensky_flight_observation_observed_at
+        values:
+        - 30
+      id: 49e53248-ee58-55a5-a7fb-f943e1d3a7dd
+  limit: 20
+  metrics:
+  - fct_opensky_flight_observation_average_baro_altitude_m
+  sorts:
+  - descending: true
+    fieldId: fct_opensky_flight_observation_average_baro_altitude_m
+  tableCalculations: []
+name: Mean observed baro altitude m by origin country
+slug: fct-opensky-flight-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_opensky_flight_observation_origin_country
+  - fct_opensky_flight_observation_average_baro_altitude_m
+tableName: fct_opensky_flight_observation
+version: 1

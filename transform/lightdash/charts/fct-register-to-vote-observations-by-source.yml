@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_register_to_vote_observed_at_day
+          yRef:
+            field: fct_register_to_vote_distinct_observations
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct registration observations
+    layout:
+      stack: true
+      xField: fct_register_to_vote_observed_at_day
+      yField:
+      - fct_register_to_vote_distinct_observations
+  type: cartesian
+description: Distinct registration observations per collection day stacked by source. The current extract
+  has one source, so the stack has one segment; no remainder is aggregated and absent days are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_register_to_vote_observed_at_day
+  - fct_register_to_vote_source
+  exploreName: fct_register_to_vote
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_register_to_vote_distinct_observations
+  sorts:
+  - descending: true
+    fieldId: fct_register_to_vote_distinct_observations
+  - descending: false
+    fieldId: fct_register_to_vote_observed_at_day
+  tableCalculations: []
+name: Registration observations by source
+pivotConfig:
+  columns:
+  - fct_register_to_vote_source
+slug: fct-register-to-vote-observations-by-source
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_register_to_vote_observed_at_day
+  - fct_register_to_vote_source
+  - fct_register_to_vote_distinct_observations
+tableName: fct_register_to_vote
+version: 1

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_musicbrainz_release_observation_observed_at_day
+          yRef:
+            field: fct_musicbrainz_release_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct release
+    layout:
+      stack: true
+      xField: fct_musicbrainz_release_observation_observed_at_day
+      yField:
+      - fct_musicbrainz_release_observation_distinct_entities
+  type: cartesian
+description: Distinct `release_id` values per observation day stacked by `country_code`. Bars show the
+  country composition of the observed payload; only the six largest country series are shown and the remainder
+  is excluded rather than aggregated.
+metricQuery:
+  dimensions:
+  - fct_musicbrainz_release_observation_observed_at_day
+  - fct_musicbrainz_release_observation_country_code
+  exploreName: fct_musicbrainz_release_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_musicbrainz_release_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_musicbrainz_release_observation_distinct_entities
+  - descending: false
+    fieldId: fct_musicbrainz_release_observation_observed_at_day
+  tableCalculations: []
+name: Observed releases by country
+pivotConfig:
+  columns:
+  - fct_musicbrainz_release_observation_country_code
+slug: fct-musicbrainz-release-observation-country-release-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_musicbrainz_release_observation_observed_at_day
+  - fct_musicbrainz_release_observation_country_code
+  - fct_musicbrainz_release_observation_distinct_entities
+tableName: fct_musicbrainz_release_observation
+version: 1

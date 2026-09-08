@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_gutendex_book_snapshot_copyright
+          yRef:
+            field: fct_gutendex_book_snapshot_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_gutendex_book_snapshot_copyright
+      yField:
+      - fct_gutendex_book_snapshot_distinct_entities
+  type: cartesian
+description: Distinct `book_id` values by `copyright` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_gutendex_book_snapshot_copyright
+  exploreName: fct_gutendex_book_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: f95f5f56-8c82-5ff0-9b79-a6b3463d2bfe
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_gutendex_book_snapshot_fetched_at
+        values:
+        - 30
+      id: ae6f1796-e2f9-5ce1-82c7-63af1d4b8482
+  limit: 20
+  metrics:
+  - fct_gutendex_book_snapshot_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_gutendex_book_snapshot_distinct_entities
+  tableCalculations: []
+name: Distinct book by copyright
+slug: fct-gutendex-book-snapshot
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gutendex_book_snapshot_copyright
+  - fct_gutendex_book_snapshot_distinct_entities
+tableName: fct_gutendex_book_snapshot
+version: 1

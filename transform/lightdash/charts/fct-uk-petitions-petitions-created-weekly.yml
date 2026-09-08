@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_petitions_created_at_week
+          yRef:
+            field: fct_uk_petitions_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Week)
+      yAxis:
+      - name: Distinct petition
+    layout:
+      xField: fct_uk_petitions_created_at_week
+      yField:
+      - fct_uk_petitions_distinct_entities
+  type: cartesian
+description: Distinct `petition_id` values by publisher `created_at` week. This is a petition creation
+  flow rather than a current-state count; weeks without created petitions are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_uk_petitions_created_at_week
+  exploreName: fct_uk_petitions
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_uk_petitions_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_uk_petitions_created_at_week
+  tableCalculations: []
+name: Distinct petitions created each week
+slug: fct-uk-petitions-petitions-created-weekly
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_petitions_created_at_week
+  - fct_uk_petitions_distinct_entities
+tableName: fct_uk_petitions
+version: 1

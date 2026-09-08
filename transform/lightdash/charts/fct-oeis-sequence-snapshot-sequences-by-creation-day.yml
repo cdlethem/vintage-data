@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_oeis_sequence_snapshot_created_at_day
+          yRef:
+            field: fct_oeis_sequence_snapshot_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct sequence
+    layout:
+      stack: true
+      xField: fct_oeis_sequence_snapshot_created_at_day
+      yField:
+      - fct_oeis_sequence_snapshot_distinct_entities
+  type: cartesian
+description: Distinct `sequence_id` values stacked by author on the source-reported `created_at` day.
+  Only nine creation days occur in this extract, so this is a shallow source-event view rather than long
+  historical publication history; other days are absent, not zero.
+metricQuery:
+  dimensions:
+  - fct_oeis_sequence_snapshot_created_at_day
+  - fct_oeis_sequence_snapshot_author
+  exploreName: fct_oeis_sequence_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_oeis_sequence_snapshot_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_oeis_sequence_snapshot_distinct_entities
+  - descending: false
+    fieldId: fct_oeis_sequence_snapshot_created_at_day
+  tableCalculations: []
+name: Sequences by reported creation day
+pivotConfig:
+  columns:
+  - fct_oeis_sequence_snapshot_author
+slug: fct-oeis-sequence-snapshot-sequences-by-creation-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_oeis_sequence_snapshot_created_at_day
+  - fct_oeis_sequence_snapshot_author
+  - fct_oeis_sequence_snapshot_distinct_entities
+tableName: fct_oeis_sequence_snapshot
+version: 1

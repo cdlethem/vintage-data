@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nhl_game_observations_scheduled_at_day
+          yRef:
+            field: fct_nhl_game_observations_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Scheduled at (Day)
+      yAxis:
+      - name: Distinct game
+    layout:
+      xField: fct_nhl_game_observations_scheduled_at_day
+      yField:
+      - fct_nhl_game_observations_distinct_entities
+  type: cartesian
+description: Distinct `game_id` values by scheduled game day. This is a forward-looking schedule level
+  rather than played-game volume, and days without scheduled games are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_nhl_game_observations_scheduled_at_day
+  exploreName: fct_nhl_game_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nhl_game_observations_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_nhl_game_observations_scheduled_at_day
+  tableCalculations: []
+name: Scheduled games by day
+slug: fct-nhl-game-observations-scheduled-games
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nhl_game_observations_scheduled_at_day
+  - fct_nhl_game_observations_distinct_entities
+tableName: fct_nhl_game_observations
+version: 1

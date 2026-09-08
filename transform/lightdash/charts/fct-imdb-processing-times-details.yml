@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of IMDb contribution processing observations. Each row records one
+  processing category at one upstream fetch timestamp, with queue age, service-level tier, backlog count,
+  and raw-load lineage retained for operational monitoring and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_imdb_processing_times_observed_at
+  - fct_imdb_processing_times_processing_time_key
+  - fct_imdb_processing_times_processing_type
+  - fct_imdb_processing_times_queue_age_days
+  - fct_imdb_processing_times_source_loaded_at
+  exploreName: fct_imdb_processing_times
+  filters:
+    dimensions:
+      and:
+      - id: b74fb199-7c37-5f47-97f6-2cf2fc30c668
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_imdb_processing_times_observed_at
+        values:
+        - 30
+      id: 065bbd8a-1698-59b5-ba20-7c60667d8d64
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_imdb_processing_times_observed_at
+  tableCalculations: []
+name: Imdb processing times — observations
+slug: fct-imdb-processing-times-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_imdb_processing_times
+version: 1

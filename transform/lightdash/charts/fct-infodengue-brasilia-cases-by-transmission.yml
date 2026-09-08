@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_infodengue_brasilia_week_start_date_week
+          yRef:
+            field: fct_infodengue_brasilia_average_cases_estimate
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Week start date (Week)
+      yAxis:
+      - name: Mean estimated cases
+    layout:
+      xField: fct_infodengue_brasilia_week_start_date_week
+      yField:
+      - fct_infodengue_brasilia_average_cases_estimate
+  type: cartesian
+description: Mean provider `cases_estimate` per epidemiological week for each `transmission_status`. The
+  two observed statuses are shown as separate trajectories rather than additive totals; missing weeks
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_infodengue_brasilia_week_start_date_week
+  - fct_infodengue_brasilia_transmission_status
+  exploreName: fct_infodengue_brasilia
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_infodengue_brasilia_average_cases_estimate
+  sorts:
+  - descending: true
+    fieldId: fct_infodengue_brasilia_average_cases_estimate
+  - descending: false
+    fieldId: fct_infodengue_brasilia_week_start_date_week
+  tableCalculations: []
+name: Mean estimated cases by transmission status
+pivotConfig:
+  columns:
+  - fct_infodengue_brasilia_transmission_status
+slug: fct-infodengue-brasilia-cases-by-transmission
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_infodengue_brasilia_week_start_date_week
+  - fct_infodengue_brasilia_transmission_status
+  - fct_infodengue_brasilia_average_cases_estimate
+tableName: fct_infodengue_brasilia
+version: 1

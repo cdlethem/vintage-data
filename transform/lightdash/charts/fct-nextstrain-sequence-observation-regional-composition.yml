@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 10
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_nextstrain_sequence_observation_sample_date_month
+          yRef:
+            field: fct_nextstrain_sequence_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Sample date (Month)
+      yAxis:
+      - name: Distinct sequence
+    layout:
+      stack: true
+      xField: fct_nextstrain_sequence_observation_sample_date_month
+      yField:
+      - fct_nextstrain_sequence_observation_distinct_entities
+  type: cartesian
+description: Distinct sequences per sample month stacked by region across the full sample history. All
+  ten observed regions are retained; absent samples are missing bars rather than zero-volume regions.
+metricQuery:
+  dimensions:
+  - fct_nextstrain_sequence_observation_sample_date_month
+  - fct_nextstrain_sequence_observation_region
+  exploreName: fct_nextstrain_sequence_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nextstrain_sequence_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_nextstrain_sequence_observation_distinct_entities
+  - descending: false
+    fieldId: fct_nextstrain_sequence_observation_sample_date_month
+  tableCalculations: []
+name: Sampled sequence composition by region
+pivotConfig:
+  columns:
+  - fct_nextstrain_sequence_observation_region
+slug: fct-nextstrain-sequence-observation-regional-composition
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nextstrain_sequence_observation_sample_date_month
+  - fct_nextstrain_sequence_observation_region
+  - fct_nextstrain_sequence_observation_distinct_entities
+tableName: fct_nextstrain_sequence_observation
+version: 1

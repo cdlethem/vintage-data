@@ -1,0 +1,68 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_infodengue_epidemiology_week_start_date_week
+          yRef:
+            field: fct_infodengue_epidemiology_average_incidence_per_100k
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Week start date (Week)
+      yAxis:
+      - name: Mean observed incidence per 100k
+    layout:
+      stack: true
+      xField: fct_infodengue_epidemiology_week_start_date_week
+      yField:
+      - fct_infodengue_epidemiology_average_incidence_per_100k
+  type: cartesian
+description: Mean incidence per 100,000 in each epidemiological week stacked by the provider `alert_level`
+  over the latest three years. The four alert levels are all retained; segments are rates within each
+  level, not additive totals.
+metricQuery:
+  dimensions:
+  - fct_infodengue_epidemiology_week_start_date_week
+  - fct_infodengue_epidemiology_alert_level
+  exploreName: fct_infodengue_epidemiology
+  filters:
+    dimensions:
+      and:
+      - id: d1b00b62-92a8-58eb-be5d-4e072d8f3a78
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_infodengue_epidemiology_week_start_date
+        values:
+        - 1095
+      id: 139bace2-6159-5f4c-914f-000ddf7bb1a8
+  limit: 5000
+  metrics:
+  - fct_infodengue_epidemiology_average_incidence_per_100k
+  sorts:
+  - descending: true
+    fieldId: fct_infodengue_epidemiology_average_incidence_per_100k
+  - descending: false
+    fieldId: fct_infodengue_epidemiology_week_start_date_week
+  tableCalculations: []
+name: Incidence mix by alert level
+pivotConfig:
+  columns:
+  - fct_infodengue_epidemiology_alert_level
+slug: fct-infodengue-epidemiology-incidence-by-alert
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_infodengue_epidemiology_week_start_date_week
+  - fct_infodengue_epidemiology_alert_level
+  - fct_infodengue_epidemiology_average_incidence_per_100k
+tableName: fct_infodengue_epidemiology
+version: 1

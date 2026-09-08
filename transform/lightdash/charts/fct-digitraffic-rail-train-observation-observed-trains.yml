@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_digitraffic_rail_train_observation_observed_at_day
+          yRef:
+            field: fct_digitraffic_rail_train_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct train
+    layout:
+      xField: fct_digitraffic_rail_train_observation_observed_at_day
+      yField:
+      - fct_digitraffic_rail_train_observation_distinct_entities
+  type: cartesian
+description: Distinct `train_id` values present in each extractor observation day. This is a published-roster
+  level rather than a flow — the feed republishes trains, so movement reflects additions, removals, or
+  changed coverage. Days with no successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_digitraffic_rail_train_observation_observed_at_day
+  exploreName: fct_digitraffic_rail_train_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_digitraffic_rail_train_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_digitraffic_rail_train_observation_observed_at_day
+  tableCalculations: []
+name: Distinct trains observed per day
+slug: fct-digitraffic-rail-train-observation-observed-trains
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_digitraffic_rail_train_observation_observed_at_day
+  - fct_digitraffic_rail_train_observation_distinct_entities
+tableName: fct_digitraffic_rail_train_observation
+version: 1

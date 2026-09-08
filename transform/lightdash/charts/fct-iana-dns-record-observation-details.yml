@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily incremental observation fact for DNS resource records published by IANA. Each row is
+  one source, record identifier, and fetch timestamp, preserving the published owner, TTL, class, type,
+  record data, publisher update marker, and raw-load lineage. Replayed copies of the same observation
+  grain are reduced to the latest loaded row; this model does not resolve DNS records or infer changes
+  between snapshots.
+metricQuery:
+  dimensions: &id001
+  - fct_iana_dns_record_observation_observed_at
+  - fct_iana_dns_record_observation_record_id
+  - fct_iana_dns_record_observation_record_type
+  - fct_iana_dns_record_observation_source_loaded_at
+  exploreName: fct_iana_dns_record_observation
+  filters:
+    dimensions:
+      and:
+      - id: dfc36c57-e6c5-5e6b-83c8-1699d3fd7da8
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_iana_dns_record_observation_observed_at
+        values:
+        - 30
+      id: 383365d2-6a52-549e-a9c8-fa2977e65588
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_iana_dns_record_observation_observed_at
+  tableCalculations: []
+name: Iana dns record observation — observations
+slug: fct-iana-dns-record-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_iana_dns_record_observation
+version: 1

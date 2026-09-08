@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nsidc_sea_ice_observation_date_day
+          yRef:
+            field: fct_nsidc_sea_ice_distinct_observations
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observation date (Day)
+      yAxis:
+      - name: Distinct observations
+    layout:
+      xField: fct_nsidc_sea_ice_observation_date_day
+      yField:
+      - fct_nsidc_sea_ice_distinct_observations
+  type: cartesian
+description: Distinct `sea_ice_id` values present for each NSIDC observation date. This is a coverage
+  level, not a flow; a missing date means no observation was published rather than zero observations.
+metricQuery:
+  dimensions:
+  - fct_nsidc_sea_ice_observation_date_day
+  exploreName: fct_nsidc_sea_ice
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nsidc_sea_ice_distinct_observations
+  sorts:
+  - descending: false
+    fieldId: fct_nsidc_sea_ice_observation_date_day
+  tableCalculations: []
+name: Sea-ice observations per day
+slug: fct-nsidc-sea-ice-daily-observations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nsidc_sea_ice_observation_date_day
+  - fct_nsidc_sea_ice_distinct_observations
+tableName: fct_nsidc_sea_ice
+version: 1

@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_arxiv_new_paper_observation_primary_category
+          yRef:
+            field: fct_arxiv_new_paper_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_arxiv_new_paper_observation_primary_category
+      yField:
+      - fct_arxiv_new_paper_observation_distinct_entities
+  type: cartesian
+description: Distinct `paper_id` values by `primary_category` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_arxiv_new_paper_observation_primary_category
+  exploreName: fct_arxiv_new_paper_observation
+  filters:
+    dimensions:
+      and:
+      - id: ebc9fabf-617d-5d34-ae7a-623f76103a4e
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_arxiv_new_paper_observation_observed_at
+        values:
+        - 30
+      id: d441f8e5-4149-55c4-ad23-dc88d2942110
+  limit: 20
+  metrics:
+  - fct_arxiv_new_paper_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_arxiv_new_paper_observation_distinct_entities
+  tableCalculations: []
+name: Distinct paper by primary category
+slug: fct-arxiv-new-paper-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_arxiv_new_paper_observation_primary_category
+  - fct_arxiv_new_paper_observation_distinct_entities
+tableName: fct_arxiv_new_paper_observation
+version: 1

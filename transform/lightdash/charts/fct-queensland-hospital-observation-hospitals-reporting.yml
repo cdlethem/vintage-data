@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_queensland_hospital_observation_observed_at_day
+          yRef:
+            field: fct_queensland_hospital_observation_hospital_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct hospitals
+    layout:
+      xField: fct_queensland_hospital_observation_observed_at_day
+      yField:
+      - fct_queensland_hospital_observation_hospital_count
+  type: cartesian
+description: Distinct non-null `hospital_id` values present in each extractor observation day. This is
+  a coverage level for the live status feed rather than a patient flow; days without a successful extract
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_queensland_hospital_observation_observed_at_day
+  exploreName: fct_queensland_hospital_observation
+  filters:
+    dimensions:
+      and:
+      - id: 327812fd-3288-5b84-85f6-5304169f7adc
+        operator: equals
+        target:
+          fieldId: fct_queensland_hospital_observation_live_data_available
+        values:
+        - true
+      id: a8c28c27-032d-52bc-a366-96fd25efa5f5
+  limit: 5000
+  metrics:
+  - fct_queensland_hospital_observation_hospital_count
+  sorts:
+  - descending: false
+    fieldId: fct_queensland_hospital_observation_observed_at_day
+  tableCalculations: []
+name: Hospitals reporting per day
+slug: fct-queensland-hospital-observation-hospitals-reporting
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_queensland_hospital_observation_observed_at_day
+  - fct_queensland_hospital_observation_hospital_count
+tableName: fct_queensland_hospital_observation
+version: 1

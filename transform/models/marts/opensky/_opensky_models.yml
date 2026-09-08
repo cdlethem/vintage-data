@@ -1,0 +1,389 @@
+version: 2
+models:
+- name: fct_opensky_flight_observation
+  description: Twice-hourly physical history of OpenSky aircraft state observations. Each row is one source,
+    aircraft, and fetch timestamp, preserving the reported position, motion, flight identity, and raw-load
+    lineage. Replayed copies of the same observation grain are reduced to the latest loaded row; this
+    model does not interpolate tracks or infer flights between snapshots.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, aircraft_id, observed_at
+      label: Opensky flight observation
+      group_label: Opensky
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: opensky_flight_observation_key
+      vintage:
+        visualization:
+          dimension: origin_country
+          metric: average_baro_altitude_m
+          time: observed_at
+          window_days: 30
+          title: Mean observed baro altitude m by origin country
+          description: Mean observed baro altitude m by `origin_country` in the selected observation window.
+            Barometric altitude reported by OpenSky, in metres, when available. Each retained observation
+            has equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+            a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - aircraft_id
+          - origin_country
+          - baro_altitude_m
+          - source_loaded_at
+          sources:
+          - '`opensky` — licence: OpenSky Network — public ADS-B aggregation; attribution required: False.
+            Source configuration: `extract/sources/opensky.yml`.'
+          analysis:
+            headline: how the observed aircraft population, altitude, speed, and country mix move through
+              each OpenSky snapshot cycle.
+            event_time: observed_at
+            grain: HOUR
+            controls:
+            - origin_country
+            - on_ground
+            trends:
+            - slug: aircraft-by-hour
+              kind: total
+              metric: distinct_aircraft
+              time: observed_at
+              grain: HOUR
+              title: Distinct aircraft observed each hour
+              description: Distinct `aircraft_id` values in each OpenSky observation hour. This is a
+                snapshot level rather than a flight count because the feed republishes aircraft states;
+                hours with no successful snapshot are absent rather than zero.
+              width: half
+            - slug: altitude-by-hour
+              kind: total
+              metric: average_baro_altitude_m
+              time: observed_at
+              grain: HOUR
+              title: Mean reported barometric altitude by hour
+              description: Observation-weighted mean `baro_altitude_m` in metres by snapshot hour. Missing
+                altitude values do not contribute and irregular polling or repeated aircraft states can
+                weight the average; empty hours are absent rather than zero.
+              width: half
+            - slug: velocity-by-hour
+              kind: total
+              metric: average_velocity_m_s
+              time: observed_at
+              grain: HOUR
+              title: Mean reported velocity by hour
+              description: Observation-weighted mean `velocity_m_s` in metres per second by snapshot hour.
+                Null velocities do not contribute and repeated snapshots can weight aircraft unevenly;
+                this is not an additive traffic total.
+              width: half
+            - slug: country-aircraft
+              kind: composition
+              metric: distinct_aircraft
+              breakdown: origin_country
+              top_n: 8
+              time: observed_at
+              grain: HOUR
+              title: Aircraft mix by origin country and hour
+              description: Distinct `aircraft_id` values stacked by `origin_country` for each snapshot hour.
+                The eight largest countries over the selected window are shown and the remainder is excluded
+                rather than aggregated; sparse hours are absent rather than zero.
+              width: full
+            - slug: ground-aircraft
+              kind: composition
+              metric: distinct_aircraft
+              breakdown: on_ground
+              top_n: 2
+              time: observed_at
+              grain: HOUR
+              title: Aircraft mix by ground status and hour
+              description: Distinct `aircraft_id` values stacked by OpenSky `on_ground` status for each
+                snapshot hour. Both boolean statuses are retained so the stack shows the observed ground
+                versus airborne mix; hours without a snapshot are absent rather than zero.
+              width: full
+  columns:
+  - name: opensky_flight_observation_key
+    description: Stable hash of the source, aircraft identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Opensky flight observation key
+          hidden: true
+  - name: source
+    description: OpenSky source stream identifier supplied by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: aircraft_id
+    description: ICAO 24-bit address identifying the aircraft in the observation.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_aircraft:
+            type: count_distinct
+            label: Distinct aircraft
+            description: Distinct `aircraft_id` values present in each snapshot period. This is a level
+              measure of the polled feed; repeated observations are counted once per time and breakdown
+              group rather than as a traffic total.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Aircraft id
+          hidden: false
+  - name: source_observation_id
+    description: Source-provided observation identifier for the aircraft state record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source observation id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the aircraft state snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: snapshot_time
+    description: Unix epoch seconds identifying the source state snapshot.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Snapshot time
+          hidden: false
+          format: '#,##0'
+  - name: callsign
+    description: Callsign reported by OpenSky for the aircraft, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Callsign
+          hidden: false
+  - name: origin_country
+    description: Country of origin reported by OpenSky for the aircraft.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Origin country
+          hidden: false
+  - name: longitude
+    description: Aircraft longitude in decimal degrees reported by OpenSky.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: latitude
+    description: Aircraft latitude in decimal degrees reported by OpenSky.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: baro_altitude_m
+    description: Barometric altitude reported by OpenSky, in metres, when available.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_baro_altitude_m:
+            type: average
+            label: Mean observed baro altitude m
+            description: Mean observed baro altitude m by `origin_country` in the selected observation
+              window. Barometric altitude reported by OpenSky, in metres, when available. Each retained
+              observation has equal weight; polling frequency and repeated snapshots can affect the mean.
+              This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Baro altitude m
+          hidden: false
+          format: '#,##0.00'
+  - name: on_ground
+    description: Whether OpenSky reported the aircraft as on the ground.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: On ground
+          hidden: false
+  - name: velocity_m_s
+    description: Aircraft ground speed reported by OpenSky, in metres per second.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_velocity_m_s:
+            type: average
+            label: Mean observed velocity m s
+            description: Observation-weighted mean `velocity_m_s` in metres per second by snapshot period.
+              Null velocities do not contribute; repeated snapshots and irregular polling can weight
+              aircraft unevenly, so this is not an additive traffic measure.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Velocity m s
+          hidden: false
+          format: '#,##0.00'
+  - name: true_track_deg
+    description: Aircraft true track reported by OpenSky, in degrees.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: True track deg
+          hidden: false
+          format: '#,##0.00'
+  - name: vertical_rate_m_s
+    description: Aircraft vertical rate reported by OpenSky, in metres per second.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Vertical rate m s
+          hidden: false
+          format: '#,##0.00'
+  - name: source_row_id
+    description: Raw loader row identifier of the retained aircraft observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained aircraft observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation in its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date assigned to the retained raw observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the retained batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained raw observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw aircraft observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

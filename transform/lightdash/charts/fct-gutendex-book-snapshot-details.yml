@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of Project Gutenberg book records returned by the Gutendex feed. Each
+  row represents one book identifier observed at one fetched_at timestamp, retaining catalog metadata
+  and raw-load lineage; repeated ingestion of the same source, book, and observation timestamp is reduced
+  to the latest loaded copy.
+metricQuery:
+  dimensions: &id001
+  - fct_gutendex_book_snapshot_fetched_at
+  - fct_gutendex_book_snapshot_book_id
+  - fct_gutendex_book_snapshot_copyright
+  - fct_gutendex_book_snapshot_source_loaded_at
+  exploreName: fct_gutendex_book_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: f95f5f56-8c82-5ff0-9b79-a6b3463d2bfe
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_gutendex_book_snapshot_fetched_at
+        values:
+        - 30
+      id: ae6f1796-e2f9-5ce1-82c7-63af1d4b8482
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_gutendex_book_snapshot_fetched_at
+  tableCalculations: []
+name: Gutendex book snapshot — observations
+slug: fct-gutendex-book-snapshot-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_gutendex_book_snapshot
+version: 1

@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_geojson_shelter_status_shelter_status
+          yRef:
+            field: fct_geojson_shelter_status_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_geojson_shelter_status_shelter_status
+      yField:
+      - fct_geojson_shelter_status_distinct_entities
+  type: cartesian
+description: Distinct `feature_id` values by `shelter_status` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_geojson_shelter_status_shelter_status
+  exploreName: fct_geojson_shelter_status
+  filters:
+    dimensions:
+      and:
+      - id: 982796f2-e7d2-5680-a8e3-405ada2f8b46
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_geojson_shelter_status_observed_at
+        values:
+        - 30
+      id: 764478c0-2ac0-5752-b864-204a853e2220
+  limit: 20
+  metrics:
+  - fct_geojson_shelter_status_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_geojson_shelter_status_distinct_entities
+  tableCalculations: []
+name: Distinct feature by shelter status
+slug: fct-geojson-shelter-status
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_geojson_shelter_status_shelter_status
+  - fct_geojson_shelter_status_distinct_entities
+tableName: fct_geojson_shelter_status
+version: 1

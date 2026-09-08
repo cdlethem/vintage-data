@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 7f18420d-9ae4-554d-8788-876f84cb231e
+    label: 'Nz visa wait times: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nz_visa_wait_times_source
+      tableName: fct_nz_visa_wait_times
+    values: []
+  - disabled: true
+    id: 57475c00-67db-585a-96ad-dd1ce5950547
+    label: 'Nz visa wait times: Visa type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nz_visa_wait_times_visa_type
+      tableName: fct_nz_visa_wait_times
+    values: []
+  - disabled: true
+    id: 6e9878d3-f5e8-5f6d-8ccb-1dfa07ec7241
+    label: 'Nz visa wait times: Average wait time text'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nz_visa_wait_times_average_wait_time_text
+      tableName: fct_nz_visa_wait_times
+    values: []
+  - disabled: true
+    id: 03fc2612-90de-5a75-b04a-af19a6f93c05
+    label: 'Nz visa wait times: Most completed within text'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nz_visa_wait_times_most_completed_within_text
+      tableName: fct_nz_visa_wait_times
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Nz Visa Wait Times
+slug: nz-visa-wait-times
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Deduplicated observations of published New Zealand visa processing waits. Each row records
+      one visa type from an endpoint observation timestamp and retains the source text alongside wait
+      durations normalized to days.
+
+
+      **Grain:** source, visa_type_key, observed_at
+
+
+      **What changes here:** how many visa categories the feed reports each day and whether published
+      wait durations are available to track.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `nz_visa_wait_times` — licence: Immigration NZ public data; attribution required: True. Source
+      configuration: `extract/sources/nz_visa_wait_times.yml`.'
+    hideFrame: false
+    title: Nz visa wait times
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Nz visa wait times — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Visa categories reported per day
+    chartSlug: fct-nz-visa-wait-times-reported-visa-types
+    hideTitle: false
+    title: Visa categories reported per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average wait duration by observation day
+    chartSlug: fct-nz-visa-wait-times-average-wait-days
+    hideTitle: false
+    title: Average wait duration by observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Most-completed window by observation day
+    chartSlug: fct-nz-visa-wait-times-completion-window-days
+    hideTitle: false
+    title: Most-completed window by observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Visa categories reported by day
+    chartSlug: fct-nz-visa-wait-times-categories-by-day
+    hideTitle: false
+    title: Visa categories reported by day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Nz visa wait times — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed average wait days by visa type
+    chartSlug: fct-nz-visa-wait-times
+    hideTitle: false
+    title: Mean observed average wait days by visa type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Nz visa wait times — observations
+    chartSlug: fct-nz-visa-wait-times-details
+    hideTitle: false
+    title: Nz visa wait times — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

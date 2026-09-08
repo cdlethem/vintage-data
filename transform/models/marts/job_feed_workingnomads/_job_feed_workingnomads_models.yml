@@ -1,0 +1,310 @@
+version: 2
+models:
+- name: fct_job_feed_workingnomads
+  description: Daily physical history of Working Nomads job-listing observations. Each row is one job
+    identifier as observed by the extractor at a fetched timestamp, with listing attributes and raw-load
+    lineage retained for audit and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: job_id, observed_at
+      label: Job feed workingnomads
+      group_label: Job feed workingnomads
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: workingnomads_job_key
+      vintage:
+        visualization:
+          dimension: company
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct job by company
+          description: Distinct `job_id` values by `company` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - job_id
+          - company
+          - source_loaded_at
+          sources:
+          - '`job_feed_workingnomads` — licence: public Working Nomads exposed jobs API; attribution required:
+            True. Source configuration: `extract/sources/job_feed_workingnomads.yml`.'
+          analysis:
+            headline: how the feed's posted-job flow and four-day observed catalogue change across departments,
+              employers, and locations.
+            event_time: posted_at
+            grain: DAY
+            controls:
+            - department
+            - location
+            - location_country
+            - company
+            trends:
+            - slug: posted-jobs
+              kind: total
+              metric: distinct_entities
+              time: posted_at
+              grain: DAY
+              title: Distinct jobs by posting day
+              description: Distinct `job_id` values by the day the source says each job was posted. This is
+                a sparse sixteen-day event-time flow over the available history — days without postings are
+                absent rather than zero.
+              width: half
+            - slug: observed-catalogue
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct jobs present by observation day
+              description: Distinct `job_id` values present when the extractor observed the feed each day.
+                This is a catalogue level rather than a new-job flow because listings recur across fetches;
+                days without a successful observation are absent rather than zero.
+              width: half
+            - slug: jobs-by-department
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: department
+              top_n: 6
+              time: posted_at
+              grain: DAY
+              title: Jobs by department and posting day
+              description: Distinct `job_id` values per posting day for all six observed departments. The
+                small department set is fully shown, and days without postings are absent rather than zero.
+              width: full
+            - slug: companies-by-location
+              kind: composition
+              metric: distinct_companies
+              breakdown: location_country
+              top_n: 8
+              time: posted_at
+              grain: DAY
+              title: Company mix by posting day and country
+              description: Distinct companies per posting day stacked by the eight most common non-null
+                `location_country` values. The remainder and null country are excluded rather than aggregated,
+                so the mix can change as coverage changes.
+              width: full
+  columns:
+  - name: workingnomads_job_key
+    description: Stable hash of the Working Nomads job identifier and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '26 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '26 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Workingnomads job key
+          hidden: true
+  - name: job_id
+    description: Working Nomads identifier for the listed job.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct job
+            description: Distinct `job_id` values by `company` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Job id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed this job listing.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_name
+    description: Upstream source label carried by the Working Nomads response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: provider
+    description: Provider or feed name associated with the listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider
+          hidden: false
+  - name: company
+    description: Company advertising the job.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_companies:
+            type: count_distinct
+            label: Distinct company
+            description: Distinct non-null `company` values represented by job observations in each posting
+              day or observation-day slice. Repeated observations of a company count once within each slice.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Company
+          hidden: false
+  - name: title
+    description: Advertised job title.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: department
+    description: Department or functional category assigned to the listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Department
+          hidden: false
+  - name: location
+    description: Location or geographic eligibility text supplied by the listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location
+          hidden: false
+  - name: location_country
+    description: Country code supplied for the listing location when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location country
+          hidden: false
+  - name: workplace_type
+    description: Workplace arrangement reported by the listing, such as remote.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Workplace type
+          hidden: false
+  - name: is_remote
+    description: Whether the listing is marked as remote by the source.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is remote
+          hidden: false
+  - name: posted_at
+    description: Timestamp when the listing was posted according to the source.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Posted at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: job_url
+    description: Canonical URL for the listed job.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job url
+          hidden: false
+  - name: description
+    description: Full job-description text supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Description
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing this job observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position of this observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

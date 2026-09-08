@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical observation fact for records returned by the Zenodo extractor. Each
+  row is one Zenodo record identifier at one extractor observation timestamp, preserving descriptive metadata
+  and raw-load lineage. Repeated copies of the same source, record, and observation timestamp retain the
+  latest loaded row.
+metricQuery:
+  dimensions: &id001
+  - fct_zenodo_record_observation_observed_at
+  - fct_zenodo_record_observation_record_id
+  - fct_zenodo_record_observation_resource_type
+  - fct_zenodo_record_observation_source_loaded_at
+  exploreName: fct_zenodo_record_observation
+  filters:
+    dimensions:
+      and:
+      - id: d7496e75-8f3b-5bb1-9f09-46c7c4e9430f
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_zenodo_record_observation_observed_at
+        values:
+        - 30
+      id: b7f34292-35c4-54f2-8765-beffb4b17482
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_zenodo_record_observation_observed_at
+  tableCalculations: []
+name: Zenodo record observation — observations
+slug: fct-zenodo-record-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_zenodo_record_observation
+version: 1

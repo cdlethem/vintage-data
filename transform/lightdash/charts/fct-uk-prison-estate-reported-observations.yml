@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_prison_estate_period_date_day
+          yRef:
+            field: fct_uk_prison_estate_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Period date (Day)
+      yAxis:
+      - name: Distinct observation
+    layout:
+      xField: fct_uk_prison_estate_period_date_day
+      yField:
+      - fct_uk_prison_estate_distinct_entities
+  type: cartesian
+description: Distinct `observation_id` values on each reported `period_date`. This is a sparse source
+  level with three reported dates rather than a continuous flow — absent dates are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_uk_prison_estate_period_date_day
+  exploreName: fct_uk_prison_estate
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_uk_prison_estate_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_uk_prison_estate_period_date_day
+  tableCalculations: []
+name: Reported prison measures by period date
+slug: fct-uk-prison-estate-reported-observations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_prison_estate_period_date_day
+  - fct_uk_prison_estate_distinct_entities
+tableName: fct_uk_prison_estate
+version: 1

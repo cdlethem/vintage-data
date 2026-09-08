@@ -219,5 +219,30 @@
  "job_feed_weworkremotely": {
   "type": "feed",
   "notes": "RSS feed; titles arrive as 'Company: Role' and are split on extract"
+ },
+ "infodengue": {
+  "type": "status",
+  "value_keys": ["casos", "casos_est", "Rt", "nivel", "nivel_inc", "p_rt1", "versao_modelo"],
+  "notes": "municipality-level weekly revision series; partial manifests expose isolated municipality failures, and held backfills are excluded from freshness/novelty"
+ },
+ "melbourne_pedestrians": {
+  "type": "snapshot",
+  "notes": "past-hour minute snapshot; stable recordid prevents fetched-at churn from being treated as novelty"
+ },
+ "openactive_feeds": {
+  "type": "feed",
+  "notes": "RPDE change feed; updated and deleted item states are both expected and cursors advance only after flushed output"
+ },
+ "sensor_community": {
+  "type": "status",
+  "notes": "global latest-reading snapshot; reading id/timestamp define novelty, never fetched_at"
+ },
+ "uk_parliament_procedural_activity": {
+  "type": "feed",
+  "notes": "dated BusinessItems are usually quiet outside parliamentary business and can be revised; zero novelty on weekends or recesses is normal"
+ },
+ "ema_medicine_shortages": {
+  "type": "snapshot",
+  "notes": "EMA's complete shortage catalogue publishes twice daily; active, resolved, and discontinued entries can be added, revised, or removed. An unchanged snapshot (including HTTP 304) produces zero records and is normal."
  }
 }

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_huggingface_model_snapshot_created_at_day
+          yRef:
+            field: fct_huggingface_model_snapshot_distinct_models
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct models
+    layout:
+      xField: fct_huggingface_model_snapshot_created_at_day
+      yField:
+      - fct_huggingface_model_snapshot_distinct_models
+  type: cartesian
+description: Distinct `model_id` values grouped by the source `created_at` day. The extract covers only
+  five creation days, so this is a short recent creation slice rather than a long-run launch rate; dates
+  with no rows are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_huggingface_model_snapshot_created_at_day
+  exploreName: fct_huggingface_model_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_huggingface_model_snapshot_distinct_models
+  sorts:
+  - descending: false
+    fieldId: fct_huggingface_model_snapshot_created_at_day
+  tableCalculations: []
+name: Distinct models by repository creation day
+slug: fct-huggingface-model-snapshot-model-creations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_huggingface_model_snapshot_created_at_day
+  - fct_huggingface_model_snapshot_distinct_models
+tableName: fct_huggingface_model_snapshot
+version: 1

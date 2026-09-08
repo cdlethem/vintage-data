@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_poland_treatment_queues_situation_date_day
+          yRef:
+            field: fct_poland_treatment_queues_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Situation date (Day)
+      yAxis:
+      - name: Distinct queue
+    layout:
+      xField: fct_poland_treatment_queues_situation_date_day
+      yField:
+      - fct_poland_treatment_queues_distinct_entities
+  type: cartesian
+description: Distinct `queue_id` values per published situation date for the six largest `benefit_name`
+  series. Remaining benefits are excluded rather than aggregated, so the lines compare the main treatment
+  categories without implying an all-benefit total.
+metricQuery:
+  dimensions:
+  - fct_poland_treatment_queues_situation_date_day
+  - fct_poland_treatment_queues_benefit_name
+  exploreName: fct_poland_treatment_queues
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_poland_treatment_queues_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_poland_treatment_queues_distinct_entities
+  - descending: false
+    fieldId: fct_poland_treatment_queues_situation_date_day
+  tableCalculations: []
+name: Queue coverage by treatment benefit
+pivotConfig:
+  columns:
+  - fct_poland_treatment_queues_benefit_name
+slug: fct-poland-treatment-queues-queues-by-benefit
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_poland_treatment_queues_situation_date_day
+  - fct_poland_treatment_queues_benefit_name
+  - fct_poland_treatment_queues_distinct_entities
+tableName: fct_poland_treatment_queues
+version: 1

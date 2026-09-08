@@ -1,0 +1,47 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of reservoir measurements published by the California Data Exchange
+  Center. Each row is one upstream measurement identifier from one extractor observation timestamp, preserving
+  the station, sensor, measurement interval, reported value, quality flags, capacity context, and raw-load
+  lineage for audit and replay. The model grain is source_name, reservoir_level_id, observed_at.
+metricQuery:
+  dimensions: &id001
+  - fct_reservoir_level_observation_observed_at
+  - fct_reservoir_level_observation_reservoir_level_id
+  - fct_reservoir_level_observation_station
+  - fct_reservoir_level_observation_pct_of_capacity
+  - fct_reservoir_level_observation_source_loaded_at
+  exploreName: fct_reservoir_level_observation
+  filters:
+    dimensions:
+      and:
+      - id: 90dda9b4-0f41-5f3f-903d-ea620024069d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_reservoir_level_observation_observed_at
+        values:
+        - 30
+      - id: bc88366a-64f4-53e0-bf93-8034541e506c
+        operator: equals
+        target:
+          fieldId: fct_reservoir_level_observation_is_missing
+        values:
+        - false
+      id: bd79fab8-d6ca-517c-ba05-aeccdd7a5db9
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_reservoir_level_observation_observed_at
+  tableCalculations: []
+name: Reservoir level observation — observations
+slug: fct-reservoir-level-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_reservoir_level_observation
+version: 1

@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_deezer_chart_observation_artist_name
+          yRef:
+            field: fct_deezer_chart_observation_average_chart_position
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_deezer_chart_observation_artist_name
+      yField:
+      - fct_deezer_chart_observation_average_chart_position
+  type: cartesian
+description: Mean observed chart position by `artist_name` in the selected observation window. One-based
+  chart position assigned to the track in the observed chart. Each retained observation has equal weight;
+  polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure or
+  an additive total.
+metricQuery:
+  dimensions:
+  - fct_deezer_chart_observation_artist_name
+  exploreName: fct_deezer_chart_observation
+  filters:
+    dimensions:
+      and:
+      - id: 52709171-f88c-5b91-9e96-aaeed681c9b0
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_deezer_chart_observation_observed_at
+        values:
+        - 30
+      id: 489c5e91-8207-5160-9dc3-8a0c14cc7e2f
+  limit: 20
+  metrics:
+  - fct_deezer_chart_observation_average_chart_position
+  sorts:
+  - descending: true
+    fieldId: fct_deezer_chart_observation_average_chart_position
+  tableCalculations: []
+name: Mean observed chart position by artist name
+slug: fct-deezer-chart-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_deezer_chart_observation_artist_name
+  - fct_deezer_chart_observation_average_chart_position
+tableName: fct_deezer_chart_observation
+version: 1

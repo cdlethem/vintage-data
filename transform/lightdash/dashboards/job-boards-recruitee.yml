@@ -1,0 +1,172 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 92baaf17-9f5a-51c4-aea2-6ea159087bd9
+    label: 'Job boards recruitee: Company country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_recruitee_company_country
+      tableName: fct_job_boards_recruitee
+    values: []
+  - disabled: true
+    id: dadf5f53-187c-5555-84cf-fb0a01bb786e
+    label: 'Job boards recruitee: Company industry'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_recruitee_company_industry
+      tableName: fct_job_boards_recruitee
+    values: []
+  - disabled: true
+    id: 23dfd0e7-d4a4-5742-84b8-86094f83b20a
+    label: 'Job boards recruitee: Employment type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_recruitee_employment_type
+      tableName: fct_job_boards_recruitee
+    values: []
+  - disabled: true
+    id: 0098c5a3-74f6-5fe0-a767-20ebd5340baa
+    label: 'Job boards recruitee: Workplace type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_recruitee_workplace_type
+      tableName: fct_job_boards_recruitee
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Boards Recruitee
+slug: job-boards-recruitee
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of job observations returned by Recruitee-hosted applicant-tracking-system
+      boards. Each row represents one source, job identifier, and extractor observation timestamp; repeated
+      raw copies of an observation are reduced to the latest loaded lineage record while listing attributes
+      and load metadata remain available for audit and replay.
+
+
+      **Grain:** source, job_id, observed_at
+
+
+      **What changes here:** how the published job catalogue and its posting mix change across companies
+      and work arrangements.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_boards_recruitee` — licence: public ATS board endpoints; attribution required: False. Source
+      configuration: `extract/sources/job_boards_recruitee.yml`.'
+    hideFrame: false
+    title: Job boards recruitee
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards recruitee — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Jobs present in the catalogue per observation day
+    chartSlug: fct-job-boards-recruitee-observed-jobs
+    hideTitle: false
+    title: Jobs present in the catalogue per observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Hiring companies present per observation day
+    chartSlug: fct-job-boards-recruitee-observed-companies
+    hideTitle: false
+    title: Hiring companies present per observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Jobs posted per month
+    chartSlug: fct-job-boards-recruitee-posted-jobs
+    hideTitle: false
+    title: Jobs posted per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Jobs posted per month by company country
+    chartSlug: fct-job-boards-recruitee-postings-by-country
+    hideTitle: false
+    title: Jobs posted per month by company country
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Monthly posting mix by workplace type
+    chartSlug: fct-job-boards-recruitee-posting-mix-by-workplace
+    hideTitle: false
+    title: Monthly posting mix by workplace type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards recruitee — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-boards-recruitee
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Job boards recruitee — observations
+    chartSlug: fct-job-boards-recruitee-details
+    hideTitle: false
+    title: Job boards recruitee — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

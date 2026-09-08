@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_ted_procurement_publication_date_day
+          yRef:
+            field: fct_ted_procurement_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Publication date (Day)
+      yAxis:
+      - name: Distinct notice
+    layout:
+      stack: true
+      xField: fct_ted_procurement_publication_date_day
+      yField:
+      - fct_ted_procurement_distinct_entities
+  type: cartesian
+description: Distinct `notice_id` values per publication day stacked by `notice_type`. Bars show the composition
+  of this four-day extract; only the six largest notice types are shown and the remainder is excluded
+  rather than aggregated.
+metricQuery:
+  dimensions:
+  - fct_ted_procurement_publication_date_day
+  - fct_ted_procurement_notice_type
+  exploreName: fct_ted_procurement
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ted_procurement_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_ted_procurement_distinct_entities
+  - descending: false
+    fieldId: fct_ted_procurement_publication_date_day
+  tableCalculations: []
+name: Published notices by notice type
+pivotConfig:
+  columns:
+  - fct_ted_procurement_notice_type
+slug: fct-ted-procurement-notice-type-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ted_procurement_publication_date_day
+  - fct_ted_procurement_notice_type
+  - fct_ted_procurement_distinct_entities
+tableName: fct_ted_procurement
+version: 1

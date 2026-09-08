@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_job_feed_jobicy_company
+          yRef:
+            field: fct_job_feed_jobicy_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_job_feed_jobicy_company
+      yField:
+      - fct_job_feed_jobicy_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values by `company` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_job_feed_jobicy_company
+  exploreName: fct_job_feed_jobicy
+  filters:
+    dimensions:
+      and:
+      - id: 44499207-786b-55d2-85c0-dd5f82cb4473
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_feed_jobicy_observed_at
+        values:
+        - 30
+      id: 90481bf8-615f-5b0e-a583-a4c58feee7ac
+  limit: 20
+  metrics:
+  - fct_job_feed_jobicy_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_jobicy_distinct_entities
+  tableCalculations: []
+name: Distinct job by company
+slug: fct-job-feed-jobicy
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_feed_jobicy_company
+  - fct_job_feed_jobicy_distinct_entities
+tableName: fct_job_feed_jobicy
+version: 1

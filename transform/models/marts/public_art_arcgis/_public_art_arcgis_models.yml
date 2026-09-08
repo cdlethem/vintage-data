@@ -1,0 +1,487 @@
+version: 2
+models:
+- name: fct_public_art_arcgis
+  description: Daily physical history of public-art features published through ArcGIS. Each row is one
+    source feature at one extractor observation timestamp; repeated copies delivered by later raw loads
+    are reduced to the latest loaded record while raw-load lineage is retained. The two observed municipal
+    feeds are normalized into common artwork, location, geometry, and source-publisher fields without
+    discarding the source layer URL.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, feature_id, observed_at
+      label: Public art arcgis
+      group_label: Public art arcgis
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: public_art_arcgis_key
+      vintage:
+        visualization:
+          dimension: category
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct feature by category
+          description: Distinct `feature_id` values by `category` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - feature_id
+          - category
+          - source_loaded_at
+          sources:
+          - '`public_art_arcgis` — licence: municipal open-data terms; attribution required: True. Source
+            configuration: `extract/sources/public_art_arcgis.yml`.'
+          analysis:
+            headline: how many artworks each municipal district keeps published, and when the publisher
+              revises those records.
+            event_time: external_modified_at
+            grain: MONTH
+            controls:
+            - category
+            - status
+            - neighborhood
+            trends:
+            - slug: published-features
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Artworks published per day
+              description: Distinct `feature_id` values present in the feed on each observation day. This
+                is a level rather than a flow — the feed republishes its whole catalogue, so the line moves
+                only when the publisher adds or withdraws a record. Days with no successful extract are
+                absent rather than zero.
+              width: half
+            - slug: artists-per-day
+              kind: total
+              metric: distinct_artists
+              time: observed_at
+              grain: DAY
+              title: Artists represented per day
+              description: Distinct non-null `artist` values present in the feed on each observation day.
+                Only the Tempe feed names artists, so this level tracks that feed's catalogue; a flat line
+                means the roster of credited artists is unchanged.
+              width: half
+            - slug: district-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: category
+              top_n: 12
+              time: observed_at
+              grain: DAY
+              title: Published artworks by district and collection, stacked per day
+              description: Distinct `feature_id` values per observation day stacked by `category`, the
+                district or funding collection the publisher assigns. Segment heights show which district
+                is growing its published catalogue; the stack total is the whole published catalogue because
+                each feature carries exactly one category.
+              width: full
+            - slug: revisions-by-district
+              kind: composition
+              metric: distinct_entities
+              breakdown: category
+              top_n: 12
+              time: external_modified_at
+              grain: MONTH
+              title: Artworks revised by the publisher each month, by district
+              description: Distinct `feature_id` values whose `external_modified_at` falls in the month,
+                stacked by district, over all published revision history. Stacked bars rather than lines
+                because revisions arrive in rare bulk republications and a line would read as a flat zero
+                between them. Only the districted Phoenix-area feed populates a revision timestamp, so
+                this covers that subset and features without one never appear.
+              width: full
+  columns:
+  - name: public_art_arcgis_key
+    description: Stable hash of the source name, feature identifier, and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Public art arcgis key
+          hidden: true
+  - name: source_name
+    description: Upstream feed label that supplied the ArcGIS feature.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: feature_id
+    description: Load-layer feature identifier for the ArcGIS record.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct feature
+            description: Distinct `feature_id` values by `category` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Feature id
+          hidden: false
+  - name: layer_url
+    description: ArcGIS FeatureServer layer URL from which the feature was fetched.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Layer url
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the ArcGIS feature.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: feature_type
+    description: GeoJSON feature type declared by the upstream record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Feature type
+          hidden: false
+  - name: geometry_type
+    description: Geometry type declared in the feature geometry object.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Geometry type
+          hidden: false
+  - name: geometry
+    description: GeoJSON geometry object for the artwork location.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Geometry
+          hidden: true
+          sql: CAST(${TABLE}.geometry AS VARCHAR)
+  - name: longitude
+    description: Longitude parsed from the first coordinate in the feature geometry.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Longitude
+          hidden: false
+          format: '#,##0.00'
+  - name: latitude
+    description: Latitude parsed from the second coordinate in the feature geometry.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Latitude
+          hidden: false
+          format: '#,##0.00'
+  - name: artwork_identifier
+    description: Source artwork identifier, preferring ART_ID, Accession_Number, or a source global identifier
+      before the load-layer feature id.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Artwork identifier
+          hidden: false
+  - name: title
+    description: Human-readable artwork title from the municipal feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: category
+    description: Artwork category or source collection grouping, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Category
+          hidden: false
+  - name: material
+    description: Artwork material reported by the source, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Material
+          hidden: false
+  - name: discipline
+    description: Artwork discipline reported by the source, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Discipline
+          hidden: false
+  - name: status
+    description: Artwork status or source modification action reported by the source, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status
+          hidden: false
+  - name: artist
+    description: Artist name or names reported by the Tempe feed, when provided.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_artists:
+            type: count_distinct
+            label: Artists represented
+            description: Distinct non-null `artist` values among the observations in scope. Only the Tempe
+              feed credits artists, so this counts that feed's roster; a single record naming several
+              collaborators counts once as its combined string.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Artist
+          hidden: false
+  - name: description
+    description: Primary artwork description or short description reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Description
+          hidden: true
+  - name: location_name
+    description: Named artwork location reported by the source, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location name
+          hidden: false
+  - name: address
+    description: Street address or location address reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Address
+          hidden: false
+  - name: city
+    description: City reported for the artwork location, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: City
+          hidden: false
+  - name: state
+    description: State or province reported for the artwork location, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: State
+          hidden: false
+  - name: postal_code
+    description: Postal or ZIP code reported for the artwork location, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Postal code
+          hidden: false
+  - name: neighborhood
+    description: Neighborhood reported for the artwork location, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Neighborhood
+          hidden: false
+  - name: website_url
+    description: Artwork or source website URL reported by the feed, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Website url
+          hidden: false
+  - name: image_url
+    description: Artwork image or thumbnail URL reported by the feed, when provided.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Image url
+          hidden: false
+  - name: external_modified_at
+    description: UTC timestamp parsed from the Calgary source modification epoch, when provided.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: External modified at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_row_id
+    description: Load-layer row identifier for the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date for the retained source observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction began for the retained source observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Load operation identifier that inserted the retained source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained source observation into the raw
+      warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

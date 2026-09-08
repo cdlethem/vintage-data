@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of Tokyo MOU port-state-control detention observations. Each row
+  is one detention event returned by the current-month APCIS query at one extractor observation timestamp;
+  repeated raw copies of that observation are reduced to the latest loaded row while vessel, deficiency,
+  release, query, and load lineage remain available.
+metricQuery:
+  dimensions: &id001
+  - fct_tokyo_mou_detentions_observed_at
+  - fct_tokyo_mou_detentions_detention_id
+  - fct_tokyo_mou_detentions_flag_country
+  - fct_tokyo_mou_detentions_source_loaded_at
+  exploreName: fct_tokyo_mou_detentions
+  filters:
+    dimensions:
+      and:
+      - id: b08ad33c-425e-5cc9-b848-cf305ad99607
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_tokyo_mou_detentions_observed_at
+        values:
+        - 30
+      id: f5903c39-a640-5964-bc45-dc21b1e36389
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_tokyo_mou_detentions_observed_at
+  tableCalculations: []
+name: Tokyo mou detentions — observations
+slug: fct-tokyo-mou-detentions-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_tokyo_mou_detentions
+version: 1

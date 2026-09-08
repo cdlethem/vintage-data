@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: e99b3939-04fe-579d-bee4-b6d6bc1f5abb
+    label: 'Imdb rating observation: Source system'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_imdb_rating_observation_source_system
+      tableName: fct_imdb_rating_observation
+    values: []
+  - disabled: true
+    id: 8f5566ba-eff8-5344-bf37-52e08bd45832
+    label: 'Imdb rating observation: Change status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_imdb_rating_observation_change_status
+      tableName: fct_imdb_rating_observation
+    values: []
+  - disabled: true
+    id: 309e35d0-c389-579b-83c9-e9197312ba81
+    label: 'Imdb rating observation: Publisher updated at'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_imdb_rating_observation_publisher_updated_at
+      tableName: fct_imdb_rating_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Imdb Ratings
+slug: imdb-ratings
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily incremental history of IMDb title rating observations. Each row is one title at one
+      upstream fetch timestamp, preserving the reported rating, vote count, change metadata, and raw-load
+      lineage. Replayed copies of the same title and observation timestamp are reduced to the latest loaded
+      row; this model does not infer title metadata or fill omitted publisher values.
+
+
+      **Grain:** title_id, observed_at
+
+
+      **What changes here:** how IMDb title coverage, ratings, and voting activity change across the four
+      observed snapshot days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `imdb_ratings` — licence: IMDb non-commercial-use terms; attribution required: True. Source configuration:
+      `extract/sources/imdb_ratings.yml`.'
+    hideFrame: false
+    title: Imdb rating observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Imdb rating observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct titles observed per day
+    chartSlug: fct-imdb-rating-observation-title-coverage
+    hideTitle: false
+    title: Distinct titles observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean title rating per observation day
+    chartSlug: fct-imdb-rating-observation-rating-level
+    hideTitle: false
+    title: Mean title rating per observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean votes per observation day
+    chartSlug: fct-imdb-rating-observation-vote-level
+    hideTitle: false
+    title: Mean votes per observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean rating by publisher change status
+    chartSlug: fct-imdb-rating-observation-rating-by-change-status
+    hideTitle: false
+    title: Mean rating by publisher change status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Mean votes by publisher change status
+    chartSlug: fct-imdb-rating-observation-votes-by-change-status
+    hideTitle: false
+    title: Mean votes by publisher change status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Imdb rating observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed average rating by change status
+    chartSlug: fct-imdb-rating-observation
+    hideTitle: false
+    title: Mean observed average rating by change status
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Imdb rating observation — observations
+    chartSlug: fct-imdb-rating-observation-details
+    hideTitle: false
+    title: Imdb rating observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

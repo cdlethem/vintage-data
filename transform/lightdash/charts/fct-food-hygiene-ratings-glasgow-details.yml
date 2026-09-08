@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical snapshot of Glasgow food-hygiene ratings. Each row is one food business from
+  one publisher snapshot, identified by source, business_id, and observed_at. Source business attributes
+  and the three nested FHRS scores are exposed as typed columns while loader lineage is retained; duplicate
+  source rows are reduced deterministically by load lineage.
+metricQuery:
+  dimensions: &id001
+  - fct_food_hygiene_ratings_glasgow_observed_at
+  - fct_food_hygiene_ratings_glasgow_business_id
+  - fct_food_hygiene_ratings_glasgow_business_type
+  - fct_food_hygiene_ratings_glasgow_source_loaded_at
+  exploreName: fct_food_hygiene_ratings_glasgow
+  filters:
+    dimensions:
+      and:
+      - id: 3d76b430-b021-5636-b3b2-8acbe63e379d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_food_hygiene_ratings_glasgow_observed_at
+        values:
+        - 30
+      id: 5f8d2305-4741-504f-8560-0a4287c3792f
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_food_hygiene_ratings_glasgow_observed_at
+  tableCalculations: []
+name: Food hygiene ratings glasgow — observations
+slug: fct-food-hygiene-ratings-glasgow-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_food_hygiene_ratings_glasgow
+version: 1

@@ -26,9 +26,11 @@ import sys
 import uuid
 from dataclasses import replace
 
+from .cadence import load_source_cadences, read_plan
 from .config import load_config
 from .destinations import get_destination
 from .discovery import scan
+from .hold_ops import active_hold, classify as _classify, install as _hold, release as _release, candidates as _candidates
 from .queue import Job, JobQueue
 from .schema import infer_columns, sanitize, table_columns
 from .service import LoaderService, sample_records
@@ -104,8 +106,13 @@ def cmd_status(args) -> int:
     print(f"queue       {config.queue_dir}  depth={queue.depth()}")
     print(f"service     {json.dumps(queue.service_status() or {'state': 'unknown'})}")
 
-    files = scan(config.source_root, min_age_s=0)
-    print(f"sink files  {len(files)} across {len({f.source for f in files})} sources")
+    files = scan(config.source_root, min_age_s=0, include_held=True)
+    held = [f for f in files if f.held is not None]
+    print(f"sink files  {len(files)} across {len({f.source for f in files})} sources, "
+          f"{len(held)} on hold (excluded from load candidates)")
+    if held:
+        for f in held:
+            print(f"  [held] {f.path}  reason={f.held.get('reason')}")
 
     destination = _readonly_destination(config)
     try:
@@ -154,6 +161,61 @@ def cmd_inspect(args) -> int:
     return 0
 
 
+def cmd_cadence(args) -> int:
+    """Show — or re-run — algorithmic scheduling cadence detection."""
+    config = load_config(args.config)
+    policy = config.cadence
+    if args.submit:
+        queue = JobQueue(config.queue_dir)
+        job_id = queue.submit({"kind": "cadence", "load_id": uuid.uuid4().hex,
+                               **({"sources": args.sources} if args.sources else {})})
+        print(f"submitted {job_id} (queue depth {queue.depth()})", file=sys.stderr)
+        if not args.wait:
+            return 0
+        result = queue.wait(job_id, timeout_s=args.timeout, poll_s=2.0)
+        if result is None:
+            print(f"timed out after {args.timeout}s waiting for {job_id}", file=sys.stderr)
+            return 2
+        return _print_result(result)
+
+    managed = load_source_cadences(policy)
+    plan = read_plan(policy.plan_path).get("sources", {})
+    print(f"policy      ladder={list(policy.ladder_minutes)} floor={policy.floor_minutes}m "
+          f"speed_up_after={policy.speed_up_after} slow_down_after={policy.slow_down_after}")
+    print(f"plan        {policy.plan_path}")
+    print(f"managed     {len(managed)} source(s) with cadence.auto in {policy.sources_dir}")
+    for name, source in sorted(managed.items()):
+        entry = plan.get(name, {})
+        cron = entry.get("cron", source.declared_cron)
+        minutes = entry.get("interval_minutes", source.declared_minutes)
+        marker = " " if cron == source.declared_cron else "*"
+        print(f" {marker}{name:<28} {minutes:>5}m  {cron:<20} "
+              f"[{max(policy.floor_minutes, source.min_minutes)}-{source.max_minutes}m]  "
+              f"{entry.get('reason', 'not yet evaluated')}")
+
+    destination = _readonly_destination(config)
+    try:
+        destination.connect()
+        rows = destination.con.execute(f"""
+            SELECT decided_at, source, decision, from_minutes, to_minutes,
+                   rows_new, novel_rows, signal, reason
+            FROM {destination.quote(config.meta_schema)}."cadence_decisions"
+            {'' if args.all else "WHERE decision <> 'hold'"}
+            ORDER BY decided_at DESC LIMIT ?
+        """, [args.log]).fetchall()
+    except Exception as exc:
+        print(f"no decision log yet, or the warehouse is busy ({exc})", file=sys.stderr)
+        destination.close()
+        return 0
+    finally:
+        destination.close()
+    print(f"\nlast {len(rows)} decision(s){'' if args.all else ' that moved a schedule'}:")
+    for at, source, decision, frm, to, rows_new, novel, signal, reason in rows:
+        print(f"  {str(at)[:19]}  {source:<28} {decision:<6} {frm:>5}m -> {to:>5}m  "
+              f"{novel or 0:>7}/{rows_new or 0:<7} {signal:<11} {reason}")
+    return 0
+
+
 def cmd_sql(args) -> int:
     """Run one read-only query. Handy because the standalone duckdb CLI is a
     separate install, while this venv already has the driver."""
@@ -185,6 +247,82 @@ def cmd_sql(args) -> int:
     print(f"({len(rows)} rows)", file=sys.stderr)
     return 0
 
+
+#: Commands that touch only the raw filesystem and never the warehouse.
+def cmd_hold(args) -> int:
+    """Install an active hold marker next to one artifact (filesystem-only)."""
+    config = load_config(args.config)
+    try:
+        marker = _hold(args.path, reason=args.reason, actor=args.actor,
+                       raw_root=config.source_root)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"could not hold {args.path}: {exc}", file=sys.stderr)
+        return 2
+    print(f"held {args.path}")
+    print(f"  reason  {marker['reason']}")
+    print(f"  sha256  {marker['artifact_sha256']}")
+    print(f"  marker  {args.path}.hold.json")
+    return 0
+
+
+def cmd_release(args) -> int:
+    """Lift a hold after re-proving the artifact bytes (filesystem-only)."""
+    config = load_config(args.config)
+    try:
+        release = _release(args.path, evidence=args.evidence, actor=args.actor,
+                           raw_root=config.source_root,
+                           expect_sha256=args.expect_sha256)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"refused to release {args.path}: {exc}", file=sys.stderr)
+        return 2
+    print(f"released {args.path}")
+    print(f"  evidence      {release['release_evidence']}")
+    print(f"  re-proved sha256 {release['release_artifact_sha256']}")
+    print(f"  audit         {args.path}.hold.released.json")
+    return 0
+
+
+def cmd_candidates(args) -> int:
+    """Classify sink files without opening the warehouse writable.
+
+    ``--no-retry-context`` keeps the command strictly on the filesystem: when
+    set the ledger is not consulted and already-loaded / attempt-exhausted
+    files simply show up as pending (they have a manifest).
+    """
+    config = load_config(args.config)
+    raw_root = args.raw_root
+    if raw_root is None:
+        raw_root = config.source_root
+    ledger = None
+    max_attempts = int((config.destination or {}).get("max_attempts", 3))
+    if not getattr(args, "no_ledger", False):
+        # A read-only ledger read is safe: it does not take the writer lock.
+        try:
+            destination = _readonly_destination(config)
+            destination.connect()
+            raw = destination.con.execute(
+                f"SELECT path, status, attempts FROM {destination.quote(config.meta_schema)}.\"files\"")
+            ledger = {}
+            for path, status, attempts in raw.fetchall():
+                ledger[path] = {"status": status, "attempts": attempts or 0}
+            destination.close()
+        except Exception as exc:
+            print(f"warning: cannot read the ledger ({exc}); "
+                  "already-loaded state will not be shown", file=sys.stderr)
+    # A source with ``enabled: false`` in load.yml is skipped by the service;
+    # mirror that here so the report matches what the next scan does.
+    disabled: set[str] = set()
+    for name in config.overrides or {}:
+        try:
+            if not config.for_source(name).enabled:
+                disabled.add(name)
+        except Exception:
+            continue
+    report = _candidates(raw_root, sources=args.sources, paths=args.paths,
+                         ledger=ledger, max_attempts=max_attempts,
+                         age_seconds=args.min_age_s, disabled_sources=disabled)
+    print(json.dumps(report, indent=2, default=str))
+    return 0
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="loader", description=__doc__,
@@ -230,6 +368,41 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--files", type=int, default=3, help="how many recent files to sample")
     p.add_argument("--all-lines", action="store_true", help="sample every line")
     p.set_defaults(func=cmd_inspect)
+
+    p = sub.add_parser("cadence", help="show or re-run scheduling cadence detection")
+    p.add_argument("--submit", action="store_true", help="enqueue a cadence job")
+    p.add_argument("--wait", action="store_true", help="wait for the job result")
+    p.add_argument("--timeout", type=float, default=600)
+    p.add_argument("--sources", nargs="*", help="limit a submitted job to these sources")
+    p.add_argument("--log", type=int, default=20, help="decision log rows to show")
+    p.add_argument("--all", action="store_true",
+                   help="include evaluations that held the cadence unchanged")
+    p.set_defaults(func=cmd_cadence)
+
+    p = sub.add_parser("hold", help="put one artifact on hold (filesystem-only)")
+    p.add_argument("path", help="the sink artifact (.ndjson) to hold")
+    p.add_argument("--reason", required=True, help="why the file is being held")
+    p.add_argument("--actor", required=True, help="who is installing the hold")
+    p.set_defaults(func=cmd_hold)
+
+    p = sub.add_parser("release", help="lift a hold (filesystem-only, re-proves bytes)")
+    p.add_argument("path", help="the sink artifact (.ndjson) to release")
+    p.add_argument("--evidence", required=True, help="what was checked before releasing")
+    p.add_argument("--actor", required=True, help="who is releasing the hold")
+    p.add_argument("--expect-sha256", dest="expect_sha256", default=None,
+                   help="refuse if the artifact no longer matches this hash")
+    p.set_defaults(func=cmd_release)
+
+    p = sub.add_parser("candidates", help="classify sink files, read-only")
+    p.add_argument("--sources", nargs="*", help="limit to these source names")
+    p.add_argument("--paths", nargs="*", help="classify these sink files specifically")
+    p.add_argument("--min-age-s", dest="min_age_s", type=int, default=300,
+                   help="age (s) under which a manifest-less file is 'young'")
+    p.add_argument("--no-ledger", dest="no_ledger", action="store_true",
+                   help="never read the ledger; filesystem state only")
+    p.add_argument("--raw-root", dest="raw_root", default=None,
+                   help="override the raw root (default: load.yml / env)")
+    p.set_defaults(func=cmd_candidates)
     return parser
 
 

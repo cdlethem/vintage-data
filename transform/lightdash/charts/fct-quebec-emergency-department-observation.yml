@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_quebec_emergency_department_observation_facility_name
+          yRef:
+            field: fct_quebec_emergency_department_observation_m_cc9d5e94
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_quebec_emergency_department_observation_facility_name
+      yField:
+      - fct_quebec_emergency_department_observation_m_cc9d5e94
+  type: cartesian
+description: Mean observed patients waiting for care count by `facility_name` in the selected observation
+  window. Total number of patients waiting for care; unreported source text is null. Each retained observation
+  has equal weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+  measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_quebec_emergency_department_observation_facility_name
+  exploreName: fct_quebec_emergency_department_observation
+  filters:
+    dimensions:
+      and:
+      - id: 782ea158-22fa-5fed-8697-4aefb9e0e7b1
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_quebec_emergency_department_observation_observed_at
+        values:
+        - 30
+      id: 60c29fa4-2dc7-543f-83e7-cbe14b626dd4
+  limit: 20
+  metrics:
+  - fct_quebec_emergency_department_observation_m_cc9d5e94
+  sorts:
+  - descending: true
+    fieldId: fct_quebec_emergency_department_observation_m_cc9d5e94
+  tableCalculations: []
+name: Mean observed patients waiting for care count by facility name
+slug: fct-quebec-emergency-department-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_quebec_emergency_department_observation_facility_name
+  - fct_quebec_emergency_department_observation_m_cc9d5e94
+tableName: fct_quebec_emergency_department_observation
+version: 1

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_geojson_shelter_status_observed_at_day
+          yRef:
+            field: fct_geojson_shelter_status_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct feature
+    layout:
+      stack: true
+      xField: fct_geojson_shelter_status_observed_at_day
+      yField:
+      - fct_geojson_shelter_status_distinct_entities
+  type: cartesian
+description: Distinct `feature_id` values per observation day stacked by `subfacility_code`. Bars show
+  how the returned snapshot mix changes; this is not a cumulative flow, and both observed codes are shown.
+  Days without observations are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_geojson_shelter_status_observed_at_day
+  - fct_geojson_shelter_status_subfacility_code
+  exploreName: fct_geojson_shelter_status
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_geojson_shelter_status_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_geojson_shelter_status_distinct_entities
+  - descending: false
+    fieldId: fct_geojson_shelter_status_observed_at_day
+  tableCalculations: []
+name: Shelter catalogue mix by facility code
+pivotConfig:
+  columns:
+  - fct_geojson_shelter_status_subfacility_code
+slug: fct-geojson-shelter-status-facility-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_geojson_shelter_status_observed_at_day
+  - fct_geojson_shelter_status_subfacility_code
+  - fct_geojson_shelter_status_distinct_entities
+tableName: fct_geojson_shelter_status
+version: 1

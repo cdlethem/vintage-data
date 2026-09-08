@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_gracedb_superevents_event_time_utc_day
+          yRef:
+            field: fct_gracedb_superevents_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event time utc (Day)
+      yAxis:
+      - name: Distinct superevent
+    layout:
+      xField: fct_gracedb_superevents_event_time_utc_day
+      yField:
+      - fct_gracedb_superevents_distinct_entities
+  type: cartesian
+description: Distinct `superevent_id` values per event day pivoted by GraceDB `category`. The extract
+  currently has one observed category, Production; no remainder is aggregated and categories absent on
+  a day are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_gracedb_superevents_event_time_utc_day
+  - fct_gracedb_superevents_category
+  exploreName: fct_gracedb_superevents
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gracedb_superevents_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_gracedb_superevents_distinct_entities
+  - descending: false
+    fieldId: fct_gracedb_superevents_event_time_utc_day
+  tableCalculations: []
+name: Superevents by category and event day
+pivotConfig:
+  columns:
+  - fct_gracedb_superevents_category
+slug: fct-gracedb-superevents-events-by-category
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gracedb_superevents_event_time_utc_day
+  - fct_gracedb_superevents_category
+  - fct_gracedb_superevents_distinct_entities
+tableName: fct_gracedb_superevents
+version: 1

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_malaysia_blood_donations_donation_date_day
+          yRef:
+            field: fct_malaysia_blood_donations_distinct_observations
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Donation date (Day)
+      yAxis:
+      - name: Distinct donation observations
+    layout:
+      stack: true
+      xField: fct_malaysia_blood_donations_donation_date_day
+      yField:
+      - fct_malaysia_blood_donations_distinct_observations
+  type: cartesian
+description: Distinct donation observations per reported day, stacked by `blood_type`. Only the observed
+  blood type is present in this extract and no remainder is fabricated; absent dates are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_malaysia_blood_donations_donation_date_day
+  - fct_malaysia_blood_donations_blood_type
+  exploreName: fct_malaysia_blood_donations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_malaysia_blood_donations_distinct_observations
+  sorts:
+  - descending: true
+    fieldId: fct_malaysia_blood_donations_distinct_observations
+  - descending: false
+    fieldId: fct_malaysia_blood_donations_donation_date_day
+  tableCalculations: []
+name: Donation observations by blood type
+pivotConfig:
+  columns:
+  - fct_malaysia_blood_donations_blood_type
+slug: fct-malaysia-blood-donations-observations-by-blood-type
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_malaysia_blood_donations_donation_date_day
+  - fct_malaysia_blood_donations_blood_type
+  - fct_malaysia_blood_donations_distinct_observations
+tableName: fct_malaysia_blood_donations
+version: 1

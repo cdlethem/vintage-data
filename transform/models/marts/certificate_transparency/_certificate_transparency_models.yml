@@ -1,0 +1,382 @@
+version: 2
+models:
+- name: fct_certificate_transparency_certificate_observation
+  description: Daily certificate transparency observation fact for certificates returned by the watched-domain
+    search. Each row is one certificate identifier at one extractor observation timestamp, retaining certificate
+    validity, subject, issuer, SAN names, and raw-load lineage. Repeated copies of the same source, certificate,
+    and observation timestamp are reduced to the latest loaded record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, certificate_id, observed_at
+      label: Certificate transparency certificate observation
+      group_label: Certificate transparency
+      default_time_dimension:
+        field: da
+        interval: DAY
+      primary_key: cer_d8c05c
+      vintage:
+        visualization:
+          dimension: issuer
+          metric: m_a6e4e251
+          time: observed_at
+          window_days: 30
+          title: Distinct certificate by issuer
+          description: Distinct `certificate_id` values by `issuer` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent a
+            current-state census.
+          detail_fields:
+          - observed_at
+          - certificate_id
+          - issuer
+          - source_loaded_at
+          sources:
+          - '`certificate_transparency` — licence: unstated; attribution required: False. Source configuration:
+            `extract/sources/certificate_transparency.yml`.'
+          analysis:
+            headline: how certificate issuance and expiry patterns shift across watched-domain history.
+            event_time: not_before
+            grain: MONTH
+            controls:
+            - issuer
+            - common_name
+            trends:
+            - slug: certificate-issuance
+              kind: total
+              metric: m_a6e4e251
+              time: not_before
+              time_dimension: nb
+              grain: MONTH
+              title: Certificates issued per month
+              description: Distinct `certificate_id` values by certificate `not_before` month — this is a
+                source issuance flow across the watched-domain history, not the number of certificates
+                observed by the collector. Months with no matching certificates are absent rather than zero.
+              width: half
+            - slug: serial-diversity
+              kind: total
+              metric: serials
+              time: not_before
+              time_dimension: nb
+              grain: MONTH
+              title: Issuer serial numbers per issuance month
+              description: Distinct non-null `serial_number` values by certificate `not_before` month — this
+                diversity measure can differ from certificate identifiers when records share serial values.
+                Empty months are absent rather than zero.
+              width: half
+            - slug: issuer-composition
+              kind: composition
+              metric: m_a6e4e251
+              breakdown: issuer
+              top_n: 8
+              time: not_before
+              time_dimension: nb
+              grain: MONTH
+              title: Certificates issued by leading issuer
+              description: Distinct `certificate_id` values per `not_before` month, stacked by the eight
+                largest issuers across the full history — all remaining issuers are excluded rather than
+                aggregated. Sparse issuance months are absent, not zero.
+              width: full
+            - slug: common-name-trajectories
+              kind: breakdown
+              metric: m_a6e4e251
+              breakdown: common_name
+              top_n: 4
+              time: not_before
+              time_dimension: nb
+              grain: MONTH
+              title: Certificates issued by common name
+              description: Distinct `certificate_id` values per `not_before` month, pivoted by the four
+                observed common names — every observed value is retained. This compares subject-name
+                trajectories and does not imply certificates are additive across repeated observations.
+              width: full
+            - slug: certificate-expiry
+              kind: total
+              metric: m_a6e4e251
+              time: not_after
+              time_dimension: na
+              grain: MONTH
+              title: Certificates expiring per month
+              description: Distinct `certificate_id` values by certificate `not_after` month — this is an
+                expiry-date flow based on publisher validity fields, not certificates actually seen expiring.
+                Months without certificates ending are absent rather than zero.
+              width: full
+  columns:
+  - name: certificate_observation_key
+    description: Stable hash of the source, certificate identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Certificate observation key
+          hidden: true
+          name: cer_d8c05c
+  - name: source
+    description: Upstream certificate transparency source name.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: certificate_id
+    description: Certificate identifier returned by the certificate transparency search API.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          m_a6e4e251:
+            type: count_distinct
+            label: Distinct certificate
+            description: Distinct `certificate_id` values by `issuer` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Certificate id
+          hidden: false
+          name: cer_469958
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the certificate record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: da
+  - name: common_name
+    description: Certificate subject common name.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Common name
+          hidden: false
+          name: com_43912d
+  - name: names
+    description: JSON array of DNS names listed in the certificate SAN extension.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Names
+          hidden: true
+          sql: CAST(${TABLE}.names AS VARCHAR)
+  - name: issuer
+    description: Distinguished name of the certificate issuer.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Issuer
+          hidden: false
+  - name: not_before
+    description: UTC timestamp at which the certificate becomes valid.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Not before
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: dc
+        additional_dimensions:
+          nb:
+            type: timestamp
+            label: Issued at
+            description: Certificate validity start, exposed under a short dimension key so its
+              date-truncated variants stay inside Postgres's 63-byte identifier limit.
+            sql: ${TABLE}.not_before
+            time_intervals:
+            - DAY
+            - WEEK
+            - MONTH
+            - YEAR
+  - name: not_after
+    description: UTC timestamp at which the certificate expires.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Not after
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: d8
+        additional_dimensions:
+          na:
+            type: timestamp
+            label: Expires at
+            description: Certificate validity end, exposed under a short dimension key so its
+              date-truncated variants stay inside Postgres's 63-byte identifier limit.
+            sql: ${TABLE}.not_after
+            time_intervals:
+            - DAY
+            - WEEK
+            - MONTH
+            - YEAR
+  - name: serial_number
+    description: Issuer-assigned certificate serial number.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          serials:
+            type: count_distinct
+            label: Distinct serial numbers
+            description: Distinct non-null `serial_number` values among matching certificate observations.
+              Serial reuse means this is a serial-diversity measure, not a count of certificates.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Serial number
+          hidden: false
+          name: ser_dc0fb8
+  - name: source_row_id
+    description: Load-layer row identifier retained for raw-record lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+          name: sou_9b06cc
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+          name: sou_eab4bc
+  - name: source_file
+    description: Raw extract file containing the source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+          name: sou_65dc1c
+  - name: source_file_row_number
+    description: One-based row position of the source observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+          name: sou_36bd5c
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: d5
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: d5
+  - name: load_id
+    description: Identifier of the load operation that inserted the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the source row into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: d2
+        metrics:
+          m_e020efde:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true
+          name: con_6e83b8

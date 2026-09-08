@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_gbif_occurrence_snapshot_fetched_at_day
+          yRef:
+            field: fct_gbif_occurrence_snapshot_distinct_species
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Distinct species
+    layout:
+      xField: fct_gbif_occurrence_snapshot_fetched_at_day
+      yField:
+      - fct_gbif_occurrence_snapshot_distinct_species
+  type: cartesian
+description: Distinct non-null `species` values in the GBIF result set on each fetch day. This is a snapshot
+  level and not a count of species first observed that day; missing species names are excluded. Days without
+  a fetch are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_gbif_occurrence_snapshot_fetched_at_day
+  exploreName: fct_gbif_occurrence_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gbif_occurrence_snapshot_distinct_species
+  sorts:
+  - descending: false
+    fieldId: fct_gbif_occurrence_snapshot_fetched_at_day
+  tableCalculations: []
+name: Distinct species represented per fetch day
+slug: fct-gbif-occurrence-snapshot-species-fetched
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gbif_occurrence_snapshot_fetched_at_day
+  - fct_gbif_occurrence_snapshot_distinct_species
+tableName: fct_gbif_occurrence_snapshot
+version: 1

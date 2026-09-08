@@ -1,0 +1,272 @@
+version: 2
+models:
+- name: fct_nhtsa_recall
+  description: Hourly physical history of NHTSA vehicle-recall observations. Each row is one recall identifier
+    as observed by the extractor at a fetched timestamp, with report content and raw-load lineage retained
+    for audit and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: recall_id, observed_at
+      label: Nhtsa recall
+      group_label: Nhtsa
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: nhtsa_recall_key
+      vintage:
+        visualization:
+          dimension: manufacturer
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct recall by manufacturer
+          description: Distinct `recall_id` values by `manufacturer` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - recall_id
+          - manufacturer
+          - source_loaded_at
+          sources:
+          - '`nhtsa` — licence: US Government work, public domain; attribution required: False. Source
+            configuration: `extract/sources/nhtsa.yml`.'
+          analysis:
+            headline: how recall notices arrive across report months and affected vehicle components.
+            event_time: report_received_date
+            grain: MONTH
+            controls:
+            - manufacturer
+            - component
+            - consequence
+            - park_it
+            trends:
+            - slug: reported-recalls
+              kind: total
+              metric: distinct_entities
+              time: report_received_date
+              grain: MONTH
+              title: Reported recalls by month
+              description: Distinct `recall_id` values by NHTSA report month. This is a sparse historical
+                flow with five observed months, so months without a report are absent rather than zero.
+              width: half
+            - slug: affected-components
+              kind: total
+              metric: distinct_components
+              time: report_received_date
+              grain: MONTH
+              title: Affected components by report month
+              description: Distinct non-null `component` values among recalls received in each report month.
+                This measures breadth of affected systems, not the number of vehicles recalled.
+              width: half
+            - slug: recalls-by-component
+              kind: composition
+              metric: distinct_entities
+              breakdown: component
+              top_n: 3
+              time: report_received_date
+              grain: MONTH
+              title: Reported recalls by component
+              description: Distinct `recall_id` values stacked by the three observed `component` values
+                across report months. Other components would be excluded rather than aggregated, and empty
+                months are absent.
+              width: full
+            - slug: park-it-mix
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: park_it
+              top_n: 2
+              time: report_received_date
+              grain: MONTH
+              title: Park-it recall mix by month
+              description: Distinct recalls by the `park_it` safety flag and report month. The five-month
+                source is sparse, and the flag describes notice guidance rather than realized vehicle risk.
+              width: full
+  columns:
+  - name: nhtsa_recall_key
+    description: Stable hash of the recall identifier and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Nhtsa recall key
+          hidden: true
+  - name: recall_id
+    description: NHTSA campaign or recall identifier assigned to the recall notice.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct recall
+            description: Distinct `recall_id` values by `manufacturer` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Recall id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this recall observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_name
+    description: Upstream source label carried by the NHTSA response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: manufacturer
+    description: Vehicle manufacturer named in the recall notice.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Manufacturer
+          hidden: false
+  - name: component
+    description: Vehicle component or system affected by the recall.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_components:
+            type: count_distinct
+            label: Distinct components
+            description: Distinct non-null `component` values among recalls in each selected time group.
+              This measures breadth of affected systems, not the number of vehicles recalled.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Component
+          hidden: false
+  - name: summary
+    description: Narrative summary of the defect or recall condition.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Summary
+          hidden: false
+  - name: consequence
+    description: Safety consequence described by the recall notice.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Consequence
+          hidden: false
+  - name: remedy
+    description: Remedy or corrective action described by the recall notice.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Remedy
+          hidden: false
+  - name: report_received_date
+    description: Calendar date on which NHTSA received the report, parsed from the source day/month/year
+      value.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Report received date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: park_it
+    description: Whether the notice instructs vehicle owners to park the vehicle.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Park it
+          hidden: false
+  - name: _source_file
+    description: Raw extract file containing this recall observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position of this observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

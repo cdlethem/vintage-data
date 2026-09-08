@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily historical observations of jobs returned by the Remotive remote-jobs feed. Each row
+  represents one job identifier observed at one extractor timestamp; repeated raw ingestion of an identical
+  observation is reduced to the latest loaded copy while prior observations remain available for history.
+metricQuery:
+  dimensions: &id001
+  - fct_job_feed_remotive_observed_at
+  - fct_job_feed_remotive_job_id
+  - fct_job_feed_remotive_company
+  - fct_job_feed_remotive_source_loaded_at
+  exploreName: fct_job_feed_remotive
+  filters:
+    dimensions:
+      and:
+      - id: 44de4a77-8d31-5db8-b2d9-51410fcceea8
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_feed_remotive_observed_at
+        values:
+        - 30
+      id: 0d11ecfe-ed7c-5d89-b8be-7398ccfe9d73
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_remotive_observed_at
+  tableCalculations: []
+name: Job feed remotive — observations
+slug: fct-job-feed-remotive-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_job_feed_remotive
+version: 1

@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_environment_agency_floods_severity
+          yRef:
+            field: fct_environment_agency_floods_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_environment_agency_floods_severity
+      yField:
+      - fct_environment_agency_floods_distinct_entities
+  type: cartesian
+description: Distinct `flood_id` values by `severity` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_environment_agency_floods_severity
+  exploreName: fct_environment_agency_floods
+  filters:
+    dimensions:
+      and:
+      - id: f9f57e6c-fca7-50f9-ab47-1157d02b6463
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_environment_agency_floods_fetched_at
+        values:
+        - 30
+      id: 012536e4-77ae-5c91-86bd-fb1c29a3808e
+  limit: 20
+  metrics:
+  - fct_environment_agency_floods_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_environment_agency_floods_distinct_entities
+  tableCalculations: []
+name: Distinct flood by severity
+slug: fct-environment-agency-floods
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_environment_agency_floods_severity
+  - fct_environment_agency_floods_distinct_entities
+tableName: fct_environment_agency_floods
+version: 1

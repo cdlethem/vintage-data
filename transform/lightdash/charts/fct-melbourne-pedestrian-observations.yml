@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_melbourne_pedestrian_observations_location_id
+          yRef:
+            field: fct_melbourne_pedestrian_observations_m_07ead95e
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_melbourne_pedestrian_observations_location_id
+      yField:
+      - fct_melbourne_pedestrian_observations_m_07ead95e
+  type: cartesian
+description: Mean observed total of directions by `location_id` in the selected observation window. Total
+  pedestrian count reported by the feed across both directions. Each retained observation has equal weight;
+  polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure or
+  an additive total.
+metricQuery:
+  dimensions:
+  - fct_melbourne_pedestrian_observations_location_id
+  exploreName: fct_melbourne_pedestrian_observations
+  filters:
+    dimensions:
+      and:
+      - id: b3d13519-ca1e-5b67-95c8-86f050da67ad
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_melbourne_pedestrian_observations_observed_at
+        values:
+        - 30
+      id: 21cb1c3a-3d3f-57bd-9a99-a6c9bc1a9a16
+  limit: 20
+  metrics:
+  - fct_melbourne_pedestrian_observations_m_07ead95e
+  sorts:
+  - descending: true
+    fieldId: fct_melbourne_pedestrian_observations_m_07ead95e
+  tableCalculations: []
+name: Mean observed total of directions by location id
+slug: fct-melbourne-pedestrian-observations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_melbourne_pedestrian_observations_location_id
+  - fct_melbourne_pedestrian_observations_m_07ead95e
+tableName: fct_melbourne_pedestrian_observations
+version: 1

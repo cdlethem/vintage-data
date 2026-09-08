@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_opensky_flight_observation_observed_at_hour
+          yRef:
+            field: fct_opensky_flight_observation_distinct_aircraft
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct aircraft
+    layout:
+      stack: true
+      xField: fct_opensky_flight_observation_observed_at_hour
+      yField:
+      - fct_opensky_flight_observation_distinct_aircraft
+  type: cartesian
+description: Distinct `aircraft_id` values stacked by `origin_country` for each snapshot hour. The eight
+  largest countries over the selected window are shown and the remainder is excluded rather than aggregated;
+  sparse hours are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_opensky_flight_observation_observed_at_hour
+  - fct_opensky_flight_observation_origin_country
+  exploreName: fct_opensky_flight_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_opensky_flight_observation_distinct_aircraft
+  sorts:
+  - descending: true
+    fieldId: fct_opensky_flight_observation_distinct_aircraft
+  - descending: false
+    fieldId: fct_opensky_flight_observation_observed_at_hour
+  tableCalculations: []
+name: Aircraft mix by origin country and hour
+pivotConfig:
+  columns:
+  - fct_opensky_flight_observation_origin_country
+slug: fct-opensky-flight-observation-country-aircraft
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_opensky_flight_observation_observed_at_hour
+  - fct_opensky_flight_observation_origin_country
+  - fct_opensky_flight_observation_distinct_aircraft
+tableName: fct_opensky_flight_observation
+version: 1

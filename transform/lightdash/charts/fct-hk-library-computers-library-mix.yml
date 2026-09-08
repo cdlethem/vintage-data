@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_hk_library_computers_observed_at_day
+          yRef:
+            field: fct_hk_library_computers_distinct_computers
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct computers
+    layout:
+      stack: true
+      xField: fct_hk_library_computers_observed_at_day
+      yField:
+      - fct_hk_library_computers_distinct_computers
+  type: cartesian
+description: Distinct `computer_id` values per observation day stacked by the six libraries with the largest
+  recent totals. The remaining libraries are excluded rather than aggregated; this is a published-catalogue
+  level, not a count of newly added computers.
+metricQuery:
+  dimensions:
+  - fct_hk_library_computers_observed_at_day
+  - fct_hk_library_computers_library_name
+  exploreName: fct_hk_library_computers
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_hk_library_computers_distinct_computers
+  sorts:
+  - descending: true
+    fieldId: fct_hk_library_computers_distinct_computers
+  - descending: false
+    fieldId: fct_hk_library_computers_observed_at_day
+  tableCalculations: []
+name: Observed computer entries by leading libraries
+pivotConfig:
+  columns:
+  - fct_hk_library_computers_library_name
+slug: fct-hk-library-computers-library-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_hk_library_computers_observed_at_day
+  - fct_hk_library_computers_library_name
+  - fct_hk_library_computers_distinct_computers
+tableName: fct_hk_library_computers
+version: 1

@@ -1,0 +1,96 @@
+name: vintage-lightdash
+services:
+  cli:
+    image: vintage-lightdash-cli:2.140.0
+    profiles: [tools]
+    build:
+      context: .
+      dockerfile: Dockerfile.cli
+    environment:
+      LIGHTDASH_URL: http://lightdash:8080
+      LIGHTDASH_API_KEY: ${LIGHTDASH_API_KEY:-}
+      LIGHTDASH_PROJECT: ${LIGHTDASH_PROJECT:-}
+      LIGHTDASH_PG_HOST: db
+      LIGHTDASH_PG_PORT: 5432
+      LIGHTDASH_READER_PASSWORD: ${LIGHTDASH_READER_PASSWORD:?run setup}
+      LIGHTDASH_DISABLE_TRACKING: "true"
+      CI: "true"
+    volumes:
+      - ${LIGHTDASH_STATE_ROOT:?render config}:/state
+      - ../transform/lightdash:/content:ro
+      - ./deploy_in_container.py:/tools/deploy.py:ro
+  db:
+    image: ${LIGHTDASH_POSTGRES_IMAGE:?load images.env}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${LIGHTDASH_DB_ADMIN_PASSWORD:?run setup}
+      LIGHTDASH_SERVING_DB: ${LIGHTDASH_SERVING_DB:-vintage_serving}
+      LIGHTDASH_APP_PASSWORD: ${LIGHTDASH_APP_PASSWORD:?run setup}
+      LIGHTDASH_PUBLISHER_PASSWORD: ${LIGHTDASH_PUBLISHER_PASSWORD:?run setup}
+      LIGHTDASH_READER_PASSWORD: ${LIGHTDASH_READER_PASSWORD:?run setup}
+    ports:
+      - "127.0.0.1:${LIGHTDASH_PG_PORT:-5433}:5432"
+    volumes:
+      - ${LIGHTDASH_STATE_ROOT:?render config}/postgres:/var/lib/postgresql
+      - ./init-db.sh:/docker-entrypoint-initdb.d/10-vintage.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  object-store:
+    image: ${LIGHTDASH_MINIO_IMAGE:?load images.env}
+    restart: unless-stopped
+    entrypoint: [/bin/sh, /init-object-store.sh]
+    environment:
+      MINIO_ROOT_USER: lightdash
+      MINIO_ROOT_PASSWORD: ${LIGHTDASH_STORAGE_PASSWORD:?run setup}
+    volumes:
+      - ${LIGHTDASH_STATE_ROOT:?render config}/objects:/data
+      - ./init-object-store.sh:/init-object-store.sh:ro
+    healthcheck:
+      test: [CMD, mc, ready, local]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  lightdash:
+    image: ${LIGHTDASH_IMAGE:?load images.env}
+    restart: unless-stopped
+    depends_on:
+      db: {condition: service_healthy}
+      object-store: {condition: service_healthy}
+    ports:
+      - "${LIGHTDASH_HOST:-127.0.0.1}:${LIGHTDASH_PORT:-8083}:8080"
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: lightdash_app
+      PGPASSWORD: ${LIGHTDASH_APP_PASSWORD:?run setup}
+      PGDATABASE: lightdash
+      LIGHTDASH_SECRET: ${LIGHTDASH_SECRET:?run setup}
+      PORT: 8080
+      SITE_URL: ${LIGHTDASH_URL:-http://localhost:8083}
+      SECURE_COOKIES: ${LIGHTDASH_SECURE_COOKIES:-false}
+      TRUST_PROXY: ${LIGHTDASH_TRUST_PROXY:-false}
+      ALLOW_MULTIPLE_ORGS: "false"
+      AUTH_DISABLE_PASSWORD_AUTHENTICATION: "false"
+      LIGHTDASH_INSTALL_TYPE: docker_image
+      LIGHTDASH_LOG_LEVEL: info
+      LIGHTDASH_QUERY_MAX_LIMIT: 5000
+      # The worker also runs content validation and asynchronous queries.
+      SCHEDULER_ENABLED: "true"
+      HEADWAY_ENABLED: "false"
+      LIGHTDASH_DISABLE_TRACKING: "true"
+      S3_ENDPOINT: http://object-store:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: lightdash
+      S3_ACCESS_KEY: lightdash
+      S3_SECRET_KEY: ${LIGHTDASH_STORAGE_PASSWORD:?run setup}
+      S3_FORCE_PATH_STYLE: "true"
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8080/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s

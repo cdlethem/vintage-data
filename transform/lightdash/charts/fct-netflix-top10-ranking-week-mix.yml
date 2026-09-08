@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_netflix_top10_week_week
+          yRef:
+            field: fct_netflix_top10_distinct_titles
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Week (Week)
+      yAxis:
+      - name: Distinct titles
+    layout:
+      stack: true
+      xField: fct_netflix_top10_week_week
+      yField:
+      - fct_netflix_top10_distinct_titles
+  type: cartesian
+description: Distinct `title_id` values stacked by `category` for each source `week`. This uses event
+  time for the ranking period rather than fetch time; only one source week is currently populated, and
+  missing weeks are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_netflix_top10_week_week
+  - fct_netflix_top10_category
+  exploreName: fct_netflix_top10
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_netflix_top10_distinct_titles
+  sorts:
+  - descending: true
+    fieldId: fct_netflix_top10_distinct_titles
+  - descending: false
+    fieldId: fct_netflix_top10_week_week
+  tableCalculations: []
+name: Ranked titles by category and source week
+pivotConfig:
+  columns:
+  - fct_netflix_top10_category
+slug: fct-netflix-top10-ranking-week-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_netflix_top10_week_week
+  - fct_netflix_top10_category
+  - fct_netflix_top10_distinct_titles
+tableName: fct_netflix_top10
+version: 1

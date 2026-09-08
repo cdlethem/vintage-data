@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_package_registry_release_observation_observed_at_day
+          yRef:
+            field: fct_package_registry_release_observation_distinct_packages
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct package
+    layout:
+      xField: fct_package_registry_release_observation_observed_at_day
+      yField:
+      - fct_package_registry_release_observation_distinct_packages
+  type: cartesian
+description: Distinct `package_name` values present in each extractor observation day. This measures catalogue
+  breadth and not new packages; absent observation days are not zeros.
+metricQuery:
+  dimensions:
+  - fct_package_registry_release_observation_observed_at_day
+  exploreName: fct_package_registry_release_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_package_registry_release_observation_distinct_packages
+  sorts:
+  - descending: false
+    fieldId: fct_package_registry_release_observation_observed_at_day
+  tableCalculations: []
+name: Distinct packages present each observation day
+slug: fct-package-registry-release-observation-observed-packages
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_package_registry_release_observation_observed_at_day
+  - fct_package_registry_release_observation_distinct_packages
+tableName: fct_package_registry_release_observation
+version: 1

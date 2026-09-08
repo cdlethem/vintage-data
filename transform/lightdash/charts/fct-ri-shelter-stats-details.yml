@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Incremental physical history of Rhode Island shelter statistics. Each row is one shelter-species
+  record at one publisher observation timestamp, retaining intake, outcome, population-status metrics,
+  and raw-load lineage from the insert-only source.
+metricQuery:
+  dimensions: &id001
+  - fct_ri_shelter_stats_observed_at
+  - fct_ri_shelter_stats_record_id
+  - fct_ri_shelter_stats_species
+  - fct_ri_shelter_stats_intake_count
+  - fct_ri_shelter_stats_source_loaded_at
+  exploreName: fct_ri_shelter_stats
+  filters:
+    dimensions:
+      and:
+      - id: d9b86e73-5ee0-5fa9-b36e-f2061353621e
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_ri_shelter_stats_observed_at
+        values:
+        - 30
+      id: 98c605c7-3989-5e28-82e3-c041db2b2e2b
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_ri_shelter_stats_observed_at
+  tableCalculations: []
+name: Ri shelter stats — observations
+slug: fct-ri-shelter-stats-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_ri_shelter_stats
+version: 1

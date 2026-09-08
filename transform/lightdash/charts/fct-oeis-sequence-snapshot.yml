@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_oeis_sequence_snapshot_keywords
+          yRef:
+            field: fct_oeis_sequence_snapshot_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_oeis_sequence_snapshot_keywords
+      yField:
+      - fct_oeis_sequence_snapshot_distinct_entities
+  type: cartesian
+description: Distinct `sequence_id` values by `keywords` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_oeis_sequence_snapshot_keywords
+  exploreName: fct_oeis_sequence_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: fbdd7624-f5c8-5d81-ba46-d9d32440f11e
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_oeis_sequence_snapshot_observed_at
+        values:
+        - 30
+      id: 931e1128-a34c-5bab-82a7-8afde8b49a32
+  limit: 20
+  metrics:
+  - fct_oeis_sequence_snapshot_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_oeis_sequence_snapshot_distinct_entities
+  tableCalculations: []
+name: Distinct sequence by keywords
+slug: fct-oeis-sequence-snapshot
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_oeis_sequence_snapshot_keywords
+  - fct_oeis_sequence_snapshot_distinct_entities
+tableName: fct_oeis_sequence_snapshot
+version: 1

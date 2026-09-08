@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_avalanche_forecasts_observed_at_day
+          yRef:
+            field: fct_avalanche_forecasts_distinct_centers
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct forecast centers
+    layout:
+      xField: fct_avalanche_forecasts_observed_at_day
+      yField:
+      - fct_avalanche_forecasts_distinct_centers
+  type: cartesian
+description: Distinct non-null `center_id` values in each observation day. This is a publisher-coverage
+  level, not a count of forecast events; days without observations are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_avalanche_forecasts_observed_at_day
+  exploreName: fct_avalanche_forecasts
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_avalanche_forecasts_distinct_centers
+  sorts:
+  - descending: false
+    fieldId: fct_avalanche_forecasts_observed_at_day
+  tableCalculations: []
+name: Forecast centers represented per day
+slug: fct-avalanche-forecasts-center-coverage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_avalanche_forecasts_observed_at_day
+  - fct_avalanche_forecasts_distinct_centers
+tableName: fct_avalanche_forecasts
+version: 1

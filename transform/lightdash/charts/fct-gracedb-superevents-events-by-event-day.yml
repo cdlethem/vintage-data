@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_gracedb_superevents_event_time_utc_day
+          yRef:
+            field: fct_gracedb_superevents_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event time utc (Day)
+      yAxis:
+      - name: Distinct superevent
+    layout:
+      xField: fct_gracedb_superevents_event_time_utc_day
+      yField:
+      - fct_gracedb_superevents_distinct_entities
+  type: cartesian
+description: Distinct `superevent_id` values by the UTC day GraceDB reports the gravitational event occurred.
+  The source spans only two event days, so this is a short event-time view; days with no source events
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_gracedb_superevents_event_time_utc_day
+  exploreName: fct_gracedb_superevents
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gracedb_superevents_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_gracedb_superevents_event_time_utc_day
+  tableCalculations: []
+name: Superevents by reported event day
+slug: fct-gracedb-superevents-events-by-event-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gracedb_superevents_event_time_utc_day
+  - fct_gracedb_superevents_distinct_entities
+tableName: fct_gracedb_superevents
+version: 1

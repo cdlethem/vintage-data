@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_imdb_rating_observation_observed_at_day
+          yRef:
+            field: fct_imdb_rating_observation_distinct_titles
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct title
+    layout:
+      xField: fct_imdb_rating_observation_observed_at_day
+      yField:
+      - fct_imdb_rating_observation_distinct_titles
+  type: cartesian
+description: Distinct `title_id` values present in each IMDb observation day. This is catalogue coverage
+  rather than new-title flow; repeated title snapshots count once per day, and absent observation days
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_imdb_rating_observation_observed_at_day
+  exploreName: fct_imdb_rating_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_imdb_rating_observation_distinct_titles
+  sorts:
+  - descending: false
+    fieldId: fct_imdb_rating_observation_observed_at_day
+  tableCalculations: []
+name: Distinct titles observed per day
+slug: fct-imdb-rating-observation-title-coverage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_imdb_rating_observation_observed_at_day
+  - fct_imdb_rating_observation_distinct_titles
+tableName: fct_imdb_rating_observation
+version: 1

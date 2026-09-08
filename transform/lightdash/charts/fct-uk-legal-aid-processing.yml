@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_legal_aid_processing_processing_stream
+          yRef:
+            field: fct_uk_legal_aid_processing_m_1e33419f
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_uk_legal_aid_processing_processing_stream
+      yField:
+      - fct_uk_legal_aid_processing_m_1e33419f
+  type: cartesian
+description: Mean observed backlog older than current processing date pct by `processing_stream` in the
+  selected observation window. Backlog older than the current processing date as a proportion between
+  zero and one, parsed from the publisher percentage. Each retained observation has equal weight; polling
+  frequency and repeated snapshots can affect the mean. This is not a latest-value measure or an additive
+  total.
+metricQuery:
+  dimensions:
+  - fct_uk_legal_aid_processing_processing_stream
+  exploreName: fct_uk_legal_aid_processing
+  filters:
+    dimensions:
+      and:
+      - id: 0f632789-9a50-5222-9ddf-97e07de4d354
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_legal_aid_processing_observed_at
+        values:
+        - 30
+      id: 7ad29afe-22e8-573a-902b-54ddc13a576b
+  limit: 20
+  metrics:
+  - fct_uk_legal_aid_processing_m_1e33419f
+  sorts:
+  - descending: true
+    fieldId: fct_uk_legal_aid_processing_m_1e33419f
+  tableCalculations: []
+name: Mean observed backlog older than current processing date pct by processing stream
+slug: fct-uk-legal-aid-processing
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_legal_aid_processing_processing_stream
+  - fct_uk_legal_aid_processing_m_1e33419f
+tableName: fct_uk_legal_aid_processing
+version: 1

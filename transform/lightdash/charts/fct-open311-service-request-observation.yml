@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_open311_service_request_observation_service_name
+          yRef:
+            field: fct_open311_service_request_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_open311_service_request_observation_service_name
+      yField:
+      - fct_open311_service_request_observation_distinct_entities
+  type: cartesian
+description: Distinct `request_id` values by `service_name` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_open311_service_request_observation_service_name
+  exploreName: fct_open311_service_request_observation
+  filters:
+    dimensions:
+      and:
+      - id: c28e07b5-7c8a-55c2-8ec8-8da0e7fab5e6
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_open311_service_request_observation_observed_at
+        values:
+        - 30
+      id: 66a921ae-fac7-524b-ae5e-1a8ab2830bae
+  limit: 20
+  metrics:
+  - fct_open311_service_request_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_open311_service_request_observation_distinct_entities
+  tableCalculations: []
+name: Distinct request by service name
+slug: fct-open311-service-request-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_open311_service_request_observation_service_name
+  - fct_open311_service_request_observation_distinct_entities
+tableName: fct_open311_service_request_observation
+version: 1

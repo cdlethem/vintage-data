@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical snapshot fact of Manchester food-hygiene ratings. Each row is one business
+  returned by the publisher for one fetched snapshot; source values are typed where stable, while the
+  original rating text and loader lineage remain available for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_food_hygiene_ratings_manchester_observed_at
+  - fct_food_hygiene_ratings_manchester_business_id
+  - fct_food_hygiene_ratings_manchester_business_type
+  - fct_food_hygiene_ratings_manchester_source_loaded_at
+  exploreName: fct_food_hygiene_ratings_manchester
+  filters:
+    dimensions:
+      and:
+      - id: 73e11cef-aefe-5c24-9f24-ba22a62c995d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_food_hygiene_ratings_manchester_observed_at
+        values:
+        - 30
+      id: 548472a3-2206-5f95-84f4-556ccc6d78df
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_food_hygiene_ratings_manchester_observed_at
+  tableCalculations: []
+name: Food hygiene ratings manchester — observations
+slug: fct-food-hygiene-ratings-manchester-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_food_hygiene_ratings_manchester
+version: 1

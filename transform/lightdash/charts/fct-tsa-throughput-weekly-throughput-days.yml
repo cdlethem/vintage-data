@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_tsa_throughput_throughput_date_week
+          yRef:
+            field: fct_tsa_throughput_distinct_throughput
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Throughput date (Week)
+      yAxis:
+      - name: Distinct throughput dates
+    layout:
+      xField: fct_tsa_throughput_throughput_date_week
+      yField:
+      - fct_tsa_throughput_distinct_throughput
+  type: cartesian
+description: Distinct `throughput_id` values reported on throughput dates in each week. The count shows
+  the breadth of daily coverage, not passenger volume; weeks with no source rows are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_tsa_throughput_throughput_date_week
+  exploreName: fct_tsa_throughput
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_tsa_throughput_distinct_throughput
+  sorts:
+  - descending: false
+    fieldId: fct_tsa_throughput_throughput_date_week
+  tableCalculations: []
+name: Throughput dates reported each week
+slug: fct-tsa-throughput-weekly-throughput-days
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_tsa_throughput_throughput_date_week
+  - fct_tsa_throughput_distinct_throughput
+tableName: fct_tsa_throughput
+version: 1

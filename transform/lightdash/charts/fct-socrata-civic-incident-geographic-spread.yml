@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_socrata_civic_incident_event_at_hour
+          yRef:
+            field: fct_socrata_civic_incident_distinct_addresses
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event at (Hour)
+      yAxis:
+      - name: Distinct incident addresses
+    layout:
+      xField: fct_socrata_civic_incident_event_at_hour
+      yField:
+      - fct_socrata_civic_incident_distinct_addresses
+  type: cartesian
+description: Distinct non-null `address` values by source `event_at` hour. The five-day event span limits
+  historical interpretation, and a location can host multiple incidents; hours with no records are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_socrata_civic_incident_event_at_hour
+  exploreName: fct_socrata_civic_incident
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_socrata_civic_incident_distinct_addresses
+  sorts:
+  - descending: false
+    fieldId: fct_socrata_civic_incident_event_at_hour
+  tableCalculations: []
+name: Distinct incident addresses by event hour
+slug: fct-socrata-civic-incident-geographic-spread
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_socrata_civic_incident_event_at_hour
+  - fct_socrata_civic_incident_distinct_addresses
+tableName: fct_socrata_civic_incident
+version: 1

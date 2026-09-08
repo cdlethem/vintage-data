@@ -1,0 +1,306 @@
+version: 2
+models:
+- name: fct_oeis_sequence_snapshot
+  description: Daily physical history of OEIS sequence records. Each row is one sequence identifier observed
+    in one OEIS fetch, retaining sequence metadata and raw load lineage; repeated ingestion of the same
+    observation is reduced to the latest loaded copy.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, sequence_id, observed_at
+      label: Oeis sequence snapshot
+      group_label: Oeis
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: oeis_sequence_snapshot_key
+      vintage:
+        visualization:
+          dimension: keywords
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct sequence by keywords
+          description: Distinct `sequence_id` values by `keywords` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - sequence_id
+          - keywords
+          - source_loaded_at
+          sources:
+          - '`oeis` — licence: unstated (OEIS content is generally freely reusable with attribution per
+            its own site, not independently verified here); attribution required: True. Source configuration:
+            `extract/sources/oeis.yml`.'
+          analysis:
+            headline: how the OEIS feed's observed sequence catalogue changes by day and how far its
+              accession coverage reaches.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - source_name
+            - author
+            - sequence_offset
+            - sequence_name
+            trends:
+            - slug: observed-sequences
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct sequences observed per day
+              description: Distinct `sequence_id` values present in each daily OEIS fetch. This is a
+                catalogue level rather than a sequence-publication flow; the five observed days are
+                shown and days with no successful fetch are absent rather than zero.
+              width: half
+            - slug: accession-coverage
+              kind: total
+              metric: max_sequence_number
+              time: observed_at
+              grain: DAY
+              title: Highest sequence accession observed per day
+              description: Maximum numeric `sequence_number` present in each daily snapshot. This is an
+                index of feed coverage, not a count and not a sum; a flat line means no higher accession
+                was present in that day's fetched catalogue.
+              width: half
+            - slug: sequences-by-author
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: author
+              top_n: 6
+              time: observed_at
+              grain: DAY
+              title: Distinct sequences by author
+              description: Distinct `sequence_id` values per observation day, compared for the six most
+                represented author labels. Remaining authors are excluded rather than aggregated; this
+                describes catalogue composition, not author publication volume.
+              width: full
+            - slug: sequences-by-creation-day
+              kind: composition
+              metric: distinct_entities
+              breakdown: author
+              top_n: 6
+              time: created_at
+              grain: DAY
+              title: Sequences by reported creation day
+              description: Distinct `sequence_id` values stacked by author on the source-reported
+                `created_at` day. Only nine creation days occur in this extract, so this is a shallow
+                source-event view rather than long historical publication history; other days are absent,
+                not zero.
+              width: full
+  columns:
+  - name: oeis_sequence_snapshot_key
+    description: Stable hash of the OEIS source, sequence identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Oeis sequence snapshot key
+          hidden: true
+  - name: source_name
+    description: Source identifier supplied by the OEIS extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: sequence_id
+    description: OEIS accession identifying the sequence, such as A000045.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct sequence
+            description: Distinct `sequence_id` values by `keywords` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Sequence id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the sequence record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: sequence_number
+    description: Numeric OEIS sequence number represented by the accession.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          max_sequence_number:
+            type: max
+            label: Highest sequence number
+            description: Highest numeric `sequence_number` in each OEIS snapshot. This is a coverage index
+              for the fetched catalogue rather than an entity count or additive measure.
+            format: '#,##0'
+        dimension:
+          type: number
+          label: Sequence number
+          hidden: false
+          format: '#,##0'
+  - name: sequence_name
+    description: OEIS title or short description of the sequence.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sequence name
+          hidden: false
+  - name: sequence_data
+    description: Comma-separated sequence terms returned by OEIS.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sequence data
+          hidden: false
+  - name: keywords
+    description: JSON array of OEIS classification keywords for the sequence.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Keywords
+          hidden: true
+          sql: CAST(${TABLE}.keywords AS VARCHAR)
+  - name: author
+    description: Author attribution text returned by OEIS.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Author
+          hidden: false
+  - name: created_at
+    description: UTC timestamp when OEIS reports that the sequence was created.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Created at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: sequence_offset
+    description: OEIS offset notation describing the starting indices of the sequence terms.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sequence offset
+          hidden: false
+  - name: sequence_url
+    description: Canonical OEIS URL for the sequence record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sequence url
+          hidden: false
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained sequence observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained sequence observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

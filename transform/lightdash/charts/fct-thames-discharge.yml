@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_thames_discharge_alert_status
+          yRef:
+            field: fct_thames_discharge_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_thames_discharge_alert_status
+      yField:
+      - fct_thames_discharge_distinct_entities
+  type: cartesian
+description: Distinct `discharge_id` values by `alert_status` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_thames_discharge_alert_status
+  exploreName: fct_thames_discharge
+  filters:
+    dimensions:
+      and:
+      - id: a6fa7d89-4b64-5e60-8a75-2810677564e6
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_thames_discharge_observed_at
+        values:
+        - 30
+      id: bec66e34-4f64-5a33-91f1-f9d39ef0b5d9
+  limit: 20
+  metrics:
+  - fct_thames_discharge_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_thames_discharge_distinct_entities
+  tableCalculations: []
+name: Distinct discharge by alert status
+slug: fct-thames-discharge
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_thames_discharge_alert_status
+  - fct_thames_discharge_distinct_entities
+tableName: fct_thames_discharge
+version: 1

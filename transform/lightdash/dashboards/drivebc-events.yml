@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Week
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 28f9eae7-d076-514d-ac6d-661dfac174d0
+    label: 'Drivebc event observations: Event type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_drivebc_event_observations_event_type
+      tableName: fct_drivebc_event_observations
+    values: []
+  - disabled: true
+    id: f258968d-c781-5f58-933f-836e2b03358d
+    label: 'Drivebc event observations: Severity'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_drivebc_event_observations_severity
+      tableName: fct_drivebc_event_observations
+    values: []
+  - disabled: true
+    id: bb4e771d-7405-5422-9fea-48a967cf8215
+    label: 'Drivebc event observations: Status'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_drivebc_event_observations_status
+      tableName: fct_drivebc_event_observations
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Drivebc Events
+slug: drivebc-events
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Incremental physical observation fact for DriveBC Open511 road events. Each row is one source
+      event at one feed fetch timestamp, preserving the event''s status, classification, location JSON,
+      scheduling metadata, and raw-load lineage. Replayed copies of the same source event observation
+      retain the latest loaded row; no current-state inference is applied.
+
+
+      **Grain:** source_name, event_id, observed_at
+
+
+      **What changes here:** how road-event creation, updates, and reported locations change across the
+      DriveBC feed.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `drivebc_events` — licence: Open Government Licence-Canada; attribution required: True. Source
+      configuration: `extract/sources/drivebc_events.yml`.'
+    hideFrame: false
+    title: Drivebc event observations
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Drivebc event observations — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct events by creation week
+    chartSlug: fct-drivebc-event-observations-created-events
+    hideTitle: false
+    title: Distinct events by creation week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct events observed per day
+    chartSlug: fct-drivebc-event-observations-observed-events
+    hideTitle: false
+    title: Distinct events observed per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean linear reference at update week
+    chartSlug: fct-drivebc-event-observations-updated-distance
+    hideTitle: false
+    title: Mean linear reference at update week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Created events by type each week
+    chartSlug: fct-drivebc-event-observations-created-by-type
+    hideTitle: false
+    title: Created events by type each week
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Updated events by severity each week
+    chartSlug: fct-drivebc-event-observations-updated-by-severity
+    hideTitle: false
+    title: Updated events by severity each week
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Drivebc event observations — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct event by severity
+    chartSlug: fct-drivebc-event-observations
+    hideTitle: false
+    title: Distinct event by severity
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Drivebc event observations — observations
+    chartSlug: fct-drivebc-event-observations-details
+    hideTitle: false
+    title: Drivebc event observations — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

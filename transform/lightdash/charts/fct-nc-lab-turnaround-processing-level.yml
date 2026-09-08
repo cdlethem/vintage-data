@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nc_lab_turnaround_fetched_at_day
+          yRef:
+            field: fct_nc_lab_turnaround_average_processing_days
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Mean observed processing days
+    layout:
+      xField: fct_nc_lab_turnaround_fetched_at_day
+      yField:
+      - fct_nc_lab_turnaround_average_processing_days
+  type: cartesian
+description: Mean `processing_days` reported across retained observations on each fetch day. Each observation
+  has equal weight, so repeated snapshots and polling frequency can affect the mean; this is not an additive
+  total or latest-value measure.
+metricQuery:
+  dimensions:
+  - fct_nc_lab_turnaround_fetched_at_day
+  exploreName: fct_nc_lab_turnaround
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nc_lab_turnaround_average_processing_days
+  sorts:
+  - descending: false
+    fieldId: fct_nc_lab_turnaround_fetched_at_day
+  tableCalculations: []
+name: Mean observed processing days per fetch day
+slug: fct-nc-lab-turnaround-processing-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nc_lab_turnaround_fetched_at_day
+  - fct_nc_lab_turnaround_average_processing_days
+tableName: fct_nc_lab_turnaround
+version: 1

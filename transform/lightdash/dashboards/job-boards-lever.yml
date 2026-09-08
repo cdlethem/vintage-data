@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 5f44f3b8-92fb-5805-9fe0-8e75d2b015e1
+    label: 'Job boards lever: Company'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_lever_company
+      tableName: fct_job_boards_lever
+    values: []
+  - disabled: true
+    id: d0e8fd33-0b86-5f9c-83f9-3c1602f26a31
+    label: 'Job boards lever: Company country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_lever_company_country
+      tableName: fct_job_boards_lever
+    values: []
+  - disabled: true
+    id: 17c3cdd5-c121-5945-8c58-b410861b203a
+    label: 'Job boards lever: Company industry'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_lever_company_industry
+      tableName: fct_job_boards_lever
+    values: []
+  - disabled: true
+    id: ace61ae5-9169-510c-adca-8ca0ac34673d
+    label: 'Job boards lever: Workplace type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_lever_workplace_type
+      tableName: fct_job_boards_lever
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Boards Lever
+slug: job-boards-lever
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of job observations returned by Lever-hosted job boards. Each row
+      represents one source label, Lever job identifier, and extractor observation timestamp; repeated
+      raw copies of an observation are reduced to the latest loaded lineage record while prior observations
+      remain available for history.
+
+
+      **Grain:** source, job_id, observed_at
+
+
+      **What changes here:** how Lever job volume and company coverage change across the published catalogue.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_boards_lever` — licence: public ATS board endpoints; attribution required: False. Source
+      configuration: `extract/sources/job_boards_lever.yml`.'
+    hideFrame: false
+    title: Job boards lever
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards lever — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Lever jobs posted per month
+    chartSlug: fct-job-boards-lever-posted-jobs
+    hideTitle: false
+    title: Lever jobs posted per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Hiring companies posting per month
+    chartSlug: fct-job-boards-lever-posting-companies
+    hideTitle: false
+    title: Hiring companies posting per month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Monthly Lever postings by leading company
+    chartSlug: fct-job-boards-lever-jobs-by-company
+    hideTitle: false
+    title: Monthly Lever postings by leading company
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Observed Lever catalogue by workplace type
+    chartSlug: fct-job-boards-lever-catalogue-by-workplace
+    hideTitle: false
+    title: Observed Lever catalogue by workplace type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards lever — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-boards-lever
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Job boards lever — observations
+    chartSlug: fct-job-boards-lever-details
+    hideTitle: false
+    title: Job boards lever — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

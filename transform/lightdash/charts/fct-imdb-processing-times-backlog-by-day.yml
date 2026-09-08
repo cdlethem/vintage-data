@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_imdb_processing_times_observed_at_day
+          yRef:
+            field: fct_imdb_processing_times_average_unprocessed_items
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean unprocessed items
+    layout:
+      xField: fct_imdb_processing_times_observed_at_day
+      yField:
+      - fct_imdb_processing_times_average_unprocessed_items
+  type: cartesian
+description: Mean `unprocessed_items` across categories in each extractor observation day. This is a snapshot
+  level rather than a sum of queues; polling and repeated snapshots can affect the mean, and absent days
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_imdb_processing_times_observed_at_day
+  exploreName: fct_imdb_processing_times
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_imdb_processing_times_average_unprocessed_items
+  sorts:
+  - descending: false
+    fieldId: fct_imdb_processing_times_observed_at_day
+  tableCalculations: []
+name: Mean unprocessed items by observation day
+slug: fct-imdb-processing-times-backlog-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_imdb_processing_times_observed_at_day
+  - fct_imdb_processing_times_average_unprocessed_items
+tableName: fct_imdb_processing_times
+version: 1

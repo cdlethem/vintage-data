@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_gdelt_document_observation_published_at_day
+          yRef:
+            field: fct_gdelt_document_observation_distinct_domains
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Published at (Day)
+      yAxis:
+      - name: Distinct publisher domains
+    layout:
+      xField: fct_gdelt_document_observation_published_at_day
+      yField:
+      - fct_gdelt_document_observation_distinct_domains
+  type: cartesian
+description: Distinct non-null `domain` values grouped by the source `published_at` day. This uses the
+  publisher's event timestamp, not extractor timing, and measures breadth of the short available window
+  rather than domains newly appearing. Days without published documents are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_gdelt_document_observation_published_at_day
+  exploreName: fct_gdelt_document_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gdelt_document_observation_distinct_domains
+  sorts:
+  - descending: false
+    fieldId: fct_gdelt_document_observation_published_at_day
+  tableCalculations: []
+name: Distinct publisher domains per publication day
+slug: fct-gdelt-document-observation-domains-published
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gdelt_document_observation_published_at_day
+  - fct_gdelt_document_observation_distinct_domains
+tableName: fct_gdelt_document_observation
+version: 1

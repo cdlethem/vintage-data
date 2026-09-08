@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_bluesky_appview_post_observation_created_at_day
+          yRef:
+            field: fct_bluesky_appview_post_observation_average_like_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Mean observed like count
+    layout:
+      xField: fct_bluesky_appview_post_observation_created_at_day
+      yField:
+      - fct_bluesky_appview_post_observation_average_like_count
+  type: cartesian
+description: Mean reported `like_count` for each creation day, split across the eight authors with the
+  largest post totals. Remaining authors are excluded rather than aggregated, and sparse creation days
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_bluesky_appview_post_observation_created_at_day
+  - fct_bluesky_appview_post_observation_author_handle
+  exploreName: fct_bluesky_appview_post_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_bluesky_appview_post_observation_average_like_count
+  sorts:
+  - descending: true
+    fieldId: fct_bluesky_appview_post_observation_average_like_count
+  - descending: false
+    fieldId: fct_bluesky_appview_post_observation_created_at_day
+  tableCalculations: []
+name: Mean likes by leading author and creation day
+pivotConfig:
+  columns:
+  - fct_bluesky_appview_post_observation_author_handle
+slug: fct-bluesky-appview-post-observation-author-engagement
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_bluesky_appview_post_observation_created_at_day
+  - fct_bluesky_appview_post_observation_author_handle
+  - fct_bluesky_appview_post_observation_average_like_count
+tableName: fct_bluesky_appview_post_observation
+version: 1

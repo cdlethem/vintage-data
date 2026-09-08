@@ -1,0 +1,64 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_steam_player_observation_observed_at_day
+          yRef:
+            field: fct_steam_player_observation_average_concurrent_player_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed concurrent player count
+    layout:
+      xField: fct_steam_player_observation_observed_at_day
+      yField:
+      - fct_steam_player_observation_average_concurrent_player_count
+  type: cartesian
+description: Mean concurrent players for the eight games with the largest observed averages, shown by
+  observation day. Remaining monitored games are excluded rather than aggregated; each line is a snapshot
+  level and polling frequency can affect its mean.
+metricQuery:
+  dimensions:
+  - fct_steam_player_observation_observed_at_day
+  - fct_steam_player_observation_game_id
+  exploreName: fct_steam_player_observation
+  filters:
+    dimensions:
+      and:
+      - id: cf3e8202-740b-5b20-bef9-5d86309e7c7e
+        operator: equals
+        target:
+          fieldId: fct_steam_player_observation_request_succeeded
+        values:
+        - true
+      id: b34fb14b-508c-5ddd-a929-73a71f62c04a
+  limit: 5000
+  metrics:
+  - fct_steam_player_observation_average_concurrent_player_count
+  sorts:
+  - descending: true
+    fieldId: fct_steam_player_observation_average_concurrent_player_count
+  - descending: false
+    fieldId: fct_steam_player_observation_observed_at_day
+  tableCalculations: []
+name: Mean concurrent players by game
+pivotConfig:
+  columns:
+  - fct_steam_player_observation_game_id
+slug: fct-steam-player-observation-game-player-levels
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_steam_player_observation_observed_at_day
+  - fct_steam_player_observation_game_id
+  - fct_steam_player_observation_average_concurrent_player_count
+tableName: fct_steam_player_observation
+version: 1

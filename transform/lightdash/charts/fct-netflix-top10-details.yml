@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily-refreshed physical fact of Netflix Top 10 observations. Each row is one weekly title
+  rank within a geographic scope and category, with repeated insert-only loads reduced to the latest copy
+  and raw-load lineage retained.
+metricQuery:
+  dimensions: &id001
+  - fct_netflix_top10_fetched_at
+  - fct_netflix_top10_title_id
+  - fct_netflix_top10_category
+  - fct_netflix_top10_weekly_hours_viewed
+  - fct_netflix_top10_source_loaded_at
+  exploreName: fct_netflix_top10
+  filters:
+    dimensions:
+      and:
+      - id: 70a91f2d-461a-590a-b1d4-5f447f9d5a24
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_netflix_top10_fetched_at
+        values:
+        - 30
+      id: 3eb7d4f9-62e7-55a8-85b4-715aa0abd870
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_netflix_top10_fetched_at
+  tableCalculations: []
+name: Netflix top10 — observations
+slug: fct-netflix-top10-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_netflix_top10
+version: 1

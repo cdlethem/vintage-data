@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_launch_library_last_updated_day
+          yRef:
+            field: fct_launch_library_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Last updated (Day)
+      yAxis:
+      - name: Distinct launch
+    layout:
+      stack: true
+      xField: fct_launch_library_last_updated_day
+      yField:
+      - fct_launch_library_distinct_entities
+  type: cartesian
+description: Distinct launches updated on each upstream `last_updated` day, stacked by the feed's `net_precision`.
+  Bars show the mix of scheduling certainty among revisions — empty days are absent rather than zero and
+  the six observed precision categories are not a total catalogue count.
+metricQuery:
+  dimensions:
+  - fct_launch_library_last_updated_day
+  - fct_launch_library_net_precision
+  exploreName: fct_launch_library
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_launch_library_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_launch_library_distinct_entities
+  - descending: false
+    fieldId: fct_launch_library_last_updated_day
+  tableCalculations: []
+name: Updated launches by schedule precision
+pivotConfig:
+  columns:
+  - fct_launch_library_net_precision
+slug: fct-launch-library-precision-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_launch_library_last_updated_day
+  - fct_launch_library_net_precision
+  - fct_launch_library_distinct_entities
+tableName: fct_launch_library
+version: 1

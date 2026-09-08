@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_sd_juror_standby_service_start_date_day
+          yRef:
+            field: fct_sd_juror_standby_distinct_standbys
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Service start date (Day)
+      yAxis:
+      - name: Distinct standby services
+    layout:
+      xField: fct_sd_juror_standby_service_start_date_day
+      yField:
+      - fct_sd_juror_standby_distinct_standbys
+  type: cartesian
+description: Distinct `standby_id` values by publisher `service_start_date`, split by courthouse. Only
+  three service dates are present in this short event-time span; unpopulated dates are absent rather than
+  zero and repeated observations count once per day and courthouse.
+metricQuery:
+  dimensions:
+  - fct_sd_juror_standby_service_start_date_day
+  - fct_sd_juror_standby_courthouse
+  exploreName: fct_sd_juror_standby
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sd_juror_standby_distinct_standbys
+  sorts:
+  - descending: true
+    fieldId: fct_sd_juror_standby_distinct_standbys
+  - descending: false
+    fieldId: fct_sd_juror_standby_service_start_date_day
+  tableCalculations: []
+name: Standby services by publisher service date
+pivotConfig:
+  columns:
+  - fct_sd_juror_standby_courthouse
+slug: fct-sd-juror-standby-service-date-by-courthouse
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sd_juror_standby_service_start_date_day
+  - fct_sd_juror_standby_courthouse
+  - fct_sd_juror_standby_distinct_standbys
+tableName: fct_sd_juror_standby
+version: 1

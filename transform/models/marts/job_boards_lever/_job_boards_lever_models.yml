@@ -1,0 +1,356 @@
+version: 2
+models:
+- name: fct_job_boards_lever
+  description: Daily physical history of job observations returned by Lever-hosted job boards. Each row
+    represents one source label, Lever job identifier, and extractor observation timestamp; repeated raw
+    copies of an observation are reduced to the latest loaded lineage record while prior observations
+    remain available for history.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, job_id, observed_at
+      label: Job boards lever
+      group_label: Job boards lever
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: job_boards_lever_key
+      vintage:
+        visualization:
+          dimension: company
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct job by company
+          description: Distinct `job_id` values by `company` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - job_id
+          - company
+          - source_loaded_at
+          sources:
+          - '`job_boards_lever` — licence: public ATS board endpoints; attribution required: False. Source
+            configuration: `extract/sources/job_boards_lever.yml`.'
+          analysis:
+            headline: how Lever job volume and company coverage change across the published catalogue.
+            event_time: posted
+            grain: MONTH
+            controls:
+            - company
+            - company_country
+            - company_industry
+            - workplace_type
+            trends:
+            - slug: posted-jobs
+              kind: total
+              metric: distinct_entities
+              time: posted
+              grain: MONTH
+              title: Lever jobs posted per month
+              description: Distinct `job_id` values grouped by their upstream `posted` month. This is a
+                source-event flow — months with no listed jobs are absent rather than zero, and repeated
+                observations of a job are counted once within its posting month.
+              width: half
+            - slug: posting-companies
+              kind: total
+              metric: distinct_companies
+              time: posted
+              grain: MONTH
+              title: Hiring companies posting per month
+              description: Distinct non-null `company` values among jobs by upstream `posted` month. This
+                measures breadth of hiring activity rather than job volume — months with no source postings
+                are absent rather than zero.
+              width: half
+            - slug: jobs-by-company
+              kind: composition
+              metric: distinct_entities
+              breakdown: company
+              top_n: 8
+              time: posted
+              grain: MONTH
+              title: Monthly Lever postings by leading company
+              description: Distinct jobs by upstream `posted` month, stacked for the eight companies with
+                the most jobs in this mart. Remaining companies are excluded rather than aggregated; sparse
+                source months are absent rather than zero.
+              width: full
+            - slug: catalogue-by-workplace
+              kind: composition
+              metric: distinct_entities
+              breakdown: workplace_type
+              top_n: 4
+              time: observed_at
+              grain: DAY
+              title: Observed Lever catalogue by workplace type
+              description: Distinct `job_id` values present on each extractor observation day, stacked by
+                `workplace_type`. This is a catalogue level rather than a posting flow — a change means
+                the published feed changed, and days with no successful extract are absent rather than zero.
+              width: full
+  columns:
+  - name: job_boards_lever_key
+    description: Stable hash of the source label, job identifier, and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job boards lever key
+          hidden: true
+  - name: source
+    description: Upstream source label carried by the Lever job-board response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: job_id
+    description: Lever identifier assigned to the advertised job.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct job
+            description: Distinct `job_id` values by `company` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Job id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed this job listing.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: provider
+    description: Job-board provider label reported by the upstream response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider
+          hidden: false
+  - name: company
+    description: Hiring company name reported by the Lever board.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_companies:
+            type: count_distinct
+            label: Distinct hiring companies
+            description: Distinct non-null `company` values per time bucket. This measures company coverage,
+              not posting volume, and repeated observations count once within each group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Company
+          hidden: false
+  - name: company_country
+    description: Country associated with the hiring company when supplied by Lever.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Company country
+          hidden: false
+  - name: company_industry
+    description: Industry label associated with the hiring company when supplied by Lever.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Company industry
+          hidden: false
+  - name: title
+    description: Public title of the advertised job.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: department
+    description: Department or discipline reported for the job listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Department
+          hidden: false
+  - name: employment_type
+    description: Employment arrangement reported for the advertised job, such as full-time or contract.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Employment type
+          hidden: false
+  - name: location
+    description: Free-text candidate location reported for the job listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location
+          hidden: false
+  - name: location_country
+    description: Country associated with the reported job location when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location country
+          hidden: false
+  - name: workplace_type
+    description: Workplace arrangement reported for the listing, such as remote, hybrid, or onsite.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Workplace type
+          hidden: false
+  - name: is_remote
+    description: Whether the extractor identifies the advertised job as remote.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is remote
+          hidden: false
+  - name: posted
+    description: UTC publication timestamp supplied by Lever for the job posting.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Posted
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: job_url
+    description: Public Lever URL for the job posting.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job url
+          hidden: false
+  - name: description
+    description: Job description text supplied by Lever for the advertised position.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Description
+          hidden: true
+  - name: _batch_id
+    description: Extract batch identifier associated with the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Load job identifier associated with the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Content hash of the retained raw observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

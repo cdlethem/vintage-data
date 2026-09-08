@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_mpc_neocp_candidate_observation_observed_at_day
+          yRef:
+            field: fct_mpc_neocp_candidate_observation_distinct_candidates
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct candidate
+    layout:
+      stack: true
+      xField: fct_mpc_neocp_candidate_observation_observed_at_day
+      yField:
+      - fct_mpc_neocp_candidate_observation_distinct_candidates
+  type: cartesian
+description: Distinct `candidate_id` values per observation day stacked by the eight most prevalent `discovery`
+  report values. This is a snapshot composition, not a count of new discoveries; remaining discovery values
+  are excluded rather than aggregated.
+metricQuery:
+  dimensions:
+  - fct_mpc_neocp_candidate_observation_observed_at_day
+  - fct_mpc_neocp_candidate_observation_discovery
+  exploreName: fct_mpc_neocp_candidate_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_mpc_neocp_candidate_observation_distinct_candidates
+  sorts:
+  - descending: true
+    fieldId: fct_mpc_neocp_candidate_observation_distinct_candidates
+  - descending: false
+    fieldId: fct_mpc_neocp_candidate_observation_observed_at_day
+  tableCalculations: []
+name: Candidate catalogue mix by discovery report
+pivotConfig:
+  columns:
+  - fct_mpc_neocp_candidate_observation_discovery
+slug: fct-mpc-neocp-candidate-observation-discovery-composition
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_mpc_neocp_candidate_observation_observed_at_day
+  - fct_mpc_neocp_candidate_observation_discovery
+  - fct_mpc_neocp_candidate_observation_distinct_candidates
+tableName: fct_mpc_neocp_candidate_observation
+version: 1

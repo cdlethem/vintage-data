@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_poland_treatment_queues_observed_at_day
+          yRef:
+            field: fct_poland_treatment_queues_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct queue
+    layout:
+      xField: fct_poland_treatment_queues_observed_at_day
+      yField:
+      - fct_poland_treatment_queues_distinct_entities
+  type: cartesian
+description: Distinct `queue_id` values present in the NFZ feed on each extractor observation day. This
+  is a published level rather than a flow because the feed republishes queues; days with no successful
+  extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_poland_treatment_queues_observed_at_day
+  exploreName: fct_poland_treatment_queues
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_poland_treatment_queues_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_poland_treatment_queues_observed_at_day
+  tableCalculations: []
+name: Queues present per observation day
+slug: fct-poland-treatment-queues-observed-queue-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_poland_treatment_queues_observed_at_day
+  - fct_poland_treatment_queues_distinct_entities
+tableName: fct_poland_treatment_queues
+version: 1

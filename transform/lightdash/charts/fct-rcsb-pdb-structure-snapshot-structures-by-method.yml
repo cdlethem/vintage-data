@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_rcsb_pdb_structure_snapshot_observed_at_day
+          yRef:
+            field: fct_rcsb_pdb_structure_snapshot_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct structure
+    layout:
+      stack: true
+      xField: fct_rcsb_pdb_structure_snapshot_observed_at_day
+      yField:
+      - fct_rcsb_pdb_structure_snapshot_distinct_entities
+  type: cartesian
+description: Distinct structures observed each day stacked by experimental method. Both methods in this
+  extract are shown and no remainder is aggregated; absent collection days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_rcsb_pdb_structure_snapshot_observed_at_day
+  - fct_rcsb_pdb_structure_snapshot_experimental_method
+  exploreName: fct_rcsb_pdb_structure_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_rcsb_pdb_structure_snapshot_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_rcsb_pdb_structure_snapshot_distinct_entities
+  - descending: false
+    fieldId: fct_rcsb_pdb_structure_snapshot_observed_at_day
+  tableCalculations: []
+name: Structure catalogue mix by experimental method
+pivotConfig:
+  columns:
+  - fct_rcsb_pdb_structure_snapshot_experimental_method
+slug: fct-rcsb-pdb-structure-snapshot-structures-by-method
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_rcsb_pdb_structure_snapshot_observed_at_day
+  - fct_rcsb_pdb_structure_snapshot_experimental_method
+  - fct_rcsb_pdb_structure_snapshot_distinct_entities
+tableName: fct_rcsb_pdb_structure_snapshot
+version: 1

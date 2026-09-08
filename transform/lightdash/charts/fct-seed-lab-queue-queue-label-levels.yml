@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_seed_lab_queue_observed_at_day
+          yRef:
+            field: fct_seed_lab_queue_average_sample_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed sample count
+    layout:
+      xField: fct_seed_lab_queue_observed_at_day
+      yField:
+      - fct_seed_lab_queue_average_sample_count
+  type: cartesian
+description: Average reported sample count per snapshot day for the six largest queue labels. The remaining
+  labels are excluded rather than aggregated; this is a short four-day level series, and absent label-day
+  observations are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_seed_lab_queue_observed_at_day
+  - fct_seed_lab_queue_queue_label
+  exploreName: fct_seed_lab_queue
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_seed_lab_queue_average_sample_count
+  sorts:
+  - descending: true
+    fieldId: fct_seed_lab_queue_average_sample_count
+  - descending: false
+    fieldId: fct_seed_lab_queue_observed_at_day
+  tableCalculations: []
+name: Largest queue labels by snapshot day
+pivotConfig:
+  columns:
+  - fct_seed_lab_queue_queue_label
+slug: fct-seed-lab-queue-queue-label-levels
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_seed_lab_queue_observed_at_day
+  - fct_seed_lab_queue_queue_label
+  - fct_seed_lab_queue_average_sample_count
+tableName: fct_seed_lab_queue
+version: 1

@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_manifold_market_observation_question
+          yRef:
+            field: fct_manifold_market_observation_average_probability
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_manifold_market_observation_question
+      yField:
+      - fct_manifold_market_observation_average_probability
+  type: cartesian
+description: Mean observed probability by `question` in the selected observation window. Market-implied
+  probability reported at observation time. Each retained observation has equal weight; polling frequency
+  and repeated snapshots can affect the mean. This is not a latest-value measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_manifold_market_observation_question
+  exploreName: fct_manifold_market_observation
+  filters:
+    dimensions:
+      and:
+      - id: 8802f4c1-8b68-5bb5-84a3-f6f5de23739f
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_manifold_market_observation_observed_at
+        values:
+        - 30
+      id: 35686960-197a-5454-9fbd-21a7c4fab662
+  limit: 20
+  metrics:
+  - fct_manifold_market_observation_average_probability
+  sorts:
+  - descending: true
+    fieldId: fct_manifold_market_observation_average_probability
+  tableCalculations: []
+name: Mean observed probability by question
+slug: fct-manifold-market-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_manifold_market_observation_question
+  - fct_manifold_market_observation_average_probability
+tableName: fct_manifold_market_observation
+version: 1

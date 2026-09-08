@@ -1,0 +1,145 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 747bf5b0-5cde-5de6-a7f6-0a4fbf39250c
+    label: 'Malaysia pricecatcher: Item code'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_malaysia_pricecatcher_item_code
+      tableName: fct_malaysia_pricecatcher
+    values: []
+  - disabled: true
+    id: 95ef5243-daec-52c7-b91a-0e0d80121e19
+    label: 'Malaysia pricecatcher: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_malaysia_pricecatcher_source
+      tableName: fct_malaysia_pricecatcher
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Malaysia Pricecatcher
+slug: malaysia-pricecatcher
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of Malaysia PriceCatcher observations. Each row represents one source
+      price observation identified by the source observation id and fetch timestamp; repeated insert-only
+      loads of that observation are reduced to the latest loaded copy while source and loader lineage
+      are retained. The model is incremental because the raw source contains 126 million loaded rows and
+      receives new daily extracts, making a full rebuild unnecessarily expensive for the daily cadence.
+
+
+      **Grain:** source, price_observation_id, observed_at
+
+
+      **What changes here:** how reported Malaysian prices and item coverage shift across collection days
+      and source price dates.
+
+
+      **Window:** ranked and record tiles cover the past 1 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `malaysia_pricecatcher` — licence: CC BY 4.0; attribution required: True. Source configuration:
+      `extract/sources/malaysia_pricecatcher.yml`.'
+    hideFrame: false
+    title: Malaysia pricecatcher
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Malaysia pricecatcher — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean collected price by extractor day
+    chartSlug: fct-malaysia-pricecatcher-collected-price-level
+    hideTitle: false
+    title: Mean collected price by extractor day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct items collected per extractor day
+    chartSlug: fct-malaysia-pricecatcher-collected-item-coverage
+    hideTitle: false
+    title: Distinct items collected per extractor day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean price by item and source price day
+    chartSlug: fct-malaysia-pricecatcher-prices-by-item
+    hideTitle: false
+    title: Mean price by item and source price day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Price mix across leading premises
+    chartSlug: fct-malaysia-pricecatcher-prices-by-premise
+    hideTitle: false
+    title: Price mix across leading premises
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Malaysia pricecatcher — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed price amount by item code
+    chartSlug: fct-malaysia-pricecatcher
+    hideTitle: false
+    title: Mean observed price amount by item code
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Malaysia pricecatcher — observations
+    chartSlug: fct-malaysia-pricecatcher-details
+    hideTitle: false
+    title: Malaysia pricecatcher — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_celestrak_socrates_conjunction_events_tca_day
+          yRef:
+            field: fct_celestrak_socrates_conjunction_events_distinct_events
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Tca (Day)
+      yAxis:
+      - name: Distinct conjunction events
+    layout:
+      stack: true
+      xField: fct_celestrak_socrates_conjunction_events_tca_day
+      yField:
+      - fct_celestrak_socrates_conjunction_events_distinct_events
+  type: cartesian
+description: Distinct `conjunction_id` values per TCA day stacked by the eight `object_name_2` values
+  with the largest observed event counts. Remaining objects are excluded rather than aggregated; the stack
+  is event composition, not collision probability.
+metricQuery:
+  dimensions:
+  - fct_celestrak_socrates_conjunction_events_tca_day
+  - fct_celestrak_socrates_conjunction_events_object_name_2
+  exploreName: fct_celestrak_socrates_conjunction_events
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_celestrak_socrates_conjunction_events_distinct_events
+  sorts:
+  - descending: true
+    fieldId: fct_celestrak_socrates_conjunction_events_distinct_events
+  - descending: false
+    fieldId: fct_celestrak_socrates_conjunction_events_tca_day
+  tableCalculations: []
+name: Conjunction mix by secondary object
+pivotConfig:
+  columns:
+  - fct_celestrak_socrates_conjunction_events_object_name_2
+slug: fct-celestrak-socrates-conjunction-events-events-by-secondary-object
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_celestrak_socrates_conjunction_events_tca_day
+  - fct_celestrak_socrates_conjunction_events_object_name_2
+  - fct_celestrak_socrates_conjunction_events_distinct_events
+tableName: fct_celestrak_socrates_conjunction_events
+version: 1

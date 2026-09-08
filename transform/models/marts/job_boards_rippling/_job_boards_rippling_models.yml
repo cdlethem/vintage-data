@@ -1,0 +1,319 @@
+version: 2
+models:
+- name: fct_job_boards_rippling
+  description: Daily physical history of job observations returned by named-company Rippling applicant-tracking-system
+    boards. Each row represents one upstream source, job identifier, and extractor observation timestamp;
+    repeated raw copies of an observation are reduced to the latest loaded lineage record while listing
+    attributes and load metadata remain available for audit and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, job_id, observed_at
+      label: Job boards rippling
+      group_label: Job boards rippling
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: job_boards_rippling_key
+      vintage:
+        visualization:
+          dimension: company
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct job by company
+          description: Distinct `job_id` values by `company` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - job_id
+          - company
+          - source_loaded_at
+          sources:
+          - '`job_boards_rippling` — licence: public ATS board endpoints; attribution required: False.
+            Source configuration: `extract/sources/job_boards_rippling.yml`.'
+          analysis:
+            headline: how the published Rippling catalogue level and its mix by industry and country change across observations.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - company_country
+            - company_industry
+            - department
+            - location_country
+            trends:
+            - slug: observed-jobs
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Jobs present in the catalogue per observation day
+              description: Distinct `job_id` values present in the Rippling feed on each extractor observation
+                day. This is a catalogue level rather than a posting flow — the publisher supplies no source
+                event timestamp. The four observed days are shown; days without a successful extract are
+                absent rather than zero.
+              width: half
+            - slug: observed-companies
+              kind: total
+              metric: distinct_companies
+              time: observed_at
+              grain: DAY
+              title: Hiring companies present per observation day
+              description: Distinct non-null `company` values attached to jobs on each observation day. This
+                is a catalogue level rather than a count of newly hiring companies because no source event
+                timestamp is available; absent observation days are absent rather than zero.
+              width: half
+            - slug: jobs-by-industry
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: company_industry
+              top_n: 5
+              time: observed_at
+              grain: DAY
+              title: Published jobs per observation day by industry
+              description: Distinct `job_id` values present on each observation day, pivoted by
+                `company_industry`. All five observed industries are retained. This is a catalogue level
+                comparison and not a flow of new postings.
+              width: full
+            - slug: catalogue-mix-by-country
+              kind: composition
+              metric: distinct_entities
+              breakdown: company_country
+              top_n: 2
+              time: observed_at
+              grain: DAY
+              title: Published job mix by company country
+              description: Distinct `job_id` values present on each observation day stacked by
+                `company_country`. Both observed countries are retained, and the stack shows the catalogue
+                mix; absent observation days are absent rather than zero.
+              width: full
+            - slug: departments-observed
+              kind: composition
+              metric: distinct_companies
+              breakdown: department
+              top_n: 8
+              time: observed_at
+              grain: DAY
+              title: Hiring-company mix by department
+              description: Distinct non-null `company` values present on each observation day stacked by
+                `department`. The eight largest departments are retained and smaller departments are
+                excluded rather than aggregated. A company can occur in multiple departments, so segments
+                are not additive; this describes the observed catalogue level, not new jobs.
+              width: full
+  columns:
+  - name: job_boards_rippling_key
+    description: Stable hash of the Rippling source, job identifier, and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job boards rippling key
+          hidden: true
+  - name: source
+    description: Upstream source label carried by the Rippling job-board response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: job_id
+    description: Rippling identifier assigned to the advertised job.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct job
+            description: Distinct `job_id` values by `company` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Job id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed this job listing.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: provider
+    description: Job-board provider label reported by the upstream response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider
+          hidden: false
+  - name: company
+    description: Hiring company name reported by the Rippling board.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_companies:
+            type: count_distinct
+            label: Distinct company
+            description: Distinct non-null `company` values among Rippling observations in each selected
+              time and dimension group. This counts the breadth of hiring companies rather than postings.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Company
+          hidden: false
+  - name: company_country
+    description: Country associated with the hiring company when supplied by Rippling.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Company country
+          hidden: false
+  - name: company_industry
+    description: Industry label associated with the hiring company when supplied by Rippling.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Company industry
+          hidden: false
+  - name: title
+    description: Public title of the advertised job.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: department
+    description: Department or discipline reported for the job listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Department
+          hidden: false
+  - name: location
+    description: Free-text candidate location reported for the job listing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location
+          hidden: false
+  - name: location_country
+    description: Country associated with the reported job location when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location country
+          hidden: false
+  - name: job_url
+    description: Public Rippling URL for the job posting.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job url
+          hidden: false
+  - name: _batch_id
+    description: Extract batch identifier associated with the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Load job identifier associated with the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Content hash of the retained raw observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

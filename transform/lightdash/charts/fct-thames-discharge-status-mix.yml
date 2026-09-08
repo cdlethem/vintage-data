@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_thames_discharge_status_changed_at_month
+          yRef:
+            field: fct_thames_discharge_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Status changed at (Month)
+      yAxis:
+      - name: Distinct discharge
+    layout:
+      stack: true
+      xField: fct_thames_discharge_status_changed_at_month
+      yField:
+      - fct_thames_discharge_distinct_entities
+  type: cartesian
+description: Distinct `discharge_id` values by source `status_changed_at` month, stacked across the three
+  observed `alert_status` values. The stack shows event mix rather than simultaneous active alerts, and
+  months with no events are absent.
+metricQuery:
+  dimensions:
+  - fct_thames_discharge_status_changed_at_month
+  - fct_thames_discharge_alert_status
+  exploreName: fct_thames_discharge
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_thames_discharge_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_thames_discharge_distinct_entities
+  - descending: false
+    fieldId: fct_thames_discharge_status_changed_at_month
+  tableCalculations: []
+name: Status-change mix by alert status
+pivotConfig:
+  columns:
+  - fct_thames_discharge_alert_status
+slug: fct-thames-discharge-status-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_thames_discharge_status_changed_at_month
+  - fct_thames_discharge_alert_status
+  - fct_thames_discharge_distinct_entities
+tableName: fct_thames_discharge
+version: 1

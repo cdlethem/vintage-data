@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_wspr_live_spot_signal_at_day
+          yRef:
+            field: fct_wspr_live_spot_average_distance_km
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Signal at (Day)
+      yAxis:
+      - name: Mean observed distance km
+    layout:
+      xField: fct_wspr_live_spot_signal_at_day
+      yField:
+      - fct_wspr_live_spot_average_distance_km
+  type: cartesian
+description: Mean reported `distance_km` for spots on each UTC signal day. Each retained observation has
+  equal weight, so irregular polling and repeated snapshots can affect the mean; absent signal days are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_wspr_live_spot_signal_at_day
+  exploreName: fct_wspr_live_spot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_wspr_live_spot_average_distance_km
+  sorts:
+  - descending: false
+    fieldId: fct_wspr_live_spot_signal_at_day
+  tableCalculations: []
+name: Mean propagation distance by signal day
+slug: fct-wspr-live-spot-distance-by-signal-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_wspr_live_spot_signal_at_day
+  - fct_wspr_live_spot_average_distance_km
+tableName: fct_wspr_live_spot
+version: 1

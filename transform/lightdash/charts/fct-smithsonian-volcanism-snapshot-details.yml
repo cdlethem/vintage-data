@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical snapshots of Smithsonian Global Volcanism Program eruption events. Each row
+  represents one source event identifier observed at one API fetch timestamp, with volcano identity, event
+  dates, eruption attributes, and raw-load lineage retained. Repeated ingestion of the same source, event,
+  and observation timestamp is reduced to the latest loaded record.
+metricQuery:
+  dimensions: &id001
+  - fct_smithsonian_volcanism_snapshot_observed_at
+  - fct_smithsonian_volcanism_snapshot_event_id
+  - fct_smithsonian_volcanism_snapshot_volcano_name
+  - fct_smithsonian_volcanism_snapshot_explosivity_index_max
+  - fct_smithsonian_volcanism_snapshot_source_loaded_at
+  exploreName: fct_smithsonian_volcanism_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: 4297972d-cbf2-5583-a3c9-37428b393b67
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_smithsonian_volcanism_snapshot_observed_at
+        values:
+        - 30
+      id: 9df69ff8-f2e8-59f7-bcb4-ce00045a4757
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_smithsonian_volcanism_snapshot_observed_at
+  tableCalculations: []
+name: Smithsonian volcanism snapshot — observations
+slug: fct-smithsonian-volcanism-snapshot-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_smithsonian_volcanism_snapshot
+version: 1

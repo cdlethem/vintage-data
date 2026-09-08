@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_manifold_market_observation_observed_at_day
+          yRef:
+            field: fct_manifold_market_observation_distinct_markets
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct market
+    layout:
+      xField: fct_manifold_market_observation_observed_at_day
+      yField:
+      - fct_manifold_market_observation_distinct_markets
+  type: cartesian
+description: Distinct `market_id` values present on each extractor observation day. This is a level rather
+  than a flow because the feed republishes market state; changes indicate markets entering or leaving
+  the published catalogue. Days with no successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_manifold_market_observation_observed_at_day
+  exploreName: fct_manifold_market_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_manifold_market_observation_distinct_markets
+  sorts:
+  - descending: false
+    fieldId: fct_manifold_market_observation_observed_at_day
+  tableCalculations: []
+name: Distinct markets observed per day
+slug: fct-manifold-market-observation-market-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_manifold_market_observation_observed_at_day
+  - fct_manifold_market_observation_distinct_markets
+tableName: fct_manifold_market_observation
+version: 1

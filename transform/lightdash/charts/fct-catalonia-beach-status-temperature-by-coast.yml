@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 5
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_catalonia_beach_status_status_updated_at_day
+          yRef:
+            field: fct_catalonia_beach_status_average_water_temperature
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Status updated at (Day)
+      yAxis:
+      - name: Mean observed water temperature
+    layout:
+      xField: fct_catalonia_beach_status_status_updated_at_day
+      yField:
+      - fct_catalonia_beach_status_average_water_temperature
+  type: cartesian
+description: Mean non-null `water_temperature` per `status_updated_at` day, split across the five observed
+  `coast_name` values. Each retained row has equal weight, and missing weather readings or dates are absent
+  rather than zero; all five coasts are shown.
+metricQuery:
+  dimensions:
+  - fct_catalonia_beach_status_status_updated_at_day
+  - fct_catalonia_beach_status_coast_name
+  exploreName: fct_catalonia_beach_status
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_catalonia_beach_status_average_water_temperature
+  sorts:
+  - descending: true
+    fieldId: fct_catalonia_beach_status_average_water_temperature
+  - descending: false
+    fieldId: fct_catalonia_beach_status_status_updated_at_day
+  tableCalculations: []
+name: Water temperature by coast and status date
+pivotConfig:
+  columns:
+  - fct_catalonia_beach_status_coast_name
+slug: fct-catalonia-beach-status-temperature-by-coast
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_catalonia_beach_status_status_updated_at_day
+  - fct_catalonia_beach_status_coast_name
+  - fct_catalonia_beach_status_average_water_temperature
+tableName: fct_catalonia_beach_status
+version: 1

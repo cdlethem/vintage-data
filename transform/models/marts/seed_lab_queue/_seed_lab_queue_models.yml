@@ -1,0 +1,259 @@
+version: 2
+models:
+- name: fct_seed_lab_queue
+  description: Physical snapshot fact for the Oregon seed-lab processing queue. Each row records one queue
+    category observed in a source snapshot, including the reported sample count, completion estimate,
+    and raw-load lineage.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, queue_id, observed_at
+      label: Seed lab queue
+      group_label: Seed lab queue
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: queue_observation_key
+      vintage:
+        visualization:
+          dimension: queue_label
+          metric: average_estimated_days_to_complete
+          time: observed_at
+          window_days: 30
+          title: Mean observed estimated days to complete by queue label
+          description: Mean observed estimated days to complete by `queue_label` in the selected observation
+            window. Estimated completion duration in days for the completion-estimate row, when present.
+            Each retained observation has equal weight; polling frequency and repeated snapshots can affect
+            the mean. This is not a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - queue_id
+          - queue_label
+          - estimated_days_to_complete
+          - source_loaded_at
+          sources:
+          - '`seed_lab_queue` — licence: Oregon State University website terms; attribution required:
+            True. Source configuration: `extract/sources/seed_lab_queue.yml`.'
+          analysis:
+            headline: how reported queue load and completion outlook move across daily snapshots.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - queue_entry_type
+            - queue_label
+            - source
+            trends:
+            - slug: queue-sample-level
+              kind: total
+              metric: average_sample_count
+              time: observed_at
+              grain: DAY
+              title: Mean reported sample count by snapshot day
+              description: Average `sample_count` across queue rows on each source snapshot day. This is a
+                publisher-reported snapshot level rather than a flow or additive total; duplicate rows in a
+                retained snapshot are observation-weighted, and absent snapshot days are absent rather than
+                zero.
+              width: half
+            - slug: completion-outlook
+              kind: total
+              metric: average_estimated_days_to_complete
+              time: observed_at
+              grain: DAY
+              title: Estimated completion days by snapshot day
+              description: Average reported `estimated_days_to_complete` on each snapshot day. Only the
+                completion-estimate rows populate this measure, so other queue rows and days with no estimate
+                are absent rather than zero.
+              width: half
+            - slug: queue-type-mix
+              kind: composition
+              metric: average_sample_count
+              breakdown: queue_entry_type
+              top_n: 4
+              time: observed_at
+              grain: DAY
+              title: Reported samples by queue entry type
+              description: Average reported sample count per snapshot day stacked by the four queue entry
+                types. This composition describes the source snapshot's mix and must not be read as samples
+                processed over time; absent types or days are absent rather than zero.
+              width: full
+            - slug: queue-label-levels
+              kind: breakdown
+              metric: average_sample_count
+              breakdown: queue_label
+              top_n: 6
+              time: observed_at
+              grain: DAY
+              title: Largest queue labels by snapshot day
+              description: Average reported sample count per snapshot day for the six largest queue labels.
+                The remaining labels are excluded rather than aggregated; this is a short four-day level
+                series, and absent label-day observations are absent rather than zero.
+              width: full
+  columns:
+  - name: queue_observation_key
+    description: Stable hash of source, queue identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null
+    - unique
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Queue observation key
+          hidden: true
+  - name: source
+    description: Source system identifier that supplied the queue snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: queue_id
+    description: Stable raw identifier for the queue category in the snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Queue id
+          hidden: false
+  - name: queue_entry_type
+    description: Typed category identifying dated, rush, total, or completion-estimate rows.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Queue entry type
+          hidden: false
+  - name: queue_label
+    description: Human-readable queue label reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Queue label
+          hidden: false
+  - name: observed_at
+    description: Timestamp when the source snapshot was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: sample_count
+    description: Number of samples reported for this queue category.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Sample count
+          hidden: false
+          format: '#,##0'
+        metrics:
+          average_sample_count:
+            type: average
+            label: Mean observed sample count
+            description: Mean reported `sample_count` across queue observations in each snapshot group. Each
+              retained row has equal weight; this is a snapshot level and must not be interpreted as samples
+              processed or summed across polling days.
+            format: '#,##0.00'
+  - name: estimated_days_to_complete
+    description: Estimated completion duration in days for the completion-estimate row, when present.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_estimated_days_to_complete:
+            type: average
+            label: Mean observed estimated days to complete
+            description: Mean observed estimated days to complete by `queue_label` in the selected observation
+              window. Estimated completion duration in days for the completion-estimate row, when present.
+              Each retained observation has equal weight; polling frequency and repeated snapshots can
+              affect the mean. This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Estimated days to complete
+          hidden: false
+          format: '#,##0'
+  - name: estimated_completion_text
+    description: Source-provided expected completion text for this queue category.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Estimated completion text
+          hidden: false
+  - name: _row_id
+    description: Raw row identifier retained for lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing this queue observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: Row position in the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted this observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

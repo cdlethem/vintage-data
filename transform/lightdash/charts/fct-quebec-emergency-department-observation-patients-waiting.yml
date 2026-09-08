@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_quebec_emergency_department_observation_observed_at_hour
+          yRef:
+            field: fct_quebec_emergency_department_observation_m_cc9d5e94
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Mean observed patients waiting for care count
+    layout:
+      xField: fct_quebec_emergency_department_observation_observed_at_hour
+      yField:
+      - fct_quebec_emergency_department_observation_m_cc9d5e94
+  type: cartesian
+description: Mean non-null `patients_waiting_for_care_count` across retained department and regional-total
+  rows in each observed hour. Each snapshot has equal weight, so polling frequency can influence this
+  level; absent hours are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_quebec_emergency_department_observation_observed_at_hour
+  exploreName: fct_quebec_emergency_department_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_quebec_emergency_department_observation_m_cc9d5e94
+  sorts:
+  - descending: false
+    fieldId: fct_quebec_emergency_department_observation_observed_at_hour
+  tableCalculations: []
+name: Mean patients waiting per hour
+slug: fct-quebec-emergency-department-observation-patients-waiting
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_quebec_emergency_department_observation_observed_at_hour
+  - fct_quebec_emergency_department_observation_m_cc9d5e94
+tableName: fct_quebec_emergency_department_observation
+version: 1

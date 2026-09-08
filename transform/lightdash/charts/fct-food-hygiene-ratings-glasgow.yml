@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_food_hygiene_ratings_glasgow_business_type
+          yRef:
+            field: fct_food_hygiene_ratings_glasgow_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_food_hygiene_ratings_glasgow_business_type
+      yField:
+      - fct_food_hygiene_ratings_glasgow_distinct_entities
+  type: cartesian
+description: Distinct `business_id` values by `business_type` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_food_hygiene_ratings_glasgow_business_type
+  exploreName: fct_food_hygiene_ratings_glasgow
+  filters:
+    dimensions:
+      and:
+      - id: 3d76b430-b021-5636-b3b2-8acbe63e379d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_food_hygiene_ratings_glasgow_observed_at
+        values:
+        - 30
+      id: 5f8d2305-4741-504f-8560-0a4287c3792f
+  limit: 20
+  metrics:
+  - fct_food_hygiene_ratings_glasgow_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_food_hygiene_ratings_glasgow_distinct_entities
+  tableCalculations: []
+name: Distinct business by business type
+slug: fct-food-hygiene-ratings-glasgow
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_food_hygiene_ratings_glasgow_business_type
+  - fct_food_hygiene_ratings_glasgow_distinct_entities
+tableName: fct_food_hygiene_ratings_glasgow
+version: 1

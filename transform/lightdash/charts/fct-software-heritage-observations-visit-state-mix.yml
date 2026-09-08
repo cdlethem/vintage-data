@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_software_heritage_observations_fetched_at_day
+          yRef:
+            field: fct_software_heritage_observations_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Distinct repository
+    layout:
+      stack: true
+      xField: fct_software_heritage_observations_fetched_at_day
+      yField:
+      - fct_software_heritage_observations_distinct_entities
+  type: cartesian
+description: Distinct `repository_id` values per extractor `fetched_at` day, stacked by `has_visits`.
+  Both boolean states are shown; this is a five-day catalogue mix rather than a count of visits, and days
+  with no successful fetch are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_software_heritage_observations_fetched_at_day
+  - fct_software_heritage_observations_has_visits
+  exploreName: fct_software_heritage_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_software_heritage_observations_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_software_heritage_observations_distinct_entities
+  - descending: false
+    fieldId: fct_software_heritage_observations_fetched_at_day
+  tableCalculations: []
+name: Repositories by visit state on fetch day
+pivotConfig:
+  columns:
+  - fct_software_heritage_observations_has_visits
+slug: fct-software-heritage-observations-visit-state-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_software_heritage_observations_fetched_at_day
+  - fct_software_heritage_observations_has_visits
+  - fct_software_heritage_observations_distinct_entities
+tableName: fct_software_heritage_observations
+version: 1

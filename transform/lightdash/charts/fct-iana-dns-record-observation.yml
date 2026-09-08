@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_iana_dns_record_observation_record_type
+          yRef:
+            field: fct_iana_dns_record_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_iana_dns_record_observation_record_type
+      yField:
+      - fct_iana_dns_record_observation_distinct_entities
+  type: cartesian
+description: Distinct `record_id` values by `record_type` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_iana_dns_record_observation_record_type
+  exploreName: fct_iana_dns_record_observation
+  filters:
+    dimensions:
+      and:
+      - id: dfc36c57-e6c5-5e6b-83c8-1699d3fd7da8
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_iana_dns_record_observation_observed_at
+        values:
+        - 30
+      id: 383365d2-6a52-549e-a9c8-fa2977e65588
+  limit: 20
+  metrics:
+  - fct_iana_dns_record_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_iana_dns_record_observation_distinct_entities
+  tableCalculations: []
+name: Distinct record by record type
+slug: fct-iana-dns-record-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_iana_dns_record_observation_record_type
+  - fct_iana_dns_record_observation_distinct_entities
+tableName: fct_iana_dns_record_observation
+version: 1

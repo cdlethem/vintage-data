@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical snapshot fact for the Oregon seed-lab processing queue. Each row records one queue
+  category observed in a source snapshot, including the reported sample count, completion estimate, and
+  raw-load lineage.
+metricQuery:
+  dimensions: &id001
+  - fct_seed_lab_queue_observed_at
+  - fct_seed_lab_queue_queue_id
+  - fct_seed_lab_queue_queue_label
+  - fct_seed_lab_queue_estimated_days_to_complete
+  - fct_seed_lab_queue_source_loaded_at
+  exploreName: fct_seed_lab_queue
+  filters:
+    dimensions:
+      and:
+      - id: 6f1060b8-9242-5560-8987-28672e6bbf73
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_seed_lab_queue_observed_at
+        values:
+        - 30
+      id: 9dfecd45-0830-5df2-a5a9-ee5fa45f34a5
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_seed_lab_queue_observed_at
+  tableCalculations: []
+name: Seed lab queue — observations
+slug: fct-seed-lab-queue-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_seed_lab_queue
+version: 1

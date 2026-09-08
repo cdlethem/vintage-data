@@ -1,0 +1,415 @@
+version: 2
+models:
+- name: fct_chess_archives_magnuscarlsen_games
+  description: Daily physical fact of Magnus Carlsen's Chess.com archive games. Each row is one game at
+    the archive-source and game identifier grain; repeated append-only copies are reduced to the latest
+    loaded row while game attributes and raw-load lineage remain available for audit.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: archive_source, game_id
+      label: Chess archives magnuscarlsen games
+      group_label: Chess archives magnuscarlsen
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: chess_archive_mag_97c502
+      vintage:
+        visualization:
+          dimension: player_result
+          metric: distinct_entities
+          time: fetched_at
+          window_days: 30
+          title: Distinct game by player result
+          description: Distinct `game_id` values by `player_result` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - fetched_at
+          - game_id
+          - player_result
+          - source_loaded_at
+          sources:
+          - '`chess_archives_magnuscarlsen` — see dbt raw-source lineage.'
+          analysis:
+            headline: how game volume, outcomes, time controls, and move timing appear across Magnus Carlsen's
+              single recorded end day.
+            event_time: ended_at
+            grain: DAY
+            controls:
+            - player_color
+            - time_class
+            - time_control
+            - is_rated
+            trends:
+            - slug: games-ended
+              kind: total
+              metric: distinct_entities
+              time: ended_at
+              grain: DAY
+              title: Games ended per day
+              description: Distinct `game_id` values by the `ended_at` calendar day. This is a one-day event-time
+                level in the current extract, and dates with no games are absent rather than zero.
+              width: half
+            - slug: average-move-time
+              kind: total
+              metric: avg_median_move_time
+              time: ended_at
+              grain: DAY
+              title: Average median move time per day
+              description: Average reported per-game median move time in seconds by the `ended_at` calendar
+                day. It is a one-day pacing level rather than a long-run trend, and absent days are absent.
+              width: half
+            - slug: results-by-day
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: player_result
+              top_n: 2
+              time: ended_at
+              grain: DAY
+              title: Games ended by player result
+              description: Distinct games per `ended_at` day pivoted by `player_result`. Only the two observed
+                result categories are shown, and dates without games are absent rather than zero.
+              width: full
+            - slug: time-class-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: time_class
+              top_n: 2
+              time: ended_at
+              grain: DAY
+              title: Games ended by time class
+              description: Distinct games per `ended_at` day stacked by the observed `time_class` value. The
+                single populated segment is a level, and dates without games remain absent.
+              width: full
+  columns:
+  - name: chess_archive_magnuscarlsen_game_key
+    description: Stable hash of the archive source and Chess.com game identifier.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Chess archive magnuscarlsen game key
+          hidden: true
+          name: chess_archive_mag_97c502
+  - name: archive_source
+    description: Raw archive relation identifier identifying the Magnus Carlsen account archive.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Archive source
+          hidden: false
+  - name: source_system
+    description: Upstream source type reported by the archive record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source system
+          hidden: false
+  - name: game_id
+    description: Chess.com identifier for the recorded game.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct game
+            description: Distinct `game_id` values by `player_result` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Game id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp when the extractor fetched the archive record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: player_user
+    description: Chess.com user identifier associated with the archived game.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Player user
+          hidden: false
+  - name: player_color
+    description: Color played by the archived user.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Player color
+          hidden: false
+  - name: ended_at
+    description: UTC timestamp when the game ended.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Ended at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: time_class
+    description: Chess.com time-class category for the game.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Time class
+          hidden: false
+  - name: time_control
+    description: Chess.com time-control setting for the game.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Time control
+          hidden: false
+  - name: is_rated
+    description: Whether Chess.com marked the game as rated.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is rated
+          hidden: false
+  - name: player_rating
+    description: Archived user's rating for the game.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Player rating
+          hidden: false
+          format: '#,##0'
+  - name: opponent_rating
+    description: Opponent's rating for the game.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Opponent rating
+          hidden: false
+          format: '#,##0'
+  - name: player_result
+    description: Archived user's game result.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Player result
+          hidden: false
+  - name: opponent_result
+    description: Opponent's game result.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Opponent result
+          hidden: false
+  - name: rules
+    description: Rule set reported for the game.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Rules
+          hidden: false
+  - name: opening
+    description: Chess.com opening or ECO text reported for the game.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Opening
+          hidden: false
+  - name: timed_move_count
+    description: Number of timed moves recorded in the game.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Timed move count
+          hidden: false
+          format: '#,##0'
+  - name: median_move_time_seconds
+    description: Median move time in seconds reported in the archive record.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          avg_median_move_time:
+            type: average
+            label: Average median move time
+            description: Average reported per-game median move time in seconds across games in the selected
+              time bucket. It is a pacing measure rather than total game duration.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Median move time seconds
+          hidden: false
+          format: '#,##0.00'
+  - name: max_move_time_seconds
+    description: Maximum move time in seconds reported in the archive record.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Max move time seconds
+          hidden: false
+          format: '#,##0.00'
+  - name: source_row_id
+    description: Raw warehouse row identifier for the retained game record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the game record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: Row position of the game within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: extract_s_51074f
+  - name: load_id
+    description: Identifier of the load job that inserted the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the source row.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

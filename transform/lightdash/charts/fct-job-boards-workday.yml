@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_job_boards_workday_company
+          yRef:
+            field: fct_job_boards_workday_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_job_boards_workday_company
+      yField:
+      - fct_job_boards_workday_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values by `company` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_job_boards_workday_company
+  exploreName: fct_job_boards_workday
+  filters:
+    dimensions:
+      and:
+      - id: b949ebe6-b44c-54c0-b18c-7f19e8b1dfa3
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_boards_workday_observed_at
+        values:
+        - 30
+      id: ec41a139-5f72-5bd3-845e-0144b065a64a
+  limit: 20
+  metrics:
+  - fct_job_boards_workday_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_boards_workday_distinct_entities
+  tableCalculations: []
+name: Distinct job by company
+slug: fct-job-boards-workday
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_boards_workday_company
+  - fct_job_boards_workday_distinct_entities
+tableName: fct_job_boards_workday
+version: 1

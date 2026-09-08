@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sd_juror_standby_observed_at_day
+          yRef:
+            field: fct_sd_juror_standby_average_instruction_length
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean instruction length
+    layout:
+      xField: fct_sd_juror_standby_observed_at_day
+      yField:
+      - fct_sd_juror_standby_average_instruction_length
+  type: cartesian
+description: Average character length of retained standby instructions on each observation day. The mean
+  is observation-weighted, so repeated snapshots can affect it; absent days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_sd_juror_standby_observed_at_day
+  exploreName: fct_sd_juror_standby
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sd_juror_standby_average_instruction_length
+  sorts:
+  - descending: false
+    fieldId: fct_sd_juror_standby_observed_at_day
+  tableCalculations: []
+name: Mean instruction length by observation day
+slug: fct-sd-juror-standby-instruction-length
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sd_juror_standby_observed_at_day
+  - fct_sd_juror_standby_average_instruction_length
+tableName: fct_sd_juror_standby
+version: 1

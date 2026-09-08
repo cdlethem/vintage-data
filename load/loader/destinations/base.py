@@ -124,6 +124,40 @@ class Destination(abc.ABC):
     def summary(self) -> list[dict]:
         """Per-table row counts and load recency, for ``status`` output."""
 
+    # -- cadence ---------------------------------------------------------
+    # Scheduling cadence detection reads RAW and writes only its own two
+    # tables, so a destination that cannot answer these cheaply is free to
+    # raise: the cadence job then reports the source as skipped and the load
+    # path is untouched.
+    @abc.abstractmethod
+    def recent_batches(self, source: str, limit: int = 2) -> list[dict]:
+        """The source's newest *scheduled* runs, newest first.
+
+        Backfill batches are excluded on purpose: a historical unit says
+        nothing about how often the upstream publishes now.
+        """
+
+    @abc.abstractmethod
+    def probe_novelty(self, table: str, batch_id: str, prev_batch_id: str, *,
+                      key: str, volatile_keys: tuple[str, ...]) -> dict:
+        """Compare two batches of one table: ``{distinct_rows, novel_rows}``.
+
+        Must read only those two batches — this runs after every load pass.
+        ``key`` is ``content`` (record hash, volatile envelope keys removed) or
+        ``ids`` (the envelope ``id`` column).
+        """
+
+    @abc.abstractmethod
+    def cadence_states(self) -> dict[str, dict]:
+        """Per-source cadence state, keyed by source name."""
+
+    @abc.abstractmethod
+    def save_cadence_state(self, state) -> None: ...
+
+    @abc.abstractmethod
+    def record_cadence_decision(self, load_id: str, decision) -> None:
+        """Append one decision, with the evidence it was made on."""
+
     def should_skip(self, path: str, ledger: dict[str, tuple[str, int]]) -> str | None:
         """Why this file is not a load candidate, or None if it is one."""
         entry = ledger.get(path)

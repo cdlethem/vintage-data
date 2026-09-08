@@ -1,0 +1,347 @@
+version: 2
+models:
+- name: fct_gracedb_superevents
+  description: Physical gravitational-event observation fact from the LIGO/Virgo/KAGRA GraceDB superevent
+    feed. Each row is one superevent observation at one extractor fetch timestamp, retaining event timing,
+    false-alarm and classification fields, retraction state, source links, and raw-load lineage. Duplicate
+    copies of the same source, superevent, and observation timestamp are reduced to the latest loaded
+    record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, superevent_id, observed_at
+      label: Gracedb superevents
+      group_label: Gracedb superevents
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: gracedb_superevent_observation_key
+      vintage:
+        visualization:
+          dimension: category
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct superevent by category
+          description: Distinct `superevent_id` values by `category` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - superevent_id
+          - category
+          - source_loaded_at
+          sources:
+          - '`gracedb_superevents` — licence: GraceDB public superevents; attribution required: False.
+            Source configuration: `extract/sources/gracedb_superevents.yml`.'
+          analysis:
+            headline: how the cataloged gravitational-wave event count and reported false-alarm rate vary
+              across event and observation days.
+            event_time: event_time_utc
+            grain: DAY
+            controls:
+            - category
+            - retracted
+            - source
+            trends:
+            - slug: events-by-event-day
+              kind: total
+              metric: distinct_entities
+              time: event_time_utc
+              grain: DAY
+              title: Superevents by reported event day
+              description: Distinct `superevent_id` values by the UTC day GraceDB reports the gravitational
+                event occurred. The source spans only two event days, so this is a short event-time view;
+                days with no source events are absent rather than zero.
+              width: half
+            - slug: false-alarm-rate-by-event-day
+              kind: total
+              metric: average_false_alarm
+              time: event_time_utc
+              grain: DAY
+              title: Mean false-alarm rate by event day
+              description: Average reported `false_alarm_rate_hz` for observations whose event timestamp falls
+                on each UTC day. Repeated observations are equally weighted, so polling frequency can affect
+                the mean; absent event days are absent rather than zero.
+              width: half
+            - slug: events-by-category
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: category
+              top_n: 2
+              time: event_time_utc
+              grain: DAY
+              title: Superevents by category and event day
+              description: Distinct `superevent_id` values per event day pivoted by GraceDB `category`.
+                The extract currently has one observed category, Production; no remainder is aggregated and
+                categories absent on a day are absent rather than zero.
+              width: full
+            - slug: retraction-composition
+              kind: composition
+              metric: distinct_entities
+              breakdown: retracted
+              top_n: 2
+              time: event_time_utc
+              grain: DAY
+              title: Superevent retraction mix by event day
+              description: Distinct superevents per event day stacked by `retracted`. The current extract is
+                entirely False, so the single visible segment describes the observed feed rather than a
+                balanced retracted-versus-active population.
+              width: full
+            - slug: observations-by-fetch-day
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct superevents observed per fetch day
+              description: Distinct `superevent_id` values in each extractor observation day. This is a
+                collection-level level over five days, not the event history; days without a successful
+                extract are absent rather than zero.
+              width: half
+  columns:
+  - name: gracedb_superevent_observation_key
+    description: Stable hash of the source, GraceDB superevent identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '6 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '6 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Gracedb superevent observation key
+          hidden: true
+  - name: source
+    description: Upstream source system that supplied the gravitational-event observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: superevent_id
+    description: GraceDB identifier of the gravitational-wave superevent.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct superevent
+            description: Distinct `superevent_id` values by `category` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Superevent id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this GraceDB superevent observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: event_time_utc
+    description: UTC timestamp of the gravitational-wave event reported by GraceDB.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Event time utc
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: gps_t0
+    description: GPS seconds associated with the event time reported by GraceDB.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Gps t0
+          hidden: false
+          format: '#,##0.00'
+  - name: false_alarm_rate_hz
+    description: False-alarm rate in hertz reported for the superevent.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: False alarm rate hz
+          hidden: false
+          format: '#,##0.00'
+        metrics:
+          average_false_alarm:
+            type: average
+            label: Mean false-alarm rate
+            description: Average reported `false_alarm_rate_hz` among matching GraceDB observations. Each
+              retained observation has equal weight, so repeated polling of one superevent can influence the
+              mean; this is not a sum or a count.
+            format: '#,##0.000000'
+  - name: category
+    description: GraceDB classification category assigned to the superevent.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Category
+          hidden: false
+  - name: labels
+    description: JSON array of GraceDB labels attached to the superevent observation.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Labels
+          hidden: true
+          sql: CAST(${TABLE}.labels AS VARCHAR)
+  - name: retracted
+    description: Whether GraceDB marks the superevent as retracted at observation time.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Retracted
+          hidden: false
+  - name: links
+    description: GraceDB URL for the observed superevent, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Links
+          hidden: false
+  - name: source_row_id
+    description: Load-layer row identifier retained for raw-record lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the source observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the source observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load operation that inserted the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the source row into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

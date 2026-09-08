@@ -1,0 +1,145 @@
+config:
+  dateZoomGranularities:
+  - Hour
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Hour
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 4ce841e2-9dcc-5065-b800-a056d2241740
+    label: 'Socrata civic incident: Incident type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_socrata_civic_incident_incident_type
+      tableName: fct_socrata_civic_incident
+    values: []
+  - disabled: true
+    id: ae502485-f105-5c45-8ea8-2bb58569b1df
+    label: 'Socrata civic incident: Address'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_socrata_civic_incident_address
+      tableName: fct_socrata_civic_incident
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Socrata Civic
+slug: socrata-civic
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Incremental physical history of Seattle Fire 911 incidents published through the Socrata
+      civic feed. Each row is one source record at one fetch timestamp (source, record_id, observed_at),
+      with typed event and location attributes, and raw-load lineage. Replayed records at the same grain
+      retain only the latest loaded copy.
+
+
+      **Grain:** source_relation, record_id, observed_at
+
+
+      **What changes here:** how the recent incident level, geographic spread, and incident-type mix move
+      through the five-day feed window.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `socrata_civic` — licence: Socrata/SODA — per-city open data licence; attribution required: False.
+      Source configuration: `extract/sources/socrata_civic.yml`.'
+    hideFrame: false
+    title: Socrata civic incident
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Socrata civic incident — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct incidents by event hour
+    chartSlug: fct-socrata-civic-incident-incident-level
+    hideTitle: false
+    title: Distinct incidents by event hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct incident addresses by event hour
+    chartSlug: fct-socrata-civic-incident-geographic-spread
+    hideTitle: false
+    title: Distinct incident addresses by event hour
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Incident level by type
+    chartSlug: fct-socrata-civic-incident-incident-type-mix
+    hideTitle: false
+    title: Incident level by type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Distinct incidents by fetch hour
+    chartSlug: fct-socrata-civic-incident-fetched-incident-level
+    hideTitle: false
+    title: Distinct incidents by fetch hour
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Socrata civic incident — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct record by incident type
+    chartSlug: fct-socrata-civic-incident
+    hideTitle: false
+    title: Distinct record by incident type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Socrata civic incident — observations
+    chartSlug: fct-socrata-civic-incident-details
+    hideTitle: false
+    title: Socrata civic incident — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

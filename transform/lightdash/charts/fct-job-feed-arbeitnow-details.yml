@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of Arbeitnow job observations. Each row represents one Arbeitnow job
+  identifier in one extractor response at an observation timestamp; repeated ingestion of the same observation
+  is reduced to the latest loaded copy while load-layer lineage is retained for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_job_feed_arbeitnow_observed_at
+  - fct_job_feed_arbeitnow_job_id
+  - fct_job_feed_arbeitnow_company
+  - fct_job_feed_arbeitnow_source_loaded_at
+  exploreName: fct_job_feed_arbeitnow
+  filters:
+    dimensions:
+      and:
+      - id: 94ab4e10-f5db-50ba-bfb6-0a17c23479e8
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_feed_arbeitnow_observed_at
+        values:
+        - 30
+      id: 18ab7baa-02a8-5d5c-9cff-dd648ecce100
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_arbeitnow_observed_at
+  tableCalculations: []
+name: Job feed arbeitnow — observations
+slug: fct-job-feed-arbeitnow-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_job_feed_arbeitnow
+version: 1

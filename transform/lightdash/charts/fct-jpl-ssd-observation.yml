@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_jpl_ssd_observation_observation_id
+          yRef:
+            field: fct_jpl_ssd_observation_max_impact_energy_kt
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_jpl_ssd_observation_observation_id
+      yField:
+      - fct_jpl_ssd_observation_max_impact_energy_kt
+  type: cartesian
+description: Maximum observed impact energy kt by `observation_id` in the selected observation window.
+  Estimated impact energy in kilotons as reported by the feed. Uses the largest retained value within
+  each group and window, not the latest value or a sum of snapshots.
+metricQuery:
+  dimensions:
+  - fct_jpl_ssd_observation_observation_id
+  exploreName: fct_jpl_ssd_observation
+  filters:
+    dimensions:
+      and:
+      - id: e1f4afa8-8ddf-5e4f-9295-fbd9a6e29a87
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_jpl_ssd_observation_observed_at
+        values:
+        - 30
+      id: 1701f442-14f5-59d6-85c6-35caae5093ad
+  limit: 20
+  metrics:
+  - fct_jpl_ssd_observation_max_impact_energy_kt
+  sorts:
+  - descending: true
+    fieldId: fct_jpl_ssd_observation_max_impact_energy_kt
+  tableCalculations: []
+name: Maximum observed impact energy kt by observation id
+slug: fct-jpl-ssd-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_jpl_ssd_observation_observation_id
+  - fct_jpl_ssd_observation_max_impact_energy_kt
+tableName: fct_jpl_ssd_observation
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_itunes_charts_fetched_at_day
+          yRef:
+            field: fct_itunes_charts_distinct_tracks
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Distinct track
+    layout:
+      xField: fct_itunes_charts_fetched_at_day
+      yField:
+      - fct_itunes_charts_distinct_tracks
+  type: cartesian
+description: Distinct `id` values in each fetched chart snapshot. This is a level rather than a flow because
+  the chart republishes its ranked catalogue; all five observed days are present and a missing fetch day
+  would be absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_itunes_charts_fetched_at_day
+  exploreName: fct_itunes_charts
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_itunes_charts_distinct_tracks
+  sorts:
+  - descending: false
+    fieldId: fct_itunes_charts_fetched_at_day
+  tableCalculations: []
+name: Tracks in each daily chart snapshot
+slug: fct-itunes-charts-charted-tracks
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_itunes_charts_fetched_at_day
+  - fct_itunes_charts_distinct_tracks
+tableName: fct_itunes_charts
+version: 1

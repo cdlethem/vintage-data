@@ -1,0 +1,144 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Week
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 24ffab5d-282a-514b-b253-036c3e9014f7
+    label: 'Tsa throughput: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_tsa_throughput_source
+      tableName: fct_tsa_throughput
+    values: []
+  - disabled: true
+    id: e112b166-8e40-5ad3-a71b-acff97dbb363
+    label: 'Tsa throughput: Publisher updated at'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_tsa_throughput_publisher_updated_at
+      tableName: fct_tsa_throughput
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Tsa Throughput
+slug: tsa-throughput
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical observation fact for the U.S. Transportation Security Administration passenger-throughput
+      table. Each row represents one TSA throughput date from one extractor fetch, retaining passenger
+      totals, the publisher''s update marker, and raw-load lineage. Repeated ingestion of the same source,
+      identifier, date, and observation timestamp is reduced to the latest loaded record.
+
+
+      **Grain:** source, throughput_id, throughput_date, observed_at
+
+
+      **What changes here:** weekly passenger throughput levels and the publisher snapshots that revise
+      them.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `tsa_throughput` — licence: US federal public data; attribution required: False. Source configuration:
+      `extract/sources/tsa_throughput.yml`.'
+    hideFrame: false
+    title: Tsa throughput
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Tsa throughput — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean passengers reported each throughput week
+    chartSlug: fct-tsa-throughput-weekly-passenger-level
+    hideTitle: false
+    title: Mean passengers reported each throughput week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Throughput dates reported each week
+    chartSlug: fct-tsa-throughput-weekly-throughput-days
+    hideTitle: false
+    title: Throughput dates reported each week
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean passengers by source each throughput week
+    chartSlug: fct-tsa-throughput-weekly-passengers-by-source
+    hideTitle: false
+    title: Mean passengers by source each throughput week
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Reported throughput dates by source each week
+    chartSlug: fct-tsa-throughput-weekly-coverage-by-source
+    hideTitle: false
+    title: Reported throughput dates by source each week
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Tsa throughput — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed passengers by throughput date
+    chartSlug: fct-tsa-throughput
+    hideTitle: false
+    title: Mean observed passengers by throughput date
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Tsa throughput — observations
+    chartSlug: fct-tsa-throughput-details
+    hideTitle: false
+    title: Tsa throughput — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

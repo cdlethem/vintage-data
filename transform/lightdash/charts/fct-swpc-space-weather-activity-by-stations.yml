@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_swpc_space_weather_observation_at_day
+          yRef:
+            field: fct_swpc_space_weather_average_kp_index
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observation at (Day)
+      yAxis:
+      - name: Mean observed kp index
+    layout:
+      stack: true
+      xField: fct_swpc_space_weather_observation_at_day
+      yField:
+      - fct_swpc_space_weather_average_kp_index
+  type: cartesian
+description: Mean `kp_index` stacked by the two observed `station_count` values for each source observation
+  day. This compares activity readings by reporting coverage, not additive storm volume; no station-count
+  remainder is aggregated.
+metricQuery:
+  dimensions:
+  - fct_swpc_space_weather_observation_at_day
+  - fct_swpc_space_weather_station_count
+  exploreName: fct_swpc_space_weather
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_swpc_space_weather_average_kp_index
+  sorts:
+  - descending: true
+    fieldId: fct_swpc_space_weather_average_kp_index
+  - descending: false
+    fieldId: fct_swpc_space_weather_observation_at_day
+  tableCalculations: []
+name: K-index mix by reporting station count
+pivotConfig:
+  columns:
+  - fct_swpc_space_weather_station_count
+slug: fct-swpc-space-weather-activity-by-stations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_swpc_space_weather_observation_at_day
+  - fct_swpc_space_weather_station_count
+  - fct_swpc_space_weather_average_kp_index
+tableName: fct_swpc_space_weather
+version: 1

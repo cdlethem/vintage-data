@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: d4297e81-4a0d-5ef6-baaf-db8c2d2a4f53
+    label: 'Open collective account observation: Currency code'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_open_collective_account_observation_currency_code
+      tableName: fct_open_collective_account_observation
+    values: []
+  - disabled: true
+    id: 8c8f7816-64a2-5c28-8043-28ae19d896a5
+    label: 'Open collective account observation: Account name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_open_collective_account_observation_account_name
+      tableName: fct_open_collective_account_observation
+    values: []
+  - disabled: true
+    id: 9658fba8-c4ab-5135-b8cb-777064d07360
+    label: 'Open collective account observation: Source name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_open_collective_account_observation_source_name
+      tableName: fct_open_collective_account_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Open Collective
+slug: open-collective
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of Open Collective account snapshots. Each row is one account observed
+      at one fetch timestamp, with account balances, funding totals, and source-load lineage retained
+      for replay auditing. The source is insert-only and repeated copies of one observation are reduced
+      to the latest loaded record.
+
+
+      **Grain:** source_name, account_id, observed_at
+
+
+      **What changes here:** Account balances and backer levels move only slightly across four daily snapshots
+      while currency mix explains most scale differences.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `open_collective` — licence: Open Collective — public; attribution required: False. Source configuration:
+      `extract/sources/open_collective.yml`.'
+    hideFrame: false
+    title: Open collective account observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Open collective account observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean observed account balance by day
+    chartSlug: fct-open-collective-account-observation-average-balance-by-day
+    hideTitle: false
+    title: Mean observed account balance by day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported backer count by day
+    chartSlug: fct-open-collective-account-observation-average-backers-by-day
+    hideTitle: false
+    title: Mean reported backer count by day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean balance by leading currency
+    chartSlug: fct-open-collective-account-observation-balance-by-currency
+    hideTitle: false
+    title: Mean balance by leading currency
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Account population mix by currency
+    chartSlug: fct-open-collective-account-observation-accounts-by-currency
+    hideTitle: false
+    title: Account population mix by currency
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Open collective account observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed balance amount by currency code
+    chartSlug: fct-open-collective-account-observation
+    hideTitle: false
+    title: Mean observed balance amount by currency code
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Open collective account observation — observations
+    chartSlug: fct-open-collective-account-observation-details
+    hideTitle: false
+    title: Open collective account observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

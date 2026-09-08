@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_manifold_market_observation_observed_at_day
+          yRef:
+            field: fct_manifold_market_observation_average_volume_24h
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean 24-hour volume
+    layout:
+      xField: fct_manifold_market_observation_observed_at_day
+      yField:
+      - fct_manifold_market_observation_average_volume_24h
+  type: cartesian
+description: Average publisher-reported `volume_24h` per observation day, pivoted by `outcome_type`. This
+  is a snapshot level and must not be read as traded volume accumulated during the day; each retained
+  observation has equal weight. All six outcome types are shown, with no remainder category.
+metricQuery:
+  dimensions:
+  - fct_manifold_market_observation_observed_at_day
+  - fct_manifold_market_observation_outcome_type
+  exploreName: fct_manifold_market_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_manifold_market_observation_average_volume_24h
+  sorts:
+  - descending: true
+    fieldId: fct_manifold_market_observation_average_volume_24h
+  - descending: false
+    fieldId: fct_manifold_market_observation_observed_at_day
+  tableCalculations: []
+name: Mean 24-hour volume by outcome type
+pivotConfig:
+  columns:
+  - fct_manifold_market_observation_outcome_type
+slug: fct-manifold-market-observation-activity-by-type
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_manifold_market_observation_observed_at_day
+  - fct_manifold_market_observation_outcome_type
+  - fct_manifold_market_observation_average_volume_24h
+tableName: fct_manifold_market_observation
+version: 1

@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 5
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_job_boards_smartrecruiters_posted_at_month
+          yRef:
+            field: fct_job_boards_smartrecruiters_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Month)
+      yAxis:
+      - name: Distinct job
+    layout:
+      stack: true
+      xField: fct_job_boards_smartrecruiters_posted_at_month
+      yField:
+      - fct_job_boards_smartrecruiters_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values by `posted_at` month stacked by `employment_type`. All five observed
+  employment types are retained, so bar segments show how the posting mix changes; null employment values
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_job_boards_smartrecruiters_posted_at_month
+  - fct_job_boards_smartrecruiters_employment_type
+  exploreName: fct_job_boards_smartrecruiters
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_boards_smartrecruiters_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_boards_smartrecruiters_distinct_entities
+  - descending: false
+    fieldId: fct_job_boards_smartrecruiters_posted_at_month
+  tableCalculations: []
+name: Monthly posting mix by employment type
+pivotConfig:
+  columns:
+  - fct_job_boards_smartrecruiters_employment_type
+slug: fct-job-boards-smartrecruiters-posting-mix-by-employment
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_boards_smartrecruiters_posted_at_month
+  - fct_job_boards_smartrecruiters_employment_type
+  - fct_job_boards_smartrecruiters_distinct_entities
+tableName: fct_job_boards_smartrecruiters
+version: 1

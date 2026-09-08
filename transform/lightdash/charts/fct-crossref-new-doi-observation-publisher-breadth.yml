@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_crossref_new_doi_observation_created_at_day
+          yRef:
+            field: fct_crossref_new_doi_observation_distinct_publishers
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct publishers
+    layout:
+      xField: fct_crossref_new_doi_observation_created_at_day
+      yField:
+      - fct_crossref_new_doi_observation_distinct_publishers
+  type: cartesian
+description: Distinct non-null `publisher` values among DOI records by `created_at` day. This measures
+  publisher breadth, not DOI volume, and absent days indicate no retained registrations.
+metricQuery:
+  dimensions:
+  - fct_crossref_new_doi_observation_created_at_day
+  exploreName: fct_crossref_new_doi_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_crossref_new_doi_observation_distinct_publishers
+  sorts:
+  - descending: false
+    fieldId: fct_crossref_new_doi_observation_created_at_day
+  tableCalculations: []
+name: Publishers registering DOIs per day
+slug: fct-crossref-new-doi-observation-publisher-breadth
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_crossref_new_doi_observation_created_at_day
+  - fct_crossref_new_doi_observation_distinct_publishers
+tableName: fct_crossref_new_doi_observation
+version: 1

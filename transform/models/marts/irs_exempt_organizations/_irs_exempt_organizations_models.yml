@@ -1,0 +1,516 @@
+version: 2
+models:
+- name: fct_irs_exempt_organizations
+  description: Daily physical snapshot of organizations recognized as tax-exempt by the United States
+    Internal Revenue Service. Each row is one employer identification number observed at one extractor
+    fetch timestamp; repeated raw copies of a snapshot row are reduced to the latest loaded copy while
+    source lineage is retained for audit.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: ein, fetched_at
+      label: Irs exempt organizations
+      group_label: Irs exempt organizations
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: irs_exempt_organization_obs_7bc030
+      vintage:
+        visualization:
+          dimension: state
+          metric: distinct_entities
+          time: fetched_at
+          window_days: 30
+          title: Distinct organization by state
+          description: Distinct `organization_id` values by `state` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - fetched_at
+          - organization_id
+          - state
+          - source_loaded_at
+          sources:
+          - '`irs_exempt_organizations` — licence: US federal public data; attribution required: False.
+            Source configuration: `extract/sources/irs_exempt_organizations.yml`.'
+          analysis:
+            headline: how the one-day IRS exempt-organization snapshot's population and reported financial
+              levels differ by state and classification.
+            event_time: publisher_updated_at
+            grain: DAY
+            controls:
+            - state
+            - subsection_code
+            - affiliation_code
+            - status_code
+            trends:
+            - slug: organizations-in-snapshot
+              kind: total
+              metric: distinct_entities
+              time: fetched_at
+              grain: DAY
+              title: Organizations in the fetched snapshot
+              description: Distinct `organization_id` values in the IRS snapshot on each fetch day. This is
+                a level rather than a flow because the feed is a catalogue snapshot; only one fetch day is
+                present, and absent fetch days are absent rather than zero.
+              width: half
+            - slug: average-assets
+              kind: total
+              metric: average_assets
+              time: fetched_at
+              grain: DAY
+              title: Average reported assets in the snapshot
+              description: Average non-null `asset_amount` in US dollars on each fetch day. This is a
+                snapshot measure rather than a sum of balances; only one fetch day is present, and absent
+                fetch days are absent rather than zero.
+              width: half
+            - slug: organizations-by-state
+              kind: composition
+              metric: distinct_entities
+              breakdown: state
+              top_n: 8
+              time: fetched_at
+              grain: DAY
+              title: Snapshot organizations by state
+              description: Distinct `organization_id` values stacked by state for the fetched snapshot.
+                All eight observed states are retained; this is a one-day level, not a time flow, and no
+                absent state is treated as zero.
+              width: full
+            - slug: organizations-by-subsection
+              kind: breakdown
+              metric: average_income
+              breakdown: subsection_code
+              top_n: 8
+              time: publisher_updated_at
+              grain: DAY
+              title: Average income by subsection
+              description: Average non-null `income_amount` in US dollars by the eight largest subsection
+                codes on the publisher update day. The publisher timestamp has one observed day, so this
+                compares classifications within a gauge rather than a historical flow; other codes are
+                excluded rather than aggregated.
+              width: full
+  columns:
+  - name: irs_exempt_organization_observation_key
+    description: Stable hash of the employer identification number and extractor fetch timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '7 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '7 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Irs exempt organization observation key
+          hidden: true
+          name: irs_exempt_organization_obs_7bc030
+  - name: source_name
+    description: Upstream source label carried by the IRS extract record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: organization_id
+    description: Identifier assigned to the organization in the IRS extract.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct organization
+            description: Distinct `organization_id` values by `state` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Organization id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp when the extractor fetched this IRS organization record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: ein
+    description: Nine-digit employer identification number identifying the exempt organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Ein
+          hidden: false
+  - name: organization_name
+    description: Legal or published name of the exempt organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Organization name
+          hidden: false
+  - name: officer_name
+    description: Incorporated officer or contact field published by the IRS for the organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Officer name
+          hidden: false
+  - name: street_address
+    description: Street address reported for the exempt organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Street address
+          hidden: false
+  - name: city
+    description: City reported for the exempt organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: City
+          hidden: false
+  - name: state
+    description: State or territory code reported for the exempt organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: State
+          hidden: false
+  - name: postal_code
+    description: Postal ZIP code reported for the exempt organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Postal code
+          hidden: false
+  - name: group_code
+    description: IRS group ruling code for the exempt organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Group code
+          hidden: false
+  - name: subsection_code
+    description: Internal Revenue Code subsection code for the exemption.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Subsection code
+          hidden: false
+  - name: affiliation_code
+    description: IRS affiliation code describing the organization's relationship to a group.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Affiliation code
+          hidden: false
+  - name: classification_code
+    description: IRS classification code for the exempt organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Classification code
+          hidden: false
+  - name: ruling_date
+    description: Date or year string of the IRS exemption ruling.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Ruling date
+          hidden: false
+  - name: deductibility_code
+    description: IRS code describing deductibility of contributions to the organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Deductibility code
+          hidden: false
+  - name: foundation_code
+    description: IRS foundation classification code for the organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Foundation code
+          hidden: false
+  - name: activity_code
+    description: IRS primary activity code for the organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Activity code
+          hidden: false
+  - name: organization_code
+    description: IRS organization type code.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Organization code
+          hidden: false
+  - name: status_code
+    description: IRS status code for the organization record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status code
+          hidden: false
+  - name: tax_period
+    description: Tax period code reported for the exempt organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Tax period
+          hidden: false
+  - name: asset_code
+    description: IRS asset range code reported for the organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Asset code
+          hidden: false
+  - name: income_code
+    description: IRS income range code reported for the organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Income code
+          hidden: false
+  - name: filing_requirement_code
+    description: IRS filing requirement code for the organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Filing requirement code
+          hidden: false
+  - name: private_foundation_filing_requirement_code
+    description: IRS private-foundation filing requirement code for the organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Private foundation filing requirement code
+          hidden: false
+          name: private_foundation_filing_r_26c5ea
+  - name: accounting_period
+    description: Accounting period code reported for the organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Accounting period
+          hidden: false
+  - name: asset_amount
+    description: Reported assets in US dollars, parsed from the IRS extract when present.
+    data_type: decimal(20,2)
+    config:
+      meta:
+        metrics:
+          average_assets:
+            type: average
+            label: Average reported assets
+            description: Average non-null `asset_amount` in US dollars for the selected snapshot group. This
+              is a snapshot level and must not be interpreted as a sum of organization balances.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Asset amount
+          hidden: false
+          format: '#,##0.00'
+  - name: income_amount
+    description: Reported income in US dollars, parsed from the IRS extract when present.
+    data_type: decimal(20,2)
+    config:
+      meta:
+        metrics:
+          average_income:
+            type: average
+            label: Average reported income
+            description: Average non-null `income_amount` in US dollars for the selected snapshot group. This
+              is a snapshot level and must not be interpreted as a sum of organization income.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Income amount
+          hidden: false
+          format: '#,##0.00'
+  - name: revenue_amount
+    description: Reported revenue in US dollars, parsed from the IRS extract when present.
+    data_type: decimal(20,2)
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Revenue amount
+          hidden: false
+          format: '#,##0.00'
+  - name: ntee_code
+    description: National Taxonomy of Exempt Entities classification code.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Ntee code
+          hidden: false
+  - name: sort_name
+    description: Normalized organization name supplied for sorting by the IRS extract.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sort name
+          hidden: false
+  - name: region_code
+    description: Numeric geographic region code supplied by the IRS extract.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Region code
+          hidden: false
+          format: '#,##0'
+  - name: publisher_updated_at
+    description: UTC timestamp when the upstream IRS publisher reported its source data was updated.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Publisher updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained raw IRS observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained raw IRS observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained IRS organization observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained IRS observation into the raw
+      warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the retained IRS organization observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

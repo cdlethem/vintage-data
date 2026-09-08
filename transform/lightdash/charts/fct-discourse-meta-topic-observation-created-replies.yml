@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_discourse_meta_topic_observation_created_at_day
+          yRef:
+            field: fct_discourse_meta_topic_observation_average_replies
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Mean observed replies
+    layout:
+      xField: fct_discourse_meta_topic_observation_created_at_day
+      yField:
+      - fct_discourse_meta_topic_observation_average_replies
+  type: cartesian
+description: Average `reply_count` reported for topics grouped by their source `created_at` day. This
+  engagement counter is not an additive number of replies; repeated observations can weight topics unevenly
+  and days without represented topics are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_discourse_meta_topic_observation_created_at_day
+  exploreName: fct_discourse_meta_topic_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_discourse_meta_topic_observation_average_replies
+  sorts:
+  - descending: false
+    fieldId: fct_discourse_meta_topic_observation_created_at_day
+  tableCalculations: []
+name: Mean replies for topics by creation day
+slug: fct-discourse-meta-topic-observation-created-replies
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_discourse_meta_topic_observation_created_at_day
+  - fct_discourse_meta_topic_observation_average_replies
+tableName: fct_discourse_meta_topic_observation
+version: 1

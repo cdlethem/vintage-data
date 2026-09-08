@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_nih_reporter_project_observations_project_start_at_month
+          yRef:
+            field: fct_nih_reporter_project_observations_distinct_projects
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Project start at (Month)
+      yAxis:
+      - name: Distinct projects
+    layout:
+      xField: fct_nih_reporter_project_observations_project_start_at_month
+      yField:
+      - fct_nih_reporter_project_observations_distinct_projects
+  type: cartesian
+description: Distinct `project_id` values by project-start month for the eight states with the most projects.
+  Remaining states are excluded rather than aggregated, and unpopulated months are absent.
+metricQuery:
+  dimensions:
+  - fct_nih_reporter_project_observations_project_start_at_month
+  - fct_nih_reporter_project_observations_organization_state
+  exploreName: fct_nih_reporter_project_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nih_reporter_project_observations_distinct_projects
+  sorts:
+  - descending: true
+    fieldId: fct_nih_reporter_project_observations_distinct_projects
+  - descending: false
+    fieldId: fct_nih_reporter_project_observations_project_start_at_month
+  tableCalculations: []
+name: Project starts by recipient state
+pivotConfig:
+  columns:
+  - fct_nih_reporter_project_observations_organization_state
+slug: fct-nih-reporter-project-observations-projects-by-state
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nih_reporter_project_observations_project_start_at_month
+  - fct_nih_reporter_project_observations_organization_state
+  - fct_nih_reporter_project_observations_distinct_projects
+tableName: fct_nih_reporter_project_observations
+version: 1

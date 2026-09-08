@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical observation fact for SEC EDGAR filing-party records. Each row is one accession
+  number, party role, CIK, and extractor observation timestamp; repeated raw copies of the same observation
+  are reduced to the latest loaded copy while source and load lineage remain available for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_sec_edgar_filing_observation_observed_at
+  - fct_sec_edgar_filing_observation_filing_party_id
+  - fct_sec_edgar_filing_observation_form_type
+  - fct_sec_edgar_filing_observation_source_loaded_at
+  exploreName: fct_sec_edgar_filing_observation
+  filters:
+    dimensions:
+      and:
+      - id: e27f7316-49c2-5c58-8667-3a79802c84dd
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sec_edgar_filing_observation_observed_at
+        values:
+        - 30
+      id: e2171c33-eb27-51ae-90ee-40679e512454
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_sec_edgar_filing_observation_observed_at
+  tableCalculations: []
+name: Sec edgar filing observation — observations
+slug: fct-sec-edgar-filing-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_sec_edgar_filing_observation
+version: 1

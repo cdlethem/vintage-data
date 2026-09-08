@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_nhl_game_observations_game_date_day
+          yRef:
+            field: fct_nhl_game_observations_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Game date (Day)
+      yAxis:
+      - name: Distinct game
+    layout:
+      xField: fct_nhl_game_observations_game_date_day
+      yField:
+      - fct_nhl_game_observations_distinct_entities
+  type: cartesian
+description: Distinct scheduled `game_id` values by game date for the eight largest `home_team_abbrev`
+  series. Remaining teams are excluded rather than aggregated, and absent dates have no row rather than
+  a zero.
+metricQuery:
+  dimensions:
+  - fct_nhl_game_observations_game_date_day
+  - fct_nhl_game_observations_home_team_abbrev
+  exploreName: fct_nhl_game_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nhl_game_observations_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_nhl_game_observations_distinct_entities
+  - descending: false
+    fieldId: fct_nhl_game_observations_game_date_day
+  tableCalculations: []
+name: Scheduled games by home team
+pivotConfig:
+  columns:
+  - fct_nhl_game_observations_home_team_abbrev
+slug: fct-nhl-game-observations-games-by-home-team
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nhl_game_observations_game_date_day
+  - fct_nhl_game_observations_home_team_abbrev
+  - fct_nhl_game_observations_distinct_entities
+tableName: fct_nhl_game_observations
+version: 1

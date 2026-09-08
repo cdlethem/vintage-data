@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sncf_station_equipment_observation_operating_status
+          yRef:
+            field: fct_sncf_station_equipment_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_sncf_station_equipment_observation_operating_status
+      yField:
+      - fct_sncf_station_equipment_observation_distinct_entities
+  type: cartesian
+description: Distinct `equipment_id` values by `operating_status` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_sncf_station_equipment_observation_operating_status
+  exploreName: fct_sncf_station_equipment_observation
+  filters:
+    dimensions:
+      and:
+      - id: ab12d30b-1195-5454-8cab-18a67ad2cc8b
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sncf_station_equipment_observation_observed_at
+        values:
+        - 30
+      id: e321ffcf-fb45-59eb-addd-dad25dbe57a7
+  limit: 20
+  metrics:
+  - fct_sncf_station_equipment_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_sncf_station_equipment_observation_distinct_entities
+  tableCalculations: []
+name: Distinct equipment by operating status
+slug: fct-sncf-station-equipment-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sncf_station_equipment_observation_operating_status
+  - fct_sncf_station_equipment_observation_distinct_entities
+tableName: fct_sncf_station_equipment_observation
+version: 1

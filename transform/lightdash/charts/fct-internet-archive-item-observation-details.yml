@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical hourly observation fact for Internet Archive items. Each row records one archive
+  source, item identifier, and extractor observation timestamp, retaining item metadata and raw-load lineage
+  for auditability. Repeated copies of the same source, item, and observation timestamp retain the latest
+  loaded record.
+metricQuery:
+  dimensions: &id001
+  - fct_internet_archive_item_observation_observed_at
+  - fct_internet_archive_item_observation_item_id
+  - fct_internet_archive_item_observation_media_type
+  - fct_internet_archive_item_observation_source_loaded_at
+  exploreName: fct_internet_archive_item_observation
+  filters:
+    dimensions:
+      and:
+      - id: e9a62900-3e06-5111-9a30-b7d5ca3ff063
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_internet_archive_item_observation_observed_at
+        values:
+        - 30
+      id: e2a6053f-2040-507f-b398-a1bc2da83602
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_internet_archive_item_observation_observed_at
+  tableCalculations: []
+name: Internet archive item observation — observations
+slug: fct-internet-archive-item-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_internet_archive_item_observation
+version: 1

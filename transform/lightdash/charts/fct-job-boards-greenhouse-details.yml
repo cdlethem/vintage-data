@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of job observations returned by Greenhouse applicant tracking system
+  boards. Each row represents one upstream source, job identifier, and extractor observation timestamp;
+  repeated raw copies of an observation are reduced to the latest loaded lineage record while listing
+  attributes and load metadata remain available for audit and replay. A table materialization preserves
+  the append-only observation history for the daily feed without rescanning raw records at query time.
+metricQuery:
+  dimensions: &id001
+  - fct_job_boards_greenhouse_observed_at
+  - fct_job_boards_greenhouse_job_id
+  - fct_job_boards_greenhouse_company
+  - fct_job_boards_greenhouse_source_loaded_at
+  exploreName: fct_job_boards_greenhouse
+  filters:
+    dimensions:
+      and:
+      - id: 3ad90482-d1c2-54e8-8b7a-31dd53142ede
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_boards_greenhouse_observed_at
+        values:
+        - 30
+      id: 83fa0da1-e8aa-57cb-96a1-87291530d4e3
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_job_boards_greenhouse_observed_at
+  tableCalculations: []
+name: Job boards greenhouse — observations
+slug: fct-job-boards-greenhouse-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_job_boards_greenhouse
+version: 1

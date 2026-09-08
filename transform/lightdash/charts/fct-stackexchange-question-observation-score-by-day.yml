@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_stackexchange_question_observation_observed_at_day
+          yRef:
+            field: fct_stackexchange_question_observation_average_score
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean question score
+    layout:
+      xField: fct_stackexchange_question_observation_observed_at_day
+      yField:
+      - fct_stackexchange_question_observation_average_score
+  type: cartesian
+description: Mean reported `score` across question observations on each API observation day. Each retained
+  observation has equal weight and polling frequency can affect the average; it is not an additive total,
+  and absent days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_stackexchange_question_observation_observed_at_day
+  exploreName: fct_stackexchange_question_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_stackexchange_question_observation_average_score
+  sorts:
+  - descending: false
+    fieldId: fct_stackexchange_question_observation_observed_at_day
+  tableCalculations: []
+name: Mean question score observed per day
+slug: fct-stackexchange-question-observation-score-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_stackexchange_question_observation_observed_at_day
+  - fct_stackexchange_question_observation_average_score
+tableName: fct_stackexchange_question_observation
+version: 1

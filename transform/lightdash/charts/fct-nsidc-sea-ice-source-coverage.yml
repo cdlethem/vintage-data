@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_nsidc_sea_ice_observation_date_day
+          yRef:
+            field: fct_nsidc_sea_ice_distinct_observations
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observation date (Day)
+      yAxis:
+      - name: Distinct observations
+    layout:
+      stack: true
+      xField: fct_nsidc_sea_ice_observation_date_day
+      yField:
+      - fct_nsidc_sea_ice_distinct_observations
+  type: cartesian
+description: Distinct `sea_ice_id` values per observation date stacked by `source_name`. Only the largest
+  source groups are shown and the remainder is excluded rather than aggregated; the stack is coverage,
+  not additive sea-ice extent.
+metricQuery:
+  dimensions:
+  - fct_nsidc_sea_ice_observation_date_day
+  - fct_nsidc_sea_ice_source_name
+  exploreName: fct_nsidc_sea_ice
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nsidc_sea_ice_distinct_observations
+  sorts:
+  - descending: true
+    fieldId: fct_nsidc_sea_ice_distinct_observations
+  - descending: false
+    fieldId: fct_nsidc_sea_ice_observation_date_day
+  tableCalculations: []
+name: Observation coverage by source
+pivotConfig:
+  columns:
+  - fct_nsidc_sea_ice_source_name
+slug: fct-nsidc-sea-ice-source-coverage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nsidc_sea_ice_observation_date_day
+  - fct_nsidc_sea_ice_source_name
+  - fct_nsidc_sea_ice_distinct_observations
+tableName: fct_nsidc_sea_ice
+version: 1

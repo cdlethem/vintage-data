@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 9c537ac7-6bfb-506e-955f-ff7bfdf53e03
+    label: 'Internet archive item observation: Archive source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_internet_archive_item_observation_archive_source
+      tableName: fct_internet_archive_item_observation
+    values: []
+  - disabled: true
+    id: 9212d946-bb00-58c3-9c94-74b2b37be865
+    label: 'Internet archive item observation: Media type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_internet_archive_item_observation_media_type
+      tableName: fct_internet_archive_item_observation
+    values: []
+  - disabled: true
+    id: ca7a7cfb-52f6-5d11-b5eb-ced0519c53d9
+    label: 'Internet archive item observation: Creator'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_internet_archive_item_observation_creator
+      tableName: fct_internet_archive_item_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Internet Archive
+slug: internet-archive
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical hourly observation fact for Internet Archive items. Each row records one archive
+      source, item identifier, and extractor observation timestamp, retaining item metadata and raw-load
+      lineage for auditability. Repeated copies of the same source, item, and observation timestamp retain
+      the latest loaded record.
+
+
+      **Grain:** archive_source, item_id, observed_at
+
+
+      **What changes here:** how the observed Internet Archive catalogue and credited-creator mix change
+      across five daily snapshots.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `internet_archive` — licence: per-item (varies by collection); attribution required: True. Source
+      configuration: `extract/sources/internet_archive.yml`.'
+    hideFrame: false
+    title: Internet archive item observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Internet archive item observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Items observed each day
+    chartSlug: fct-internet-archive-item-observation-observed-items
+    hideTitle: false
+    title: Items observed each day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Creators represented each day
+    chartSlug: fct-internet-archive-item-observation-observed-creators
+    hideTitle: false
+    title: Creators represented each day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Observed items by creator
+    chartSlug: fct-internet-archive-item-observation-items-by-creator
+    hideTitle: false
+    title: Observed items by creator
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Items by credited creator on reported addition day
+    chartSlug: fct-internet-archive-item-observation-added-items-by-creator
+    hideTitle: false
+    title: Items by credited creator on reported addition day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Internet archive item observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct item by media type
+    chartSlug: fct-internet-archive-item-observation
+    hideTitle: false
+    title: Distinct item by media type
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Internet archive item observation — observations
+    chartSlug: fct-internet-archive-item-observation-details
+    hideTitle: false
+    title: Internet archive item observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

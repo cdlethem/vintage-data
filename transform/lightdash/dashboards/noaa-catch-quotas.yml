@@ -1,0 +1,154 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 924595b2-124d-5ca3-8a28-45d908ed18cd
+    label: 'Noaa catch quotas: Management system'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_noaa_catch_quotas_management_system
+      tableName: fct_noaa_catch_quotas
+    values: []
+  - disabled: true
+    id: 77e77978-ed70-5c53-add3-a6f7c9a0f4b8
+    label: 'Noaa catch quotas: Share category'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_noaa_catch_quotas_share_category
+      tableName: fct_noaa_catch_quotas
+    values: []
+  - disabled: true
+    id: 116ce1f0-9a65-5e37-8415-5a84ef861d45
+    label: 'Noaa catch quotas: Fishery year'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_noaa_catch_quotas_fishery_year
+      tableName: fct_noaa_catch_quotas
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Noaa Catch Quotas
+slug: noaa-catch-quotas
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical daily fact of NOAA catch-share quota observations. Each row is the latest loaded
+      record for one quota identifier at one source-fetch timestamp; repeated raw loads of the same observation
+      are reduced using load lineage. The source''s display-formatted quota fields are retained alongside
+      its typed numeric value fields, while quota_increase_value remains text because the source can report
+      multiple comma-separated values in that field.
+
+
+      **Grain:** source, quota_id, observed_at
+
+
+      **What changes here:** how the current NOAA quota catalogue and reported remaining and landing levels
+      move across collection days.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `noaa_catch_quotas` — licence: US federal public data; attribution required: False. Source configuration:
+      `extract/sources/noaa_catch_quotas.yml`.'
+    hideFrame: false
+    title: Noaa catch quotas
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Noaa catch quotas — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Published quotas by collection day
+    chartSlug: fct-noaa-catch-quotas-quota-catalogue
+    hideTitle: false
+    title: Published quotas by collection day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean quota remaining by collection day
+    chartSlug: fct-noaa-catch-quotas-remaining-level
+    hideTitle: false
+    title: Mean quota remaining by collection day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean quota remaining by share category
+    chartSlug: fct-noaa-catch-quotas-remaining-by-share
+    hideTitle: false
+    title: Mean quota remaining by share category
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean landings by management system
+    chartSlug: fct-noaa-catch-quotas-landings-by-management
+    hideTitle: false
+    title: Mean landings by management system
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Noaa catch quotas — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed quota remaining value by share category
+    chartSlug: fct-noaa-catch-quotas
+    hideTitle: false
+    title: Mean observed quota remaining value by share category
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Noaa catch quotas — observations
+    chartSlug: fct-noaa-catch-quotas-details
+    hideTitle: false
+    title: Noaa catch quotas — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

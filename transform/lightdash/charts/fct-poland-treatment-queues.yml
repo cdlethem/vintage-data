@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_poland_treatment_queues_benefit_name
+          yRef:
+            field: fct_poland_treatment_queues_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_poland_treatment_queues_benefit_name
+      yField:
+      - fct_poland_treatment_queues_distinct_entities
+  type: cartesian
+description: Distinct `queue_id` values by `benefit_name` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_poland_treatment_queues_benefit_name
+  exploreName: fct_poland_treatment_queues
+  filters:
+    dimensions:
+      and:
+      - id: cccb3dd2-4c1a-55ae-a7ba-75814614e0a8
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_poland_treatment_queues_observed_at
+        values:
+        - 30
+      id: a92c85c1-e7df-5365-94cd-12123f6632c4
+  limit: 20
+  metrics:
+  - fct_poland_treatment_queues_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_poland_treatment_queues_distinct_entities
+  tableCalculations: []
+name: Distinct queue by benefit name
+slug: fct-poland-treatment-queues
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_poland_treatment_queues_benefit_name
+  - fct_poland_treatment_queues_distinct_entities
+tableName: fct_poland_treatment_queues
+version: 1

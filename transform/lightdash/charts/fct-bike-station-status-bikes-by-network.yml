@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_bike_station_status_observed_at_hour
+          yRef:
+            field: fct_bike_station_status_average_num_bikes_available
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Mean observed num bikes available
+    layout:
+      xField: fct_bike_station_status_observed_at_hour
+      yField:
+      - fct_bike_station_status_average_num_bikes_available
+  type: cartesian
+description: Observation-weighted mean `num_bikes_available` for each network in each extractor observation
+  hour. The two supported networks are shown; this is a station-state level, not a count of bike trips,
+  and hours without a successful extract are absent.
+metricQuery:
+  dimensions:
+  - fct_bike_station_status_observed_at_hour
+  - fct_bike_station_status_network
+  exploreName: fct_bike_station_status
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_bike_station_status_average_num_bikes_available
+  sorts:
+  - descending: true
+    fieldId: fct_bike_station_status_average_num_bikes_available
+  - descending: false
+    fieldId: fct_bike_station_status_observed_at_hour
+  tableCalculations: []
+name: Mean available bikes by network and hour
+pivotConfig:
+  columns:
+  - fct_bike_station_status_network
+slug: fct-bike-station-status-bikes-by-network
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_bike_station_status_observed_at_hour
+  - fct_bike_station_status_network
+  - fct_bike_station_status_average_num_bikes_available
+tableName: fct_bike_station_status
+version: 1

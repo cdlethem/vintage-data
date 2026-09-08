@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_irs_exempt_organizations_fetched_at_day
+          yRef:
+            field: fct_irs_exempt_organizations_average_assets
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Average reported assets
+    layout:
+      xField: fct_irs_exempt_organizations_fetched_at_day
+      yField:
+      - fct_irs_exempt_organizations_average_assets
+  type: cartesian
+description: Average non-null `asset_amount` in US dollars on each fetch day. This is a snapshot measure
+  rather than a sum of balances; only one fetch day is present, and absent fetch days are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_irs_exempt_organizations_fetched_at_day
+  exploreName: fct_irs_exempt_organizations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_irs_exempt_organizations_average_assets
+  sorts:
+  - descending: false
+    fieldId: fct_irs_exempt_organizations_fetched_at_day
+  tableCalculations: []
+name: Average reported assets in the snapshot
+slug: fct-irs-exempt-organizations-average-assets
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_irs_exempt_organizations_fetched_at_day
+  - fct_irs_exempt_organizations_average_assets
+tableName: fct_irs_exempt_organizations
+version: 1

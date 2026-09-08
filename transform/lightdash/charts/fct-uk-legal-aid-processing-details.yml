@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily observations of UK legal-aid processing backlogs by processing item. Each row represents
+  one processing item in one published feed snapshot, preserving the source percentage text alongside
+  its normalized proportion and the dates reported by the publisher.
+metricQuery:
+  dimensions: &id001
+  - fct_uk_legal_aid_processing_observed_at
+  - fct_uk_legal_aid_processing_legal_aid_processing_key
+  - fct_uk_legal_aid_processing_processing_stream
+  - fct_uk_legal_aid_processing_backlog_older_than_current_p_6cb2a0
+  - fct_uk_legal_aid_processing_source_loaded_at
+  exploreName: fct_uk_legal_aid_processing
+  filters:
+    dimensions:
+      and:
+      - id: 0f632789-9a50-5222-9ddf-97e07de4d354
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_legal_aid_processing_observed_at
+        values:
+        - 30
+      id: 7ad29afe-22e8-573a-902b-54ddc13a576b
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_uk_legal_aid_processing_observed_at
+  tableCalculations: []
+name: Uk legal aid processing — observations
+slug: fct-uk-legal-aid-processing-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_uk_legal_aid_processing
+version: 1

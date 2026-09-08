@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: ac43deba-729c-50a3-91f1-b5c606d9aa41
+    label: 'Sveriges radio now program observation: Channel name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sveriges_radio_now_program_observation_channel_name
+      tableName: fct_sveriges_radio_now_program_observation
+    values: []
+  - disabled: true
+    id: 449f7dfb-1e78-576f-bf25-bd562e92ab65
+    label: 'Sveriges radio now program observation: Schedule relation'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sveriges_radio_now_program_observation_schedule_relation
+      tableName: fct_sveriges_radio_now_program_observation
+    values: []
+  - disabled: true
+    id: f9c6da27-22c3-5f0d-9924-2039214706cc
+    label: 'Sveriges radio now program observation: Program name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_sveriges_radio_now_program_observation_program_name
+      tableName: fct_sveriges_radio_now_program_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Sveriges Radio Now
+slug: sveriges-radio-now
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical observation fact for Sveriges Radio''s right-now programme schedule. Each row is
+      one previous, current, or next scheduled episode observed for a channel at an extractor fetch timestamp.
+      Repeated copies of the same source, observation identifier, and timestamp retain the latest loaded
+      row while preserving raw-load lineage.
+
+
+      **Grain:** source_name, observation_id, observed_at
+
+
+      **What changes here:** how the current Sveriges Radio schedule''s programme mix and episode coverage
+      change each day.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `sveriges_radio_now` — licence: Sveriges Radio API terms; attribution required: True. Source configuration:
+      `extract/sources/sveriges_radio_now.yml`.'
+    hideFrame: false
+    title: Sveriges radio now program observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Sveriges radio now program observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct schedule observations by day
+    chartSlug: fct-sveriges-radio-now-program-observation-schedule-observations
+    hideTitle: false
+    title: Distinct schedule observations by day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct programmes covered by day
+    chartSlug: fct-sveriges-radio-now-program-observation-programmes-covered
+    hideTitle: false
+    title: Distinct programmes covered by day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Programme coverage by schedule relation
+    chartSlug: fct-sveriges-radio-now-program-observation-schedule-relation-mix
+    hideTitle: false
+    title: Programme coverage by schedule relation
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Programmes by scheduled start day
+    chartSlug: fct-sveriges-radio-now-program-observation-scheduled-start-coverage
+    hideTitle: false
+    title: Programmes by scheduled start day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Sveriges radio now program observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct observation by channel name
+    chartSlug: fct-sveriges-radio-now-program-observation
+    hideTitle: false
+    title: Distinct observation by channel name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Sveriges radio now program observation — observations
+    chartSlug: fct-sveriges-radio-now-program-observation-details
+    hideTitle: false
+    title: Sveriges radio now program observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

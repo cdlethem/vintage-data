@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Deduplicated job observations published by the We Work Remotely feed. Each row represents
+  one source job at one feed observation timestamp; repeated loads of the same source, job, and observation
+  are reduced to the latest loaded row while ingestion lineage is retained.
+metricQuery:
+  dimensions: &id001
+  - fct_job_feed_weworkremotely_fetched_at
+  - fct_job_feed_weworkremotely_job_id
+  - fct_job_feed_weworkremotely_company
+  - fct_job_feed_weworkremotely_source_loaded_at
+  exploreName: fct_job_feed_weworkremotely
+  filters:
+    dimensions:
+      and:
+      - id: 935a65f9-39bf-5dee-9011-fe8ab4033932
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_feed_weworkremotely_fetched_at
+        values:
+        - 30
+      id: 6f5fee7d-c049-59b6-b620-2aa0cd980f0f
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_weworkremotely_fetched_at
+  tableCalculations: []
+name: Job feed weworkremotely — observations
+slug: fct-job-feed-weworkremotely-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_job_feed_weworkremotely
+version: 1

@@ -1,0 +1,451 @@
+version: 2
+models:
+- name: fct_uk_food_alert_observation
+  description: Hourly physical history of food safety alerts published by the UK Food Standards Agency.
+    Each row is one alert at one extractor fetch timestamp, identified by the publisher source, alert
+    identifier, and fetched_at. Repeated copies from later insert-only raw loads are reduced to the latest
+    loaded record while the nested alert payload and load lineage remain available for audit and replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, alert_id, fetched_at
+      label: Uk food alert observation
+      group_label: Uk food alerts
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: uk_food_alert_key
+      vintage:
+        visualization:
+          dimension: status_label
+          metric: distinct_entities
+          time: fetched_at
+          window_days: 30
+          title: Distinct alert by status label
+          description: Distinct `alert_id` values by `status_label` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - fetched_at
+          - alert_id
+          - status_label
+          - source_loaded_at
+          sources:
+          - '`uk_food_alerts` — licence: OGL 3.0; attribution required: True. Source configuration: `extract/sources/uk_food_alerts.yml`.'
+          analysis:
+            headline: alerts created over time and the businesses most often named in food safety notices.
+            event_time: created_date
+            grain: WEEK
+            controls:
+            - status_label
+            - reporting_business
+            - source
+            trends:
+            - slug: alerts-created-weekly
+              kind: total
+              metric: distinct_entities
+              time: created_date
+              grain: WEEK
+              title: Distinct food alerts created each week
+              description: Distinct `alert_id` values by publisher `created_date` week across the published
+                history. This is a flow of alerts created, not a current catalogue level; weeks with no
+                created alerts are absent rather than zero.
+              width: half
+            - slug: businesses-named-weekly
+              kind: total
+              metric: distinct_reporting_business
+              time: created_date
+              grain: WEEK
+              title: Reporting businesses named each week
+              description: Distinct non-null `reporting_business` values among alerts by `created_date`
+                week. This measures the breadth of businesses named in newly created notices, not the
+                number of alerts; weeks with no notices are absent rather than zero.
+              width: half
+            - slug: alerts-by-business
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: reporting_business
+              top_n: 6
+              time: created_date
+              grain: WEEK
+              title: Distinct alerts by reporting business each week
+              description: Distinct alerts by `created_date` week for the six businesses with the largest
+                alert counts in the selected result. Remaining businesses are excluded rather than
+                aggregated, so the lines compare major named reporters and are not a total.
+              width: full
+            - slug: modified-alerts-by-business
+              kind: composition
+              metric: distinct_entities
+              breakdown: reporting_business
+              top_n: 6
+              time: modified_at
+              grain: WEEK
+              title: Alerts modified by reporting business each week
+              description: Distinct alerts whose publisher `modified_at` falls in each week, stacked by
+                reporting business. The six largest businesses are shown and the remainder is excluded;
+                this is a modification flow rather than a snapshot of currently active alerts.
+              width: full
+  columns:
+  - name: uk_food_alert_key
+    description: Stable hash of the publisher source, alert identifier, and extractor fetch timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Uk food alert key
+          hidden: true
+  - name: source
+    description: Publisher source label carried by the alert record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: alert_id
+    description: Food Standards Agency alert identifier.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct alert
+            description: Distinct `alert_id` values by `status_label` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Alert id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp when the extractor fetched this alert snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: alert_identifier_url
+    description: Canonical source URL identifying the alert record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Alert identifier url
+          hidden: false
+  - name: title
+    description: Full headline supplied for the food safety alert.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: notation
+    description: Publisher notation associated with the alert, typically matching the alert identifier.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Notation
+          hidden: false
+  - name: created_date
+    description: Calendar date on which the publisher created the alert.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Created date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: modified_at
+    description: UTC timestamp when the publisher last modified the alert.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Modified at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: alert_types
+    description: JSON array of alert type identifiers supplied by the publisher.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Alert types
+          hidden: true
+          sql: CAST(${TABLE}.alert_types AS VARCHAR)
+  - name: status
+    description: Complete JSON status object supplied by the publisher.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status
+          hidden: true
+          sql: CAST(${TABLE}.status AS VARCHAR)
+  - name: status_id
+    description: Publisher status identifier extracted from the status object.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status id
+          hidden: false
+  - name: status_label
+    description: Human-readable publisher status label extracted from the status object.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status label
+          hidden: false
+  - name: alert_url
+    description: Public Food Standards Agency web URL for the alert.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Alert url
+          hidden: false
+  - name: reporting_business
+    description: Business name reported as responsible for the alert.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_reporting_business:
+            type: count_distinct
+            label: Distinct reporting businesses
+            description: Distinct non-null `reporting_business` values among alerts in each time period.
+              Null business names are excluded from this breadth measure.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Reporting business
+          hidden: false
+  - name: problems
+    description: JSON array of food safety problem objects supplied by the publisher.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Problems
+          hidden: true
+          sql: CAST(${TABLE}.problems AS VARCHAR)
+  - name: primary_risk_statement
+    description: Risk statement from the first problem object, when supplied.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Primary risk statement
+          hidden: false
+  - name: primary_allergens
+    description: JSON array of allergens attached to the first problem object, when supplied.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Primary allergens
+          hidden: true
+          sql: CAST(${TABLE}.primary_allergens AS VARCHAR)
+  - name: primary_pathogen_risk
+    description: JSON pathogen-risk object attached to the first problem object, when supplied.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Primary pathogen risk
+          hidden: true
+          sql: CAST(${TABLE}.primary_pathogen_risk AS VARCHAR)
+  - name: product_details
+    description: JSON array of affected product detail objects supplied by the publisher.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Product details
+          hidden: true
+          sql: CAST(${TABLE}.product_details AS VARCHAR)
+  - name: countries
+    description: JSON array of countries associated with the alert.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Countries
+          hidden: true
+          sql: CAST(${TABLE}.countries AS VARCHAR)
+  - name: short_title
+    description: Optional shortened alert title supplied by the publisher.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Short title
+          hidden: false
+  - name: _row_id
+    description: Raw warehouse row identifier for the retained alert snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _source
+    description: Loader source name for the raw relation containing the retained alert snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source'
+          hidden: true
+  - name: _batch_id
+    description: Extract batch identifier that produced the retained alert snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained alert snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained alert snapshot in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: _dt
+    description: Load-layer partition date associated with the retained alert snapshot.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: UTC timestamp when extraction began for the retained alert snapshot.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _load_id
+    description: Load operation identifier that inserted the retained alert snapshot into raw.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained alert snapshot into raw.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer content hash for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

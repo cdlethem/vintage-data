@@ -1,0 +1,328 @@
+version: 2
+models:
+- name: fct_codeforces_submission_observation
+  description: Hourly physical history of Codeforces recent-submission observations. Each row represents
+    one submission from the Codeforces feed at one extractor observation timestamp; repeated ingestion
+    of the same observation is reduced to the latest loaded row while status changes across observations
+    remain visible. Raw-load lineage is retained for replay and audit.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, submission_id, observed_at
+      label: Codeforces submission observation
+      group_label: Codeforces
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: codeforces_submiss_57534e
+      vintage:
+        visualization:
+          dimension: verdict
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct submission by verdict
+          description: Distinct `submission_id` values by `verdict` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - submission_id
+          - verdict
+          - source_loaded_at
+          sources:
+          - '`codeforces` — licence: Codeforces API — keyless, public; attribution required: False. Source
+            configuration: `extract/sources/codeforces.yml`.'
+          analysis:
+            headline: how submission activity, judge outcomes, and participating users change across the recent Codeforces feed.
+            event_time: submitted_at
+            grain: DAY
+            controls:
+            - source
+            - verdict
+            - language
+            - problem_rating
+            trends:
+            - slug: daily-submissions
+              kind: total
+              metric: distinct_entities
+              time: submitted_at
+              grain: DAY
+              title: Submissions made per day
+              description: Distinct `submission_id` values by Codeforces `submitted_at` day. This is a submission
+                flow rather than a catalogue level; days with no submissions are absent rather than zero.
+              width: half
+            - slug: daily-users
+              kind: total
+              metric: distinct_users
+              time: submitted_at
+              grain: DAY
+              title: Active submitters per day
+              description: Distinct non-null `user_handle` values among submissions by their `submitted_at` day.
+                This measures participating accounts, not submissions, and days without named handles are absent
+                rather than zero.
+              width: half
+            - slug: verdict-trajectories
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: verdict
+              top_n: 6
+              time: submitted_at
+              grain: DAY
+              title: Submissions by judge verdict
+              description: Distinct `submission_id` values per `submitted_at` day, pivoted by the six largest
+                observed `verdict` values. Null verdicts and smaller categories are excluded rather than
+                aggregated, so lines compare outcome trajectories and are not additive across verdict changes.
+              width: full
+            - slug: language-composition
+              kind: composition
+              metric: distinct_entities
+              breakdown: language
+              top_n: 8
+              time: submitted_at
+              grain: DAY
+              title: Submission language mix
+              description: Distinct `submission_id` values per `submitted_at` day, stacked by the eight most
+                common `language` values. Remaining languages are excluded rather than grouped, and a missing
+                day means no retained submissions were reported.
+              width: full
+            - slug: observed-volume
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Feed submissions observed per day
+              description: Distinct `submission_id` values present in each extractor `observed_at` day. This is
+                a short five-day collection level and repeated polling can make it differ from the submitted_at
+                flow; days without a successful extract are absent rather than zero.
+              width: half
+  columns:
+  - name: codeforces_submission_observation_key
+    description: Stable hash of the feed source, submission identifier, and extractor observation timestamp
+      defining the row grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Codeforces submission observation key
+          hidden: true
+          name: codeforces_submiss_57534e
+  - name: source
+    description: Codeforces feed label supplied by the extractor, currently codeforces_recent.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: submission_id
+    description: Codeforces submission identifier.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct submission
+            description: Distinct `submission_id` values by `verdict` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Submission id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the submission in the recent-submissions feed.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: submitted_at
+    description: UTC timestamp when the submission was made according to Codeforces.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Submitted at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: user_handle
+    description: Codeforces handle of the submitting user.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_users:
+            type: count_distinct
+            label: Distinct submitters
+            description: Distinct non-null `user_handle` values among submissions in the selected window. Repeated
+              observations of a submitter count once within each time and filter group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: User handle
+          hidden: false
+  - name: problem_rating
+    description: Numeric difficulty rating of the submitted problem when Codeforces supplies one.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Problem rating
+          hidden: false
+          format: '#,##0'
+  - name: tags
+    description: JSON array of Codeforces problem tags.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Tags
+          hidden: true
+          sql: CAST(${TABLE}.tags AS VARCHAR)
+  - name: verdict
+    description: Codeforces judge verdict for the observed submission.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Verdict
+          hidden: false
+  - name: language
+    description: Programming language reported for the observed submission.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Language
+          hidden: false
+  - name: source_date
+    description: Raw partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the retained source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: extract_st_51074f
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw Codeforces record for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

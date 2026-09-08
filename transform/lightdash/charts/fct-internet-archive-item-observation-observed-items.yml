@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_internet_archive_item_observation_observed_at_day
+          yRef:
+            field: fct_internet_archive_item_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct item
+    layout:
+      xField: fct_internet_archive_item_observation_observed_at_day
+      yField:
+      - fct_internet_archive_item_observation_distinct_entities
+  type: cartesian
+description: Distinct `item_id` values present in the feed on each observation day. This is a level rather
+  than a flow because the feed republishes its catalogue; days with no successful extract are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_internet_archive_item_observation_observed_at_day
+  exploreName: fct_internet_archive_item_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_internet_archive_item_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_internet_archive_item_observation_observed_at_day
+  tableCalculations: []
+name: Items observed each day
+slug: fct-internet-archive-item-observation-observed-items
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_internet_archive_item_observation_observed_at_day
+  - fct_internet_archive_item_observation_distinct_entities
+tableName: fct_internet_archive_item_observation
+version: 1

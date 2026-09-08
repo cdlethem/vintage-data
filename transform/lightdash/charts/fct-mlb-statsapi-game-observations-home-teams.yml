@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_mlb_statsapi_game_observations_scheduled_at_hour
+          yRef:
+            field: fct_mlb_statsapi_game_observations_average_home_score
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Scheduled at (Hour)
+      yAxis:
+      - name: Mean home score
+    layout:
+      xField: fct_mlb_statsapi_game_observations_scheduled_at_hour
+      yField:
+      - fct_mlb_statsapi_game_observations_average_home_score
+  type: cartesian
+description: Average reported `home_score` by scheduled start hour, pivoted to the six home teams with
+  the largest distinct-game presence. Teams with fewer games are excluded rather than aggregated; pregame
+  null scores are absent, not zero.
+metricQuery:
+  dimensions:
+  - fct_mlb_statsapi_game_observations_scheduled_at_hour
+  - fct_mlb_statsapi_game_observations_home_team
+  exploreName: fct_mlb_statsapi_game_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_mlb_statsapi_game_observations_average_home_score
+  sorts:
+  - descending: true
+    fieldId: fct_mlb_statsapi_game_observations_average_home_score
+  - descending: false
+    fieldId: fct_mlb_statsapi_game_observations_scheduled_at_hour
+  tableCalculations: []
+name: Mean home score by leading home teams
+pivotConfig:
+  columns:
+  - fct_mlb_statsapi_game_observations_home_team
+slug: fct-mlb-statsapi-game-observations-home-teams
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_mlb_statsapi_game_observations_scheduled_at_hour
+  - fct_mlb_statsapi_game_observations_home_team
+  - fct_mlb_statsapi_game_observations_average_home_score
+tableName: fct_mlb_statsapi_game_observations
+version: 1

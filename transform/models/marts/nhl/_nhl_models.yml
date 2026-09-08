@@ -1,0 +1,350 @@
+version: 2
+models:
+- name: fct_nhl_game_observations
+  description: Physical observation fact for NHL schedule records. Each row is one deduplicated game snapshot
+    at the schedule feed fetch timestamp, retaining the scheduled game, participating teams, venue, state,
+    and raw-load lineage. The source currently reports future game schedules; this fact does not infer
+    scores or player-level statistics.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_system, game_id, observed_at
+      label: Nhl game observations
+      group_label: Nhl
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: nhl_game_observation_key
+      vintage:
+        visualization:
+          dimension: game_state
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct game by game state
+          description: Distinct `game_id` values by `game_state` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - game_id
+          - game_state
+          - source_loaded_at
+          sources:
+          - '`nhl` — licence: NHL official API — public; attribution required: False. Source configuration: `extract/sources/nhl.yml`.'
+          analysis:
+            headline: how the scheduled NHL slate and its venue mix change across the upcoming game days.
+            event_time: scheduled_at
+            grain: DAY
+            controls:
+            - game_state
+            - venue
+            - home_team_abbrev
+            - away_team_abbrev
+            trends:
+            - slug: scheduled-games
+              kind: total
+              metric: distinct_entities
+              time: scheduled_at
+              grain: DAY
+              title: Scheduled games by day
+              description: Distinct `game_id` values by scheduled game day. This is a forward-looking
+                schedule level rather than played-game volume, and days without scheduled games are absent
+                rather than zero.
+              width: half
+            - slug: scheduled-venues
+              kind: total
+              metric: distinct_venues
+              time: scheduled_at
+              grain: DAY
+              title: Scheduled venues by day
+              description: Distinct non-null `venue` values by scheduled game day. This shows how widely
+                the upcoming slate is distributed across arenas, not attendance or venue activity.
+              width: half
+            - slug: games-by-home-team
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: home_team_abbrev
+              top_n: 8
+              time: game_date
+              grain: DAY
+              title: Scheduled games by home team
+              description: Distinct scheduled `game_id` values by game date for the eight largest
+                `home_team_abbrev` series. Remaining teams are excluded rather than aggregated, and absent
+                dates have no row rather than a zero.
+              width: full
+            - slug: venue-slate-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: venue
+              top_n: 8
+              time: game_date
+              grain: DAY
+              title: Scheduled games by venue
+              description: Distinct scheduled `game_id` values stacked by venue and game date for the eight
+                largest venues. Remaining venues are excluded, so the stack is not the full slate.
+              width: full
+  columns:
+  - name: nhl_game_observation_key
+    description: Stable hash of the source system, NHL game identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Nhl game observation key
+          hidden: true
+  - name: source_system
+    description: Upstream source stream identifier reported by the NHL record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source system
+          hidden: false
+  - name: game_id
+    description: Identifier of the scheduled NHL game.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct game
+            description: Distinct `game_id` values by `game_state` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+          distinct_venues:
+            type: count_distinct
+            label: Distinct venues
+            description: Distinct non-null `venue` values represented by the scheduled observations in each
+              selected time group. This counts arenas, not attendance or venue activity.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Game id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this game observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: game_date
+    description: Calendar date assigned to the scheduled NHL game by the source.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Game date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: scheduled_at
+    description: UTC scheduled start timestamp for the NHL game.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Scheduled at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: game_state
+    description: NHL schedule state reported at observation time.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Game state
+          hidden: false
+  - name: venue
+    description: Venue name reported for the scheduled game.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_venues:
+            type: count_distinct
+            label: Distinct venues
+            description: Distinct non-null `venue` values represented by the scheduled observations in each
+              selected time group. This counts arenas, not attendance or venue activity.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Venue
+          hidden: false
+  - name: away_team
+    description: Full name of the visiting team.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Away team
+          hidden: false
+  - name: away_team_abbrev
+    description: Abbreviated identifier of the visiting team.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Away team abbrev
+          hidden: false
+  - name: home_team
+    description: Full name of the home team.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Home team
+          hidden: false
+  - name: home_team_abbrev
+    description: Abbreviated identifier of the home team.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Home team abbrev
+          hidden: false
+  - name: source_row_id
+    description: Raw load row identifier for this source record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the game observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: Row position of the game observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load job that inserted the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the source row.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

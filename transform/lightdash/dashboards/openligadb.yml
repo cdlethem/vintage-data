@@ -1,0 +1,172 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: f5c046aa-fc98-5df3-8ac3-f94791ad32cd
+    label: 'Openligadb match observations: League'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openligadb_match_observations_league
+      tableName: fct_openligadb_match_observations
+    values: []
+  - disabled: true
+    id: 7383434a-a522-509b-a603-22d805d7bf89
+    label: 'Openligadb match observations: Home team'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openligadb_match_observations_home_team
+      tableName: fct_openligadb_match_observations
+    values: []
+  - disabled: true
+    id: 453ab489-657b-5325-899f-20c0047ad5fc
+    label: 'Openligadb match observations: Away team'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openligadb_match_observations_away_team
+      tableName: fct_openligadb_match_observations
+    values: []
+  - disabled: true
+    id: c2f8b7a6-fc25-5ae0-8938-77b309fdc3ec
+    label: 'Openligadb match observations: Is finished'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openligadb_match_observations_is_finished
+      tableName: fct_openligadb_match_observations
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Openligadb
+slug: openligadb
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical hourly observation fact for OpenLigaDB football match records. Each row is one
+      match from one upstream league snapshot at one fetched timestamp. Repeated snapshots preserve changes
+      to completion, scores, and source update time; duplicate raw rows at the same source, match, and
+      observation grain are reduced to the latest loaded record while raw-load lineage is retained.
+
+
+      **Grain:** source_system, match_id, observed_at
+
+
+      **What changes here:** how the scheduled football calendar, score levels, and team mix change across
+      the season and match updates.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `openligadb` — licence: OpenLigaDB — community project; attribution required: False. Source configuration:
+      `extract/sources/openligadb.yml`.'
+    hideFrame: false
+    title: Openligadb match observations
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Openligadb match observations — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Scheduled matches per month
+    chartSlug: fct-openligadb-match-observations-scheduled-matches
+    hideTitle: false
+    title: Scheduled matches per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported home score by update week
+    chartSlug: fct-openligadb-match-observations-home-score-level
+    hideTitle: false
+    title: Mean reported home score by update week
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean reported away score by update week
+    chartSlug: fct-openligadb-match-observations-away-score-level
+    hideTitle: false
+    title: Mean reported away score by update week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Leading home teams by scheduled month
+    chartSlug: fct-openligadb-match-observations-team-calendar-mix
+    hideTitle: false
+    title: Leading home teams by scheduled month
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Scheduled matches by completion status
+    chartSlug: fct-openligadb-match-observations-completion-mix
+    hideTitle: false
+    title: Scheduled matches by completion status
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Openligadb match observations — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct match by league
+    chartSlug: fct-openligadb-match-observations
+    hideTitle: false
+    title: Distinct match by league
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Openligadb match observations — observations
+    chartSlug: fct-openligadb-match-observations-details
+    hideTitle: false
+    title: Openligadb match observations — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

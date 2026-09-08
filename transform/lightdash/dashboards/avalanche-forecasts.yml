@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 7a97f32b-9d61-5867-959e-8a9efa1af378
+    label: 'Avalanche forecasts: State'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_avalanche_forecasts_state
+      tableName: fct_avalanche_forecasts
+    values: []
+  - disabled: true
+    id: 1949bcd5-72be-51a0-92dc-3385f4c17a59
+    label: 'Avalanche forecasts: Center'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_avalanche_forecasts_center
+      tableName: fct_avalanche_forecasts
+    values: []
+  - disabled: true
+    id: f729797e-1116-5bc3-860c-4a45211f95a6
+    label: 'Avalanche forecasts: Timezone'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_avalanche_forecasts_timezone
+      tableName: fct_avalanche_forecasts
+    values: []
+  - disabled: true
+    id: 41df7f10-44c0-5c7b-9eee-0f601ae009c2
+    label: 'Avalanche forecasts: Off season'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_avalanche_forecasts_off_season
+      tableName: fct_avalanche_forecasts
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Avalanche Forecasts
+slug: avalanche-forecasts
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of avalanche forecast observations published by avalanche.org. Each
+      row is one forecast zone identified by its upstream source and identifier at an extractor observation
+      timestamp, with the published danger, season dates, travel guidance, and raw-load lineage retained
+      for audit and replay.
+
+
+      **Grain:** source_name, forecast_id, observed_at
+
+
+      **What changes here:** how forecast-zone coverage and the sparse published season schedule change
+      across observations.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `avalanche_forecasts` — licence: varies per EAWS member service; several require attribution to
+      issuing warning service; attribution required: True. Source configuration: `extract/sources/avalanche_forecasts.yml`.'
+    hideFrame: false
+    title: Avalanche forecasts
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Avalanche forecasts — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct forecast zones observed per day
+    chartSlug: fct-avalanche-forecasts-forecast-coverage
+    hideTitle: false
+    title: Distinct forecast zones observed per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Forecast centers represented per day
+    chartSlug: fct-avalanche-forecasts-center-coverage
+    hideTitle: false
+    title: Forecast centers represented per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Forecast zones by published start day
+    chartSlug: fct-avalanche-forecasts-season-starts
+    hideTitle: false
+    title: Forecast zones by published start day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Published forecast starts by state
+    chartSlug: fct-avalanche-forecasts-starts-by-state
+    hideTitle: false
+    title: Published forecast starts by state
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Avalanche forecasts — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct forecast by danger text
+    chartSlug: fct-avalanche-forecasts
+    hideTitle: false
+    title: Distinct forecast by danger text
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Avalanche forecasts — observations
+    chartSlug: fct-avalanche-forecasts-details
+    hideTitle: false
+    title: Avalanche forecasts — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_netflix_top10_category
+          yRef:
+            field: fct_netflix_top10_average_weekly_hours_viewed
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_netflix_top10_category
+      yField:
+      - fct_netflix_top10_average_weekly_hours_viewed
+  type: cartesian
+description: Mean observed weekly hours viewed by `category` in the selected observation window. Hours
+  viewed for the title during the ranking week. Each retained observation has equal weight; polling frequency
+  and repeated snapshots can affect the mean. This is not a latest-value measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_netflix_top10_category
+  exploreName: fct_netflix_top10
+  filters:
+    dimensions:
+      and:
+      - id: 70a91f2d-461a-590a-b1d4-5f447f9d5a24
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_netflix_top10_fetched_at
+        values:
+        - 30
+      id: 3eb7d4f9-62e7-55a8-85b4-715aa0abd870
+  limit: 20
+  metrics:
+  - fct_netflix_top10_average_weekly_hours_viewed
+  sorts:
+  - descending: true
+    fieldId: fct_netflix_top10_average_weekly_hours_viewed
+  tableCalculations: []
+name: Mean observed weekly hours viewed by category
+slug: fct-netflix-top10
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_netflix_top10_category
+  - fct_netflix_top10_average_weekly_hours_viewed
+tableName: fct_netflix_top10
+version: 1

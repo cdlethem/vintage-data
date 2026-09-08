@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_job_boards_greenhouse_posted_at_month
+          yRef:
+            field: fct_job_boards_greenhouse_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Month)
+      yAxis:
+      - name: Distinct job
+    layout:
+      stack: true
+      xField: fct_job_boards_greenhouse_posted_at_month
+      yField:
+      - fct_job_boards_greenhouse_distinct_entities
+  type: cartesian
+description: Distinct jobs stacked by `company_country` and Greenhouse posting month. The eight largest
+  countries are shown; the remainder is excluded rather than aggregated. Stacked bars show mix and volume,
+  not a continuously active-job census.
+metricQuery:
+  dimensions:
+  - fct_job_boards_greenhouse_posted_at_month
+  - fct_job_boards_greenhouse_company_country
+  exploreName: fct_job_boards_greenhouse
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_boards_greenhouse_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_boards_greenhouse_distinct_entities
+  - descending: false
+    fieldId: fct_job_boards_greenhouse_posted_at_month
+  tableCalculations: []
+name: Monthly job mix by employer country
+pivotConfig:
+  columns:
+  - fct_job_boards_greenhouse_company_country
+slug: fct-job-boards-greenhouse-jobs-by-company-country
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_boards_greenhouse_posted_at_month
+  - fct_job_boards_greenhouse_company_country
+  - fct_job_boards_greenhouse_distinct_entities
+tableName: fct_job_boards_greenhouse
+version: 1

@@ -1,0 +1,327 @@
+version: 2
+models:
+- name: fct_malaysia_pricecatcher
+  description: Daily physical history of Malaysia PriceCatcher observations. Each row represents one source
+    price observation identified by the source observation id and fetch timestamp; repeated insert-only
+    loads of that observation are reduced to the latest loaded copy while source and loader lineage are
+    retained. The model is incremental because the raw source contains 126 million loaded rows and receives
+    new daily extracts, making a full rebuild unnecessarily expensive for the daily cadence.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, price_observation_id, observed_at
+      label: Malaysia pricecatcher
+      group_label: Malaysia pricecatcher
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: malaysia_pricecatcher_observation_key
+      vintage:
+        visualization:
+          dimension: item_code
+          metric: average_price_amount
+          time: observed_at
+          window_days: 1
+          title: Mean observed price amount by item code
+          description: Mean observed price amount by `item_code` in the selected observation window. The
+            window is one day because the mart was seeded with a 126-million-row historical backfill on a
+            single collection day and now receives roughly a hundred rows per poll, so a longer window is
+            dominated by that one backfill. Price amount reported for the item at the premise on the price
+            date, parsed to four decimal places. Each retained observation has equal weight; polling
+            frequency and repeated snapshots can affect the mean. This is not a latest-value measure or an
+            additive total.
+          detail_fields:
+          - observed_at
+          - price_observation_id
+          - item_code
+          - price_amount
+          - source_loaded_at
+          sources:
+          - '`malaysia_pricecatcher` — licence: CC BY 4.0; attribution required: True. Source configuration:
+            `extract/sources/malaysia_pricecatcher.yml`.'
+          analysis:
+            headline: how reported Malaysian prices and item coverage shift across collection days and source price dates.
+            event_time: price_date
+            grain: DAY
+            controls:
+            - item_code
+            - source
+            trends:
+            - slug: collected-price-level
+              kind: total
+              metric: average_price_amount
+              time: observed_at
+              grain: DAY
+              title: Mean collected price by extractor day
+              description: Observation-weighted mean `price_amount` for rows fetched on each extractor day
+                in the recent 14-day window. This is an average price level, not a sum across items or
+                premises; days with no successful extract are absent rather than zero.
+              width: half
+              window_days: 14
+            - slug: collected-item-coverage
+              kind: total
+              metric: distinct_items
+              time: observed_at
+              grain: DAY
+              title: Distinct items collected per extractor day
+              description: Distinct non-null `item_code` values present on each extractor day in the recent
+                14-day window. This measures feed coverage, not sales or item volume; absent collection
+                days are absent rather than zero.
+              width: half
+              window_days: 14
+            - slug: prices-by-item
+              kind: breakdown
+              metric: average_price_amount
+              breakdown: item_code
+              top_n: 6
+              time: price_date
+              grain: DAY
+              title: Mean price by item and source price day
+              description: Mean reported price per item code on each publisher `price_date` in the recent
+                14-day window. The six largest item series by observed rows are shown and the remainder
+                is excluded; averages avoid summing prices across premises or currencies.
+              width: full
+              window_days: 14
+            - slug: prices-by-premise
+              kind: composition
+              metric: average_price_amount
+              breakdown: premise_code
+              top_n: 8
+              time: price_date
+              grain: DAY
+              title: Price mix across leading premises
+              description: Mean reported price stacked by the eight premises with the largest recent
+                observation counts on each publisher `price_date`. Remaining premises are excluded rather
+                than aggregated; stacked bars show the mix of reported levels, not a total market value.
+              width: full
+              window_days: 14
+  columns:
+  - name: malaysia_pricecatcher_observation_key
+    description: Stable hash of source, price observation id, and fetch timestamp defining the row grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Malaysia pricecatcher observation key
+          hidden: true
+  - name: source
+    description: Source-system label supplied by the Malaysia PriceCatcher feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: price_observation_id
+    description: Source-provided identifier for the reported date, premise, and item price observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Price observation id
+          hidden: false
+  - name: observed_at
+    description: Timestamp when the extractor fetched the publisher response containing this price observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: price_date
+    description: Calendar date for which the price is reported by the publisher.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Price date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: premise_code
+    description: Publisher code identifying the retail premise where the price was observed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Premise code
+          hidden: false
+  - name: item_code
+    description: Publisher code identifying the item whose price was observed.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_items:
+            type: count_distinct
+            label: Distinct items
+            description: Distinct non-null `item_code` values represented in each time and filter group.
+              Repeated premise observations count once, so this measures item coverage rather than price
+              observation volume.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Item code
+          hidden: false
+  - name: price_amount
+    description: Price amount reported for the item at the premise on the price date, parsed to four decimal
+      places.
+    data_type: decimal(18,4)
+    config:
+      meta:
+        metrics:
+          average_price_amount:
+            type: average
+            label: Mean observed price amount
+            description: Mean observed price amount by `item_code` in the selected observation window.
+              Price amount reported for the item at the premise on the price date, parsed to four decimal
+              places. Each retained observation has equal weight; polling frequency and repeated snapshots
+              can affect the mean. This is not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Price amount
+          hidden: false
+          format: '#,##0.00'
+  - name: publisher_updated_at
+    description: Publisher-provided last-update timestamp retained as source text because the feed emits
+      an RFC-style GMT string.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Publisher updated at
+          hidden: false
+  - name: source_row_id
+    description: Load-layer row identifier of the retained raw price observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained raw price observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained price observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained price observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_partition_date
+    description: Load-layer partition date associated with the retained raw price observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source partition date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: Timestamp when the extract job that produced the retained price observation started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained raw price observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: Timestamp when the load layer inserted the retained raw price observation; used as the
+      incremental watermark.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer content hash of the retained raw price observation for lineage and replay
+      auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

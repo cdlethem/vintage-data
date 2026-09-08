@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_petitions_created_at_week
+          yRef:
+            field: fct_uk_petitions_average_signature_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Week)
+      yAxis:
+      - name: Mean signature count
+    layout:
+      xField: fct_uk_petitions_created_at_week
+      yField:
+      - fct_uk_petitions_average_signature_count
+  type: cartesian
+description: Mean reported `signature_count` for petitions by their `created_at` week. This is an observation-weighted
+  measure of signatures at fetch time, not signatures gained during the week; repeated snapshots and polling
+  frequency affect it, and absent weeks are not zero.
+metricQuery:
+  dimensions:
+  - fct_uk_petitions_created_at_week
+  exploreName: fct_uk_petitions
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_uk_petitions_average_signature_count
+  sorts:
+  - descending: false
+    fieldId: fct_uk_petitions_created_at_week
+  tableCalculations: []
+name: Mean signatures on petitions created each week
+slug: fct-uk-petitions-signatures-created-weekly
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_petitions_created_at_week
+  - fct_uk_petitions_average_signature_count
+tableName: fct_uk_petitions
+version: 1

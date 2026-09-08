@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 12
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_open_library_change_event_timestamp_day
+          yRef:
+            field: fct_open_library_change_average_change_count
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Event timestamp (Day)
+      yAxis:
+      - name: Mean changed keys
+    layout:
+      stack: true
+      xField: fct_open_library_change_event_timestamp_day
+      yField:
+      - fct_open_library_change_average_change_count
+  type: cartesian
+description: Mean reported `change_count` per event day stacked across up to twelve common operation kinds.
+  Remaining kinds are excluded rather than aggregated, and stack heights show average event size rather
+  than counts of changes.
+metricQuery:
+  dimensions:
+  - fct_open_library_change_event_timestamp_day
+  - fct_open_library_change_change_kind
+  exploreName: fct_open_library_change
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_open_library_change_average_change_count
+  sorts:
+  - descending: true
+    fieldId: fct_open_library_change_average_change_count
+  - descending: false
+    fieldId: fct_open_library_change_event_timestamp_day
+  tableCalculations: []
+name: Changed-key depth by operation kind
+pivotConfig:
+  columns:
+  - fct_open_library_change_change_kind
+slug: fct-open-library-change-changed-key-depth-by-kind
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_open_library_change_event_timestamp_day
+  - fct_open_library_change_change_kind
+  - fct_open_library_change_average_change_count
+tableName: fct_open_library_change
+version: 1

@@ -1,0 +1,380 @@
+version: 2
+models:
+- name: fct_discourse_meta_topic_observation
+  description: Twice-hourly physical observation fact for topics published on the Discourse Meta community.
+    Each row records one topic at one extractor observation timestamp, retaining the topic metadata, engagement
+    counters, tags, and raw load lineage. Repeated copies of the same source, topic identifier, and observation
+    timestamp retain the latest loaded row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, topic_id, observed_at
+      label: Discourse meta topic observation
+      group_label: Discourse meta
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: discourse_topic_obs_fdfce8
+      vintage:
+        visualization:
+          dimension: title
+          metric: average_views
+          time: observed_at
+          window_days: 30
+          title: Mean observed views by title
+          description: Mean observed views by `title` in the selected observation window. Number of views
+            reported by Discourse at observation time. Each retained observation has equal weight; polling
+            frequency and repeated snapshots can affect the mean. This is not a latest-value measure or
+            an additive total.
+          detail_fields:
+          - observed_at
+          - topic_id
+          - title
+          - views
+          - source_loaded_at
+          sources:
+          - '`discourse_meta` — licence: unstated; varies per forum; attribution required: False. Source
+            configuration: `extract/sources/discourse_meta.yml`.'
+          analysis:
+            headline: how topic creation and engagement levels move across the forum's short observed history.
+            event_time: created_at
+            grain: DAY
+            controls:
+            - author
+            - title
+            - reply_count
+            trends:
+            - slug: topics-created
+              kind: total
+              metric: distinct_entities
+              time: created_at
+              grain: DAY
+              title: Distinct topics by creation day
+              description: Distinct `topic_id` values grouped by each topic's Discourse `created_at` day.
+                This is a source-event flow of topics represented in the feed, not a polling count; days with
+                no represented creations are absent rather than zero.
+              width: half
+            - slug: observed-views
+              kind: total
+              metric: average_views
+              time: observed_at
+              grain: DAY
+              title: Mean observed views per day
+              description: Average Discourse `views` counter across retained topic observations on each
+                observation day. Each observation has equal weight, so irregular polling and repeated snapshots
+                can affect the level; missing observation days are absent rather than zero.
+              width: half
+            - slug: created-replies
+              kind: total
+              metric: average_replies
+              time: created_at
+              grain: DAY
+              title: Mean replies for topics by creation day
+              description: Average `reply_count` reported for topics grouped by their source `created_at` day.
+                This engagement counter is not an additive number of replies; repeated observations can weight
+                topics unevenly and days without represented topics are absent rather than zero.
+              width: half
+            - slug: views-by-author
+              kind: breakdown
+              metric: average_views
+              breakdown: author
+              top_n: 6
+              time: observed_at
+              grain: DAY
+              title: Mean observed views by author
+              description: Average Discourse `views` counter per observation day, pivoted to the six authors
+                with the largest observed view metric over the selected window. Remaining authors are excluded,
+                not aggregated; irregular polling can weight authors unevenly.
+              width: full
+            - slug: topics-by-author
+              kind: composition
+              metric: distinct_entities
+              breakdown: author
+              top_n: 6
+              time: created_at
+              grain: DAY
+              title: Topics created by author each day
+              description: Distinct `topic_id` values by source `created_at` day stacked for the six authors
+                with the largest topic metric. Remaining authors are excluded rather than aggregated, and days
+                without represented topics are absent rather than zero.
+              width: full
+  columns:
+  - name: discourse_topic_observation_key
+    description: Stable hash of the source name, topic identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Discourse topic observation key
+          hidden: true
+          name: discourse_topic_obs_fdfce8
+  - name: source_name
+    description: Source-system identifier supplied by the Discourse extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: topic_id
+    description: Discourse topic identifier supplied by the source.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct topic
+            description: Distinct `topic_id` values represented by each observation or source-event grouping.
+              Repeated snapshots of a topic count once within each group and are not an additive current-state
+              census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Topic id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the topic metadata.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: title
+    description: Topic title published by Discourse.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: slug
+    description: URL slug published by Discourse for the topic.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Slug
+          hidden: false
+  - name: created_at
+    description: UTC timestamp when the topic was created according to Discourse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Created at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: bumped_at
+    description: UTC timestamp of the latest topic activity according to Discourse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Bumped at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: author
+    description: Discourse username of the topic author.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Author
+          hidden: false
+  - name: tags
+    description: JSON array of Discourse tags assigned to the topic.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Tags
+          hidden: true
+          sql: CAST(${TABLE}.tags AS VARCHAR)
+  - name: reply_count
+    description: Number of replies reported by Discourse at observation time.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Reply count
+          hidden: false
+          format: '#,##0'
+        metrics:
+          average_replies:
+            type: average
+            label: Mean observed replies
+            description: Mean `reply_count` reported by Discourse across retained topic observations. Each
+              observation has equal weight, so polling frequency and repeated snapshots can affect the mean;
+              this is not an additive reply total.
+            format: '#,##0.00'
+  - name: views
+    description: Number of views reported by Discourse at observation time.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_views:
+            type: average
+            label: Mean observed views
+            description: Mean observed views by `title` in the selected observation window. Number of
+              views reported by Discourse at observation time. Each retained observation has equal weight;
+              polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+              measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Views
+          hidden: false
+          format: '#,##0'
+  - name: url
+    description: Canonical Discourse URL for the topic.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Url
+          hidden: false
+  - name: _row_id
+    description: Raw loader row identifier retained for lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Load batch identifier that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: _dt
+    description: Source partition date assigned by the loader.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: UTC timestamp when extraction for the retained observation started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: _extract_st_81163b
+  - name: _load_id
+    description: Load job identifier that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content for lineage and replay.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

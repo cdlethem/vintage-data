@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_wikimedia_change_observation_event_at_day
+          yRef:
+            field: fct_wikimedia_change_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event at (Day)
+      yAxis:
+      - name: Distinct change
+    layout:
+      xField: fct_wikimedia_change_observation_event_at_day
+      yField:
+      - fct_wikimedia_change_observation_distinct_entities
+  type: cartesian
+description: Distinct `change_id` values per UTC event day, split among the four observed `change_type`
+  values. The top four operation types are shown; any other type is excluded rather than aggregated.
+metricQuery:
+  dimensions:
+  - fct_wikimedia_change_observation_event_at_day
+  - fct_wikimedia_change_observation_change_type
+  exploreName: fct_wikimedia_change_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_wikimedia_change_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_wikimedia_change_observation_distinct_entities
+  - descending: false
+    fieldId: fct_wikimedia_change_observation_event_at_day
+  tableCalculations: []
+name: Changes by operation type and event day
+pivotConfig:
+  columns:
+  - fct_wikimedia_change_observation_change_type
+slug: fct-wikimedia-change-observation-change-type-volume
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_wikimedia_change_observation_event_at_day
+  - fct_wikimedia_change_observation_change_type
+  - fct_wikimedia_change_observation_distinct_entities
+tableName: fct_wikimedia_change_observation
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_museum_collection_items_fetched_at_day
+          yRef:
+            field: fct_museum_collection_items_distinct_artists
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Distinct artists
+    layout:
+      xField: fct_museum_collection_items_fetched_at_day
+      yField:
+      - fct_museum_collection_items_distinct_artists
+  type: cartesian
+description: Distinct non-null `artist` values present on each fetched day. This is a level of credited
+  names in the republished catalogue, not a count of new artists; absent fetch days are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_museum_collection_items_fetched_at_day
+  exploreName: fct_museum_collection_items
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_museum_collection_items_distinct_artists
+  sorts:
+  - descending: false
+    fieldId: fct_museum_collection_items_fetched_at_day
+  tableCalculations: []
+name: Credited artists per observation day
+slug: fct-museum-collection-items-credited-artists
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_museum_collection_items_fetched_at_day
+  - fct_museum_collection_items_distinct_artists
+tableName: fct_museum_collection_items
+version: 1

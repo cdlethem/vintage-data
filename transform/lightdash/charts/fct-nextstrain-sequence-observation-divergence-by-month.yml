@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nextstrain_sequence_observation_sample_date_month
+          yRef:
+            field: fct_nextstrain_sequence_observation_average_divergence
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Sample date (Month)
+      yAxis:
+      - name: Mean genetic divergence
+    layout:
+      xField: fct_nextstrain_sequence_observation_sample_date_month
+      yField:
+      - fct_nextstrain_sequence_observation_average_divergence
+  type: cartesian
+description: Mean reported `divergence` across sequence observations assigned to each calendar sample
+  month. The average is observation-weighted and describes the sampled tree, not a sum of mutations; months
+  without samples are absent.
+metricQuery:
+  dimensions:
+  - fct_nextstrain_sequence_observation_sample_date_month
+  exploreName: fct_nextstrain_sequence_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nextstrain_sequence_observation_average_divergence
+  sorts:
+  - descending: false
+    fieldId: fct_nextstrain_sequence_observation_sample_date_month
+  tableCalculations: []
+name: Mean genetic divergence by sample month
+slug: fct-nextstrain-sequence-observation-divergence-by-month
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nextstrain_sequence_observation_sample_date_month
+  - fct_nextstrain_sequence_observation_average_divergence
+tableName: fct_nextstrain_sequence_observation
+version: 1

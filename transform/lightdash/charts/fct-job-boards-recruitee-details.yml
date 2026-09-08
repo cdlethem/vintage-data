@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of job observations returned by Recruitee-hosted applicant-tracking-system
+  boards. Each row represents one source, job identifier, and extractor observation timestamp; repeated
+  raw copies of an observation are reduced to the latest loaded lineage record while listing attributes
+  and load metadata remain available for audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_job_boards_recruitee_observed_at
+  - fct_job_boards_recruitee_job_id
+  - fct_job_boards_recruitee_company
+  - fct_job_boards_recruitee_source_loaded_at
+  exploreName: fct_job_boards_recruitee
+  filters:
+    dimensions:
+      and:
+      - id: 0692a66f-9ff1-5643-a4d1-bf8c34b7433d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_boards_recruitee_observed_at
+        values:
+        - 30
+      id: d3d56915-d842-5a95-b46d-b6faffb8725b
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_job_boards_recruitee_observed_at
+  tableCalculations: []
+name: Job boards recruitee — observations
+slug: fct-job-boards-recruitee-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_job_boards_recruitee
+version: 1

@@ -1,0 +1,153 @@
+config:
+  dateZoomGranularities:
+  - Hour
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Hour
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 2d1103fd-7948-5afd-b304-da4e118fd02f
+    label: 'Airport screening waits: Airport slug'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_catsa_wait_times_airport_slug
+      tableName: fct_catsa_wait_times
+    values: []
+  - disabled: true
+    id: 02b16e8e-a49a-5206-97f4-300cfa0d4b00
+    label: 'Airport screening waits: Checkpoint'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_catsa_wait_times_checkpoint
+      tableName: fct_catsa_wait_times
+    values: []
+  - disabled: true
+    id: b3b60d20-930f-5638-93b5-a5b1c76c8344
+    label: 'Airport screening waits: Wait time available'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_catsa_wait_times_wait_time_available
+      tableName: fct_catsa_wait_times
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Catsa Wait Times
+slug: catsa-wait-times
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical history of Canadian Air Transport Security Authority checkpoint wait-time
+      observations by airport and checkpoint. Each row preserves the published wait-time text, parsed
+      minute bounds where present, and raw load lineage for replay and audit.
+
+
+      **Grain:** airport_slug, checkpoint, observed_at
+
+
+      **What changes here:** how checkpoint wait bounds and reporting availability move through the four-day
+      polling window.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `catsa_wait_times` — licence: CATSA website terms; attribution required: True. Source configuration:
+      `extract/sources/catsa_wait_times.yml`.'
+    hideFrame: false
+    title: Airport screening waits
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Airport screening waits — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Mean upper wait bound per hour
+    chartSlug: fct-catsa-wait-times-hourly-maximum-wait
+    hideTitle: false
+    title: Mean upper wait bound per hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean lower wait bound per hour
+    chartSlug: fct-catsa-wait-times-hourly-minimum-wait
+    hideTitle: false
+    title: Mean lower wait bound per hour
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Upper wait bound by airport
+    chartSlug: fct-catsa-wait-times-airport-wait-trajectories
+    hideTitle: false
+    title: Upper wait bound by airport
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Available and unavailable reports by hour
+    chartSlug: fct-catsa-wait-times-availability-mix
+    hideTitle: false
+    title: Available and unavailable reports by hour
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Airport screening waits — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed wait time max minutes by airport slug
+    chartSlug: fct-catsa-wait-times
+    hideTitle: false
+    title: Mean observed wait time max minutes by airport slug
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Airport screening waits — observations
+    chartSlug: fct-catsa-wait-times-details
+    hideTitle: false
+    title: Airport screening waits — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

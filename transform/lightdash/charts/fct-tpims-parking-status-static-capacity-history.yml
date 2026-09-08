@@ -1,0 +1,65 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_tpims_parking_status_status_static_updated_at_day
+          yRef:
+            field: fct_tpims_parking_status_average_capacity
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Status static updated at (Day)
+      yAxis:
+      - name: Mean parking capacity
+    layout:
+      stack: true
+      xField: fct_tpims_parking_status_status_static_updated_at_day
+      yField:
+      - fct_tpims_parking_status_average_capacity
+  type: cartesian
+description: Average `capacity` per static-status update day stacked by region. These dates represent
+  publisher site-metadata revisions rather than occupancy events; repeated observations weight the mean,
+  and dates without a static update are absent.
+metricQuery:
+  dimensions:
+  - fct_tpims_parking_status_status_static_updated_at_day
+  - fct_tpims_parking_status_region
+  exploreName: fct_tpims_parking_status
+  filters:
+    dimensions:
+      and:
+      - id: 1b83deed-2ce0-5dcb-b756-bbd66913afef
+        operator: equals
+        target:
+          fieldId: fct_tpims_parking_status_trusts_data
+        values:
+        - true
+      id: 05040495-4d9e-58f4-958c-a06add682c0c
+  limit: 5000
+  metrics:
+  - fct_tpims_parking_status_average_capacity
+  sorts:
+  - descending: true
+    fieldId: fct_tpims_parking_status_average_capacity
+  - descending: false
+    fieldId: fct_tpims_parking_status_status_static_updated_at_day
+  tableCalculations: []
+name: Mean capacity at static-status update dates
+pivotConfig:
+  columns:
+  - fct_tpims_parking_status_region
+slug: fct-tpims-parking-status-static-capacity-history
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_tpims_parking_status_status_static_updated_at_day
+  - fct_tpims_parking_status_region
+  - fct_tpims_parking_status_average_capacity
+tableName: fct_tpims_parking_status
+version: 1

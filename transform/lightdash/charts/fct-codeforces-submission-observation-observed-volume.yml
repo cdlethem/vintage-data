@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_codeforces_submission_observation_observed_at_day
+          yRef:
+            field: fct_codeforces_submission_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct submission
+    layout:
+      xField: fct_codeforces_submission_observation_observed_at_day
+      yField:
+      - fct_codeforces_submission_observation_distinct_entities
+  type: cartesian
+description: Distinct `submission_id` values present in each extractor `observed_at` day. This is a short
+  five-day collection level and repeated polling can make it differ from the submitted_at flow; days without
+  a successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_codeforces_submission_observation_observed_at_day
+  exploreName: fct_codeforces_submission_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_codeforces_submission_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_codeforces_submission_observation_observed_at_day
+  tableCalculations: []
+name: Feed submissions observed per day
+slug: fct-codeforces-submission-observation-observed-volume
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_codeforces_submission_observation_observed_at_day
+  - fct_codeforces_submission_observation_distinct_entities
+tableName: fct_codeforces_submission_observation
+version: 1

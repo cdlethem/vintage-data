@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_amsat_status_observations_satellite_name
+          yRef:
+            field: fct_amsat_status_observations_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_amsat_status_observations_satellite_name
+      yField:
+      - fct_amsat_status_observations_distinct_entities
+  type: cartesian
+description: Distinct `observation_id` values by `satellite_name` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_amsat_status_observations_satellite_name
+  exploreName: fct_amsat_status_observations
+  filters:
+    dimensions:
+      and:
+      - id: 388a1990-f713-50b6-b58d-8053f89a3563
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_amsat_status_observations_fetched_at
+        values:
+        - 30
+      id: 59ad4469-fb61-5f1b-a329-66d000684209
+  limit: 20
+  metrics:
+  - fct_amsat_status_observations_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_amsat_status_observations_distinct_entities
+  tableCalculations: []
+name: Distinct observation by satellite name
+slug: fct-amsat-status-observations
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_amsat_status_observations_satellite_name
+  - fct_amsat_status_observations_distinct_entities
+tableName: fct_amsat_status_observations
+version: 1

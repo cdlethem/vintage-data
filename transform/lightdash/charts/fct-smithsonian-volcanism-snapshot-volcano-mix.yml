@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_smithsonian_volcanism_snapshot_event_start_date_day
+          yRef:
+            field: fct_smithsonian_volcanism_snapshot_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Event start date (Day)
+      yAxis:
+      - name: Distinct eruption events
+    layout:
+      stack: true
+      xField: fct_smithsonian_volcanism_snapshot_event_start_date_day
+      yField:
+      - fct_smithsonian_volcanism_snapshot_distinct_entities
+  type: cartesian
+description: Distinct `event_id` values by reported start day, stacked by `volcano_name`. The eight largest
+  volcano series by metric are shown; remaining volcanoes are excluded rather than aggregated. Dates with
+  no reported starts are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_smithsonian_volcanism_snapshot_event_start_date_day
+  - fct_smithsonian_volcanism_snapshot_volcano_name
+  exploreName: fct_smithsonian_volcanism_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_smithsonian_volcanism_snapshot_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_smithsonian_volcanism_snapshot_distinct_entities
+  - descending: false
+    fieldId: fct_smithsonian_volcanism_snapshot_event_start_date_day
+  tableCalculations: []
+name: Eruption starts by volcano
+pivotConfig:
+  columns:
+  - fct_smithsonian_volcanism_snapshot_volcano_name
+slug: fct-smithsonian-volcanism-snapshot-volcano-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_smithsonian_volcanism_snapshot_event_start_date_day
+  - fct_smithsonian_volcanism_snapshot_volcano_name
+  - fct_smithsonian_volcanism_snapshot_distinct_entities
+tableName: fct_smithsonian_volcanism_snapshot
+version: 1

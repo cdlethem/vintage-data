@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_thames_discharge_most_recent_discharge_alert_start_month
+          yRef:
+            field: fct_thames_discharge_distinct_watercourses
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Most recent discharge alert start (Month)
+      yAxis:
+      - name: Distinct watercourses
+    layout:
+      xField: fct_thames_discharge_most_recent_discharge_alert_start_month
+      yField:
+      - fct_thames_discharge_distinct_watercourses
+  type: cartesian
+description: Distinct non-null `receiving_watercourse` values by most recent alert-start month. This event
+  view counts each watercourse once per month and excludes rows without an alert start; it is not a duration
+  or a live-alert level.
+metricQuery:
+  dimensions:
+  - fct_thames_discharge_most_recent_discharge_alert_start_month
+  exploreName: fct_thames_discharge
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_thames_discharge_distinct_watercourses
+  sorts:
+  - descending: false
+    fieldId: fct_thames_discharge_most_recent_discharge_alert_start_month
+  tableCalculations: []
+name: Watercourses with alert starts
+slug: fct-thames-discharge-alert-watercourses
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_thames_discharge_most_recent_discharge_alert_start_month
+  - fct_thames_discharge_distinct_watercourses
+tableName: fct_thames_discharge
+version: 1

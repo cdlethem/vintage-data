@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_clinicaltrials_study_observation_status
+          yRef:
+            field: fct_clinicaltrials_study_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_clinicaltrials_study_observation_status
+      yField:
+      - fct_clinicaltrials_study_observation_distinct_entities
+  type: cartesian
+description: Distinct `study_id` values by `status` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_clinicaltrials_study_observation_status
+  exploreName: fct_clinicaltrials_study_observation
+  filters:
+    dimensions:
+      and:
+      - id: 6284d783-c2e6-554b-8a15-54d808398efe
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_clinicaltrials_study_observation_observed_at
+        values:
+        - 30
+      id: d8aea761-e4b0-5882-b9c3-8bef6140ea0b
+  limit: 20
+  metrics:
+  - fct_clinicaltrials_study_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_clinicaltrials_study_observation_distinct_entities
+  tableCalculations: []
+name: Distinct study by status
+slug: fct-clinicaltrials-study-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_clinicaltrials_study_observation_status
+  - fct_clinicaltrials_study_observation_distinct_entities
+tableName: fct_clinicaltrials_study_observation
+version: 1

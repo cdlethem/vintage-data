@@ -6,13 +6,30 @@ enabled: true
 retries: 1
 timeout_minutes: 120
 sink: local
+run_summary:
+  required: true
 
 backfill:
-  unit: single
+  unit: year
   start: "2010"
-  args: ["--start-year", "2010", "--end-year", "2026", "--limit", "0"]
+  end: "2026"
+  args: ["--start-year", "{yyyy}", "--end-year", "{yyyy}", "--limit", "0"]
   pace_seconds: 3
   timeout_minutes: 180
+
+# Read by fetch_infodengue.py and tools/validate_infodengue.py. Crossing a cap
+# is a hard non-zero failure before sink publication; municipality failures
+# below the cap produce a partial manifest, never silent completeness.
+acceptance:
+  identity: [geocode, disease, se]
+  rolling_window:            # scheduled 10-week national sweep
+    weeks: 10
+    max_records: 75000
+    max_bytes: 67108864      # 64 MiB
+  single_year:               # one historical year
+    max_records: 350000
+    max_bytes: 335544320     # 320 MiB
+  value_fields: [casos, casos_est, Rt, nivel, nivel_inc, p_rt1, versao_modelo]
 
 # Vetting metadata (documentation only, not read by the DAG factory)
 cadence_note: "Rebuilt 2026-09-04: the prior config tracked one municipality (Rio de Janeiro). Verified live 2026-09-04 that IBGE's own public municipalities directory lists all 5,571 real Brazilian municipalities with official geocodes, and a random 10-municipality sample (all small, non-capital towns) all returned real InfoDengue weekly case/Rt data -- Brazil's SINAN arbovirus surveillance system covers essentially the whole country. The scheduled sweep discovers every municipality and emits its 10 most-recent weeks; the historical backfill uses one epidemiological-year-range request per municipality for complete 2010-2026 history. The sweep sleeps 0.3s between requests; one municipality erroring is logged and skipped, not fatal to the rest. Weekly series revised retrospectively; daily polling captures those revisions."

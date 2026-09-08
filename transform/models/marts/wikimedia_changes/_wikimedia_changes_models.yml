@@ -1,0 +1,363 @@
+version: 2
+models:
+- name: fct_wikimedia_change_observation
+  description: Twice-hourly physical observation fact for Wikimedia recent changes. Each row is one Wikimedia
+    source, change identifier, and extractor observation timestamp, retaining the event payload and raw-load
+    lineage. Replayed copies of the same observation are reduced to the latest loaded row; this model
+    preserves the source feed's event history and does not infer later edits or repair omitted API fields.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, change_id, observed_at
+      label: Wikimedia change observation
+      group_label: Wikimedia changes
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: wikimedia_change_observ_57ec1d
+      vintage:
+        visualization:
+          dimension: change_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct change by change type
+          description: Distinct `change_id` values by `change_type` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - change_id
+          - change_type
+          - source_loaded_at
+          sources:
+          - '`wikimedia_changes` — licence: Wikimedia — CC-BY-SA / GFDL; attribution required: False.
+            Source configuration: `extract/sources/wikimedia_changes.yml`.'
+          analysis:
+            headline: how Wikimedia change volume and edit size shift by operation, bot status, and minor flag
+              across the five-day event feed window.
+            event_time: event_at
+            grain: DAY
+            controls:
+            - change_type
+            - is_bot
+            - is_minor
+            trends:
+            - slug: changes-by-event-day
+              kind: total
+              metric: distinct_entities
+              time: event_at
+              grain: DAY
+              title: Wikimedia changes by event day
+              description: Distinct `change_id` values whose Wikimedia event falls on each UTC day. This is
+                a short five-day event-time slice rather than a long historical trend; absent event days are
+                absent rather than zero.
+              width: half
+            - slug: bytes-by-event-day
+              kind: total
+              metric: average_bytes_delta
+              time: event_at
+              grain: DAY
+              title: Mean byte change by event day
+              description: Mean signed `bytes_delta` per change on each UTC event day. Positive values indicate
+                additions on average and negative values indicate removals; changes are weighted equally, and
+                absent event days are absent rather than zero.
+              width: half
+            - slug: change-type-volume
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: change_type
+              top_n: 4
+              time: event_at
+              grain: DAY
+              title: Changes by operation type and event day
+              description: Distinct `change_id` values per UTC event day, split among the four observed
+                `change_type` values. The top four operation types are shown; any other type is excluded
+                rather than aggregated.
+              width: full
+            - slug: bot-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: is_bot
+              top_n: 2
+              time: event_at
+              grain: DAY
+              title: Bot and human changes by event day
+              description: Distinct `change_id` values per UTC event day stacked by Wikimedia's `is_bot`
+                flag. Each change has one flag, so the stack is the day's observed change level; absent event
+                days are absent rather than zero.
+              width: full
+  columns:
+  - name: wikimedia_change_observation_key
+    description: Stable hash of the Wikimedia source, change identifier, and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Wikimedia change observation key
+          hidden: true
+          name: wikimedia_change_observ_57ec1d
+  - name: source_relation
+    description: Raw loader relation that supplied the retained Wikimedia change record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source relation
+          hidden: false
+  - name: source_name
+    description: Wikimedia source label reported by the change feed, such as wikimedia_recentchanges.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: change_id
+    description: Wikimedia identifier assigned to the recent-change event.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct change
+            description: Distinct `change_id` values by `change_type` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Change id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the Wikimedia change feed event.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: event_at
+    description: UTC timestamp assigned to the change event by Wikimedia.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Event at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: change_type
+    description: Wikimedia operation type, such as edit, new, log, or categorize.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Change type
+          hidden: false
+  - name: title
+    description: Page or entity title associated with the Wikimedia change.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: editor
+    description: User name reported by Wikimedia as responsible for the change.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Editor
+          hidden: false
+  - name: is_bot
+    description: Whether Wikimedia marked the change as made by a bot.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is bot
+          hidden: false
+  - name: is_minor
+    description: Whether Wikimedia marked the change as minor.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is minor
+          hidden: false
+  - name: comment
+    description: Human-readable comment supplied with the Wikimedia change.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Comment
+          hidden: false
+  - name: bytes_delta
+    description: Signed change in page byte count reported by Wikimedia.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_bytes_delta:
+            type: average
+            label: Mean bytes delta
+            description: Mean signed `bytes_delta` per Wikimedia change on each UTC event day. Positive values
+              indicate additions on average and negative values indicate removals; changes are weighted equally,
+              and this is not an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Bytes delta
+          hidden: false
+          format: '#,##0'
+  - name: tags
+    description: JSON array of Wikimedia tags attached to the change.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Tags
+          hidden: true
+          sql: CAST(${TABLE}.tags AS VARCHAR)
+  - name: source_row_id
+    description: Raw loader row identifier for the retained Wikimedia change.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained raw change.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained Wikimedia change.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained change within its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date for the retained Wikimedia change.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction began for the retained Wikimedia batch.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Load operation identifier that inserted the retained Wikimedia change.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained Wikimedia change.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained raw Wikimedia change content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

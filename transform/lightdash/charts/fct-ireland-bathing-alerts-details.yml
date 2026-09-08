@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical history of bathing-water alerts published for Irish beaches. Each row
+  is one source alert at one extractor fetch timestamp, identified by source, alert identifier, and fetched_at.
+  Repeated copies from later insert-only raw loads are reduced to the latest loaded record, while load
+  lineage is retained for replay and audit.
+metricQuery:
+  dimensions: &id001
+  - fct_ireland_bathing_alerts_fetched_at
+  - fct_ireland_bathing_alerts_alert_id
+  - fct_ireland_bathing_alerts_county_name
+  - fct_ireland_bathing_alerts_source_loaded_at
+  exploreName: fct_ireland_bathing_alerts
+  filters:
+    dimensions:
+      and:
+      - id: 7f55cc7f-6f67-584c-929e-437116ffe13c
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_ireland_bathing_alerts_fetched_at
+        values:
+        - 30
+      id: 0c69eb41-539d-5f03-9764-d4288a1ee63a
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_ireland_bathing_alerts_fetched_at
+  tableCalculations: []
+name: Ireland bathing alerts — observations
+slug: fct-ireland-bathing-alerts-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_ireland_bathing_alerts
+version: 1

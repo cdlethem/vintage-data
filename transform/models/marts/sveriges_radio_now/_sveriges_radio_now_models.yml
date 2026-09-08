@@ -1,0 +1,412 @@
+version: 2
+models:
+- name: fct_sveriges_radio_now_program_observation
+  description: Physical observation fact for Sveriges Radio's right-now programme schedule. Each row is
+    one previous, current, or next scheduled episode observed for a channel at an extractor fetch timestamp.
+    Repeated copies of the same source, observation identifier, and timestamp retain the latest loaded
+    row while preserving raw-load lineage.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, observation_id, observed_at
+      label: Sveriges radio now program observation
+      group_label: Sveriges radio now
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: sveriges_radi_67fd68
+      vintage:
+        visualization:
+          dimension: channel_name
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct observation by channel name
+          description: Distinct `observation_id` values by `channel_name` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - observation_id
+          - channel_name
+          - source_loaded_at
+          sources:
+          - '`sveriges_radio_now` — licence: Sveriges Radio API terms; attribution required: True. Source
+            configuration: `extract/sources/sveriges_radio_now.yml`.'
+          analysis:
+            headline: how the current Sveriges Radio schedule's programme mix and episode coverage change each day.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - channel_name
+            - schedule_relation
+            - program_name
+            trends:
+            - slug: schedule-observations
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct schedule observations by day
+              description: Distinct `observation_id` values present in the current schedule on each observation
+                day. This is a small roster-level gauge rather than a programme count; days without a successful
+                fetch are absent rather than zero.
+              width: half
+            - slug: programmes-covered
+              kind: total
+              metric: distinct_programs
+              time: observed_at
+              grain: DAY
+              title: Distinct programmes covered by day
+              description: Distinct non-null `program_id` values in the schedule snapshot on each observation
+                day. This is catalogue coverage at fetch time, not broadcasts over a day; absent observation
+                days are absent rather than zero.
+              width: half
+            - slug: schedule-relation-mix
+              kind: composition
+              metric: distinct_programs
+              breakdown: schedule_relation
+              top_n: 3
+              time: observed_at
+              grain: DAY
+              title: Programme coverage by schedule relation
+              description: Distinct programmes in each current, previous, or next schedule relation, stacked by
+                observation day. The three relation segments show mix rather than additive broadcast volume;
+                any relation absent from a fetch is absent, and no remainder is aggregated.
+              width: full
+            - slug: scheduled-start-coverage
+              kind: total
+              metric: distinct_programs
+              time: scheduled_start_at
+              time_dimension: starts
+              grain: DAY
+              title: Programmes by scheduled start day
+              description: Distinct `program_id` values grouped by the source `scheduled_start_at` day. All
+                1,092 retained rows currently have a null scheduled start, so this event-time chart is empty
+                for the present window rather than treating missing schedule times as zero.
+              width: full
+  columns:
+  - name: sveriges_radio_program_observation_key
+    description: Stable hash of the source, programme observation identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sveriges radio program observation key
+          hidden: true
+          name: sveriges_radi_67fd68
+  - name: source_name
+    description: Sveriges Radio source stream identifier supplied by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: observation_id
+    description: Extractor observation identifier combining the channel identifier and schedule relation.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct observation
+            description: Distinct `observation_id` values by `channel_name` among observations in the
+              selected window. Repeated observations of an entity count once within each group. An entity
+              that changed category can appear in multiple groups; these groups are not additive and do
+              not represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Observation id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this schedule observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: episode_id
+    description: Sveriges Radio identifier of the scheduled episode.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Episode id
+          hidden: false
+          format: '#,##0'
+  - name: title
+    description: Title of the scheduled episode.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: description
+    description: Editorial description of the scheduled episode.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Description
+          hidden: true
+  - name: scheduled_start_at
+    description: UTC scheduled start timestamp parsed from the publisher's legacy Date value.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Scheduled start at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: sched_24fe37
+        additional_dimensions:
+          starts:
+            type: timestamp
+            label: Scheduled start
+            description: Publisher scheduled start timestamp, exposed under a short dimension key so its
+              date-truncated variants stay inside Postgres's 63-byte identifier limit.
+            sql: ${TABLE}.scheduled_start_at
+            time_intervals:
+            - HOUR
+            - DAY
+            - WEEK
+            - MONTH
+            - YEAR
+  - name: scheduled_end_at
+    description: UTC scheduled end timestamp parsed from the publisher's legacy Date value.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Scheduled end at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: sched_773850
+  - name: program_id
+    description: Sveriges Radio identifier of the programme associated with the episode.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_programs:
+            type: count_distinct
+            label: Distinct programmes
+            description: Distinct non-null `program_id` values represented in each schedule observation
+              time bucket. Repeated programme snapshots count once within each time and filter group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Program id
+          hidden: false
+  - name: program_name
+    description: Display name of the programme associated with the episode.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Program name
+          hidden: false
+  - name: program
+    description: JSON programme object returned by Sveriges Radio, retained for source detail.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Program
+          hidden: true
+          sql: CAST(${TABLE}.program AS VARCHAR)
+  - name: social_image_url
+    description: Social image URL supplied for the scheduled episode, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Social image url
+          hidden: false
+  - name: channel_id
+    description: Sveriges Radio channel identifier for the schedule observation.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Channel id
+          hidden: false
+          format: '#,##0'
+  - name: channel_name
+    description: Display name of the Sveriges Radio channel.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Channel name
+          hidden: false
+  - name: schedule_relation
+    description: 'Position of the episode relative to the fetch time: previous, current, or next.'
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Schedule relation
+          hidden: false
+  - name: subtitle
+    description: Episode subtitle or editorial detail supplied by Sveriges Radio, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Subtitle
+          hidden: false
+  - name: source_row_id
+    description: Load-layer row identifier for the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+          name: source_file_r_36bd5c
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: extra_51074f
+  - name: load_id
+    description: Load job identifier that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: sourc_2059e1
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw record content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

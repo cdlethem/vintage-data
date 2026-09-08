@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 12
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_food_hygiene_ratings_birmingham_rating_date_month
+          yRef:
+            field: fct_food_hygiene_ratings_birmingham_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Rating date (Month)
+      yAxis:
+      - name: Distinct business
+    layout:
+      stack: true
+      xField: fct_food_hygiene_ratings_birmingham_rating_date_month
+      yField:
+      - fct_food_hygiene_ratings_birmingham_distinct_entities
+  type: cartesian
+description: Distinct rated businesses stacked by business type for each rating month. The twelve largest
+  types are shown; the smallest type is excluded rather than grouped into an other category. Empty months
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_food_hygiene_ratings_birmingham_rating_date_month
+  - fct_food_hygiene_ratings_birmingham_business_type
+  exploreName: fct_food_hygiene_ratings_birmingham
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_food_hygiene_ratings_birmingham_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_food_hygiene_ratings_birmingham_distinct_entities
+  - descending: false
+    fieldId: fct_food_hygiene_ratings_birmingham_rating_date_month
+  tableCalculations: []
+name: Monthly rating mix by business type
+pivotConfig:
+  columns:
+  - fct_food_hygiene_ratings_birmingham_business_type
+slug: fct-food-hygiene-ratings-birmingham-type-composition
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_food_hygiene_ratings_birmingham_rating_date_month
+  - fct_food_hygiene_ratings_birmingham_business_type
+  - fct_food_hygiene_ratings_birmingham_distinct_entities
+tableName: fct_food_hygiene_ratings_birmingham
+version: 1

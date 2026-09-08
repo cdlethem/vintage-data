@@ -1,0 +1,42 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of Malaysia blood-donation observations. Each row records one source
+  observation identifier and fetch timestamp, with its reported date, state, blood type, and donation
+  count. Insert-only reloads of the same observation are reduced to the latest loaded copy while extractor
+  and load lineage are kept for audit and replay. The publisher timestamp is retained as source text because
+  the feed emits an RFC-style GMT string that is not consistently parseable as a warehouse timestamp.
+metricQuery:
+  dimensions: &id001
+  - fct_malaysia_blood_donations_fetched_at
+  - fct_malaysia_blood_donations_observation_id
+  - fct_malaysia_blood_donations_state
+  - fct_malaysia_blood_donations_donation_count
+  - fct_malaysia_blood_donations_source_loaded_at
+  exploreName: fct_malaysia_blood_donations
+  filters:
+    dimensions:
+      and:
+      - id: b4fba286-57f1-5fcd-aac2-644027e04244
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_malaysia_blood_donations_fetched_at
+        values:
+        - 30
+      id: 525176c6-c344-5d33-8a3c-a32708d255ee
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_malaysia_blood_donations_fetched_at
+  tableCalculations: []
+name: Malaysia blood donations — observations
+slug: fct-malaysia-blood-donations-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_malaysia_blood_donations
+version: 1

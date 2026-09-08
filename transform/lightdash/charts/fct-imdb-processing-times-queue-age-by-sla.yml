@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_imdb_processing_times_observed_at_day
+          yRef:
+            field: fct_imdb_processing_times_average_queue_age_days
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed queue age days
+    layout:
+      xField: fct_imdb_processing_times_observed_at_day
+      yField:
+      - fct_imdb_processing_times_average_queue_age_days
+  type: cartesian
+description: Mean queue age per observation day for each of the three IMDb service tiers. Repeated category
+  snapshots have equal row weight; all three tiers are shown and missing observation days are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_imdb_processing_times_observed_at_day
+  - fct_imdb_processing_times_sla
+  exploreName: fct_imdb_processing_times
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_imdb_processing_times_average_queue_age_days
+  sorts:
+  - descending: true
+    fieldId: fct_imdb_processing_times_average_queue_age_days
+  - descending: false
+    fieldId: fct_imdb_processing_times_observed_at_day
+  tableCalculations: []
+name: Queue age by service tier
+pivotConfig:
+  columns:
+  - fct_imdb_processing_times_sla
+slug: fct-imdb-processing-times-queue-age-by-sla
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_imdb_processing_times_observed_at_day
+  - fct_imdb_processing_times_sla
+  - fct_imdb_processing_times_average_queue_age_days
+tableName: fct_imdb_processing_times
+version: 1

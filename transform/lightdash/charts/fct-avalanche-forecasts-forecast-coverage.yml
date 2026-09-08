@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_avalanche_forecasts_observed_at_day
+          yRef:
+            field: fct_avalanche_forecasts_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct forecast
+    layout:
+      xField: fct_avalanche_forecasts_observed_at_day
+      yField:
+      - fct_avalanche_forecasts_distinct_entities
+  type: cartesian
+description: Distinct `forecast_id` values in each extractor observation day. This is a five-day catalogue
+  level because the feed republishes its zones; days without a successful extract are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_avalanche_forecasts_observed_at_day
+  exploreName: fct_avalanche_forecasts
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_avalanche_forecasts_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_avalanche_forecasts_observed_at_day
+  tableCalculations: []
+name: Distinct forecast zones observed per day
+slug: fct-avalanche-forecasts-forecast-coverage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_avalanche_forecasts_observed_at_day
+  - fct_avalanche_forecasts_distinct_entities
+tableName: fct_avalanche_forecasts
+version: 1

@@ -1,67 +1,68 @@
 #!/usr/bin/env python3
-"""Run a bot by name, from a shell.
+"""Run a bot through the dashboard, or explicitly in dry-run/ephemeral mode."""
 
-    bots/bin/run_bot <name> [--dry-run] [--model ALIAS] [--models-config PATH]
-    bots/bin/run_bot --list
-
-Exit codes: 0 ran (or skipped at the gate), 3 the model was busy, 1 the bot or
-its wiring is broken. Identical to what the scheduled Airflow task does — the
-DAG calls the same runner, so a manual run reproduces a scheduled one exactly.
-
-Needs PyYAML: use the orchestration virtualenv (or any interpreter with yaml).
-    orchestration/.venv/bin/python bots/bin/run_bot pipeline_check
-"""
 from __future__ import annotations
 
 import argparse
+import json
 import pathlib
 import sys
 
 BOTS_ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BOTS_ROOT))
 
-import bot_runner  # noqa: E402
-import providers  # noqa: E402
+import bot_runner
+import providers
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("bot", nargs="?", help="bot name (directory under bots/)")
     parser.add_argument("--list", action="store_true", help="list defined bots")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="print the assembled prompt; call no model")
-    parser.add_argument("--model", help="override the bot's model alias")
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--dry-run", action="store_true", help="build and print the prompt only")
+    modes.add_argument(
+        "--ephemeral",
+        action="store_true",
+        help="invoke the model without persisting provider state",
+    )
+    parser.add_argument("--model", help="override the bot model alias")
     parser.add_argument("--models-config", help="alternative models.yml")
     args = parser.parse_args()
 
     if args.list:
+        models_cfg = bot_runner.load_models(args.models_config)
         for path in bot_runner.discover():
             cfg = bot_runner.load_bot(path)
             state = "enabled" if cfg.get("enabled", True) else "disabled"
-            print(f"{cfg['name']:<20} {cfg['schedule']:<16} model={cfg.get('model') or 'default'} "
-                  f"[{state}] {cfg.get('description', '')}")
+            aliases = " -> ".join(bot_runner._model_aliases(cfg, models_cfg))
+            print(
+                f"{cfg['name']:<20} {cfg['schedule']:<16} model={aliases} "
+                f"[{state}] {cfg.get('description', '')}"
+            )
         return 0
 
     if not args.bot:
         parser.error("name a bot, or pass --list")
-
     try:
         cfg = bot_runner.load_bot(BOTS_ROOT / args.bot)
-        if args.model:
-            cfg["model"] = args.model
-        result = bot_runner.run(cfg, dry_run=args.dry_run,
-                                models_config=args.models_config)
-    except (bot_runner.BotError, providers.ProviderError) as exc:
-        print(f"{args.bot}: {exc}", file=sys.stderr)
+        result = bot_runner.run(
+            cfg,
+            dry_run=args.dry_run,
+            ephemeral=args.ephemeral,
+            models_config=args.models_config,
+            model_override=args.model,
+        )
+    except (bot_runner.BotError, providers.ProviderFailure) as exc:
+        print(f"{args.bot}: {getattr(exc, 'code', type(exc).__name__)}", file=sys.stderr)
         return 1
-
     if args.dry_run:
-        print(result.report)
-        return 0
-
-    print(f"{result.bot}: {result.status} -> {result.report_path}", file=sys.stderr)
-    print(result.report)
-    return 3 if result.status == "busy" else 0
+        print(result.debug_prompt or "")
+    else:
+        print(json.dumps(result.projection, sort_keys=True))
+    if result.outcome == "capacity_unavailable":
+        return 3
+    return 1 if result.outcome in {"failed", "timed_out"} else 0
 
 
 if __name__ == "__main__":

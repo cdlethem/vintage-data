@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_texas_scratch_prize_observation_game_name
+          yRef:
+            field: fct_texas_scratch_prize_observation_max_prizes_claimed
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_texas_scratch_prize_observation_game_name
+      yField:
+      - fct_texas_scratch_prize_observation_max_prizes_claimed
+  type: cartesian
+description: Maximum observed prizes claimed by `game_name` in the selected observation window. Number
+  of prizes claimed for this level at observation time. Uses the largest retained value within each group
+  and window, not the latest value or a sum of snapshots.
+metricQuery:
+  dimensions:
+  - fct_texas_scratch_prize_observation_game_name
+  exploreName: fct_texas_scratch_prize_observation
+  filters:
+    dimensions:
+      and:
+      - id: 7544dd9a-9170-554d-83b0-5c72fdf996a2
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_texas_scratch_prize_observation_observed_at
+        values:
+        - 30
+      id: 781b7e95-3c01-5839-bb12-c27210d09be0
+  limit: 20
+  metrics:
+  - fct_texas_scratch_prize_observation_max_prizes_claimed
+  sorts:
+  - descending: true
+    fieldId: fct_texas_scratch_prize_observation_max_prizes_claimed
+  tableCalculations: []
+name: Maximum observed prizes claimed by game name
+slug: fct-texas-scratch-prize-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_texas_scratch_prize_observation_game_name
+  - fct_texas_scratch_prize_observation_max_prizes_claimed
+tableName: fct_texas_scratch_prize_observation
+version: 1

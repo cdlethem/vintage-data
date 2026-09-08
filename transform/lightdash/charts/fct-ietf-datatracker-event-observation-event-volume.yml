@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_ietf_datatracker_event_observation_event_time_day
+          yRef:
+            field: fct_ietf_datatracker_event_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Event time (Day)
+      yAxis:
+      - name: Distinct event
+    layout:
+      xField: fct_ietf_datatracker_event_observation_event_time_day
+      yField:
+      - fct_ietf_datatracker_event_observation_distinct_entities
+  type: cartesian
+description: Distinct `event_id` values by the day the Datatracker reports the event occurred. This five-day
+  window is a recent activity slice rather than a long historical series; absent days are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_ietf_datatracker_event_observation_event_time_day
+  exploreName: fct_ietf_datatracker_event_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_ietf_datatracker_event_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_ietf_datatracker_event_observation_event_time_day
+  tableCalculations: []
+name: Events recorded per day
+slug: fct-ietf-datatracker-event-observation-event-volume
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_ietf_datatracker_event_observation_event_time_day
+  - fct_ietf_datatracker_event_observation_distinct_entities
+tableName: fct_ietf_datatracker_event_observation
+version: 1

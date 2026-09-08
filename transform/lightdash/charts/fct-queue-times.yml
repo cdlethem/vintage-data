@@ -1,0 +1,60 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_queue_times_ride
+          yRef:
+            field: fct_queue_times_average_wait_minutes
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_queue_times_ride
+      yField:
+      - fct_queue_times_average_wait_minutes
+  type: cartesian
+description: Mean observed wait minutes by `ride` in the selected observation window. Reported queue wait
+  duration in minutes; zero may indicate no wait. Each retained observation has equal weight; polling
+  frequency and repeated snapshots can affect the mean. This is not a latest-value measure or an additive
+  total.
+metricQuery:
+  dimensions:
+  - fct_queue_times_ride
+  exploreName: fct_queue_times
+  filters:
+    dimensions:
+      and:
+      - id: 2ffec96a-f55a-5c86-89f1-a43a8268847d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_queue_times_observed_at
+        values:
+        - 30
+      - id: 6bf9284e-47e6-546e-b577-0ec3d56ddeed
+        operator: equals
+        target:
+          fieldId: fct_queue_times_is_open
+        values:
+        - true
+      id: 225433e2-abe2-5fe9-bbde-afadc1a9448a
+  limit: 20
+  metrics:
+  - fct_queue_times_average_wait_minutes
+  sorts:
+  - descending: true
+    fieldId: fct_queue_times_average_wait_minutes
+  tableCalculations: []
+name: Mean observed wait minutes by ride
+slug: fct-queue-times
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_queue_times_ride
+  - fct_queue_times_average_wait_minutes
+tableName: fct_queue_times
+version: 1

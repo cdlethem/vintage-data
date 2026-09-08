@@ -1,0 +1,324 @@
+version: 2
+models:
+- name: fct_huggingface_model_snapshot
+  description: Twice-hourly physical history of models returned by the Hugging Face model catalog. Each
+    row is one model from one catalog observation, identified by the source, model identifier, and fetch
+    timestamp. If the same observation is loaded more than once, the latest load copy is kept while its
+    raw lineage remains available.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, model_id, observed_at
+      label: Huggingface model snapshot
+      group_label: Huggingface
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: huggingface_model_snapshot_key
+      vintage:
+        visualization:
+          dimension: author
+          metric: average_like_count
+          time: observed_at
+          window_days: 30
+          title: Mean observed like count by author
+          description: Mean observed like count by `author` in the selected observation window. Number
+            of likes reported by the Hugging Face catalog at observation time. Each retained observation
+            has equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+            a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - model_id
+          - author
+          - like_count
+          - source_loaded_at
+          sources:
+          - '`huggingface` — licence: unstated; attribution required: False. Source configuration: `extract/sources/huggingface.yml`.'
+          analysis:
+            headline: how the observed model catalogue and engagement signals move across collection days
+              and model authors.
+            event_time: created_at
+            grain: DAY
+            controls:
+            - author
+            - is_private
+            - source_name
+            trends:
+            - slug: catalogue-size
+              kind: total
+              metric: distinct_models
+              time: observed_at
+              grain: DAY
+              title: Distinct models observed each day
+              description: Distinct `model_id` values present in the catalogue on each extractor
+                observation day. This is a catalogue level rather than a flow because models recur across
+                snapshots; days without a successful extract are absent rather than zero.
+              width: half
+            - slug: daily-likes
+              kind: total
+              metric: average_like_count
+              time: observed_at
+              grain: DAY
+              title: Mean reported likes observed each day
+              description: Mean non-null `like_count` reported by the catalogue on each observation day.
+                Each retained snapshot has equal weight, so polling frequency and repeated snapshots can
+                affect the level; this is not a sum of likes or a latest-value measure.
+              width: half
+            - slug: model-creations
+              kind: total
+              metric: distinct_models
+              time: created_at
+              grain: DAY
+              title: Distinct models by repository creation day
+              description: Distinct `model_id` values grouped by the source `created_at` day. The extract
+                covers only five creation days, so this is a short recent creation slice rather than a
+                long-run launch rate; dates with no rows are absent rather than zero.
+              width: half
+            - slug: author-catalogue
+              kind: composition
+              metric: distinct_models
+              breakdown: author
+              top_n: 6
+              time: observed_at
+              grain: DAY
+              title: Observed models by leading authors
+              description: Distinct `model_id` values per observation day stacked by the six authors with
+                the largest recent catalogue presence. Remaining authors are excluded rather than
+                aggregated; repeated snapshots are deduplicated within each author and day.
+              width: full
+  columns:
+  - name: huggingface_model_snapshot_key
+    description: Stable hash of the source, model identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Huggingface model snapshot key
+          hidden: true
+  - name: source_name
+    description: Hugging Face catalog source identifier supplied by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: model_id
+    description: Hugging Face repository identifier for the model.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_models:
+            type: count_distinct
+            label: Distinct models
+            description: Distinct `model_id` values present at each time point. Repeated catalogue
+              snapshots of the same repository are counted once within each group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Model id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the model catalog record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: author
+    description: Hugging Face account name that owns the model repository.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Author
+          hidden: false
+  - name: created_at
+    description: UTC timestamp when the model repository was created.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Created at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: like_count
+    description: Number of likes reported by the Hugging Face catalog at observation time.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_like_count:
+            type: average
+            label: Mean observed like count
+            description: Mean observed like count by `author` in the selected observation window. Number
+              of likes reported by the Hugging Face catalog at observation time. Each retained observation
+              has equal weight; polling frequency and repeated snapshots can affect the mean. This is
+              not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Like count
+          hidden: false
+          format: '#,##0'
+  - name: download_count
+    description: Number of downloads reported by the Hugging Face catalog at observation time.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Download count
+          hidden: false
+          format: '#,##0'
+  - name: is_private
+    description: Whether the model repository was private at observation time.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is private
+          hidden: false
+  - name: tags
+    description: JSON array of catalog tags reported for the model.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Tags
+          hidden: true
+          sql: CAST(${TABLE}.tags AS VARCHAR)
+  - name: _row_id
+    description: Raw loader row identifier for the retained model observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Extract batch identifier that supplied the retained model observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained model observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained model observation in its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: _dt
+    description: Raw partition date assigned to the retained model observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: UTC timestamp when extraction began for the retained model observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _load_id
+    description: Load job identifier that inserted the retained model observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained model observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw model record for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

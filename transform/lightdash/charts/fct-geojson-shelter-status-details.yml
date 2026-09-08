@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Incremental physical history of GeoJSON shelter status features. Each row is one upstream
+  feature at one extractor observation timestamp, with the normalized shelter attributes, point geometry,
+  and raw-load lineage needed to audit refreshes and replay the insert-only source.
+metricQuery:
+  dimensions: &id001
+  - fct_geojson_shelter_status_observed_at
+  - fct_geojson_shelter_status_feature_id
+  - fct_geojson_shelter_status_shelter_status
+  - fct_geojson_shelter_status_source_loaded_at
+  exploreName: fct_geojson_shelter_status
+  filters:
+    dimensions:
+      and:
+      - id: 982796f2-e7d2-5680-a8e3-405ada2f8b46
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_geojson_shelter_status_observed_at
+        values:
+        - 30
+      id: 764478c0-2ac0-5752-b864-204a853e2220
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_geojson_shelter_status_observed_at
+  tableCalculations: []
+name: Geojson shelter status — observations
+slug: fct-geojson-shelter-status-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_geojson_shelter_status
+version: 1

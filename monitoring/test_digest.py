@@ -71,19 +71,19 @@ class SourceHealthTest(unittest.TestCase):
             with mock.patch.object(digest, "DATA_ROOT", Path(tmp)):
                 invalid = digest.check_source(
                     "invalid",
-                    {"schedule": "bad", "enabled": "true"},
+                    {"schedule": "bad", "enabled": True},
                     window_start,
                     now=NOW,
                 )
                 valid = digest.check_source(
                     "valid",
-                    {"schedule": "*/30 * * * *", "enabled": "true"},
+                    {"schedule": "*/30 * * * *", "enabled": True},
                     window_start,
                     now=NOW,
                 )
                 disabled = digest.check_source(
                     "disabled",
-                    {"schedule": "bad", "enabled": "false"},
+                    {"schedule": "bad", "enabled": False},
                     window_start,
                     now=NOW,
                 )
@@ -93,6 +93,31 @@ class SourceHealthTest(unittest.TestCase):
             self.assertEqual(valid["expected_gap_min"], 30)
             self.assertNotIn("schedule_error", valid)
             self.assertEqual(digest.classify(disabled), "OK")
+
+    def test_a_cadence_managed_source_is_judged_on_its_effective_cadence(self):
+        """A source the load layer slowed to 2h must not read as stale at 15m."""
+        with tempfile.TemporaryDirectory() as tmp:
+            data_root = Path(tmp)
+            manifest_dir = data_root / "raw" / "source=managed" / "dt=2026-09-04"
+            manifest_dir.mkdir(parents=True)
+            (manifest_dir / "run.meta.json").write_text(json.dumps({
+                "started_at": (NOW - timedelta(minutes=100)).isoformat(),
+                "records": 5, "bytes": 50}))
+            cfg = {"name": "managed", "schedule": "3-59/15 * * * *", "enabled": True,
+                   "cadence": {"auto": True, "min_minutes": 15, "max_minutes": 240}}
+            plan = {"managed": {"cron": "3 0-23/2 * * *", "interval_minutes": 120,
+                                "decision": "slower", "reason": "no new rows"}}
+            with mock.patch.object(digest, "DATA_ROOT", data_root):
+                declared = digest.check_source("managed", cfg, NOW - timedelta(hours=24),
+                                               now=NOW)
+                managed = digest.check_source("managed", cfg, NOW - timedelta(hours=24),
+                                              now=NOW, cadence=plan)
+
+        self.assertEqual(declared["expected_gap_min"], 15)
+        self.assertIs(declared["stale"], True)
+        self.assertEqual(managed["expected_gap_min"], 120)
+        self.assertIs(managed["stale"], False)
+        self.assertIn("cadence-managed", managed["cadence"])
 
 
 class ConfigurationCoverageTest(unittest.TestCase):

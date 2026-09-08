@@ -1,0 +1,310 @@
+version: 2
+models:
+- name: fct_ofac_sanction_observation
+  description: Daily physical observation fact for the US Treasury OFAC Specially Designated Nationals
+    snapshot. Each row is one source, sanction identifier, and extractor observation timestamp, retaining
+    the reported entity, programme tags, aliases, addresses, identifiers, and raw-load lineage. Repeated
+    raw copies of the same observation are reduced to the latest loaded record so the table remains one
+    row per governed grain while preserving the complete snapshot history.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, sanction_id, observed_at
+      label: Ofac sanction observation
+      group_label: Ofac sanctions
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: ofac_sanction_observation_key
+      vintage:
+        visualization:
+          dimension: entity_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct sanction by entity type
+          description: Distinct `sanction_id` values by `entity_type` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - sanction_id
+          - entity_type
+          - source_loaded_at
+          sources:
+          - '`ofac_sanctions` — licence: US Treasury public data; attribution required: False. Source
+            configuration: `extract/sources/ofac_sanctions.yml`.'
+          analysis:
+            headline: The OFAC snapshot level is stable overall while sanctioned entity categories and programme mix reveal small daily revisions.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - entity_type
+            - title
+            - source_name
+            trends:
+            - slug: sanctions-by-day
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Sanctioned records present each observation day
+              description: Distinct `sanction_id` values present in the republished OFAC snapshot on each observation day. This is a level rather than a flow — the feed republishes its catalogue, so changes indicate additions or withdrawals. Missing observation days are absent rather than zero.
+              width: half
+            - slug: names-by-day
+              kind: total
+              metric: distinct_names
+              time: observed_at
+              grain: DAY
+              title: Distinct sanctioned names each observation day
+              description: Distinct non-null `entity_name` values in the republished OFAC snapshot on each observation day. This is a level and not a count of new people or organisations. Missing observation days are absent rather than zero.
+              width: half
+            - slug: sanctions-by-entity-type
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: entity_type
+              top_n: 4
+              time: observed_at
+              grain: DAY
+              title: Sanctioned records by entity type
+              description: Distinct `sanction_id` values per observation day split by OFAC `entity_type`. All four entity types are shown because this dimension has four values; categories are snapshot levels, not additive flows.
+              width: full
+            - slug: sanctions-by-programme
+              kind: composition
+              metric: distinct_entities
+              breakdown: programs
+              top_n: 8
+              time: observed_at
+              grain: DAY
+              title: Snapshot mix across leading sanction programmes
+              description: Distinct `sanction_id` values per observation day stacked by the eight most common programme-array values. The remaining programme combinations are excluded rather than aggregated, and a record can carry multiple programmes so segments are not additive.
+              width: full
+  columns:
+  - name: ofac_sanction_observation_key
+    description: Stable hash of the OFAC source name, sanction identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Ofac sanction observation key
+          hidden: true
+  - name: source_relation
+    description: Raw relation name identifying the load source that produced this OFAC observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source relation
+          hidden: false
+  - name: source_name
+    description: OFAC list or feed label supplied by the extractor, such as ofac_sdn.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: source_row_id
+    description: Stable load-layer identifier for the retained raw OFAC observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: sanction_id
+    description: OFAC unique identifier for the sanctioned individual, entity, vessel, or aircraft.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct sanction
+            description: Distinct `sanction_id` values by `entity_type` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Sanction id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched the OFAC snapshot observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: entity_name
+    description: Name of the sanctioned individual, entity, vessel, or aircraft reported by OFAC.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_names:
+            type: count_distinct
+            label: Distinct sanctioned name
+            description: Distinct non-null `entity_name` values in the OFAC snapshot. Repeated observations of a name count once within each time and breakdown group, so this is a catalogue level rather than a flow of new names.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Entity name
+          hidden: false
+  - name: entity_type
+    description: OFAC classification of the sanctioned record, such as Individual, Entity, Vessel, or
+      Aircraft.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Entity type
+          hidden: false
+  - name: title
+    description: Title or role associated with the sanctioned individual as reported by OFAC.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: remarks
+    description: Additional remarks about the sanctioned record supplied by OFAC.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Remarks
+          hidden: false
+  - name: programs
+    description: JSON array of OFAC sanctions programme codes attached to the record.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Programs
+          hidden: true
+          sql: CAST(${TABLE}.programs AS VARCHAR)
+  - name: aliases
+    description: JSON array of alternate names reported for the sanctioned record.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Aliases
+          hidden: true
+          sql: CAST(${TABLE}.aliases AS VARCHAR)
+  - name: addresses
+    description: JSON array of addresses reported for the sanctioned record.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Addresses
+          hidden: true
+          sql: CAST(${TABLE}.addresses AS VARCHAR)
+  - name: identifiers
+    description: JSON array of identification documents or numbers reported for the sanctioned record.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Identifiers
+          hidden: true
+          sql: CAST(${TABLE}.identifiers AS VARCHAR)
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained OFAC observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load operation that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained OFAC observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the retained raw OFAC observation for replay and lineage auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

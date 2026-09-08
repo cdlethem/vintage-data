@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical observation fact for Sveriges Radio's right-now programme schedule. Each row is
+  one previous, current, or next scheduled episode observed for a channel at an extractor fetch timestamp.
+  Repeated copies of the same source, observation identifier, and timestamp retain the latest loaded row
+  while preserving raw-load lineage.
+metricQuery:
+  dimensions: &id001
+  - fct_sveriges_radio_now_program_observation_observed_at
+  - fct_sveriges_radio_now_program_observation_observation_id
+  - fct_sveriges_radio_now_program_observation_channel_name
+  - fct_sveriges_radio_now_program_observation_sourc_2059e1
+  exploreName: fct_sveriges_radio_now_program_observation
+  filters:
+    dimensions:
+      and:
+      - id: 6103c1e8-2ea1-5178-9172-b6ca53439b5e
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sveriges_radio_now_program_observation_observed_at
+        values:
+        - 30
+      id: eddc9bcf-0fbf-5998-b85f-e060f1e92715
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_sveriges_radio_now_program_observation_observed_at
+  tableCalculations: []
+name: Sveriges radio now program observation — observations
+slug: fct-sveriges-radio-now-program-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_sveriges_radio_now_program_observation
+version: 1

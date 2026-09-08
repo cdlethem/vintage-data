@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly typed epidemiological surveillance observations for São Paulo from the Infodengue
+  city-alerts feed. This physical incremental fact is at the source relation and provider record identifier
+  grain, retaining the latest loaded replay and raw-load lineage for auditability.
+metricQuery:
+  dimensions: &id001
+  - fct_infodengue_saopaulo_epidemiology_fetched_at
+  - fct_infodengue_saopaulo_epidemiology_record_id
+  - fct_infodengue_saopaulo_epidemiology_municipality_name
+  - fct_infodengue_saopaulo_epidemiology_incidence_per_100k
+  - fct_infodengue_saopaulo_epidemiology_source_loaded_at
+  exploreName: fct_infodengue_saopaulo_epidemiology
+  filters:
+    dimensions:
+      and:
+      - id: 135434b4-4917-57d9-a1ed-88a8e41d0f21
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_infodengue_saopaulo_epidemiology_fetched_at
+        values:
+        - 30
+      id: 3e2f3102-d37b-5b67-b245-545945e4595f
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_infodengue_saopaulo_epidemiology_fetched_at
+  tableCalculations: []
+name: Infodengue saopaulo epidemiology — observations
+slug: fct-infodengue-saopaulo-epidemiology-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_infodengue_saopaulo_epidemiology
+version: 1

@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_arxiv_new_paper_observation_published_at_hour
+          yRef:
+            field: fct_arxiv_new_paper_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Published at (Hour)
+      yAxis:
+      - name: Distinct paper
+    layout:
+      xField: fct_arxiv_new_paper_observation_published_at_hour
+      yField:
+      - fct_arxiv_new_paper_observation_distinct_entities
+  type: cartesian
+description: Distinct `paper_id` values per publication hour for the eight categories with the largest
+  totals in this extract. Remaining categories are excluded rather than aggregated, so the chart is a
+  readable view of the current one-day burst.
+metricQuery:
+  dimensions:
+  - fct_arxiv_new_paper_observation_published_at_hour
+  - fct_arxiv_new_paper_observation_primary_category
+  exploreName: fct_arxiv_new_paper_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_arxiv_new_paper_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_arxiv_new_paper_observation_distinct_entities
+  - descending: false
+    fieldId: fct_arxiv_new_paper_observation_published_at_hour
+  tableCalculations: []
+name: Leading arXiv categories by publication hour
+pivotConfig:
+  columns:
+  - fct_arxiv_new_paper_observation_primary_category
+slug: fct-arxiv-new-paper-observation-category-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_arxiv_new_paper_observation_published_at_hour
+  - fct_arxiv_new_paper_observation_primary_category
+  - fct_arxiv_new_paper_observation_distinct_entities
+tableName: fct_arxiv_new_paper_observation
+version: 1

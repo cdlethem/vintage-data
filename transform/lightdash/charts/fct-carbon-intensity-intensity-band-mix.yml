@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 5
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_carbon_intensity_observed_at_hour
+          yRef:
+            field: fct_carbon_intensity_distinct_intervals
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Distinct intervals
+    layout:
+      stack: true
+      xField: fct_carbon_intensity_observed_at_hour
+      yField:
+      - fct_carbon_intensity_distinct_intervals
+  type: cartesian
+description: Distinct intervals per observation hour stacked by the publisher's five `intensity_index`
+  bands. Segment heights show which bands make up the feed; missing observations are absent rather than
+  zero and the stack is not an energy total.
+metricQuery:
+  dimensions:
+  - fct_carbon_intensity_observed_at_hour
+  - fct_carbon_intensity_intensity_index
+  exploreName: fct_carbon_intensity
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_carbon_intensity_distinct_intervals
+  sorts:
+  - descending: true
+    fieldId: fct_carbon_intensity_distinct_intervals
+  - descending: false
+    fieldId: fct_carbon_intensity_observed_at_hour
+  tableCalculations: []
+name: Interval coverage mix by intensity band
+pivotConfig:
+  columns:
+  - fct_carbon_intensity_intensity_index
+slug: fct-carbon-intensity-intensity-band-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_carbon_intensity_observed_at_hour
+  - fct_carbon_intensity_intensity_index
+  - fct_carbon_intensity_distinct_intervals
+tableName: fct_carbon_intensity
+version: 1

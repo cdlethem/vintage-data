@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_amsat_status_observations_reported_time_hour
+          yRef:
+            field: fct_amsat_status_observations_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Reported time (Hour)
+      yAxis:
+      - name: Distinct observation
+    layout:
+      xField: fct_amsat_status_observations_reported_time_hour
+      yField:
+      - fct_amsat_status_observations_distinct_entities
+  type: cartesian
+description: Distinct `observation_id` values per reported hour for the six satellites with the largest
+  totals in this window. The remainder is excluded rather than aggregated, so changing membership can
+  look like a trend.
+metricQuery:
+  dimensions:
+  - fct_amsat_status_observations_reported_time_hour
+  - fct_amsat_status_observations_satellite_name
+  exploreName: fct_amsat_status_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_amsat_status_observations_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_amsat_status_observations_distinct_entities
+  - descending: false
+    fieldId: fct_amsat_status_observations_reported_time_hour
+  tableCalculations: []
+name: Leading satellites by reported hour
+pivotConfig:
+  columns:
+  - fct_amsat_status_observations_satellite_name
+slug: fct-amsat-status-observations-satellite-reporters
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_amsat_status_observations_reported_time_hour
+  - fct_amsat_status_observations_satellite_name
+  - fct_amsat_status_observations_distinct_entities
+tableName: fct_amsat_status_observations
+version: 1

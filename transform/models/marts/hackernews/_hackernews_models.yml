@@ -1,0 +1,367 @@
+version: 2
+models:
+- name: fct_hackernews_item_observation
+  description: Incremental physical observation fact for Hacker News API items. Each row is one Hacker
+    News item identifier from the source stream at one fetched_at observation timestamp, preserving the
+    item payload fields and raw-load lineage. Replayed copies of the same source, item, and observation
+    timestamp are reduced to the latest loaded row; this model does not infer parent/child relationships
+    or fill fields omitted by the API.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_system, item_id, observed_at
+      label: Hackernews item observation
+      group_label: Hackernews
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: hackernews_item_observation_key
+      vintage:
+        visualization:
+          dimension: item_type
+          metric: average_score
+          time: observed_at
+          window_days: 30
+          title: Mean observed score by item type
+          description: Mean observed score by `item_type` in the selected observation window. Hacker News
+            score reported for the item at observation time. Each retained observation has equal weight;
+            polling frequency and repeated snapshots can affect the mean. This is not a latest-value measure
+            or an additive total.
+          detail_fields:
+          - observed_at
+          - item_id
+          - item_type
+          - score
+          - source_loaded_at
+          sources:
+          - '`hackernews` — licence: HN Firebase API — public; attribution required: False. Source configuration:
+            `extract/sources/hackernews.yml`.'
+          analysis:
+            headline: how Hacker News item volume and story engagement change across the sparse archive.
+            event_time: created_at
+            grain: MONTH
+            controls:
+            - item_type
+            - is_dead
+            - is_deleted
+            - author
+            trends:
+            - slug: items-created
+              kind: total
+              metric: distinct_items
+              time: created_at
+              grain: MONTH
+              title: Distinct items created per month
+              description: Distinct `item_id` values by Hacker News `created_at` month. The archive is sparse
+                before the latest collection burst — absent months have no source rows, not zero item creation.
+              width: half
+            - slug: average-story-score
+              kind: total
+              metric: average_score
+              time: created_at
+              grain: MONTH
+              title: Mean story score by creation month
+              description: Mean non-null Hacker News `score` among observations whose `created_at` falls in each
+                month. Scores are available for stories only; observation-weighted polling and repeated
+                snapshots can bias the mean, and months without scored stories are absent.
+              width: half
+            - slug: average-story-comments
+              kind: total
+              metric: average_descendants
+              time: created_at
+              grain: MONTH
+              title: Mean story comments by creation month
+              description: Mean non-null `descendants` count for Hacker News stories by their `created_at`
+                month. This is an observation-weighted snapshot measure, not newly posted comments; months
+                without story comment counts are absent rather than zero.
+              width: half
+            - slug: items-by-type
+              kind: composition
+              metric: distinct_items
+              breakdown: item_type
+              top_n: 2
+              time: created_at
+              grain: MONTH
+              title: Monthly item mix by type
+              description: Distinct Hacker News items stacked by `item_type` and creation month. Both available
+                types are shown — story and comment — while absent months indicate no source rows. Bars expose
+                the sparse archive and the September 2026 collection burst rather than implying zeroes.
+              width: full
+  columns:
+  - name: hackernews_item_observation_key
+    description: Stable hash of the source system, Hacker News item identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Hackernews item observation key
+          hidden: true
+  - name: source_system
+    description: Raw source stream identifier for the Hacker News item.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source system
+          hidden: false
+  - name: item_id
+    description: Hacker News item identifier supplied by the API.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_items:
+            type: count_distinct
+            label: Distinct items
+            description: Distinct `item_id` values by Hacker News `created_at` month. Repeated observations of
+              an item count once within its creation month.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Item id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this Hacker News item.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: item_type
+    description: Hacker News API item type, such as story or comment.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Item type
+          hidden: false
+  - name: author
+    description: Hacker News username that authored the item, when supplied by the API.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Author
+          hidden: false
+  - name: created_at
+    description: UTC timestamp when Hacker News reports that the item was created.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Created at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: title
+    description: Story or job title supplied by Hacker News, when applicable.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: url
+    description: External URL supplied for the item, when applicable.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Url
+          hidden: false
+  - name: score
+    description: Hacker News score reported for the item at observation time.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_score:
+            type: average
+            label: Mean observed score
+            description: Mean observed score by `item_type` in the selected observation window. Hacker
+              News score reported for the item at observation time. Each retained observation has equal
+              weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+              measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Score
+          hidden: false
+          format: '#,##0'
+  - name: descendants
+    description: Number of descendant comments reported for the item at observation time.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_descendants:
+            type: average
+            label: Mean story comments
+            description: Mean non-null `descendants` count for Hacker News stories by their `created_at` month.
+              This is an observation-weighted snapshot measure, not newly posted comments.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Descendants
+          hidden: false
+          format: '#,##0'
+  - name: is_dead
+    description: Whether Hacker News marked the item as dead at observation time.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is dead
+          hidden: false
+  - name: is_deleted
+    description: Whether Hacker News marked the item as deleted at observation time.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is deleted
+          hidden: false
+  - name: text
+    description: HTML-formatted item text supplied by Hacker News, when applicable.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Text
+          hidden: true
+  - name: source_row_id
+    description: Raw load row identifier for the retained Hacker News observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained Hacker News observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained raw observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained raw observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw record content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

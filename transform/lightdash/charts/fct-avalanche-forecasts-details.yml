@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of avalanche forecast observations published by avalanche.org. Each
+  row is one forecast zone identified by its upstream source and identifier at an extractor observation
+  timestamp, with the published danger, season dates, travel guidance, and raw-load lineage retained for
+  audit and replay.
+metricQuery:
+  dimensions: &id001
+  - fct_avalanche_forecasts_observed_at
+  - fct_avalanche_forecasts_forecast_id
+  - fct_avalanche_forecasts_danger_text
+  - fct_avalanche_forecasts_source_loaded_at
+  exploreName: fct_avalanche_forecasts
+  filters:
+    dimensions:
+      and:
+      - id: 07a839c8-f41c-516b-ad46-a49db985fc7d
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_avalanche_forecasts_observed_at
+        values:
+        - 30
+      id: 8dceba75-1c80-588d-ab5f-c4f6ac6ed510
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_avalanche_forecasts_observed_at
+  tableCalculations: []
+name: Avalanche forecasts — observations
+slug: fct-avalanche-forecasts-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_avalanche_forecasts
+version: 1

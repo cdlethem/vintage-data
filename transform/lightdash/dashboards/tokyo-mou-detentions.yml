@@ -1,0 +1,171 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 3af883ee-5a6e-5614-bf3d-604345c5a754
+    label: 'Tokyo mou detentions: Flag country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_tokyo_mou_detentions_flag_country
+      tableName: fct_tokyo_mou_detentions
+    values: []
+  - disabled: true
+    id: c5d589d0-8e02-5e55-b053-e573ab6a0ca7
+    label: 'Tokyo mou detentions: Ship type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_tokyo_mou_detentions_ship_type
+      tableName: fct_tokyo_mou_detentions
+    values: []
+  - disabled: true
+    id: 7d771fe1-92dc-5589-b6ec-f367b4a611d7
+    label: 'Tokyo mou detentions: Detention location'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_tokyo_mou_detentions_detention_location
+      tableName: fct_tokyo_mou_detentions
+    values: []
+  - disabled: true
+    id: 4139f0d3-4ca9-53a0-a391-d10aaa6d01e6
+    label: 'Tokyo mou detentions: Classification society'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_tokyo_mou_detentions_classification_society
+      tableName: fct_tokyo_mou_detentions
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Tokyo Mou Detentions
+slug: tokyo-mou-detentions
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of Tokyo MOU port-state-control detention observations. Each row
+      is one detention event returned by the current-month APCIS query at one extractor observation timestamp;
+      repeated raw copies of that observation are reduced to the latest loaded row while vessel, deficiency,
+      release, query, and load lineage remain available.
+
+
+      **Grain:** detention_id, observed_at
+
+
+      **What changes here:** how detention events vary by day, flag state, vessel type, and vessel size.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `tokyo_mou_detentions` — licence: Tokyo MOU terms; attribution required: True. Source configuration:
+      `extract/sources/tokyo_mou_detentions.yml`.'
+    hideFrame: false
+    title: Tokyo mou detentions
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Tokyo mou detentions — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Detentions recorded per day
+    chartSlug: fct-tokyo-mou-detentions-daily-detentions
+    hideTitle: false
+    title: Detentions recorded per day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean detained-vessel gross tonnage per day
+    chartSlug: fct-tokyo-mou-detentions-vessel-tonnage
+    hideTitle: false
+    title: Mean detained-vessel gross tonnage per day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Detentions by flag country
+    chartSlug: fct-tokyo-mou-detentions-detentions-by-flag
+    hideTitle: false
+    title: Detentions by flag country
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Mean vessel tonnage by ship type
+    chartSlug: fct-tokyo-mou-detentions-tonnage-by-vessel-type
+    hideTitle: false
+    title: Mean vessel tonnage by ship type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Detentions with a release date
+    chartSlug: fct-tokyo-mou-detentions-releases-by-day
+    hideTitle: false
+    title: Detentions with a release date
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Tokyo mou detentions — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct detention by flag country
+    chartSlug: fct-tokyo-mou-detentions
+    hideTitle: false
+    title: Distinct detention by flag country
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Tokyo mou detentions — observations
+    chartSlug: fct-tokyo-mou-detentions-details
+    hideTitle: false
+    title: Tokyo mou detentions — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

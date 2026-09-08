@@ -1,0 +1,172 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 4078f016-9e23-52dc-a646-9342b7397040
+    label: 'Openactive feed: Provider'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openactive_feed_provider
+      tableName: fct_openactive_feed
+    values: []
+  - disabled: true
+    id: 007d50ad-8f25-5a97-a2e0-b999acd1f41e
+    label: 'Openactive feed: Kind'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openactive_feed_kind
+      tableName: fct_openactive_feed
+    values: []
+  - disabled: true
+    id: 7c24e0ff-1ae7-5e42-8d14-415de7903724
+    label: 'Openactive feed: State'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openactive_feed_state
+      tableName: fct_openactive_feed
+    values: []
+  - disabled: true
+    id: a50bfa51-a976-5e00-9063-bdc72b6238c0
+    label: 'Openactive feed: Feed type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_openactive_feed_feed_type
+      tableName: fct_openactive_feed
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Openactive Feeds
+slug: openactive-feeds
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Incremental physical history of OpenActive slot-feed observations, including and extractor-row
+      observation. The source row identifier preserves repeated observations as auditable append-only
+      facts alongside their original loader lineage. Slot attributes are parsed from the feed''s JSON
+      data when a record is not a tombstone.
+
+
+      **Grain:** source, record_id, observed_at, _row_id
+
+
+      **What changes here:** how scheduled activity supply expands into future months and how remaining
+      capacity differs by provider.
+
+
+      **Window:** ranked and record tiles cover the past 2 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `openactive_feeds` — licence: CC BY 4.0 from the respective providers; attribution required: True.
+      Source configuration: `extract/sources/openactive_feeds.yml`.'
+    hideFrame: false
+    title: Openactive feed
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Openactive feed — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Scheduled records by start month
+    chartSlug: fct-openactive-feed-scheduled-records
+    hideTitle: false
+    title: Scheduled records by start month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean remaining uses by scheduled month
+    chartSlug: fct-openactive-feed-remaining-capacity
+    hideTitle: false
+    title: Mean remaining uses by scheduled month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Scheduled records by leading provider
+    chartSlug: fct-openactive-feed-provider-supply
+    hideTitle: false
+    title: Scheduled records by leading provider
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Scheduled records by feed state
+    chartSlug: fct-openactive-feed-state-mix
+    hideTitle: false
+    title: Scheduled records by feed state
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Scheduled records by OpenActive kind
+    chartSlug: fct-openactive-feed-kind-mix
+    hideTitle: false
+    title: Scheduled records by OpenActive kind
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Openactive feed — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct record by state
+    chartSlug: fct-openactive-feed
+    hideTitle: false
+    title: Distinct record by state
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Openactive feed — observations
+    chartSlug: fct-openactive-feed-details
+    hideTitle: false
+    title: Openactive feed — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

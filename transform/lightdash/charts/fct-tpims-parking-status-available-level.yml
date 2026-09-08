@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_tpims_parking_status_observed_at_day
+          yRef:
+            field: fct_tpims_parking_status_average_reported_available_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed reported available count
+    layout:
+      xField: fct_tpims_parking_status_observed_at_day
+      yField:
+      - fct_tpims_parking_status_average_reported_available_count
+  type: cartesian
+description: Average numeric `reported_available_count` across retained status snapshots on each observation
+  day. Categorical or unparseable availability is null, and equal-weight snapshots can reflect polling
+  frequency; this is not an additive site total.
+metricQuery:
+  dimensions:
+  - fct_tpims_parking_status_observed_at_day
+  exploreName: fct_tpims_parking_status
+  filters:
+    dimensions:
+      and:
+      - id: f81dc581-f6c8-5f34-b628-e8a16d95d503
+        operator: equals
+        target:
+          fieldId: fct_tpims_parking_status_trusts_data
+        values:
+        - true
+      id: 129e5afc-0fd3-5280-9d5c-bafdf21cf08e
+  limit: 5000
+  metrics:
+  - fct_tpims_parking_status_average_reported_available_count
+  sorts:
+  - descending: false
+    fieldId: fct_tpims_parking_status_observed_at_day
+  tableCalculations: []
+name: Mean reported available spaces per day
+slug: fct-tpims-parking-status-available-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_tpims_parking_status_observed_at_day
+  - fct_tpims_parking_status_average_reported_available_count
+tableName: fct_tpims_parking_status
+version: 1

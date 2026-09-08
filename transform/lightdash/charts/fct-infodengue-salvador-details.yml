@@ -1,0 +1,42 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of InfoDengue epidemiological observations for Salvador. Each row
+  represents the latest loaded copy of one provider record from the Salvador city-alerts feed at the source
+  relation and record identifier grain; typed surveillance measures and raw-load lineage are retained.
+  The source is refreshed daily and revises prior epidemiological weeks, so repeated records are reduced
+  to the latest loaded copy during each table build.
+metricQuery:
+  dimensions: &id001
+  - fct_infodengue_salvador_fetched_at
+  - fct_infodengue_salvador_record_id
+  - fct_infodengue_salvador_municipality_name
+  - fct_infodengue_salvador_incidence_per_100k
+  - fct_infodengue_salvador_source_loaded_at
+  exploreName: fct_infodengue_salvador
+  filters:
+    dimensions:
+      and:
+      - id: 17ae33c1-e2dd-565b-8cac-5594e14c8c18
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_infodengue_salvador_fetched_at
+        values:
+        - 30
+      id: c653e7d2-d733-5638-8104-864da12a625f
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_infodengue_salvador_fetched_at
+  tableCalculations: []
+name: Infodengue salvador — observations
+slug: fct-infodengue-salvador-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_infodengue_salvador
+version: 1

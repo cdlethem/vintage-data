@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sveriges_radio_now_program_observation_starts_day
+          yRef:
+            field: fct_sveriges_radio_now_program_observation_distinct_programs
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Scheduled start at (Day)
+      yAxis:
+      - name: Distinct programmes
+    layout:
+      xField: fct_sveriges_radio_now_program_observation_starts_day
+      yField:
+      - fct_sveriges_radio_now_program_observation_distinct_programs
+  type: cartesian
+description: Distinct `program_id` values grouped by the source `scheduled_start_at` day. All 1,092 retained
+  rows currently have a null scheduled start, so this event-time chart is empty for the present window
+  rather than treating missing schedule times as zero.
+metricQuery:
+  dimensions:
+  - fct_sveriges_radio_now_program_observation_starts_day
+  exploreName: fct_sveriges_radio_now_program_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sveriges_radio_now_program_observation_distinct_programs
+  sorts:
+  - descending: false
+    fieldId: fct_sveriges_radio_now_program_observation_starts_day
+  tableCalculations: []
+name: Programmes by scheduled start day
+slug: fct-sveriges-radio-now-program-observation-scheduled-start-coverage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sveriges_radio_now_program_observation_starts_day
+  - fct_sveriges_radio_now_program_observation_distinct_programs
+tableName: fct_sveriges_radio_now_program_observation
+version: 1

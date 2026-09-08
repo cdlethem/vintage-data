@@ -1,0 +1,64 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_tpims_parking_status_status_updated_at_day
+          yRef:
+            field: fct_tpims_parking_status_average_reported_available_count
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Status updated at (Day)
+      yAxis:
+      - name: Mean observed reported available count
+    layout:
+      xField: fct_tpims_parking_status_status_updated_at_day
+      yField:
+      - fct_tpims_parking_status_average_reported_available_count
+  type: cartesian
+description: Average numeric reported availability on each publisher status-update day split by region.
+  This short five-day update history is sparse; null values and days without a publisher update are absent
+  rather than zero.
+metricQuery:
+  dimensions:
+  - fct_tpims_parking_status_status_updated_at_day
+  - fct_tpims_parking_status_region
+  exploreName: fct_tpims_parking_status
+  filters:
+    dimensions:
+      and:
+      - id: 4918d1f7-3a17-5704-897a-860c93906349
+        operator: equals
+        target:
+          fieldId: fct_tpims_parking_status_trusts_data
+        values:
+        - true
+      id: c8cbc591-8a50-5f8d-8829-cc3b6a681bae
+  limit: 5000
+  metrics:
+  - fct_tpims_parking_status_average_reported_available_count
+  sorts:
+  - descending: true
+    fieldId: fct_tpims_parking_status_average_reported_available_count
+  - descending: false
+    fieldId: fct_tpims_parking_status_status_updated_at_day
+  tableCalculations: []
+name: Mean availability by publisher status-update day
+pivotConfig:
+  columns:
+  - fct_tpims_parking_status_region
+slug: fct-tpims-parking-status-status-updates-by-region
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_tpims_parking_status_status_updated_at_day
+  - fct_tpims_parking_status_region
+  - fct_tpims_parking_status_average_reported_available_count
+tableName: fct_tpims_parking_status
+version: 1

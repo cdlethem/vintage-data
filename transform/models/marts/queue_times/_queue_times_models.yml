@@ -1,0 +1,362 @@
+version: 2
+models:
+- name: fct_queue_times
+  description: Twice-hourly physical history of theme-park attraction queue observations. Each row records
+    one ride's reported wait at a source snapshot, including park, land, operating status, update timestamp,
+    and raw-load lineage. Repeated insert-only raw records for the same source, ride, and observation
+    timestamp are reduced to the latest loaded record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, park_id, land_id, ride_id, observed_at
+      label: Queue times
+      group_label: Queue times
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: queue_time_observation_key
+      vintage:
+        visualization:
+          dimension: ride
+          metric: average_wait_minutes
+          time: observed_at
+          window_days: 30
+          title: Mean observed wait minutes by ride
+          description: Mean observed wait minutes by `ride` in the selected observation window. Reported
+            queue wait duration in minutes; zero may indicate no wait. Each retained observation has equal
+            weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+            measure or an additive total.
+          detail_fields:
+          - observed_at
+          - observation_id
+          - ride
+          - wait_minutes
+          - source_loaded_at
+          sources:
+          - '`queue_times` — licence: Queue-Times.com — free, attribution required; attribution required:
+            True. Source configuration: `extract/sources/queue_times.yml`.'
+          filters:
+          - field: is_open
+            values:
+            - true
+          analysis:
+            headline: how reported queue levels change across rides and park lands during each observation
+              day, while source updates reveal short-term movement.
+            event_time: last_updated_at
+            grain: DAY
+            controls:
+            - park
+            - land
+            - ride
+            - is_open
+            trends:
+            - slug: observed-queue-level
+              kind: total
+              metric: average_wait_minutes
+              time: observed_at
+              grain: DAY
+              title: Mean queue wait observed each day
+              description: Average reported `wait_minutes` across retained ride observations on each
+                collection day. This is a level of the polled queue feed rather than an additive total;
+                polling frequency weights the mean and days with no successful extract are absent rather
+                than zero.
+              width: half
+            - slug: rides-observed
+              kind: total
+              metric: distinct_rides
+              time: observed_at
+              grain: DAY
+              title: Distinct rides reporting each day
+              description: Distinct non-null `ride_id` values present in the feed on each observation day.
+                The feed republishes current ride status, so this is a catalogue level rather than a flow;
+                days with no successful extract are absent rather than zero.
+              width: half
+            - slug: wait-by-land
+              kind: breakdown
+              metric: average_wait_minutes
+              breakdown: land
+              top_n: 8
+              time: observed_at
+              grain: DAY
+              title: Mean queue wait by land
+              description: Average reported wait minutes per observation day, with one line for each of
+                the eight lands. All eight observed lands are shown; no remainder is aggregated. Sparse
+                days are absent rather than zero, and repeated polls give frequently observed rides more
+                weight.
+              width: full
+            - slug: updates-by-land
+              kind: composition
+              metric: distinct_rides
+              breakdown: land
+              top_n: 8
+              time: last_updated_at
+              grain: DAY
+              title: Rides with source updates by land
+              description: Distinct `ride_id` values by source `last_updated_at` day, stacked by land.
+                This event-time view shows when the publisher reported ride updates, not when this
+                project collected them; all eight lands are shown and days with no updates are absent.
+              width: full
+  columns:
+  - name: queue_time_observation_key
+    description: Stable hash of source, park, land, ride, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Queue time observation key
+          hidden: true
+  - name: source
+    description: Source system identifier that published the queue observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: observation_id
+    description: Source-provided identifier for the ride observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Observation id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the queue snapshot was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: park_id
+    description: Stable source identifier for the theme park.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Park id
+          hidden: false
+          format: '#,##0'
+  - name: park
+    description: Theme-park name reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Park
+          hidden: false
+  - name: land_id
+    description: Stable source identifier for the land within the park.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Land id
+          hidden: false
+          format: '#,##0'
+  - name: land
+    description: Land name reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Land
+          hidden: false
+  - name: ride_id
+    description: Stable source identifier for the attraction.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          distinct_rides:
+            type: count_distinct
+            label: Distinct rides
+            description: Distinct `ride_id` values present in the selected observation window. The feed
+              republishes current ride status, so this is a catalogue level rather than an additive count.
+            format: '#,##0'
+        dimension:
+          type: number
+          label: Ride id
+          hidden: false
+          format: '#,##0'
+  - name: ride
+    description: Attraction name reported by the source.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Ride
+          hidden: false
+  - name: is_open
+    description: Whether the attraction was reported as open at observation time.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is open
+          hidden: false
+  - name: wait_minutes
+    description: Reported queue wait duration in minutes; zero may indicate no wait.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_wait_minutes:
+            type: average
+            label: Mean observed wait minutes
+            description: Mean observed wait minutes by `ride` in the selected observation window. Reported
+              queue wait duration in minutes; zero may indicate no wait. Each retained observation has
+              equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+              a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Wait minutes
+          hidden: false
+          format: '#,##0'
+  - name: last_updated_at
+    description: UTC timestamp when the source last updated the ride status.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Last updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _row_id
+    description: Raw row identifier retained for lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Identifier of the raw load batch that produced this row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing this queue observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position in the raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: _dt
+    description: Raw partition date assigned to this loaded row.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: UTC timestamp when extraction of the source file began.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _load_id
+    description: Identifier of the load operation that inserted this row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

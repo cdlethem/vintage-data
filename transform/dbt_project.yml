@@ -1,0 +1,31 @@
+name: vintage_data
+version: 1.0.0
+config-version: 2
+profile: vintage_data
+
+model-paths: [models]
+macro-paths: [macros]
+test-paths: [tests]
+seed-paths: [seeds]
+snapshot-paths: [snapshots]
+analysis-paths: [analyses]
+
+clean-targets:
+  - target
+  - dbt_packages
+  - logs
+
+models:
+  vintage_data:
+    +persist_docs:
+      relation: true
+      columns: true
+    base:
+      +materialized: view
+      +schema: base
+    staging:
+      +materialized: view
+      +schema: staging
+    marts:
+      +materialized: table
+      +schema: marts

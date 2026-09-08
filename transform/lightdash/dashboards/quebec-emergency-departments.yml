@@ -1,0 +1,173 @@
+config:
+  dateZoomGranularities:
+  - Hour
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Hour
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 54f8b2f5-b7d1-5ce6-805c-5fc9a6c62f59
+    label: 'Quebec emergency department observation: Health region'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_quebec_emergency_department_observation_health_region
+      tableName: fct_quebec_emergency_department_observation
+    values: []
+  - disabled: true
+    id: 81fdc36b-f548-5e6d-8380-ad66f1646c8e
+    label: 'Quebec emergency department observation: Facility name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_quebec_emergency_department_observation_facility_name
+      tableName: fct_quebec_emergency_department_observation
+    values: []
+  - disabled: true
+    id: 0071fc10-740d-5db2-9f4c-435293a88fc2
+    label: 'Quebec emergency department observation: Reporting level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_quebec_emergency_department_observation_reporting_level
+      tableName: fct_quebec_emergency_department_observation
+    values: []
+  - disabled: true
+    id: 6c024787-8b33-5068-a393-368256938937
+    label: 'Quebec emergency department observation: Establishment name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_quebec_emergency_department_observation_establishment_name
+      tableName: fct_quebec_emergency_department_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Quebec Emergency Departments
+slug: quebec-emergency-departments
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of Quebec emergency-department status observations. Each row represents
+      one department or published regional total at one upstream fetch timestamp. Source text is retained
+      alongside null-safe typed patient, stretcher, and length-of-stay measures, with raw load lineage
+      for replay and audit.
+
+
+      **Grain:** source, department_id, observed_at
+
+
+      **What changes here:** how emergency-department waiting and stretcher pressure moves through observed
+      hours across Quebec facilities and health regions.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `quebec_emergency_departments` — licence: Quebec open-government reuse terms; attribution required:
+      True. Source configuration: `extract/sources/quebec_emergency_departments.yml`.'
+    hideFrame: false
+    title: Quebec emergency department observation
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Quebec emergency department observation — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Departments reporting per hour
+    chartSlug: fct-quebec-emergency-department-observation-departments-observed
+    hideTitle: false
+    title: Departments reporting per hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean patients waiting per hour
+    chartSlug: fct-quebec-emergency-department-observation-patients-waiting
+    hideTitle: false
+    title: Mean patients waiting per hour
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean occupied stretchers per hour
+    chartSlug: fct-quebec-emergency-department-observation-occupied-stretchers
+    hideTitle: false
+    title: Mean occupied stretchers per hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Patients waiting by health region
+    chartSlug: fct-quebec-emergency-department-observation-waiting-by-region
+    hideTitle: false
+    title: Patients waiting by health region
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Occupied stretchers by reporting level
+    chartSlug: fct-quebec-emergency-department-observation-stretcher-mix
+    hideTitle: false
+    title: Occupied stretchers by reporting level
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Quebec emergency department observation — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Mean observed patients waiting for care count by facility name
+    chartSlug: fct-quebec-emergency-department-observation
+    hideTitle: false
+    title: Mean observed patients waiting for care count by facility name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Quebec emergency department observation — observations
+    chartSlug: fct-quebec-emergency-department-observation-details
+    hideTitle: false
+    title: Quebec emergency department observation — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

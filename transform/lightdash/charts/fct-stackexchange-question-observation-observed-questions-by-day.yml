@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_stackexchange_question_observation_observed_at_day
+          yRef:
+            field: fct_stackexchange_question_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct question
+    layout:
+      xField: fct_stackexchange_question_observation_observed_at_day
+      yField:
+      - fct_stackexchange_question_observation_distinct_entities
+  type: cartesian
+description: Distinct `question_id` values present in the API response on each observation day. This is
+  a catalogue level because questions are repeatedly polled, not a new-question flow; days without a successful
+  fetch are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_stackexchange_question_observation_observed_at_day
+  exploreName: fct_stackexchange_question_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_stackexchange_question_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_stackexchange_question_observation_observed_at_day
+  tableCalculations: []
+name: Distinct questions observed per day
+slug: fct-stackexchange-question-observation-observed-questions-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_stackexchange_question_observation_observed_at_day
+  - fct_stackexchange_question_observation_distinct_entities
+tableName: fct_stackexchange_question_observation
+version: 1

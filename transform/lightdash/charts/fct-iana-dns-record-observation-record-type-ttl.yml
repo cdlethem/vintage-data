@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 9
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_iana_dns_record_observation_observed_at_day
+          yRef:
+            field: fct_iana_dns_record_observation_average_ttl_seconds
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean TTL seconds
+    layout:
+      stack: true
+      xField: fct_iana_dns_record_observation_observed_at_day
+      yField:
+      - fct_iana_dns_record_observation_average_ttl_seconds
+  type: cartesian
+description: Mean reported `ttl_seconds` per collection day stacked by record type. All nine types are
+  shown; stacked segments compare TTL levels and must not be interpreted as a sum.
+metricQuery:
+  dimensions:
+  - fct_iana_dns_record_observation_observed_at_day
+  - fct_iana_dns_record_observation_record_type
+  exploreName: fct_iana_dns_record_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_iana_dns_record_observation_average_ttl_seconds
+  sorts:
+  - descending: true
+    fieldId: fct_iana_dns_record_observation_average_ttl_seconds
+  - descending: false
+    fieldId: fct_iana_dns_record_observation_observed_at_day
+  tableCalculations: []
+name: Mean TTL by record type
+pivotConfig:
+  columns:
+  - fct_iana_dns_record_observation_record_type
+slug: fct-iana-dns-record-observation-record-type-ttl
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_iana_dns_record_observation_observed_at_day
+  - fct_iana_dns_record_observation_record_type
+  - fct_iana_dns_record_observation_average_ttl_seconds
+tableName: fct_iana_dns_record_observation
+version: 1

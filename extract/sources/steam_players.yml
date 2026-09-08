@@ -11,6 +11,14 @@ retries: 1
 timeout_minutes: 10
 sink: local
 
+# Algorithmic scheduling cadence: the load layer steps `schedule` between
+# these bounds from what each run actually brought back (load/README.md).
+# a concurrent-players gauge always moves, so this pins to its floor by design
+cadence:
+  auto: true
+  min_minutes: 10
+  max_minutes: 60
+
 # Vetting metadata (documentation only, not read by the DAG factory)
 cadence_note: "genuinely continuous; strong daily/weekly rhythm plus release-day spikes"
 rate_limit: "unpublished; poll a handful of games every few minutes, not in a tight loop"

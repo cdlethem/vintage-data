@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_seed_lab_queue_queue_label
+          yRef:
+            field: fct_seed_lab_queue_average_estimated_days_to_complete
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_seed_lab_queue_queue_label
+      yField:
+      - fct_seed_lab_queue_average_estimated_days_to_complete
+  type: cartesian
+description: Mean observed estimated days to complete by `queue_label` in the selected observation window.
+  Estimated completion duration in days for the completion-estimate row, when present. Each retained observation
+  has equal weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+  measure or an additive total.
+metricQuery:
+  dimensions:
+  - fct_seed_lab_queue_queue_label
+  exploreName: fct_seed_lab_queue
+  filters:
+    dimensions:
+      and:
+      - id: 6f1060b8-9242-5560-8987-28672e6bbf73
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_seed_lab_queue_observed_at
+        values:
+        - 30
+      id: 9dfecd45-0830-5df2-a5a9-ee5fa45f34a5
+  limit: 20
+  metrics:
+  - fct_seed_lab_queue_average_estimated_days_to_complete
+  sorts:
+  - descending: true
+    fieldId: fct_seed_lab_queue_average_estimated_days_to_complete
+  tableCalculations: []
+name: Mean observed estimated days to complete by queue label
+slug: fct-seed-lab-queue
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_seed_lab_queue_queue_label
+  - fct_seed_lab_queue_average_estimated_days_to_complete
+tableName: fct_seed_lab_queue
+version: 1

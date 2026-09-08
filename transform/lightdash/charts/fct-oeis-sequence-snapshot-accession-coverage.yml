@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_oeis_sequence_snapshot_observed_at_day
+          yRef:
+            field: fct_oeis_sequence_snapshot_max_sequence_number
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Highest sequence number
+    layout:
+      xField: fct_oeis_sequence_snapshot_observed_at_day
+      yField:
+      - fct_oeis_sequence_snapshot_max_sequence_number
+  type: cartesian
+description: Maximum numeric `sequence_number` present in each daily snapshot. This is an index of feed
+  coverage, not a count and not a sum; a flat line means no higher accession was present in that day's
+  fetched catalogue.
+metricQuery:
+  dimensions:
+  - fct_oeis_sequence_snapshot_observed_at_day
+  exploreName: fct_oeis_sequence_snapshot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_oeis_sequence_snapshot_max_sequence_number
+  sorts:
+  - descending: false
+    fieldId: fct_oeis_sequence_snapshot_observed_at_day
+  tableCalculations: []
+name: Highest sequence accession observed per day
+slug: fct-oeis-sequence-snapshot-accession-coverage
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_oeis_sequence_snapshot_observed_at_day
+  - fct_oeis_sequence_snapshot_max_sequence_number
+tableName: fct_oeis_sequence_snapshot
+version: 1

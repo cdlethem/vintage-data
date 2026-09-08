@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_job_feed_getonboard_department
+          yRef:
+            field: fct_job_feed_getonboard_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_job_feed_getonboard_department
+      yField:
+      - fct_job_feed_getonboard_distinct_entities
+  type: cartesian
+description: Distinct `job_id` values by `department` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_job_feed_getonboard_department
+  exploreName: fct_job_feed_getonboard
+  filters:
+    dimensions:
+      and:
+      - id: 8b829abf-ac5f-5033-82a4-2d6d89479c10
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_feed_getonboard_observed_at
+        values:
+        - 30
+      id: 28c0d547-1503-55a7-83ce-6fd64051af71
+  limit: 20
+  metrics:
+  - fct_job_feed_getonboard_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_getonboard_distinct_entities
+  tableCalculations: []
+name: Distinct job by department
+slug: fct-job-feed-getonboard
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_feed_getonboard_department
+  - fct_job_feed_getonboard_distinct_entities
+tableName: fct_job_feed_getonboard
+version: 1

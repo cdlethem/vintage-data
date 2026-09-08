@@ -1,0 +1,362 @@
+version: 2
+models:
+- name: fct_speedrun_run
+  description: Current-state fact for Speedrun.com run records. Each row is one run identifier, retaining
+    the latest loaded representation of that run and the source observation and load lineage used to select
+    it. This model deliberately keeps player lists as JSON because a run may have multiple participants.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: run_id
+      label: Speedrun run
+      group_label: Speedrun runs
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: speedrun_run_key
+      vintage:
+        visualization:
+          dimension: category_name
+          metric: average_duration_seconds
+          time: observed_at
+          window_days: 30
+          title: Mean observed duration seconds by category name
+          description: Mean observed duration seconds by `category_name` in the selected observation window.
+            Run completion duration in seconds. Each retained observation has equal weight; polling frequency
+            and repeated snapshots can affect the mean. This is not a latest-value measure or an additive
+            total.
+          detail_fields:
+          - observed_at
+          - run_id
+          - category_name
+          - duration_seconds
+          - source_loaded_at
+          sources:
+          - '`speedrun_runs` — licence: CC-BY-NC 4.0 — non-commercial use only; attribution required:
+            True. Source configuration: `extract/sources/speedrun_runs.yml`.'
+          analysis:
+            headline: how run submissions accumulate across games and platforms while completion speed changes
+              through the published run-date history.
+            event_time: run_date
+            grain: MONTH
+            controls:
+            - game_name
+            - category_name
+            - platform_name
+            - is_emulated
+            trends:
+            - slug: runs-by-month
+              kind: total
+              metric: distinct_runs
+              time: run_date
+              grain: MONTH
+              title: Distinct runs by run month
+              description: Distinct `run_id` values whose published `run_date` falls in each month. This is
+                a sparse submission flow rather than a catalogue level — months with no recorded runs are
+                absent rather than zero.
+              width: half
+            - slug: duration-by-month
+              kind: total
+              metric: average_duration_seconds
+              time: run_date
+              grain: MONTH
+              title: Mean completion duration by run month
+              description: Mean `duration_seconds` for runs whose published `run_date` falls in each month.
+                Each run has equal weight and this is not an additive total; months with no recorded runs are
+                absent rather than zero.
+              width: half
+            - slug: games-by-month
+              kind: breakdown
+              metric: distinct_runs
+              breakdown: game_name
+              top_n: 6
+              time: run_date
+              grain: MONTH
+              title: Distinct runs by game and run month
+              description: Distinct `run_id` values per run-date month pivoted by the six games with the
+                largest retained run counts. Other games are excluded rather than aggregated; empty months
+                for a game are absent rather than zero.
+              width: full
+            - slug: platform-mix-by-month
+              kind: composition
+              metric: distinct_runs
+              breakdown: platform_name
+              top_n: 8
+              time: run_date
+              grain: MONTH
+              title: Run platform mix by run month
+              description: Distinct `run_id` values per run-date month stacked by the eight most common
+                reported platforms. Null and less-common platforms are excluded rather than aggregated, so
+                the stack is not the full run total.
+              width: full
+  columns:
+  - name: speedrun_run_key
+    description: Stable hash of the Speedrun.com run identifier.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Speedrun run key
+          hidden: true
+  - name: run_id
+    description: Speedrun.com identifier for the submitted run.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_runs:
+            type: count_distinct
+            label: Distinct runs
+            description: Distinct non-null `run_id` values in each run-date and filter group. Repeated
+              observations of a run count once within each group.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Run id
+          hidden: false
+  - name: source
+    description: Upstream source identifier reported by the raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: game_name
+    description: Game title associated with the run.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Game name
+          hidden: false
+  - name: category_name
+    description: Category or leaderboard category in which the run competes.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Category name
+          hidden: false
+  - name: platform_name
+    description: Platform on which the run was performed, when reported.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Platform name
+          hidden: false
+  - name: players
+    description: JSON array of player identifiers credited with the run.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Players
+          hidden: true
+          sql: CAST(${TABLE}.players AS VARCHAR)
+  - name: run_date
+    description: Calendar date on which the run was performed.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Run date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: submitted_at
+    description: UTC timestamp when the run was submitted, when reported.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Submitted at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: verified_at
+    description: UTC timestamp when the run was verified, when reported.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Verified at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: status
+    description: Verification status reported for the run.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status
+          hidden: false
+  - name: examiner_id
+    description: Identifier of the examiner who reviewed the run, when reported.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Examiner id
+          hidden: false
+  - name: duration_seconds
+    description: Run completion duration in seconds.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_duration_seconds:
+            type: average
+            label: Mean observed duration seconds
+            description: Mean observed duration seconds by `category_name` in the selected observation
+              window. Run completion duration in seconds. Each retained observation has equal weight;
+              polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+              measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Duration seconds
+          hidden: false
+          format: '#,##0.00'
+  - name: duration_iso
+    description: ISO 8601 representation of the run completion duration.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Duration iso
+          hidden: false
+  - name: is_emulated
+    description: Whether the source marks the run as performed on an emulator.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is emulated
+          hidden: false
+  - name: has_video
+    description: Whether a video is available for the run.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Has video
+          hidden: false
+  - name: run_url
+    description: Canonical URL for the run on Speedrun.com.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Run url
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this run record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained run record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained run within its source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained run record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw run record for replay and lineage auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

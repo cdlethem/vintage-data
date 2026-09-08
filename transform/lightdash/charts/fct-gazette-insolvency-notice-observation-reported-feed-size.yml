@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_gazette_insolvency_notice_observation_observed_at_day
+          yRef:
+            field: fct_gazette_insolvency_notice_observation_average_feed_total
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Average reported feed total
+    layout:
+      xField: fct_gazette_insolvency_notice_observation_observed_at_day
+      yField:
+      - fct_gazette_insolvency_notice_observation_average_feed_total
+  type: cartesian
+description: Observation-weighted average of the source-reported `feed_total` on each observation day.
+  This is a publisher-reported level, not notices added that day; repeated polling can bias the average
+  toward fetches with more retained rows. Days without an observation are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_gazette_insolvency_notice_observation_observed_at_day
+  exploreName: fct_gazette_insolvency_notice_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_gazette_insolvency_notice_observation_average_feed_total
+  sorts:
+  - descending: false
+    fieldId: fct_gazette_insolvency_notice_observation_observed_at_day
+  tableCalculations: []
+name: Reported feed total per observation day
+slug: fct-gazette-insolvency-notice-observation-reported-feed-size
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_gazette_insolvency_notice_observation_observed_at_day
+  - fct_gazette_insolvency_notice_observation_average_feed_total
+tableName: fct_gazette_insolvency_notice_observation
+version: 1

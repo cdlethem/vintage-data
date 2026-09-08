@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_carbon_intensity_observed_at_hour
+          yRef:
+            field: fct_carbon_intensity_average_forecast_intensity
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Hour)
+      yAxis:
+      - name: Mean observed forecast intensity
+    layout:
+      xField: fct_carbon_intensity_observed_at_hour
+      yField:
+      - fct_carbon_intensity_average_forecast_intensity
+  type: cartesian
+description: Observation-weighted average forecast intensity in grams of CO2 per kilowatt-hour for each
+  extractor observation hour. This is a reported level rather than an additive quantity, and hours without
+  forecast values are absent from the average.
+metricQuery:
+  dimensions:
+  - fct_carbon_intensity_observed_at_hour
+  exploreName: fct_carbon_intensity
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_carbon_intensity_average_forecast_intensity
+  sorts:
+  - descending: false
+    fieldId: fct_carbon_intensity_observed_at_hour
+  tableCalculations: []
+name: Forecast carbon intensity by observation hour
+slug: fct-carbon-intensity-forecast-intensity
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_carbon_intensity_observed_at_hour
+  - fct_carbon_intensity_average_forecast_intensity
+tableName: fct_carbon_intensity
+version: 1

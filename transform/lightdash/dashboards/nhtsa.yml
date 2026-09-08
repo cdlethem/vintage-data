@@ -1,0 +1,160 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 358c25c5-d357-526a-ac15-cf023aaf2d7b
+    label: 'Nhtsa recall: Manufacturer'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nhtsa_recall_manufacturer
+      tableName: fct_nhtsa_recall
+    values: []
+  - disabled: true
+    id: 29fa8f41-195f-52af-8597-0b8259152311
+    label: 'Nhtsa recall: Component'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nhtsa_recall_component
+      tableName: fct_nhtsa_recall
+    values: []
+  - disabled: true
+    id: ce0b8672-b706-5ce4-af68-bc998353181e
+    label: 'Nhtsa recall: Consequence'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nhtsa_recall_consequence
+      tableName: fct_nhtsa_recall
+    values: []
+  - disabled: true
+    id: 7df121e7-e82b-53f3-8ebc-3906ab6a186d
+    label: 'Nhtsa recall: Park it'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nhtsa_recall_park_it
+      tableName: fct_nhtsa_recall
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Nhtsa
+slug: nhtsa
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly physical history of NHTSA vehicle-recall observations. Each row is one recall identifier
+      as observed by the extractor at a fetched timestamp, with report content and raw-load lineage retained
+      for audit and replay.
+
+
+      **Grain:** recall_id, observed_at
+
+
+      **What changes here:** how recall notices arrive across report months and affected vehicle components.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `nhtsa` — licence: US Government work, public domain; attribution required: False. Source configuration:
+      `extract/sources/nhtsa.yml`.'
+    hideFrame: false
+    title: Nhtsa recall
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Nhtsa recall — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Reported recalls by month
+    chartSlug: fct-nhtsa-recall-reported-recalls
+    hideTitle: false
+    title: Reported recalls by month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Affected components by report month
+    chartSlug: fct-nhtsa-recall-affected-components
+    hideTitle: false
+    title: Affected components by report month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Reported recalls by component
+    chartSlug: fct-nhtsa-recall-recalls-by-component
+    hideTitle: false
+    title: Reported recalls by component
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Park-it recall mix by month
+    chartSlug: fct-nhtsa-recall-park-it-mix
+    hideTitle: false
+    title: Park-it recall mix by month
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Nhtsa recall — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct recall by manufacturer
+    chartSlug: fct-nhtsa-recall
+    hideTitle: false
+    title: Distinct recall by manufacturer
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Nhtsa recall — observations
+    chartSlug: fct-nhtsa-recall-details
+    hideTitle: false
+    title: Nhtsa recall — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

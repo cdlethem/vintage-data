@@ -1,90 +1,44 @@
 #!/usr/bin/env python3
-"""GDELT DOC 2.0 — global news article firehose slices (keyless, JSON).
+"""Fetch GDELT DOC with a persistent 429 circuit breaker. Stdlib only."""
+from __future__ import annotations
+import argparse, json, os, pathlib, sys, urllib.error, urllib.parse, urllib.request
+from datetime import datetime, timedelta, timezone
 
-GDELT monitors worldwide online news in 65 machine-translated languages and
-refreshes every 15 minutes. 'Current' per run = ArtList results for a query
-over the last N minutes (min 15), sorted newest first, plus optionally a
-TimelineVolRaw series (article counts per 15-min bucket) which is the cleanest
-ready-made time series in the entire news space.
-
-Docs-verified 2026-09-02 against the official spec at
-https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/ (endpoint
-api.gdeltproject.org/api/v2/doc/doc). The endpoint is explicitly public and
-keyless; my sandboxed fetcher couldn't hit it only because of a blanket
-robots rule, so smoke-test once from your own machine before wiring in.
-
-Tips:
-  * maxrecords caps at 250 per call; slide STARTDATETIME/ENDDATETIME windows
-    to go deeper. Searchable window: trailing 3 months.
-  * `tone` and `sourcecountry`/`sourcelang` query operators let you build
-    sentiment-by-country time series with zero NLP of your own.
-  * Very short single-word queries can be rejected; quote phrases.
-
-Stdlib only.
-"""
-import json
-import os
-import sys
-import urllib.parse
-import urllib.request
-from datetime import datetime, timezone
-
-BASE = "https://api.gdeltproject.org/api/v2/doc/doc"
-USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
-
-
-def _get(params: dict):
-    url = BASE + "?" + urllib.parse.urlencode(params)
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.load(resp)
-
-
-def fetch_articles(query: str, minutes: int = 15, maxrecords: int = 250):
-    """Newest articles matching `query` from the last `minutes` (>=15)."""
-    data = _get({
-        "query": query,
-        "mode": "ArtList",
-        "format": "json",
-        "sort": "DateDesc",
-        "timespan": f"{max(minutes, 15)}min",
-        "maxrecords": min(maxrecords, 250),
-    })
-    now = datetime.now(timezone.utc).isoformat()
-    for a in data.get("articles", []):
-        yield {
-            "source": "gdelt_doc",
-            "fetched_at": now,
-            "id": a.get("url"),                      # URL is the natural key
-            "published": a.get("seendate"),          # YYYYMMDDTHHMMSSZ
-            "title": a.get("title"),
-            "domain": a.get("domain"),
-            "language": a.get("language"),
-            "sourcecountry": a.get("sourcecountry"),
-            "url": a.get("url"),
-        }
-
-
-def fetch_volume_timeline(query: str, timespan: str = "1d"):
-    """15-min resolution article-count time series for `query`."""
-    data = _get({
-        "query": query, "mode": "TimelineVolRaw",
-        "format": "json", "timespan": timespan,
-    })
-    now = datetime.now(timezone.utc).isoformat()
-    for series in data.get("timeline", []):
-        for point in series.get("data", []):
-            yield {
-                "source": "gdelt_timeline",
-                "fetched_at": now,
-                "query": query,
-                "ts": point.get("date"),
-                "count": point.get("value"),
-                "norm": point.get("norm"),   # total articles GDELT saw that bucket
-            }
-
-
-if __name__ == "__main__":
-    q = sys.argv[1] if len(sys.argv) > 1 else '"artificial intelligence"'
-    for rec in fetch_articles(q, minutes=30):
-        print(json.dumps(rec, ensure_ascii=False))
+BASE="https://api.gdeltproject.org/api/v2/doc/doc"; USER_AGENT=os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1"; PREFIX="VINTAGE_RUN_SUMMARY\t"
+def now(): return datetime.now(timezone.utc)
+def state_path(): return pathlib.Path(os.environ.get("EXTRACT_DATA_ROOT") or "~/.local/share/vintage-data/extract").expanduser()/"state"/"gdelt_doc.json"
+def load_state(path):
+    try: return json.loads(path.read_text())
+    except FileNotFoundError: return {"consecutive_429":0,"next_probe_at":None,"last_status":None,"last_attempt_at":None,"last_success_at":None,"retry_count":0,"cooldown_s":0}
+def save_state(path, state):
+    path.parent.mkdir(parents=True,exist_ok=True); tmp=path.with_suffix(".tmp"); tmp.write_text(json.dumps(state,indent=2)+"\n"); os.replace(tmp,path)
+def _get(query):
+    url=BASE+"?"+urllib.parse.urlencode({"query":query,"mode":"ArtList","format":"json","sort":"DateDesc","timespan":"60min","maxrecords":250})
+    req=urllib.request.Request(url,headers={"User-Agent":USER_AGENT})
+    with urllib.request.urlopen(req,timeout=30) as r: return json.load(r), getattr(r,"status",200)
+def main(argv=None):
+    p=argparse.ArgumentParser(); p.add_argument("--query",default='"artificial intelligence"'); p.add_argument("--state-file"); a=p.parse_args(argv)
+    path=pathlib.Path(a.state_file) if a.state_file else state_path(); state=load_state(path); started=now(); state["last_attempt_at"]=started.isoformat()
+    due=state.get("next_probe_at")
+    if due and started < datetime.fromisoformat(due):
+        print(PREFIX+json.dumps({"health":"open_circuit","completeness":"unknown","records":0,"requests":{"attempted":0},"metrics":{"next_probe_at":due,"cooldown_s":state["cooldown_s"]}}),file=sys.stderr); save_state(path,state); return 0
+    try: data,status=_get(a.query)
+    except urllib.error.HTTPError as exc:
+        state["last_status"]=exc.code
+        if exc.code != 429: save_state(path,state); print(PREFIX+json.dumps({"health":"failed","completeness":"failed","records":0,"requests":{"attempted":1},"error":str(exc)}),file=sys.stderr); return 1
+        n=state["consecutive_429"]+1; retry=exc.headers.get("Retry-After")
+        try: retry_s=max(0,int(float(retry)))
+        except (TypeError,ValueError): retry_s=0
+        cooldown=min(86400,max(retry_s,3600*2**(n-1))); state.update({"consecutive_429":n,"retry_count":state["retry_count"]+1,"cooldown_s":cooldown,"next_probe_at":(started+timedelta(seconds=cooldown)).isoformat()}); save_state(path,state)
+        print(PREFIX+json.dumps({"health":"open_circuit","completeness":"unknown","records":0,"requests":{"attempted":1},"metrics":{"status":429,"cooldown_s":cooldown,"next_probe_at":state["next_probe_at"]}}),file=sys.stderr); return 0
+    except Exception as exc:
+        state["last_status"]="error"; save_state(path,state); print(PREFIX+json.dumps({"health":"failed","completeness":"failed","records":0,"requests":{"attempted":1},"error":str(exc)}),file=sys.stderr); return 1
+    articles=data.get("articles") if isinstance(data,dict) else None
+    if not isinstance(articles,list): print(PREFIX+json.dumps({"health":"failed","completeness":"failed","records":0,"requests":{"attempted":1},"error":"invalid GDELT schema"}),file=sys.stderr); return 1
+    stamp=started.isoformat()
+    for item in articles: print(json.dumps({"source":"gdelt_doc","fetched_at":stamp,"id":item.get("url"),"published":item.get("seendate"),"title":item.get("title"),"domain":item.get("domain"),"language":item.get("language"),"sourcecountry":item.get("sourcecountry"),"url":item.get("url")},ensure_ascii=False))
+    state.update({"last_status":status,"consecutive_429":0,"cooldown_s":3600,"next_probe_at":(started+timedelta(hours=1)).isoformat()})
+    health="healthy" if articles else "degraded"
+    if articles: state["last_success_at"]=stamp
+    save_state(path,state); print(PREFIX+json.dumps({"health":health,"completeness":"complete" if articles else "unknown","records":len(articles),"requests":{"attempted":1}}),file=sys.stderr); return 0
+if __name__=="__main__": raise SystemExit(main())

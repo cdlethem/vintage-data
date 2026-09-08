@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_federal_register_rule_publication_observation_pub_day
+          yRef:
+            field: fct_federal_register_rule_publication_observation_m_a6e4e251
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Publication date (Day)
+      yAxis:
+      - name: Distinct document
+    layout:
+      xField: fct_federal_register_rule_publication_observation_pub_day
+      yField:
+      - fct_federal_register_rule_publication_observation_m_a6e4e251
+  type: cartesian
+description: Distinct `document_id` values on each Federal Register `publication_date`. This is a publication-time
+  flow over three observed dates; dates without publications are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_federal_register_rule_publication_observation_pub_day
+  exploreName: fct_federal_register_rule_publication_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_federal_register_rule_publication_observation_m_a6e4e251
+  sorts:
+  - descending: false
+    fieldId: fct_federal_register_rule_publication_observation_pub_day
+  tableCalculations: []
+name: Documents published per day
+slug: fct-federal-register-rule-publication-observation-published-documents
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_federal_register_rule_publication_observation_pub_day
+  - fct_federal_register_rule_publication_observation_m_a6e4e251
+tableName: fct_federal_register_rule_publication_observation
+version: 1

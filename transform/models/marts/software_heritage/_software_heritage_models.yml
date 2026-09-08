@@ -1,0 +1,307 @@
+version: 2
+models:
+- name: fct_software_heritage_observations
+  description: Physical archive observation fact for Software Heritage origin records. Each row represents
+    one repository observation at one extractor fetch time, with visit summary attributes and raw-load
+    lineage retained for auditability. Duplicate copies of the same source, repository, and fetch timestamp
+    are reduced to the latest loaded record.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: archive_source, repository_id, fetched_at
+      label: Software heritage observations
+      group_label: Software heritage
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: software_heritage_obs_723563
+      vintage:
+        visualization:
+          dimension: has_visits
+          metric: distinct_entities
+          time: fetched_at
+          window_days: 30
+          title: Distinct repository by has visits
+          description: Distinct `repository_id` values by `has_visits` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - fetched_at
+          - repository_id
+          - has_visits
+          - source_loaded_at
+          sources:
+          - '`software_heritage` — licence: unstated; attribution required: False. Source configuration:
+            `extract/sources/software_heritage.yml`.'
+          analysis:
+            headline: how reported repository visit recency, visit volume, and visit-state composition
+              change across the archive's sparse history.
+            event_time: last_visit_at
+            grain: MONTH
+            controls:
+            - has_visits
+            - visit_types
+            trends:
+            - slug: repository-visits
+              kind: total
+              metric: distinct_entities
+              time: last_visit_at
+              grain: MONTH
+              title: Repositories by reported last visit month
+              description: Distinct `repository_id` values whose reported `last_visit_at` falls in each
+                month. This is a sparse history of latest-visit attributes rather than every visit event;
+                months with no reported last visits are absent rather than zero, and null timestamps are
+                excluded.
+              width: half
+            - slug: average-visit-count
+              kind: total
+              metric: average_visit_count
+              time: last_visit_at
+              grain: MONTH
+              title: Average reported visits by last visit month
+              description: Average reported `visit_count` for repository observations grouped by their
+                `last_visit_at` month. This observation-weighted measure can be influenced by polling
+                frequency and is sparse — months with no non-null last visits are absent rather than zero.
+              width: half
+            - slug: visit-state-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: has_visits
+              top_n: 2
+              time: fetched_at
+              grain: DAY
+              title: Repositories by visit state on fetch day
+              description: Distinct `repository_id` values per extractor `fetched_at` day, stacked by
+                `has_visits`. Both boolean states are shown; this is a five-day catalogue mix rather
+                than a count of visits, and days with no successful fetch are absent rather than zero.
+              width: full
+            - slug: fetched-repository-level
+              kind: total
+              metric: distinct_entities
+              time: fetched_at
+              grain: DAY
+              title: Repositories fetched each day
+              description: Distinct `repository_id` values present at each extractor `fetched_at` day.
+                This collection-time series is a five-day catalogue level, not repository activity
+                history; days without a successful fetch are absent rather than zero.
+              width: full
+  columns:
+  - name: software_heritage_observation_key
+    description: Stable hash of the archive source, repository identifier, and fetch timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Software heritage observation key
+          hidden: true
+          name: software_heritage_obs_723563
+  - name: archive_source
+    description: Software Heritage source identifier reported by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Archive source
+          hidden: false
+  - name: repository_id
+    description: Repository or origin identifier reported by Software Heritage, normally its canonical
+      URL.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct repository
+            description: Distinct `repository_id` values by `has_visits` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Repository id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp when the extractor fetched this repository observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: repository_url
+    description: Repository URL returned by Software Heritage for the observed origin.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Repository url
+          hidden: false
+  - name: visit_types
+    description: JSON array of visit types recorded for the repository observation.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Visit types
+          hidden: false
+          sql: CAST(${TABLE}.visit_types AS VARCHAR)
+  - name: has_visits
+    description: Whether Software Heritage reports at least one visit for the repository.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Has visits
+          hidden: false
+  - name: visit_count
+    description: Number of visits reported for the repository observation.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_visit_count:
+            type: average
+            label: Average reported visits
+            description: Average `visit_count` across repository observations in the selected time and
+              breakdown. This observation-weighted measure can be influenced by polling frequency.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Visit count
+          hidden: false
+          format: '#,##0'
+  - name: last_visit_at
+    description: UTC timestamp of the most recent visit reported by Software Heritage, when available.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Last visit at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the repository observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the observation within its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load job that inserted the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the source row.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw record content used for lineage and deduplication.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

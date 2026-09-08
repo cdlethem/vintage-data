@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_musicbrainz_release_observation_observed_at_day
+          yRef:
+            field: fct_musicbrainz_release_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct release
+    layout:
+      xField: fct_musicbrainz_release_observation_observed_at_day
+      yField:
+      - fct_musicbrainz_release_observation_distinct_entities
+  type: cartesian
+description: Distinct `release_id` values present in each daily MusicBrainz search observation. This is
+  a polled catalogue level rather than a flow of newly released records; days without a successful poll
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_musicbrainz_release_observation_observed_at_day
+  exploreName: fct_musicbrainz_release_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_musicbrainz_release_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_musicbrainz_release_observation_observed_at_day
+  tableCalculations: []
+name: Distinct releases observed per day
+slug: fct-musicbrainz-release-observation-observed-releases
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_musicbrainz_release_observation_observed_at_day
+  - fct_musicbrainz_release_observation_distinct_entities
+tableName: fct_musicbrainz_release_observation
+version: 1

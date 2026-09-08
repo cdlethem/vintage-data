@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical observation fact for MLB schedule records. Each row is one observed game snapshot
+  at the StatsAPI fetch timestamp, retaining the scheduled game, participating teams, status, scores,
+  venue, probable pitchers, and raw-load lineage. The source does not expose player-level statistics,
+  so this model intentionally has no player grain.
+metricQuery:
+  dimensions: &id001
+  - fct_mlb_statsapi_game_observations_observed_at
+  - fct_mlb_statsapi_game_observations_game_id
+  - fct_mlb_statsapi_game_observations_game_status
+  - fct_mlb_statsapi_game_observations_source_loaded_at
+  exploreName: fct_mlb_statsapi_game_observations
+  filters:
+    dimensions:
+      and:
+      - id: bc9d24d4-b35c-53f3-aac2-ec91ffae8f97
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_mlb_statsapi_game_observations_observed_at
+        values:
+        - 30
+      id: 2245e056-aa5d-5171-9d6f-523b64e66745
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_mlb_statsapi_game_observations_observed_at
+  tableCalculations: []
+name: Mlb statsapi game observations — observations
+slug: fct-mlb-statsapi-game-observations-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_mlb_statsapi_game_observations
+version: 1

@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical observation fact for Wikimedia recent changes. Each row is one Wikimedia
+  source, change identifier, and extractor observation timestamp, retaining the event payload and raw-load
+  lineage. Replayed copies of the same observation are reduced to the latest loaded row; this model preserves
+  the source feed's event history and does not infer later edits or repair omitted API fields.
+metricQuery:
+  dimensions: &id001
+  - fct_wikimedia_change_observation_observed_at
+  - fct_wikimedia_change_observation_change_id
+  - fct_wikimedia_change_observation_change_type
+  - fct_wikimedia_change_observation_source_loaded_at
+  exploreName: fct_wikimedia_change_observation
+  filters:
+    dimensions:
+      and:
+      - id: b78a3932-e265-5c2a-b22e-0f4a506e74b5
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_wikimedia_change_observation_observed_at
+        values:
+        - 30
+      id: 89acb82b-3ce1-52d5-930c-a98838b01c4b
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_wikimedia_change_observation_observed_at
+  tableCalculations: []
+name: Wikimedia change observation — observations
+slug: fct-wikimedia-change-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_wikimedia_change_observation
+version: 1

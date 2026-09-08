@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_codeforces_submission_observation_submitted_at_day
+          yRef:
+            field: fct_codeforces_submission_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Submitted at (Day)
+      yAxis:
+      - name: Distinct submission
+    layout:
+      xField: fct_codeforces_submission_observation_submitted_at_day
+      yField:
+      - fct_codeforces_submission_observation_distinct_entities
+  type: cartesian
+description: Distinct `submission_id` values by Codeforces `submitted_at` day. This is a submission flow
+  rather than a catalogue level; days with no submissions are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_codeforces_submission_observation_submitted_at_day
+  exploreName: fct_codeforces_submission_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_codeforces_submission_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_codeforces_submission_observation_submitted_at_day
+  tableCalculations: []
+name: Submissions made per day
+slug: fct-codeforces-submission-observation-daily-submissions
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_codeforces_submission_observation_submitted_at_day
+  - fct_codeforces_submission_observation_distinct_entities
+tableName: fct_codeforces_submission_observation
+version: 1

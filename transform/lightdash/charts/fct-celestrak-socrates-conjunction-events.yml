@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_celestrak_socrates_conjunction_events_object_name_1
+          yRef:
+            field: fct_celestrak_socrates_conjunction_events_max_max_probability
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_celestrak_socrates_conjunction_events_object_name_1
+      yField:
+      - fct_celestrak_socrates_conjunction_events_max_max_probability
+  type: cartesian
+description: Maximum observed max probability by `object_name_1` in the selected observation window. Maximum
+  predicted collision probability reported for the conjunction event. Uses the largest retained value
+  within each group and window, not the latest value or a sum of snapshots.
+metricQuery:
+  dimensions:
+  - fct_celestrak_socrates_conjunction_events_object_name_1
+  exploreName: fct_celestrak_socrates_conjunction_events
+  filters:
+    dimensions:
+      and:
+      - id: e480191b-0556-57f7-a073-b6f9cc3a9a1c
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_celestrak_socrates_conjunction_events_observed_at
+        values:
+        - 30
+      id: 303f6d5a-832e-51b5-a03a-6fb39b96a657
+  limit: 20
+  metrics:
+  - fct_celestrak_socrates_conjunction_events_max_max_probability
+  sorts:
+  - descending: true
+    fieldId: fct_celestrak_socrates_conjunction_events_max_max_probability
+  tableCalculations: []
+name: Maximum observed max probability by object name 1
+slug: fct-celestrak-socrates-conjunction-events
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_celestrak_socrates_conjunction_events_object_name_1
+  - fct_celestrak_socrates_conjunction_events_max_max_probability
+tableName: fct_celestrak_socrates_conjunction_events
+version: 1

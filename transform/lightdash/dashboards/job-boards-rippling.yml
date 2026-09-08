@@ -1,0 +1,172 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: ccc75605-9c8c-5c1a-814e-0c1d71469f3d
+    label: 'Job boards rippling: Company country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_rippling_company_country
+      tableName: fct_job_boards_rippling
+    values: []
+  - disabled: true
+    id: 364c96c4-b1bb-5079-b2a7-cf1b0d9cfd5c
+    label: 'Job boards rippling: Company industry'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_rippling_company_industry
+      tableName: fct_job_boards_rippling
+    values: []
+  - disabled: true
+    id: 088fb07f-578f-5d35-9e93-4d85fe6afb96
+    label: 'Job boards rippling: Department'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_rippling_department
+      tableName: fct_job_boards_rippling
+    values: []
+  - disabled: true
+    id: 26fb8b47-7ae5-502d-817c-104215b52862
+    label: 'Job boards rippling: Location country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_rippling_location_country
+      tableName: fct_job_boards_rippling
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Boards Rippling
+slug: job-boards-rippling
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of job observations returned by named-company Rippling applicant-tracking-system
+      boards. Each row represents one upstream source, job identifier, and extractor observation timestamp;
+      repeated raw copies of an observation are reduced to the latest loaded lineage record while listing
+      attributes and load metadata remain available for audit and replay.
+
+
+      **Grain:** source, job_id, observed_at
+
+
+      **What changes here:** how the published Rippling catalogue level and its mix by industry and country
+      change across observations.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_boards_rippling` — licence: public ATS board endpoints; attribution required: False. Source
+      configuration: `extract/sources/job_boards_rippling.yml`.'
+    hideFrame: false
+    title: Job boards rippling
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards rippling — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Jobs present in the catalogue per observation day
+    chartSlug: fct-job-boards-rippling-observed-jobs
+    hideTitle: false
+    title: Jobs present in the catalogue per observation day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Hiring companies present per observation day
+    chartSlug: fct-job-boards-rippling-observed-companies
+    hideTitle: false
+    title: Hiring companies present per observation day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Published jobs per observation day by industry
+    chartSlug: fct-job-boards-rippling-jobs-by-industry
+    hideTitle: false
+    title: Published jobs per observation day by industry
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Published job mix by company country
+    chartSlug: fct-job-boards-rippling-catalogue-mix-by-country
+    hideTitle: false
+    title: Published job mix by company country
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Hiring-company mix by department
+    chartSlug: fct-job-boards-rippling-departments-observed
+    hideTitle: false
+    title: Hiring-company mix by department
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards rippling — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-boards-rippling
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Job boards rippling — observations
+    chartSlug: fct-job-boards-rippling-details
+    hideTitle: false
+    title: Job boards rippling — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_thames_discharge_status_changed_at_month
+          yRef:
+            field: fct_thames_discharge_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Status changed at (Month)
+      yAxis:
+      - name: Distinct discharge
+    layout:
+      xField: fct_thames_discharge_status_changed_at_month
+      yField:
+      - fct_thames_discharge_distinct_entities
+  type: cartesian
+description: Distinct `discharge_id` values by source `status_changed_at` month across the published history.
+  This is an event-time flow of reported status changes, not the number currently discharging; months
+  with no reported changes are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_thames_discharge_status_changed_at_month
+  exploreName: fct_thames_discharge
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_thames_discharge_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_thames_discharge_status_changed_at_month
+  tableCalculations: []
+name: Discharge status changes per month
+slug: fct-thames-discharge-status-changes
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_thames_discharge_status_changed_at_month
+  - fct_thames_discharge_distinct_entities
+tableName: fct_thames_discharge
+version: 1

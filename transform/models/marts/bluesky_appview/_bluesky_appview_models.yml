@@ -1,0 +1,369 @@
+version: 2
+models:
+- name: fct_bluesky_appview_post_observation
+  description: Twice-hourly physical observation fact for posts returned by the Bluesky AppView feed.
+    Each row represents one post URI at one extractor observation timestamp, retaining the engagement
+    snapshot, post text metadata, and raw-load lineage. The incremental table preserves the append-only
+    observation history without rescanning prior raw snapshots on each 15-minute load. Repeated raw copies
+    of the same observation are reduced to the latest loaded row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, post_uri, observed_at
+      label: Bluesky appview post observation
+      group_label: Bluesky appview
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: bluesky_appview_pos_32be6e
+      vintage:
+        visualization:
+          dimension: author_handle
+          metric: average_like_count
+          time: observed_at
+          window_days: 30
+          title: Mean observed like count by author handle
+          description: Mean observed like count by `author_handle` in the selected observation window.
+            Number of likes reported for the post at observation time. Each retained observation has equal
+            weight; polling frequency and repeated snapshots can affect the mean. This is not a latest-value
+            measure or an additive total.
+          detail_fields:
+          - observed_at
+          - bluesky_appview_post_observation_key
+          - author_handle
+          - like_count
+          - source_loaded_at
+          sources:
+          - '`bluesky_appview` — licence: Bluesky/AT Protocol — public posts; attribution required: False.
+            Source configuration: `extract/sources/bluesky_appview.yml`.'
+          analysis:
+            headline: how the observed Bluesky catalogue and engagement levels change across posts' creation
+              dates and polling days.
+            event_time: created_at
+            grain: DAY
+            controls:
+            - author_handle
+            - source_name
+            trends:
+            - slug: observed-posts
+              kind: total
+              metric: distinct_posts
+              time: observed_at
+              grain: DAY
+              title: Distinct posts observed per day
+              description: Distinct `post_uri` values present in each extractor observation day. This is a
+                five-day catalogue level with repeated engagement snapshots, not a publication flow; days
+                without a successful extract are absent rather than zero.
+              width: half
+            - slug: observed-engagement
+              kind: total
+              metric: average_like_count
+              time: observed_at
+              grain: DAY
+              title: Mean observed likes per polling day
+              description: Mean reported `like_count` across retained post snapshots for each observation
+                day. Each snapshot has equal weight, so polling frequency and repeated snapshots can bias
+                the level; days without observations are absent rather than zero.
+              width: half
+            - slug: created-posts
+              kind: total
+              metric: distinct_posts
+              time: created_at
+              grain: DAY
+              title: Distinct posts by creation day
+              description: Distinct `post_uri` values by the source `created_at` day. The retained history
+                covers 25 populated days across five months and is sparse; days without posts are absent
+                rather than zero.
+              width: half
+            - slug: author-engagement
+              kind: breakdown
+              metric: average_like_count
+              breakdown: author_handle
+              top_n: 8
+              time: created_at
+              grain: DAY
+              title: Mean likes by leading author and creation day
+              description: Mean reported `like_count` for each creation day, split across the eight authors
+                with the largest post totals. Remaining authors are excluded rather than aggregated, and
+                sparse creation days are absent rather than zero.
+              width: full
+            - slug: author-mix
+              kind: composition
+              metric: distinct_posts
+              breakdown: author_handle
+              top_n: 8
+              time: created_at
+              grain: DAY
+              title: Post mix by author and creation day
+              description: Distinct `post_uri` values stacked by `author_handle` and source creation day.
+                All eight observed authors fit the bounded pivot; this shows mix, not cumulative author
+                output, and dates without posts are absent rather than zero.
+              width: full
+  columns:
+  - name: bluesky_appview_post_observation_key
+    description: Stable hash of the source label, post URI, and observation timestamp defining the row
+      grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Bluesky appview post observation key
+          hidden: true
+          name: bluesky_appview_pos_32be6e
+  - name: source_name
+    description: Upstream source label reported by the Bluesky AppView record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: post_uri
+    description: AT URI identifying the observed Bluesky post.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_posts:
+            type: count_distinct
+            label: Distinct posts
+            description: Distinct `post_uri` values represented by retained AppView observations in each
+              time bucket. Repeated engagement snapshots of one post count once within each bucket.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Post uri
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the post in the AppView response.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: author_handle
+    description: Bluesky handle or service identifier attributed to the post author.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Author handle
+          hidden: false
+  - name: created_at
+    description: UTC timestamp when the post was created according to Bluesky.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Created at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: post_text
+    description: Text body of the post as returned by the AppView.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Post text
+          hidden: true
+  - name: languages
+    description: JSON array of language codes associated with the post.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Languages
+          hidden: true
+          sql: CAST(${TABLE}.languages AS VARCHAR)
+  - name: like_count
+    description: Number of likes reported for the post at observation time.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_like_count:
+            type: average
+            label: Mean observed like count
+            description: Mean observed like count by `author_handle` in the selected observation window.
+              Number of likes reported for the post at observation time. Each retained observation has
+              equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+              a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Like count
+          hidden: false
+          format: '#,##0'
+  - name: repost_count
+    description: Number of reposts reported for the post at observation time.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Repost count
+          hidden: false
+          format: '#,##0'
+  - name: reply_count
+    description: Number of replies reported for the post at observation time.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Reply count
+          hidden: false
+          format: '#,##0'
+  - name: quote_count
+    description: Number of quote posts reported for the post at observation time.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Quote count
+          hidden: false
+          format: '#,##0'
+  - name: bookmark_count
+    description: Number of bookmarks reported for the post at observation time.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Bookmark count
+          hidden: false
+          format: '#,##0'
+  - name: source_row_id
+    description: Raw warehouse row identifier for the retained post observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that produced the retained post observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained post observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Raw partition date assigned by the load layer for the retained observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction began for the retained post observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_load_id
+    description: Identifier of the load operation that inserted the retained post observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained post observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw post observation content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

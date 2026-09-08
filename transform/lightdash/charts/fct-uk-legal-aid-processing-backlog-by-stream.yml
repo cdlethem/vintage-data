@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_legal_aid_processing_current_processing_date_day
+          yRef:
+            field: fct_uk_legal_aid_processing_m_1e33419f
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Current processing date (Day)
+      yAxis:
+      - name: Mean observed backlog older than current processing date pct
+    layout:
+      xField: fct_uk_legal_aid_processing_current_processing_date_day
+      yField:
+      - fct_uk_legal_aid_processing_m_1e33419f
+  type: cartesian
+description: Mean non-null backlog proportion by current processing date, split across the three processing
+  streams. The percentage is not summed across streams and missing stream dates are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_uk_legal_aid_processing_current_processing_date_day
+  - fct_uk_legal_aid_processing_processing_stream
+  exploreName: fct_uk_legal_aid_processing
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_uk_legal_aid_processing_m_1e33419f
+  sorts:
+  - descending: true
+    fieldId: fct_uk_legal_aid_processing_m_1e33419f
+  - descending: false
+    fieldId: fct_uk_legal_aid_processing_current_processing_date_day
+  tableCalculations: []
+name: Backlog proportion by processing stream
+pivotConfig:
+  columns:
+  - fct_uk_legal_aid_processing_processing_stream
+slug: fct-uk-legal-aid-processing-backlog-by-stream
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_legal_aid_processing_current_processing_date_day
+  - fct_uk_legal_aid_processing_processing_stream
+  - fct_uk_legal_aid_processing_m_1e33419f
+tableName: fct_uk_legal_aid_processing
+version: 1

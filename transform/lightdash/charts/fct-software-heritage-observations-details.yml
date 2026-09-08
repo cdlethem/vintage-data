@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical archive observation fact for Software Heritage origin records. Each row represents
+  one repository observation at one extractor fetch time, with visit summary attributes and raw-load lineage
+  retained for auditability. Duplicate copies of the same source, repository, and fetch timestamp are
+  reduced to the latest loaded record.
+metricQuery:
+  dimensions: &id001
+  - fct_software_heritage_observations_fetched_at
+  - fct_software_heritage_observations_repository_id
+  - fct_software_heritage_observations_has_visits
+  - fct_software_heritage_observations_source_loaded_at
+  exploreName: fct_software_heritage_observations
+  filters:
+    dimensions:
+      and:
+      - id: d69a5b6b-351f-53c4-9897-dc40d4a0dc04
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_software_heritage_observations_fetched_at
+        values:
+        - 30
+      id: 09d6589f-18a9-51a7-9291-e7e24ec88ebf
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_software_heritage_observations_fetched_at
+  tableCalculations: []
+name: Software heritage observations — observations
+slug: fct-software-heritage-observations-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_software_heritage_observations
+version: 1

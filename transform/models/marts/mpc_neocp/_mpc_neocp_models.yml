@@ -1,0 +1,382 @@
+version: 2
+models:
+- name: fct_mpc_neocp_candidate_observation
+  description: Twice-hourly physical history of Minor Planet Center near-Earth-object candidate reports.
+    Each row is one candidate identifier observed at one upstream fetch timestamp, with parsed numeric
+    discovery measures and raw load lineage retained for replay and audit. Rows are deduplicated by the
+    candidate observation grain, retaining the latest loaded copy.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, candidate_id, observed_at
+      label: Mpc neocp candidate observation
+      group_label: Mpc neocp
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: mpc_neocp_candidate__009bee
+      vintage:
+        visualization:
+          dimension: temporary_designation
+          metric: average_visual_magnitude
+          time: observed_at
+          window_days: 30
+          title: Mean observed visual magnitude by temporary designation
+          description: Mean observed visual magnitude by `temporary_designation` in the selected observation
+            window. Approximate visual magnitude reported for the candidate. Each retained observation
+            has equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+            a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - candidate_id
+          - temporary_designation
+          - visual_magnitude
+          - source_loaded_at
+          sources:
+          - '`mpc_neocp` — licence: MPC (Minor Planet Center); attribution required: True. Source configuration:
+            `extract/sources/mpc_neocp.yml`.'
+          analysis:
+            headline: how the published candidate catalogue and its reported brightness change across
+              collection days.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - discovery
+            - note
+            - update_description
+            trends:
+            - slug: candidate-level
+              kind: total
+              metric: distinct_candidates
+              time: observed_at
+              grain: DAY
+              title: Distinct candidates observed per day
+              description: Distinct `candidate_id` values present on each extractor observation day. This is
+                a catalogue level rather than a discovery flow because the feed republishes candidates;
+                changes reflect additions or withdrawals. Days with no successful extract are absent rather
+                than zero.
+              width: half
+            - slug: brightness-level
+              kind: total
+              metric: average_visual_magnitude
+              time: observed_at
+              grain: DAY
+              title: Mean visual magnitude per observation day
+              description: Average reported `visual_magnitude` across candidate snapshots on each collection
+                day. Each retained observation has equal weight, so irregular polling and repeated snapshots
+                can influence the level; lower magnitudes indicate brighter objects. Missing days are absent.
+              width: half
+            - slug: discovery-composition
+              kind: composition
+              metric: distinct_candidates
+              breakdown: discovery
+              top_n: 8
+              time: observed_at
+              grain: DAY
+              title: Candidate catalogue mix by discovery report
+              description: Distinct `candidate_id` values per observation day stacked by the eight most
+                prevalent `discovery` report values. This is a snapshot composition, not a count of new
+                discoveries; remaining discovery values are excluded rather than aggregated.
+              width: full
+            - slug: note-brightness
+              kind: breakdown
+              metric: average_visual_magnitude
+              breakdown: note
+              top_n: 3
+              time: observed_at
+              grain: DAY
+              title: Mean visual magnitude by candidate note
+              description: Average reported `visual_magnitude` per collection day, pivoted by the three
+                observed `note` values. Repeated snapshots have equal weight and blank notes are retained as
+                a category; the lines are brightness levels, not additive totals.
+              width: full
+  columns:
+  - name: mpc_neocp_candidate_observation_key
+    description: Stable hash of the upstream source, candidate identifier, and observed timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Mpc neocp candidate observation key
+          hidden: true
+          name: mpc_neocp_candidate__009bee
+  - name: source
+    description: Upstream feed identifier that supplied the near-Earth-object candidate report.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: candidate_id
+    description: Identifier assigned by the upstream near-Earth-object candidate feed.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_candidates:
+            type: count_distinct
+            label: Distinct candidate
+            description: Distinct `candidate_id` values present per observation period. Repeated snapshots of
+              the same candidate count once within each period, measuring catalogue breadth rather than row
+              volume.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Candidate id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the upstream candidate feed was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: temporary_designation
+    description: Temporary designation assigned to the candidate by the upstream feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Temporary designation
+          hidden: false
+  - name: discovery_score
+    description: Integer discovery score reported for the candidate.
+    data_type: integer
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Discovery score
+          hidden: false
+          format: '#,##0'
+  - name: discovery
+    description: Discovery date and fractional day text reported by the upstream feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Discovery
+          hidden: false
+  - name: right_ascension
+    description: Right ascension text reported for the candidate, in the upstream feed's hour and minute
+      format.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Right ascension
+          hidden: false
+  - name: declination
+    description: Declination text reported for the candidate, including its sign and degree-minute format.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Declination
+          hidden: false
+  - name: visual_magnitude
+    description: Approximate visual magnitude reported for the candidate.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_visual_magnitude:
+            type: average
+            label: Mean observed visual magnitude
+            description: Mean observed visual magnitude by `temporary_designation` in the selected observation
+              window. Approximate visual magnitude reported for the candidate. Each retained observation
+              has equal weight; polling frequency and repeated snapshots can affect the mean. This is
+              not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Visual magnitude
+          hidden: false
+          format: '#,##0.00'
+  - name: update_description
+    description: Upstream text describing when the candidate was added or updated.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Update description
+          hidden: false
+  - name: note
+    description: Free-form note supplied for the candidate by the upstream feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Note
+          hidden: false
+  - name: observation_count
+    description: Number of observations reported for the candidate.
+    data_type: integer
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Observation count
+          hidden: false
+          format: '#,##0'
+  - name: observation_arc_days
+    description: Observation arc length in days reported for the candidate.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Observation arc days
+          hidden: false
+          format: '#,##0.00'
+  - name: absolute_magnitude
+    description: Absolute magnitude reported for the candidate.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Absolute magnitude
+          hidden: false
+          format: '#,##0.00'
+  - name: days_since_last_seen
+    description: Number of days since the candidate was last seen, as reported by the upstream feed.
+    data_type: double
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Days since last seen
+          hidden: false
+          format: '#,##0.00'
+  - name: source_row_id
+    description: Raw row identifier retained for exact source-row lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the raw load batch that supplied this candidate observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing this candidate observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of this candidate observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Raw partition date associated with this candidate observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source file started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load operation that inserted this candidate observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this candidate observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw candidate observation content for lineage and replay.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

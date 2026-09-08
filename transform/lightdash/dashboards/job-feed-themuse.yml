@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: b1ad9609-d343-5a01-8bca-a7544222c87a
+    label: 'Job feed themuse: Company'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_themuse_company
+      tableName: fct_job_feed_themuse
+    values: []
+  - disabled: true
+    id: 52edf3dc-4c1a-561b-80cd-5259774f9d14
+    label: 'Job feed themuse: Department'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_themuse_department
+      tableName: fct_job_feed_themuse
+    values: []
+  - disabled: true
+    id: 134a2a8d-ffe7-54c1-8a37-7ab4b801b78b
+    label: 'Job feed themuse: Experience level'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_themuse_experience_level
+      tableName: fct_job_feed_themuse
+    values: []
+  - disabled: true
+    id: b3c3d35f-d0af-5cc7-be5e-50aa9e75d297
+    label: 'Job feed themuse: Location country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_themuse_location_country
+      tableName: fct_job_feed_themuse
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Feed Themuse
+slug: job-feed-themuse
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of The Muse job observations. Each row represents one The Muse job
+      identifier from one extractor response at an observed timestamp; repeated raw ingestion of the same
+      observation is reduced to the latest loaded copy while load-layer lineage remains available for
+      audit and replay.
+
+
+      **Grain:** source, job_id, observed_at
+
+
+      **What changes here:** how The Muse''s published job volume and hiring mix shift month by month
+      across departments and experience levels.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_feed_themuse` — licence: public The Muse jobs API; attribution required: True. Source configuration:
+      `extract/sources/job_feed_themuse.yml`.'
+    hideFrame: false
+    title: Job feed themuse
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed themuse — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Jobs by publisher posted month
+    chartSlug: fct-job-feed-themuse-monthly-postings
+    hideTitle: false
+    title: Jobs by publisher posted month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Jobs present in the catalogue each day
+    chartSlug: fct-job-feed-themuse-catalogue-level
+    hideTitle: false
+    title: Jobs present in the catalogue each day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Published jobs by leading department
+    chartSlug: fct-job-feed-themuse-department-volume
+    hideTitle: false
+    title: Published jobs by leading department
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Hiring-company mix by posted month and experience level
+    chartSlug: fct-job-feed-themuse-experience-mix
+    hideTitle: false
+    title: Hiring-company mix by posted month and experience level
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed themuse — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-feed-themuse
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Job feed themuse — observations
+    chartSlug: fct-job-feed-themuse-details
+    hideTitle: false
+    title: Job feed themuse — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

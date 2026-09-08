@@ -1,0 +1,338 @@
+version: 2
+models:
+- name: fct_sec_edgar_filing_observation
+  description: Hourly physical observation fact for SEC EDGAR filing-party records. Each row is one accession
+    number, party role, CIK, and extractor observation timestamp; repeated raw copies of the same observation
+    are reduced to the latest loaded copy while source and load lineage remain available for audit and
+    replay.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: accession_number, party_role, cik, observed_at
+      label: Sec edgar filing observation
+      group_label: Sec edgar
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: sec_edgar_filing_observ_f02ed0
+      vintage:
+        visualization:
+          dimension: form_type
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct filing party by form type
+          description: Distinct `filing_party_id` values by `form_type` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - filing_party_id
+          - form_type
+          - source_loaded_at
+          sources:
+          - '`sec_edgar` — licence: US Government work, public domain; attribution required: False. Source
+            configuration: `extract/sources/sec_edgar.yml`.'
+          analysis:
+            headline: how filing activity and represented parties shift across filed dates and SEC form roles.
+            event_time: filed_date
+            grain: DAY
+            controls:
+            - form_type
+            - party_role
+            - filing_size
+            trends:
+            - slug: filed-filings
+              kind: total
+              metric: distinct_filings
+              time: filed_date
+              grain: DAY
+              title: Distinct filings by filed day
+              description: Distinct `accession_number` values whose `filed_date` falls on each calendar day.
+                This is a filing flow over six populated dates, not a collection-time level; dates with no
+                source filings are absent rather than zero.
+              width: half
+            - slug: filed-parties
+              kind: total
+              metric: distinct_entities
+              time: filed_date
+              grain: DAY
+              title: Distinct filing parties by filed day
+              description: Distinct `filing_party_id` values represented by filings on each filed day.
+                Party rows can repeat across roles and accessions, so this is not an additive row count; days
+                with no filings are absent rather than zero.
+              width: half
+            - slug: role-trajectory
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: party_role
+              top_n: 7
+              time: filed_date
+              grain: DAY
+              title: Distinct parties by filing role and filed day
+              description: Distinct filing parties per filed day split by party role. All seven observed roles
+                are shown; the lines compare role trajectories, and a party represented in multiple roles is
+                intentionally counted in each role rather than treated as additive.
+              width: full
+            - slug: form-mix
+              kind: composition
+              metric: distinct_filings
+              breakdown: form_type
+              top_n: 8
+              time: filed_date
+              grain: DAY
+              title: Filing mix by SEC form type and filed day
+              description: Distinct accessions per filed day stacked by the eight largest form types. The
+                remaining form types are excluded rather than aggregated; stacked bars show the bursty mix
+                without implying that absent dates are zero.
+              width: full
+  columns:
+  - name: sec_edgar_filing_observation_key
+    description: Stable hash of the accession number, party role, CIK, and observed timestamp defining
+      the fact grain.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Sec edgar filing observation key
+          hidden: true
+          name: sec_edgar_filing_observ_f02ed0
+  - name: source_relation
+    description: Raw relation name that supplied the SEC EDGAR record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source relation
+          hidden: false
+  - name: source_name
+    description: Upstream source label carried by the SEC EDGAR extract record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: source_row_id
+    description: Stable load-layer row identifier for the retained raw SEC EDGAR record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: filing_party_id
+    description: Source identifier for the filing-party record, typically combining accession number,
+      party role, and CIK.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct filing party
+            description: Distinct `filing_party_id` values by `form_type` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Filing party id
+          hidden: false
+  - name: accession_number
+    description: SEC accession number identifying the filing submission.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Accession number
+          hidden: false
+        metrics:
+          distinct_filings:
+            type: count_distinct
+            label: Distinct filings
+            description: Distinct `accession_number` values in each observation group. Party-role rows can
+              repeat an accession, so this avoids counting the same filing once per represented party.
+            format: '#,##0'
+  - name: party_role
+    description: Role of the CIK or named party in the filing, such as Issuer, Filer, Reporting, or Subject.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Party role
+          hidden: false
+  - name: cik
+    description: SEC Central Index Key identifying the filing party.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Cik
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the SEC EDGAR filing-party record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: form_type
+    description: SEC form type reported for the filing, such as 4, 144, or 10-K.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Form type
+          hidden: false
+  - name: party_name
+    description: Name of the filing party as reported by SEC EDGAR.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Party name
+          hidden: false
+  - name: filed_date
+    description: Calendar date on which the filing was submitted to the SEC.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Filed date
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: filing_size
+    description: Human-readable filing size reported by SEC EDGAR.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Filing size
+          hidden: false
+  - name: updated_at
+    description: UTC timestamp when SEC EDGAR reported the filing record was updated.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: filing_url
+    description: SEC archive URL for the filing index page.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Filing url
+          hidden: false
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained SEC EDGAR record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load operation that inserted the retained SEC EDGAR record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing the retained SEC EDGAR record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained record in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained SEC EDGAR record into the raw
+      warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Load-layer hash of the retained SEC EDGAR record for replay and lineage auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

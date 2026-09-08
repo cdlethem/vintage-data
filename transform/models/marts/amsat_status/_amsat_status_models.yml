@@ -1,0 +1,350 @@
+version: 2
+models:
+- name: fct_amsat_status_observations
+  description: Twice-hourly physical history of amateur-radio satellite status reports. Each row represents
+    one source satellite report identified by its upstream source, report identifier, and fetched_at observation
+    timestamp. Duplicate raw observations are reduced to the latest loaded record while raw-load lineage
+    is retained for replay and audit.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, observation_id, fetched_at
+      label: Amsat status observations
+      group_label: Amsat status
+      default_time_dimension:
+        field: fetched_at
+        interval: DAY
+      primary_key: amsat_status_observation_key
+      vintage:
+        visualization:
+          dimension: satellite_name
+          metric: distinct_entities
+          time: fetched_at
+          window_days: 30
+          title: Distinct observation by satellite name
+          description: Distinct `observation_id` values by `satellite_name` among observations in the
+            selected window. Repeated observations of an entity count once within each group. An entity
+            that changed category can appear in multiple groups; these groups are not additive and do
+            not represent a current-state census.
+          detail_fields:
+          - fetched_at
+          - observation_id
+          - satellite_name
+          - source_loaded_at
+          sources:
+          - '`amsat_status` — licence: unstated; attribution required: False. Source configuration: `extract/sources/amsat_status.yml`.'
+          analysis:
+            headline: how reported satellite statuses and their radio periods change through the five-day feed
+              history.
+            event_time: reported_time
+            grain: HOUR
+            controls:
+            - satellite_name
+            - satellite_display_name
+            - report
+            trends:
+            - slug: reported-observations
+              kind: total
+              metric: distinct_entities
+              time: reported_time
+              grain: HOUR
+              title: Distinct satellite reports by reported hour
+              description: Distinct `observation_id` values by the hour the upstream feed reported them.
+                This is a short five-day event-time history rather than a long-run publication flow; hours
+                without reports are absent rather than zero.
+              width: half
+            - slug: average-period
+              kind: total
+              metric: average_period
+              time: reported_time
+              grain: HOUR
+              title: Mean report period by reported hour
+              description: Average upstream `period` value among reports at each reported hour. This is a
+                reported-measure level, not an additive total; hours without reports are absent rather than
+                zero.
+              width: half
+            - slug: reporting-callsigns
+              kind: total
+              metric: distinct_callsigns
+              time: reported_time
+              grain: HOUR
+              title: Distinct reporting callsigns by hour
+              description: Distinct non-null `callsign` values represented in each reported-time hour.
+                This tracks reporting identities rather than unique satellite observations; hours without
+                reports are absent rather than zero.
+              width: half
+            - slug: satellite-reporters
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: satellite_name
+              top_n: 6
+              time: reported_time
+              grain: HOUR
+              title: Leading satellites by reported hour
+              description: Distinct `observation_id` values per reported hour for the six satellites with
+                the largest totals in this window. The remainder is excluded rather than aggregated, so
+                changing membership can look like a trend.
+              width: full
+            - slug: report-status-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: report
+              top_n: 3
+              time: reported_time
+              grain: HOUR
+              title: Report status mix by reported hour
+              description: Distinct `observation_id` values stacked by upstream `report` status for each
+                reported hour. All three observed statuses fit in the composition; hours without reports
+                are absent rather than zero.
+              width: full
+  columns:
+  - name: amsat_status_observation_key
+    description: Stable hash of the upstream source, report identifier, and fetched_at observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Amsat status observation key
+          hidden: true
+  - name: source
+    description: Upstream feed identifier that supplied the satellite status report.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: observation_id
+    description: Identifier assigned by the upstream AMSAT status feed to this report.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct observation
+            description: Distinct `observation_id` values by `satellite_name` among observations in the
+              selected window. Repeated observations of an entity count once within each group. An entity
+              that changed category can appear in multiple groups; these groups are not additive and do
+              not represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Observation id
+          hidden: false
+  - name: fetched_at
+    description: UTC timestamp when the upstream AMSAT status feed was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: satellite_name
+    description: Upstream satellite name and mode label for this status report.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Satellite name
+          hidden: false
+  - name: satellite_display_name
+    description: Human-readable satellite display name supplied by the upstream feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Satellite display name
+          hidden: false
+  - name: reported_time
+    description: UTC timestamp at which the upstream feed reports this satellite status.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Reported time
+          hidden: false
+          time_intervals:
+          - RAW
+          - HOUR
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: callsign
+    description: Amateur-radio callsign associated with the reported status.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_callsigns:
+            type: count_distinct
+            label: Distinct callsigns
+            description: Distinct non-null `callsign` values represented by reports in each reported-time
+              bucket. This counts reporting identities, not unique satellite observations.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Callsign
+          hidden: false
+  - name: report
+    description: Status text supplied by the upstream AMSAT feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Report
+          hidden: false
+  - name: grid_square
+    description: Maidenhead grid square associated with the reporting station.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Grid square
+          hidden: false
+  - name: period
+    description: Upstream integer period or pass value associated with this report.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_period:
+            type: average
+            label: Mean report period
+            description: Average upstream `period` value among reports in each reported-time bucket. This
+              is a reported measure and must not be read as a summed duration.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Period
+          hidden: false
+          format: '#,##0'
+  - name: _row_id
+    description: Raw row identifier retained for exact source-row lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' row id'
+          hidden: true
+  - name: _batch_id
+    description: Identifier of the raw load batch that supplied this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _source_file
+    description: Raw extract file containing this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of this observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: _dt
+    description: Raw partition date associated with this observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: ' dt'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _extract_started_at
+    description: UTC timestamp when extraction of the source file started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: ' extract started at'
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: _load_id
+    description: Identifier of the load operation that inserted this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw observation content for lineage and replay.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

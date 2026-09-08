@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_stackexchange_question_observation_created_at_day
+          yRef:
+            field: fct_stackexchange_question_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created at (Day)
+      yAxis:
+      - name: Distinct question
+    layout:
+      xField: fct_stackexchange_question_observation_created_at_day
+      yField:
+      - fct_stackexchange_question_observation_distinct_entities
+  type: cartesian
+description: Distinct `question_id` values grouped by their source `created_at` day. The source history
+  spans only five days in this mart, so this is a short creation flow rather than a long historical series;
+  days with no source-created questions are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_stackexchange_question_observation_created_at_day
+  exploreName: fct_stackexchange_question_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_stackexchange_question_observation_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_stackexchange_question_observation_created_at_day
+  tableCalculations: []
+name: Distinct questions by source creation day
+slug: fct-stackexchange-question-observation-questions-created-by-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_stackexchange_question_observation_created_at_day
+  - fct_stackexchange_question_observation_distinct_entities
+tableName: fct_stackexchange_question_observation
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_jolpica_f1_observed_at_day
+          yRef:
+            field: fct_jolpica_f1_distinct_drivers
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct driver
+    layout:
+      xField: fct_jolpica_f1_observed_at_day
+      yField:
+      - fct_jolpica_f1_distinct_drivers
+  type: cartesian
+description: Distinct `driver_id` values in each daily championship-standing snapshot. This is a short
+  collection-time level because Jolpica provides no source event timestamp; days without a snapshot are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_jolpica_f1_observed_at_day
+  exploreName: fct_jolpica_f1
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_jolpica_f1_distinct_drivers
+  sorts:
+  - descending: false
+    fieldId: fct_jolpica_f1_observed_at_day
+  tableCalculations: []
+name: Drivers represented by observation day
+slug: fct-jolpica-f1-drivers-observed
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_jolpica_f1_observed_at_day
+  - fct_jolpica_f1_distinct_drivers
+tableName: fct_jolpica_f1
+version: 1

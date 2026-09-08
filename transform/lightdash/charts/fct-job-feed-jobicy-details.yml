@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of jobs published by the Jobicy remote-jobs feed. Each row is one
+  job identifier at one upstream observation timestamp; repeated copies of that observation are reduced
+  to the latest loaded lineage record while the published job attributes and source payload lineage remain
+  available for analysis and audit.
+metricQuery:
+  dimensions: &id001
+  - fct_job_feed_jobicy_observed_at
+  - fct_job_feed_jobicy_job_id
+  - fct_job_feed_jobicy_company
+  - fct_job_feed_jobicy_source_loaded_at
+  exploreName: fct_job_feed_jobicy
+  filters:
+    dimensions:
+      and:
+      - id: 44499207-786b-55d2-85c0-dd5f82cb4473
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_job_feed_jobicy_observed_at
+        values:
+        - 30
+      id: 90481bf8-615f-5b0e-a583-a4c58feee7ac
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_job_feed_jobicy_observed_at
+  tableCalculations: []
+name: Job feed jobicy — observations
+slug: fct-job-feed-jobicy-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_job_feed_jobicy
+version: 1

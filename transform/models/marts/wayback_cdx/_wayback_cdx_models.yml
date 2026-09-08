@@ -1,0 +1,291 @@
+version: 2
+models:
+- name: fct_wayback_cdx_observation
+  description: Daily physical history of Internet Archive Wayback CDX captures. Each row records one CDX
+    capture identifier observed in one extractor fetch, with typed capture metadata and raw-load lineage;
+    repeated ingestion of the same source, capture, and observation timestamp retains the latest copy.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, capture_id, observed_at
+      label: Wayback cdx observation
+      group_label: Wayback cdx
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: wayback_cdx_observation_key
+      vintage:
+        visualization:
+          dimension: mimetype
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct capture by mimetype
+          description: Distinct `capture_id` values by `mimetype` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - capture_id
+          - mimetype
+          - source_loaded_at
+          sources:
+          - '`wayback_cdx` — licence: Internet Archive — public; attribution required: False. Source configuration:
+            `extract/sources/wayback_cdx.yml`.'
+          analysis:
+            headline: how archived capture volume, response size, and status mix change across capture days.
+            event_time: captured_at
+            grain: DAY
+            controls:
+            - mimetype
+            - status_code
+            trends:
+            - slug: captures-by-day
+              kind: total
+              metric: distinct_entities
+              time: captured_at
+              grain: DAY
+              title: Distinct captures by capture day
+              description: Distinct `capture_id` values by the CDX `captured_at` day. This is a source
+                capture flow over 14 observed days, and days without captures are absent rather than zero.
+              width: half
+            - slug: average-response-size
+              kind: total
+              metric: average_content_length
+              time: captured_at
+              grain: DAY
+              title: Average archived response size by day
+              description: Average non-null `content_length` in bytes by CDX capture day. This describes
+                response size among captured records rather than total bytes, and absent days are absent
+                rather than zero.
+              width: half
+            - slug: captures-by-mimetype
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: mimetype
+              top_n: 6
+              time: captured_at
+              grain: DAY
+              title: Captures by MIME type
+              description: Distinct `capture_id` values per capture day and `mimetype`, retaining the six
+                largest MIME series. Remaining types are excluded rather than aggregated, and absent days
+                are absent rather than zero.
+              width: full
+            - slug: status-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: status_code
+              top_n: 8
+              time: captured_at
+              grain: DAY
+              title: Capture status-code mix
+              description: Distinct `capture_id` values per capture day stacked by HTTP `status_code`.
+                The eight largest status series are retained and the remainder excluded rather than
+                aggregated; segment heights show the mix of captured responses, not total bytes.
+              width: full
+  columns:
+  - name: wayback_cdx_observation_key
+    description: Stable hash of the source name, CDX capture identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Wayback cdx observation key
+          hidden: true
+  - name: source_name
+    description: Source identifier supplied by the Wayback CDX extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: capture_id
+    description: Wayback CDX capture identifier supplied by the archive index.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct capture
+            description: Distinct `capture_id` values by `mimetype` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Capture id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed this CDX capture record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: captured_at
+    description: UTC timestamp encoded by the CDX capture timestamp, parsed from the archive index value.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Captured at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: original_url
+    description: Original URL captured by the Wayback archive.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Original url
+          hidden: false
+  - name: status_code
+    description: HTTP response status code reported by the capture, retained as text because CDX uses
+      '-' for unknown values.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Status code
+          hidden: false
+  - name: mimetype
+    description: MIME type reported for the archived response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Mimetype
+          hidden: false
+  - name: digest
+    description: Wayback content digest for the archived response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Digest
+          hidden: false
+  - name: content_length
+    description: Archived response length in bytes.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Content length
+          hidden: false
+          format: '#,##0'
+        metrics:
+          average_content_length:
+            type: average
+            label: Average archived response size
+            description: Average non-null `content_length` in bytes for captures in the selected time
+              grouping. This is an observation-weighted size average, not an additive byte total.
+            format: '#,##0.00'
+  - name: watched_url
+    description: Optional URL watched by the extractor when this capture was collected.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Watched url
+          hidden: false
+  - name: _batch_id
+    description: Identifier of the extract batch that produced the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Identifier of the load job that inserted the retained raw record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained CDX observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained CDX observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Hash of the original raw record content for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 7a7f7b82-8bec-5346-8974-de23d921adff
+    label: 'Job boards ashby: Company'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_ashby_company
+      tableName: fct_job_boards_ashby
+    values: []
+  - disabled: true
+    id: c584a670-360e-5141-b2ac-ce277b34e973
+    label: 'Job boards ashby: Company country'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_ashby_company_country
+      tableName: fct_job_boards_ashby
+    values: []
+  - disabled: true
+    id: ce6fb74e-b0b6-5b02-8d3e-b6c62a730105
+    label: 'Job boards ashby: Company industry'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_ashby_company_industry
+      tableName: fct_job_boards_ashby
+    values: []
+  - disabled: true
+    id: 64bc79fc-f2b7-5dcc-a494-263f7258e2cd
+    label: 'Job boards ashby: Workplace type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_boards_ashby_workplace_type
+      tableName: fct_job_boards_ashby
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Boards Ashby
+slug: job-boards-ashby
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of job observations returned by Ashby applicant-tracking-system boards.
+      Each row represents one upstream source, job identifier, and extractor observation timestamp; repeated
+      raw copies of an observation are reduced to the latest loaded lineage record while listing attributes
+      and load metadata remain available for audit and replay.
+
+
+      **Grain:** source, job_id, observed_at
+
+
+      **What changes here:** how Ashby job volume and company coverage change across the published catalogue.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_boards_ashby` — licence: public ATS board endpoints; attribution required: False. Source
+      configuration: `extract/sources/job_boards_ashby.yml`.'
+    hideFrame: false
+    title: Job boards ashby
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards ashby — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Ashby jobs posted per month
+    chartSlug: fct-job-boards-ashby-posted-jobs
+    hideTitle: false
+    title: Ashby jobs posted per month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Hiring companies posting per month
+    chartSlug: fct-job-boards-ashby-posting-companies
+    hideTitle: false
+    title: Hiring companies posting per month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Monthly Ashby postings by leading company
+    chartSlug: fct-job-boards-ashby-jobs-by-company
+    hideTitle: false
+    title: Monthly Ashby postings by leading company
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Observed Ashby catalogue by workplace type
+    chartSlug: fct-job-boards-ashby-catalogue-by-workplace
+    hideTitle: false
+    title: Observed Ashby catalogue by workplace type
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Job boards ashby — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-boards-ashby
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Job boards ashby — observations
+    chartSlug: fct-job-boards-ashby-details
+    hideTitle: false
+    title: Job boards ashby — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

@@ -1,0 +1,39 @@
+chartConfig:
+  config: {}
+  type: table
+description: Daily physical history of Internet Archive Wayback CDX captures. Each row records one CDX
+  capture identifier observed in one extractor fetch, with typed capture metadata and raw-load lineage;
+  repeated ingestion of the same source, capture, and observation timestamp retains the latest copy.
+metricQuery:
+  dimensions: &id001
+  - fct_wayback_cdx_observation_observed_at
+  - fct_wayback_cdx_observation_capture_id
+  - fct_wayback_cdx_observation_mimetype
+  - fct_wayback_cdx_observation_source_loaded_at
+  exploreName: fct_wayback_cdx_observation
+  filters:
+    dimensions:
+      and:
+      - id: 752d3db2-cde6-56f5-adf3-52418ac01d5b
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_wayback_cdx_observation_observed_at
+        values:
+        - 30
+      id: 239fd0f7-ddd4-5cea-94e3-03d7ddae581f
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_wayback_cdx_observation_observed_at
+  tableCalculations: []
+name: Wayback cdx observation — observations
+slug: fct-wayback-cdx-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_wayback_cdx_observation
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_nager_date_holiday_observation_holiday_date_month
+          yRef:
+            field: fct_nager_date_holiday_observation_distinct_holidays
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Holiday date (Month)
+      yAxis:
+      - name: Distinct holiday variants
+    layout:
+      xField: fct_nager_date_holiday_observation_holiday_date_month
+      yField:
+      - fct_nager_date_holiday_observation_distinct_holidays
+  type: cartesian
+description: Distinct holiday identities by published holiday month across the observed calendar, including
+  future months. Repeated polls count once. Different names or regional/type variants on one date remain
+  distinct. Months without records are absent, not zero; this is not a count of days off.
+metricQuery:
+  dimensions:
+  - fct_nager_date_holiday_observation_holiday_date_month
+  exploreName: fct_nager_date_holiday_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_nager_date_holiday_observation_distinct_holidays
+  sorts:
+  - descending: false
+    fieldId: fct_nager_date_holiday_observation_holiday_date_month
+  tableCalculations: []
+name: Published holiday variants by month
+slug: fct-nager-date-holiday-observation-holiday-variants-by-month
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_nager_date_holiday_observation_holiday_date_month
+  - fct_nager_date_holiday_observation_distinct_holidays
+tableName: fct_nager_date_holiday_observation
+version: 1

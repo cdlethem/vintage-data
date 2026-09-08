@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_tokyo_mou_detentions_detention_date_day
+          yRef:
+            field: fct_tokyo_mou_detentions_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Detention date (Day)
+      yAxis:
+      - name: Distinct detention
+    layout:
+      xField: fct_tokyo_mou_detentions_detention_date_day
+      yField:
+      - fct_tokyo_mou_detentions_distinct_entities
+  type: cartesian
+description: Distinct `detention_id` values by the reported detention date. This source currently covers
+  five populated days; dates with no returned detention are absent rather than zero, and repeated extractor
+  observations are deduplicated by detention identifier.
+metricQuery:
+  dimensions:
+  - fct_tokyo_mou_detentions_detention_date_day
+  exploreName: fct_tokyo_mou_detentions
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_tokyo_mou_detentions_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_tokyo_mou_detentions_detention_date_day
+  tableCalculations: []
+name: Detentions recorded per day
+slug: fct-tokyo-mou-detentions-daily-detentions
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_tokyo_mou_detentions_detention_date_day
+  - fct_tokyo_mou_detentions_distinct_entities
+tableName: fct_tokyo_mou_detentions
+version: 1

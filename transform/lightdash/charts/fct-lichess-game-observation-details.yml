@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Twice-hourly physical history of games and featured players observed in the Lichess TV feed.
+  Each row represents one source, game, variant, player, color, and feed observation timestamp; duplicate
+  append-only rows for that observation are reduced to the latest loaded record while the source-load
+  lineage is retained for replay and audit.
+metricQuery:
+  dimensions: &id001
+  - fct_lichess_game_observation_observed_at
+  - fct_lichess_game_observation_game_id
+  - fct_lichess_game_observation_variant
+  - fct_lichess_game_observation_rating
+  - fct_lichess_game_observation_source_loaded_at
+  exploreName: fct_lichess_game_observation
+  filters:
+    dimensions:
+      and:
+      - id: 28c84fe6-61e4-5a18-8b0b-0c5394ecef21
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_lichess_game_observation_observed_at
+        values:
+        - 30
+      id: fe1124ac-d6a2-5a8a-ad12-cbff9fea6365
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_lichess_game_observation_observed_at
+  tableCalculations: []
+name: Lichess game observation — observations
+slug: fct-lichess-game-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_lichess_game_observation
+version: 1

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_wspr_live_spot_signal_at_day
+          yRef:
+            field: fct_wspr_live_spot_distinct_spots
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Signal at (Day)
+      yAxis:
+      - name: Distinct WSPR spots
+    layout:
+      xField: fct_wspr_live_spot_signal_at_day
+      yField:
+      - fct_wspr_live_spot_distinct_spots
+  type: cartesian
+description: Distinct `spot_id` values whose transmission signal falls on each UTC day. This is a short
+  five-day event-time slice rather than a long historical trend; absent signal days are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_wspr_live_spot_signal_at_day
+  exploreName: fct_wspr_live_spot
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_wspr_live_spot_distinct_spots
+  sorts:
+  - descending: false
+    fieldId: fct_wspr_live_spot_signal_at_day
+  tableCalculations: []
+name: WSPR spots by signal day
+slug: fct-wspr-live-spot-spots-by-signal-day
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_wspr_live_spot_signal_at_day
+  - fct_wspr_live_spot_distinct_spots
+tableName: fct_wspr_live_spot
+version: 1

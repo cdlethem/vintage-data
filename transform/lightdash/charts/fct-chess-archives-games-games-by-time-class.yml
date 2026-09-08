@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    columnLimit: 4
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_chess_archives_games_ended_at_month
+          yRef:
+            field: fct_chess_archives_games_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Ended at (Month)
+      yAxis:
+      - name: Distinct game
+    layout:
+      xField: fct_chess_archives_games_ended_at_month
+      yField:
+      - fct_chess_archives_games_distinct_entities
+  type: cartesian
+description: Distinct games by `time_class` and `ended_at` month. All four observed time classes are shown;
+  sparse months have fewer series because absent source rows are not zeroes.
+metricQuery:
+  dimensions:
+  - fct_chess_archives_games_ended_at_month
+  - fct_chess_archives_games_time_class
+  exploreName: fct_chess_archives_games
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_chess_archives_games_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_chess_archives_games_distinct_entities
+  - descending: false
+    fieldId: fct_chess_archives_games_ended_at_month
+  tableCalculations: []
+name: Games ended per month by time class
+pivotConfig:
+  columns:
+  - fct_chess_archives_games_time_class
+slug: fct-chess-archives-games-games-by-time-class
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_chess_archives_games_ended_at_month
+  - fct_chess_archives_games_time_class
+  - fct_chess_archives_games_distinct_entities
+tableName: fct_chess_archives_games
+version: 1

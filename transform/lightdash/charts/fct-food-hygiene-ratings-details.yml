@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Incremental physical snapshot fact of Food Standards Agency food hygiene ratings. Each row
+  is one source, food-business rating identifier, and fetch timestamp; repeated rows for that grain are
+  resolved to the latest raw load record. Source rating labels and score JSON are retained alongside typed
+  score and geocode fields and raw-load lineage.
+metricQuery:
+  dimensions: &id001
+  - fct_food_hygiene_ratings_observed_at
+  - fct_food_hygiene_ratings_rating_id
+  - fct_food_hygiene_ratings_business_type
+  - fct_food_hygiene_ratings_source_loaded_at
+  exploreName: fct_food_hygiene_ratings
+  filters:
+    dimensions:
+      and:
+      - id: 9e708f9c-90f1-5b28-8138-2f8e6c711c25
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_food_hygiene_ratings_observed_at
+        values:
+        - 30
+      id: af849a3f-f130-5106-8610-40b7743f6474
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_food_hygiene_ratings_observed_at
+  tableCalculations: []
+name: Food hygiene ratings — observations
+slug: fct-food-hygiene-ratings-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_food_hygiene_ratings
+version: 1

@@ -1,0 +1,370 @@
+version: 2
+models:
+- name: fct_openligadb_match_observations
+  description: Physical hourly observation fact for OpenLigaDB football match records. Each row is one
+    match from one upstream league snapshot at one fetched timestamp. Repeated snapshots preserve changes
+    to completion, scores, and source update time; duplicate raw rows at the same source, match, and observation
+    grain are reduced to the latest loaded record while raw-load lineage is retained.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_system, match_id, observed_at
+      label: Openligadb match observations
+      group_label: Openligadb
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: openligadb_match_obser_da5928
+      vintage:
+        visualization:
+          dimension: league
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct match by league
+          description: Distinct `match_id` values by `league` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - match_id
+          - league
+          - source_loaded_at
+          sources:
+          - '`openligadb` — licence: OpenLigaDB — community project; attribution required: False. Source
+            configuration: `extract/sources/openligadb.yml`.'
+          analysis:
+            headline: how the scheduled football calendar, score levels, and team mix change across the
+              season and match updates.
+            event_time: scheduled_at
+            grain: MONTH
+            controls:
+            - league
+            - home_team
+            - away_team
+            - is_finished
+            trends:
+            - slug: scheduled-matches
+              kind: total
+              metric: distinct_entities
+              time: scheduled_at
+              grain: MONTH
+              title: Scheduled matches per month
+              description: Distinct `match_id` values by scheduled kickoff month. This is the published
+                season calendar rather than a match-observation flow; months with no scheduled matches are
+                absent rather than zero.
+              width: half
+            - slug: home-score-level
+              kind: total
+              metric: average_home_score
+              time: match_updated_at
+              grain: WEEK
+              title: Mean reported home score by update week
+              description: Observation-weighted mean `home_score` by `match_updated_at` week. Only rows with
+                a reported score contribute, and repeated snapshots can weight frequently updated matches
+                more heavily; unfinished or scoreless rows are absent rather than zero.
+              width: half
+            - slug: away-score-level
+              kind: total
+              metric: average_away_score
+              time: match_updated_at
+              grain: WEEK
+              title: Mean reported away score by update week
+              description: Observation-weighted mean `away_score` by `match_updated_at` week. Only rows with
+                a reported score contribute, and repeated snapshots can weight frequently updated matches
+                more heavily; unfinished or scoreless rows are absent rather than zero.
+              width: half
+            - slug: team-calendar-mix
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: home_team
+              top_n: 8
+              time: scheduled_at
+              grain: MONTH
+              title: Leading home teams by scheduled month
+              description: Distinct scheduled `match_id` values pivoted by `home_team` and month. The eight
+                largest teams over the selected season are shown and the remainder is excluded rather than
+                aggregated; a missing month means no scheduled match in that series.
+              width: full
+            - slug: completion-mix
+              kind: composition
+              metric: distinct_entities
+              breakdown: is_finished
+              top_n: 2
+              time: scheduled_at
+              grain: MONTH
+              title: Scheduled matches by completion status
+              description: Distinct scheduled `match_id` values stacked by OpenLigaDB `is_finished` status
+                and kickoff month. The stack compares completed and upcoming calendar entries; missing
+                months are absent rather than zero.
+              width: full
+  columns:
+  - name: openligadb_match_observation_key
+    description: Stable hash of the source system, match identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Openligadb match observation key
+          hidden: true
+          name: openligadb_match_obser_da5928
+  - name: source_system
+    description: Upstream source identifier reported by the match record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source system
+          hidden: false
+  - name: match_id
+    description: OpenLigaDB identifier for the match.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct match
+            description: Distinct `match_id` values by `league` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Match id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the upstream match feed was fetched.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: league
+    description: League and season label reported by OpenLigaDB.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: League
+          hidden: false
+  - name: scheduled_at
+    description: UTC scheduled match start timestamp reported by OpenLigaDB.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Scheduled at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: is_finished
+    description: Whether OpenLigaDB reported that the match had finished at observation time.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is finished
+          hidden: false
+  - name: home_team
+    description: Team1, the home-side team reported by the OpenLigaDB match feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Home team
+          hidden: false
+  - name: away_team
+    description: Team2, the away-side team reported by the OpenLigaDB match feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Away team
+          hidden: false
+  - name: home_score
+    description: Team1 score reported at observation time.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_home_score:
+            type: average
+            label: Mean home score
+            description: Observation-weighted mean `home_score` by scheduled or update time. Null scores do
+              not contribute; repeated snapshots can weight frequently updated matches more heavily, so this
+              is not a total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Home score
+          hidden: false
+          format: '#,##0'
+  - name: away_score
+    description: Team2 score reported at observation time.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_away_score:
+            type: average
+            label: Mean away score
+            description: Observation-weighted mean `away_score` by scheduled or update time. Null scores do
+              not contribute; repeated snapshots can weight frequently updated matches more heavily, so this
+              is not a total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Away score
+          hidden: false
+          format: '#,##0'
+  - name: match_updated_at
+    description: UTC timestamp when OpenLigaDB last reported an update to the match.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Match updated at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_row_id
+    description: Raw load row identifier for this match observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the raw load batch that inserted this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing this match observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of this observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Raw partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load operation that inserted this observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted this observation into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw match observation content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

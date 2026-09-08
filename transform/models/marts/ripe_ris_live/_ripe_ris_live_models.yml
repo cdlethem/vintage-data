@@ -1,0 +1,402 @@
+version: 2
+models:
+- name: fct_ripe_ris_live_bgp_update
+  description: Twice-hourly physical history of BGP UPDATE messages observed by the RIPE RIS live collector.
+    Each row represents one source, update identifier, and observation timestamp, with the route path,
+    announcement and withdrawal sets preserved as JSON and raw-load lineage retained for audit and replay.
+    Insert-only copies of the same observation are reduced to the latest loaded copy using the append-only
+    load timestamp and file position.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, update_id, observed_at
+      label: Ripe ris live bgp update
+      group_label: Ripe ris live
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: ripe_ris_live_bgp_update_key
+      vintage:
+        visualization:
+          dimension: collector_host
+          metric: average_announcement_count
+          time: observed_at
+          window_days: 30
+          title: Mean observed announcement count by collector host
+          description: Mean observed announcement count by `collector_host` in the selected observation
+            window. Number of prefixes in the preserved announcements array. Each retained observation
+            has equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+            a latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - update_id
+          - collector_host
+          - announcement_count
+          - source_loaded_at
+          sources:
+          - '`ripe_ris_live` — licence: unstated (RIPE NCC public service); attribution required: False.
+            Source configuration: `extract/sources/ripe_ris_live.yml`.'
+          analysis:
+            headline: how BGP update volume and route-change payloads vary by source event day and collector
+              across the seven observed event days.
+            event_time: bgp_observed_at
+            grain: DAY
+            controls:
+            - collector_host
+            - origin
+            - update_type
+            trends:
+            - slug: updates-by-event-day
+              kind: total
+              metric: distinct_updates
+              time: bgp_observed_at
+              grain: DAY
+              title: BGP updates per source event day
+              description: Distinct non-null `update_id` values per day of the source `bgp_observed_at`
+                timestamp. This is an event flow, not a collection level; the two early event dates and any
+                date without source updates are absent rather than zero.
+              width: half
+            - slug: announcements-by-event-day
+              kind: total
+              metric: average_announcement_count
+              time: bgp_observed_at
+              grain: DAY
+              title: Mean announced-prefix count per event day
+              description: Mean `announcement_count` per source event day, counting prefixes in each BGP
+                UPDATE announcement array. Each update has equal weight, so collector sampling can affect
+                the mean; absent event days are absent rather than zero.
+              width: half
+            - slug: withdrawals-by-event-day
+              kind: total
+              metric: average_withdrawal_count
+              time: bgp_observed_at
+              grain: DAY
+              title: Mean withdrawn-prefix count per event day
+              description: Mean `withdrawal_count` per source event day, counting prefixes in each BGP
+                UPDATE withdrawal array. Each update has equal weight and bursty withdrawals can be hidden
+                by the average; absent event days are absent rather than zero.
+              width: half
+            - slug: collector-volume
+              kind: composition
+              metric: distinct_updates
+              breakdown: collector_host
+              top_n: 8
+              time: bgp_observed_at
+              grain: DAY
+              title: BGP update mix across leading collectors
+              description: Distinct `update_id` values per source event day stacked by the eight collector
+                hosts with the largest selected-window volume. The remaining 15 collectors are excluded
+                rather than aggregated; missing collector-days are absent rather than zero.
+              width: full
+            - slug: collected-volume
+              kind: total
+              metric: distinct_updates
+              time: observed_at
+              grain: DAY
+              title: Updates ingested per collection day
+              description: Distinct `update_id` values by extractor `observed_at` day. This five-day series
+                describes ingestion throughput rather than when routes changed; repeated source updates
+                remain one per collection-day group and days without a load are absent.
+              width: half
+  columns:
+  - name: ripe_ris_live_bgp_update_key
+    description: Stable hash of the RIPE source, update identifier, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Ripe ris live bgp update key
+          hidden: true
+  - name: source
+    description: Raw source name identifying the RIPE RIS live feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: update_id
+    description: Source-provided identifier for this BGP UPDATE message.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Update id
+          hidden: false
+        metrics:
+          distinct_updates:
+            type: count_distinct
+            label: Distinct BGP updates
+            description: Distinct non-null `update_id` values represented in each source event-time and
+              dimension group. This counts each BGP UPDATE once and measures message flow rather than
+              summing repeated payload values.
+            format: '#,##0'
+  - name: observed_at
+    description: UTC timestamp when the collector observed this BGP UPDATE message.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: update_type
+    description: BGP message type reported by the source, currently UPDATE for this feed.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Update type
+          hidden: false
+  - name: bgp_observed_at
+    description: UTC timestamp represented by the source BGP epoch timestamp, when positive.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Bgp observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: collector_host
+    description: RIPE RIS collector host that reported the BGP UPDATE message.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Collector host
+          hidden: false
+  - name: peer_address
+    description: Network address of the BGP peer that supplied the message.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Peer address
+          hidden: false
+  - name: peer_asn
+    description: Autonomous system number of the BGP peer, retained as source text.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Peer asn
+          hidden: false
+  - name: as_path
+    description: Ordered AS path supplied by the BGP peer as a JSON array.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: As path
+          hidden: true
+          sql: CAST(${TABLE}.as_path AS VARCHAR)
+  - name: origin
+    description: BGP origin attribute reported for the update, when present.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Origin
+          hidden: false
+  - name: announcements
+    description: Prefixes announced by this BGP UPDATE as a JSON array.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Announcements
+          hidden: true
+          sql: CAST(${TABLE}.announcements AS VARCHAR)
+  - name: withdrawals
+    description: Prefixes withdrawn by this BGP UPDATE as a JSON array.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Withdrawals
+          hidden: true
+          sql: CAST(${TABLE}.withdrawals AS VARCHAR)
+  - name: path_hop_count
+    description: Number of AS path entries in the preserved AS path array.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Path hop count
+          hidden: false
+          format: '#,##0'
+  - name: announcement_count
+    description: Number of prefixes in the preserved announcements array.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_announcement_count:
+            type: average
+            label: Mean observed announcement count
+            description: Mean observed announcement count by `collector_host` in the selected observation
+              window. Number of prefixes in the preserved announcements array. Each retained observation
+              has equal weight; polling frequency and repeated snapshots can affect the mean. This is
+              not a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Announcement count
+          hidden: false
+          format: '#,##0'
+  - name: withdrawal_count
+    description: Number of prefixes in the preserved withdrawals array.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_withdrawal_count:
+            type: average
+            label: Mean observed withdrawal count
+            description: Mean `withdrawal_count` across BGP UPDATE messages in each source event-time and
+              dimension group. Each update has equal weight; this reports the average withdrawn-prefix
+              payload and does not sum republished or bursty route changes.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Withdrawal count
+          hidden: false
+          format: '#,##0'
+  - name: source_row_id
+    description: Raw loader row identifier for the retained BGP UPDATE message.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained BGP UPDATE message.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained BGP UPDATE message.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained BGP UPDATE message in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date for the retained BGP UPDATE message.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction began for the retained BGP UPDATE message.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Load operation identifier that inserted the retained BGP UPDATE message.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained BGP UPDATE message.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained BGP UPDATE record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

@@ -25,6 +25,8 @@ fi
 ./04_systemd.sh
 ./05_tailscale.sh
 ./06_loader.sh
+./07_transform.sh
+./08_lightdash.sh
 
 echo
 echo "Done. Admin password: see orchestration/airflow_home/simple_auth_manager_passwords.json.generated"

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_job_boards_posted_at_month
+          yRef:
+            field: fct_job_boards_distinct_companies
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Posted at (Month)
+      yAxis:
+      - name: Distinct hiring companies
+    layout:
+      xField: fct_job_boards_posted_at_month
+      yField:
+      - fct_job_boards_distinct_companies
+  type: cartesian
+description: Distinct non-null `company` values among jobs by upstream `posted_at` month. This measures
+  breadth of hiring activity rather than job volume — months with no source postings are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_job_boards_posted_at_month
+  exploreName: fct_job_boards
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_job_boards_distinct_companies
+  sorts:
+  - descending: false
+    fieldId: fct_job_boards_posted_at_month
+  tableCalculations: []
+name: Hiring companies posting per month
+slug: fct-job-boards-posting-companies
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_job_boards_posted_at_month
+  - fct_job_boards_distinct_companies
+tableName: fct_job_boards
+version: 1

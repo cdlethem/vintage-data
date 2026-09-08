@@ -1,0 +1,378 @@
+version: 2
+models:
+- name: fct_nih_reporter_project_observations
+  description: Daily physical history of NIH Reporter research-project records. Each row is one NIH application
+    observed at an extractor timestamp, retaining grant, project, organization, principal-investigator,
+    and raw-load lineage fields. Repeated raw copies of the same application observation are reduced to
+    the latest loaded row.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: project_id, observed_at
+      label: Nih reporter project observations
+      group_label: Nih reporter
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: nih_reporter_proje_9f2ab6
+      vintage:
+        visualization:
+          dimension: organization_state
+          metric: average_award_amount
+          time: observed_at
+          window_days: 30
+          title: Mean observed award amount by organization state
+          description: Mean observed award amount by `organization_state` in the selected observation
+            window. Award amount reported by NIH Reporter in US dollars. Each retained observation has
+            equal weight; polling frequency and repeated snapshots can affect the mean. This is not a
+            latest-value measure or an additive total.
+          detail_fields:
+          - observed_at
+          - project_id
+          - organization_state
+          - award_amount
+          - source_loaded_at
+          sources:
+          - '`nih_reporter` — licence: US Government work, public domain; attribution required: False.
+            Source configuration: `extract/sources/nih_reporter.yml`.'
+          analysis:
+            headline: how NIH project starts, award levels, and recipient geography change across the
+              published research portfolio.
+            event_time: project_start_at
+            grain: MONTH
+            controls:
+            - organization_state
+            - organization_name
+            - fiscal_year
+            trends:
+            - slug: project-starts
+              kind: total
+              metric: distinct_projects
+              time: project_start_at
+              grain: MONTH
+              title: Projects starting by month
+              description: Distinct `project_id` values by reported project-start month. The historical
+                source is sparse with 26 populated months, so months without starts are absent rather than
+                zero.
+              width: half
+            - slug: award-level
+              kind: total
+              metric: average_award_amount
+              time: project_start_at
+              grain: MONTH
+              title: Mean award amount by project-start month
+              description: Mean non-null `award_amount` in US dollars by reported project-start month. Each
+                retained observation has equal weight, so repeated snapshots and polling frequency can
+                influence this level; it is not an additive funding total.
+              width: half
+            - slug: projects-by-state
+              kind: breakdown
+              metric: distinct_projects
+              breakdown: organization_state
+              top_n: 8
+              time: project_start_at
+              grain: MONTH
+              title: Project starts by recipient state
+              description: Distinct `project_id` values by project-start month for the eight states with
+                the most projects. Remaining states are excluded rather than aggregated, and unpopulated
+                months are absent.
+              width: full
+            - slug: award-mix-by-organization
+              kind: composition
+              metric: average_award_amount
+              breakdown: organization_name
+              top_n: 6
+              time: project_start_at
+              grain: MONTH
+              title: Mean award level by recipient organization
+              description: Mean non-null `award_amount` stacked by the six organizations with the most
+                projects and project-start month. Other organizations are excluded rather than aggregated,
+                and sparse months have no bar.
+              width: full
+  columns:
+  - name: nih_reporter_project_observation_key
+    description: Stable hash of the NIH application identifier and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Nih reporter project observation key
+          hidden: true
+          name: nih_reporter_proje_9f2ab6
+  - name: source_name
+    description: Upstream source label carried by the NIH Reporter response.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: project_id
+    description: NIH Reporter application identifier for the observed research project.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_projects:
+            type: count_distinct
+            label: Distinct projects
+            description: Distinct `project_id` values in each selected time group. Repeated snapshots of
+              one project count once within a group, so this measures project breadth rather than
+              observation volume.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Project id
+          hidden: false
+  - name: project_number
+    description: NIH grant or project number assigned to the observed application.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Project number
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this NIH Reporter observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: project_title
+    description: Research project title published by NIH Reporter.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Project title
+          hidden: false
+  - name: date_added
+    description: UTC timestamp when NIH Reporter added the project record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Date added
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: fiscal_year
+    description: Federal fiscal year associated with the project record.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Fiscal year
+          hidden: false
+          format: '#,##0'
+  - name: award_amount
+    description: Award amount reported by NIH Reporter in US dollars.
+    data_type: bigint
+    config:
+      meta:
+        metrics:
+          average_award_amount:
+            type: average
+            label: Mean observed award amount
+            description: Mean observed award amount by `organization_state` in the selected observation
+              window. Award amount reported by NIH Reporter in US dollars. Each retained observation has
+              equal weight; polling frequency and repeated snapshots can affect the mean. This is not
+              a latest-value measure or an additive total.
+            format: '#,##0.00'
+        dimension:
+          type: number
+          label: Award amount
+          hidden: false
+          format: '#,##0'
+  - name: organization_name
+    description: Organization receiving or administering the NIH award.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Organization name
+          hidden: false
+  - name: organization_state
+    description: US state or territory associated with the recipient organization.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Organization state
+          hidden: false
+  - name: principal_investigators
+    description: JSON array of principal-investigator names reported for the project.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Principal investigators
+          hidden: true
+          sql: CAST(${TABLE}.principal_investigators AS VARCHAR)
+  - name: project_start_at
+    description: UTC timestamp for the reported start of the research project.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Project start at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: project_end_at
+    description: UTC timestamp for the reported end of the research project.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Project end at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: source_row_id
+    description: Raw warehouse row identifier for the retained project observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained raw project observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained project observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the project observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Extraction partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the source batch began.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: extract_st_51074f
+  - name: load_id
+    description: Load operation identifier that inserted the source row.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the source row into the raw warehouse.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Hash of the original raw project record for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_noaa_catch_quotas_observed_at_day
+          yRef:
+            field: fct_noaa_catch_quotas_distinct_quotas
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct quotas
+    layout:
+      xField: fct_noaa_catch_quotas_observed_at_day
+      yField:
+      - fct_noaa_catch_quotas_distinct_quotas
+  type: cartesian
+description: Distinct `quota_id` values present in each daily NOAA snapshot. This is a collection-time
+  level rather than a source-event flow, and days without a successful snapshot are absent rather than
+  zero.
+metricQuery:
+  dimensions:
+  - fct_noaa_catch_quotas_observed_at_day
+  exploreName: fct_noaa_catch_quotas
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_noaa_catch_quotas_distinct_quotas
+  sorts:
+  - descending: false
+    fieldId: fct_noaa_catch_quotas_observed_at_day
+  tableCalculations: []
+name: Published quotas by collection day
+slug: fct-noaa-catch-quotas-quota-catalogue
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_noaa_catch_quotas_observed_at_day
+  - fct_noaa_catch_quotas_distinct_quotas
+tableName: fct_noaa_catch_quotas
+version: 1

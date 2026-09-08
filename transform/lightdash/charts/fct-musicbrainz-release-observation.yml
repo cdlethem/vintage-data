@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_musicbrainz_release_observation_release_group_type
+          yRef:
+            field: fct_musicbrainz_release_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_musicbrainz_release_observation_release_group_type
+      yField:
+      - fct_musicbrainz_release_observation_distinct_entities
+  type: cartesian
+description: Distinct `release_id` values by `release_group_type` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_musicbrainz_release_observation_release_group_type
+  exploreName: fct_musicbrainz_release_observation
+  filters:
+    dimensions:
+      and:
+      - id: caed5237-4189-5e46-b913-723addbf5c87
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_musicbrainz_release_observation_observed_at
+        values:
+        - 30
+      id: 789ef8a6-d566-5202-abc6-5216da975da0
+  limit: 20
+  metrics:
+  - fct_musicbrainz_release_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_musicbrainz_release_observation_distinct_entities
+  tableCalculations: []
+name: Distinct release by release group type
+slug: fct-musicbrainz-release-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_musicbrainz_release_observation_release_group_type
+  - fct_musicbrainz_release_observation_distinct_entities
+tableName: fct_musicbrainz_release_observation
+version: 1

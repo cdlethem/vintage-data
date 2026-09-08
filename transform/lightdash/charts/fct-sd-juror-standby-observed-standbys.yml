@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sd_juror_standby_observed_at_day
+          yRef:
+            field: fct_sd_juror_standby_distinct_standbys
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct standby services
+    layout:
+      xField: fct_sd_juror_standby_observed_at_day
+      yField:
+      - fct_sd_juror_standby_distinct_standbys
+  type: cartesian
+description: Distinct `standby_id` values present on each extractor observation day. This is a level of
+  the short four-day feed rather than a flow; repeated snapshots count once within each day, and days
+  with no successful extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_sd_juror_standby_observed_at_day
+  exploreName: fct_sd_juror_standby
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_sd_juror_standby_distinct_standbys
+  sorts:
+  - descending: false
+    fieldId: fct_sd_juror_standby_observed_at_day
+  tableCalculations: []
+name: Distinct standby services observed each day
+slug: fct-sd-juror-standby-observed-standbys
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sd_juror_standby_observed_at_day
+  - fct_sd_juror_standby_distinct_standbys
+tableName: fct_sd_juror_standby
+version: 1

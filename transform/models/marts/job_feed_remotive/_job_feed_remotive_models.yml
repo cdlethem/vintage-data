@@ -1,0 +1,350 @@
+version: 2
+models:
+- name: fct_job_feed_remotive
+  description: Daily historical observations of jobs returned by the Remotive remote-jobs feed. Each row
+    represents one job identifier observed at one extractor timestamp; repeated raw ingestion of an identical
+    observation is reduced to the latest loaded copy while prior observations remain available for history.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, job_id, observed_at
+      label: Job feed remotive
+      group_label: Job feed remotive
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: job_observation_key
+      vintage:
+        visualization:
+          dimension: company
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct job by company
+          description: Distinct `job_id` values by `company` among observations in the selected window.
+            Repeated observations of an entity count once within each group. An entity that changed category
+            can appear in multiple groups; these groups are not additive and do not represent a current-state
+            census.
+          detail_fields:
+          - observed_at
+          - job_id
+          - company
+          - source_loaded_at
+          sources:
+          - '`job_feed_remotive` — licence: public Remotive API; attribution required: True. Source configuration:
+            `extract/sources/job_feed_remotive.yml`.'
+          analysis:
+            headline: how the four-day Remotive catalogue level and sparse publication mix change across companies and departments.
+            event_time: posted
+            grain: DAY
+            controls:
+            - company
+            - department
+            - employment_type
+            - location_country
+            trends:
+            - slug: catalogue-level
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Jobs present in the catalogue each day
+              description: Distinct `job_id` values present in the feed on each observation day. This is a
+                catalogue level rather than a count of new postings because the feed republishes listings
+                and repeated observations are deduplicated within each day. Days without a successful extract
+                are absent rather than zero.
+              width: half
+            - slug: posted-day-history
+              kind: total
+              metric: distinct_entities
+              time: posted
+              grain: DAY
+              title: Jobs by publisher posted day
+              description: Distinct `job_id` values grouped by the publisher's posted day across retained
+                observations. This is not a new-posting count because a listing can recur in later snapshots;
+                posted days with no matching records are absent rather than zero.
+              width: half
+            - slug: company-levels
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: company
+              top_n: 6
+              time: observed_at
+              grain: DAY
+              title: Catalogue jobs by leading company
+              description: Distinct `job_id` values per observation day for the six companies with the
+                largest retained job presence. The remainder is excluded rather than aggregated, and this
+                is a catalogue level rather than a flow; days without an extract are absent rather than zero.
+              width: half
+            - slug: department-mix
+              kind: composition
+              metric: distinct_companies
+              breakdown: department
+              top_n: 6
+              time: posted
+              grain: DAY
+              title: Hiring-company mix by posting day and department
+              description: Distinct non-null `company` values per publisher posted day, stacked by the six
+                largest `department` values. The remainder is excluded rather than aggregated; repeated
+                listings can recur, so this shows observed mix rather than unique organizations over the
+                full history. Posted days with no matching records are absent rather than zero.
+              width: full
+  columns:
+  - name: job_observation_key
+    description: Stable hash of the source, job identifier, and extractor observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 days'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Job observation key
+          hidden: true
+  - name: source_name
+    description: Source identifier supplied by the Remotive extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: job_id
+    description: Remotive identifier for the advertised job.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct job
+            description: Distinct `job_id` values by `company` among observations in the selected window.
+              Repeated observations of an entity count once within each group. An entity that changed
+              category can appear in multiple groups; these groups are not additive and do not represent
+              a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Job id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed this job in the Remotive feed.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: provider
+    description: Provider label carried by the Remotive job record.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Provider
+          hidden: false
+  - name: company
+    description: Company name advertising the job.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_companies:
+            type: count_distinct
+            label: Distinct hiring company
+            description: Distinct non-null `company` values represented in the selected observations. This
+              counts organizations rather than postings and can repeat an organization across snapshots.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Company
+          hidden: false
+  - name: title
+    description: Public title of the advertised job.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: department
+    description: Remotive category or department assigned to the job.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Department
+          hidden: false
+  - name: employment_type
+    description: Employment arrangement reported by Remotive, such as full-time or contract.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Employment type
+          hidden: false
+  - name: location
+    description: Candidate-required location text reported by Remotive.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location
+          hidden: false
+  - name: location_country
+    description: Country code inferred by the extractor from the candidate-required location text when
+      available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Location country
+          hidden: false
+  - name: workplace_type
+    description: Workplace arrangement reported for the job; Remotive feed observations are marked remote
+      by the extractor.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Workplace type
+          hidden: false
+  - name: is_remote
+    description: Whether the extractor identifies the job as remote.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Is remote
+          hidden: false
+  - name: posted
+    description: UTC publication timestamp supplied by Remotive for the job posting.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Posted
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: url
+    description: Public Remotive URL for the job posting.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Url
+          hidden: false
+  - name: salary_text
+    description: Salary or compensation text supplied by the job provider, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Salary text
+          hidden: false
+  - name: description
+    description: Plain-text job description supplied by Remotive after extractor HTML cleanup.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Description
+          hidden: true
+  - name: _batch_id
+    description: Extract batch identifier associated with the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' batch id'
+          hidden: true
+  - name: _load_id
+    description: Load job identifier associated with the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' load id'
+          hidden: true
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' source file'
+          hidden: true
+  - name: _file_row_num
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: ' file row num'
+          hidden: true
+          format: '#,##0'
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: _content_hash
+    description: Content hash of the retained raw observation for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' content hash'
+          hidden: true

@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_usaspending_award_observations_performance_start_date_month
+          yRef:
+            field: fct_usaspending_award_observations_distinct_awards
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Performance start date (Month)
+      yAxis:
+      - name: Distinct award
+    layout:
+      xField: fct_usaspending_award_observations_performance_start_date_month
+      yField:
+      - fct_usaspending_award_observations_distinct_awards
+  type: cartesian
+description: Distinct `award_id` values by `performance_start_date` month across the published award history.
+  Months with no award starts are absent rather than zero, so recent bursts should not be read as a continuous
+  monthly flow.
+metricQuery:
+  dimensions:
+  - fct_usaspending_award_observations_performance_start_date_month
+  exploreName: fct_usaspending_award_observations
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_usaspending_award_observations_distinct_awards
+  sorts:
+  - descending: false
+    fieldId: fct_usaspending_award_observations_performance_start_date_month
+  tableCalculations: []
+name: Distinct awards by performance-start month
+slug: fct-usaspending-award-observations-awards-by-month
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_usaspending_award_observations_performance_start_date_month
+  - fct_usaspending_award_observations_distinct_awards
+tableName: fct_usaspending_award_observations
+version: 1

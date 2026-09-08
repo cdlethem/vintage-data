@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_infodengue_epidemiology_week_start_date_week
+          yRef:
+            field: fct_infodengue_epidemiology_distinct_municipalities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Week start date (Week)
+      yAxis:
+      - name: Distinct municipality
+    layout:
+      xField: fct_infodengue_epidemiology_week_start_date_week
+      yField:
+      - fct_infodengue_epidemiology_distinct_municipalities
+  type: cartesian
+description: Distinct `municipality_name` values represented in each epidemiological week over the latest
+  three years. This is coverage of the source observations rather than a case count; missing weeks are
+  absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_infodengue_epidemiology_week_start_date_week
+  exploreName: fct_infodengue_epidemiology
+  filters:
+    dimensions:
+      and:
+      - id: 472b45b8-1309-5970-aec2-9d19c8cc7842
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_infodengue_epidemiology_week_start_date
+        values:
+        - 1095
+      id: 42264516-1d71-5039-8710-dd5cae0f853c
+  limit: 5000
+  metrics:
+  - fct_infodengue_epidemiology_distinct_municipalities
+  sorts:
+  - descending: false
+    fieldId: fct_infodengue_epidemiology_week_start_date_week
+  tableCalculations: []
+name: Municipalities represented by epidemiological week
+slug: fct-infodengue-epidemiology-weekly-municipalities
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_infodengue_epidemiology_week_start_date_week
+  - fct_infodengue_epidemiology_distinct_municipalities
+tableName: fct_infodengue_epidemiology
+version: 1

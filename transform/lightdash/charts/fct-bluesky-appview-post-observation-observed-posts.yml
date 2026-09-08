@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_bluesky_appview_post_observation_observed_at_day
+          yRef:
+            field: fct_bluesky_appview_post_observation_distinct_posts
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct posts
+    layout:
+      xField: fct_bluesky_appview_post_observation_observed_at_day
+      yField:
+      - fct_bluesky_appview_post_observation_distinct_posts
+  type: cartesian
+description: Distinct `post_uri` values present in each extractor observation day. This is a five-day
+  catalogue level with repeated engagement snapshots, not a publication flow; days without a successful
+  extract are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_bluesky_appview_post_observation_observed_at_day
+  exploreName: fct_bluesky_appview_post_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_bluesky_appview_post_observation_distinct_posts
+  sorts:
+  - descending: false
+    fieldId: fct_bluesky_appview_post_observation_observed_at_day
+  tableCalculations: []
+name: Distinct posts observed per day
+slug: fct-bluesky-appview-post-observation-observed-posts
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_bluesky_appview_post_observation_observed_at_day
+  - fct_bluesky_appview_post_observation_distinct_posts
+tableName: fct_bluesky_appview_post_observation
+version: 1

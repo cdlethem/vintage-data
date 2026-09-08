@@ -1,0 +1,161 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 1718da9e-e728-5722-bc55-e957a8372f97
+    label: 'Job feed weworkremotely: Department'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_weworkremotely_department
+      tableName: fct_job_feed_weworkremotely
+    values: []
+  - disabled: true
+    id: e37abe73-79d8-59b4-b7f9-279df9d7f460
+    label: 'Job feed weworkremotely: Employment type'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_weworkremotely_employment_type
+      tableName: fct_job_feed_weworkremotely
+    values: []
+  - disabled: true
+    id: e604da5a-ce48-5b68-a512-06cbcbfd32e9
+    label: 'Job feed weworkremotely: Location'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_weworkremotely_location
+      tableName: fct_job_feed_weworkremotely
+    values: []
+  - disabled: true
+    id: e77f10bb-1f1b-584b-a896-677c03fd1bef
+    label: 'Job feed weworkremotely: Company'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_job_feed_weworkremotely_company
+      tableName: fct_job_feed_weworkremotely
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Job Feed Weworkremotely
+slug: job-feed-weworkremotely
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Deduplicated job observations published by the We Work Remotely feed. Each row represents
+      one source job at one feed observation timestamp; repeated loads of the same source, job, and observation
+      are reduced to the latest loaded row while ingestion lineage is retained.
+
+
+      **Grain:** source, job_id, fetched_at
+
+
+      **What changes here:** how the feed''s posted-job flow and observed catalogue change across departments,
+      employers, and locations.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `job_feed_weworkremotely` — licence: public We Work Remotely RSS feed; attribution required: True.
+      Source configuration: `extract/sources/job_feed_weworkremotely.yml`.'
+    hideFrame: false
+    title: Job feed weworkremotely
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed weworkremotely — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct jobs by posting day
+    chartSlug: fct-job-feed-weworkremotely-posted-jobs
+    hideTitle: false
+    title: Distinct jobs by posting day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct jobs present by fetch day
+    chartSlug: fct-job-feed-weworkremotely-observed-catalogue
+    hideTitle: false
+    title: Distinct jobs present by fetch day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Leading departments by posting day
+    chartSlug: fct-job-feed-weworkremotely-jobs-by-department
+    hideTitle: false
+    title: Leading departments by posting day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Employer mix by posting day and location
+    chartSlug: fct-job-feed-weworkremotely-company-mix
+    hideTitle: false
+    title: Employer mix by posting day and location
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Job feed weworkremotely — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct job by company
+    chartSlug: fct-job-feed-weworkremotely
+    hideTitle: false
+    title: Distinct job by company
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Job feed weworkremotely — observations
+    chartSlug: fct-job-feed-weworkremotely-details
+    hideTitle: false
+    title: Job feed weworkremotely — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

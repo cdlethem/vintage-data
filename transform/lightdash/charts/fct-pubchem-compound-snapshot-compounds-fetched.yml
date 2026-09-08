@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_pubchem_compound_snapshot_fetched_at_day
+          yRef:
+            field: fct_pubchem_compound_snapshot_distinct_compounds
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Distinct compounds
+    layout:
+      xField: fct_pubchem_compound_snapshot_fetched_at_day
+      yField:
+      - fct_pubchem_compound_snapshot_distinct_compounds
+  type: cartesian
+description: Distinct non-null `compound_id` values returned by PubChem on each fetch day. This is a catalogue
+  level for requested lookups rather than a discovery flow; the current extract covers one day and days
+  without fetches are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_pubchem_compound_snapshot_fetched_at_day
+  exploreName: fct_pubchem_compound_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: b107624f-89f4-5d67-bd5e-6ca624ddd3d2
+        operator: equals
+        target:
+          fieldId: fct_pubchem_compound_snapshot_found
+        values:
+        - true
+      id: 675e25bf-784d-5fee-aec8-76b78fbdd3be
+  limit: 5000
+  metrics:
+  - fct_pubchem_compound_snapshot_distinct_compounds
+  sorts:
+  - descending: false
+    fieldId: fct_pubchem_compound_snapshot_fetched_at_day
+  tableCalculations: []
+name: Distinct compounds fetched per day
+slug: fct-pubchem-compound-snapshot-compounds-fetched
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_pubchem_compound_snapshot_fetched_at_day
+  - fct_pubchem_compound_snapshot_distinct_compounds
+tableName: fct_pubchem_compound_snapshot
+version: 1

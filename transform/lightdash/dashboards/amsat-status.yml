@@ -1,0 +1,163 @@
+config:
+  dateZoomGranularities:
+  - Hour
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Hour
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: ac4c6976-1e52-5cf7-8502-b4445e8ea095
+    label: 'Amsat status observations: Satellite name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_amsat_status_observations_satellite_name
+      tableName: fct_amsat_status_observations
+    values: []
+  - disabled: true
+    id: 7056a972-6d4c-50f1-9fbd-46baef256296
+    label: 'Amsat status observations: Satellite display name'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_amsat_status_observations_satellite_display_name
+      tableName: fct_amsat_status_observations
+    values: []
+  - disabled: true
+    id: e0b02c60-72aa-5f91-b119-fe436c2a734d
+    label: 'Amsat status observations: Report'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_amsat_status_observations_report
+      tableName: fct_amsat_status_observations
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Amsat Status
+slug: amsat-status
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Twice-hourly physical history of amateur-radio satellite status reports. Each row represents
+      one source satellite report identified by its upstream source, report identifier, and fetched_at
+      observation timestamp. Duplicate raw observations are reduced to the latest loaded record while
+      raw-load lineage is retained for replay and audit.
+
+
+      **Grain:** source, observation_id, fetched_at
+
+
+      **What changes here:** how reported satellite statuses and their radio periods change through the
+      five-day feed history.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `amsat_status` — licence: unstated; attribution required: False. Source configuration: `extract/sources/amsat_status.yml`.'
+    hideFrame: false
+    title: Amsat status observations
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Amsat status observations — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct satellite reports by reported hour
+    chartSlug: fct-amsat-status-observations-reported-observations
+    hideTitle: false
+    title: Distinct satellite reports by reported hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean report period by reported hour
+    chartSlug: fct-amsat-status-observations-average-period
+    hideTitle: false
+    title: Mean report period by reported hour
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct reporting callsigns by hour
+    chartSlug: fct-amsat-status-observations-reporting-callsigns
+    hideTitle: false
+    title: Distinct reporting callsigns by hour
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Leading satellites by reported hour
+    chartSlug: fct-amsat-status-observations-satellite-reporters
+    hideTitle: false
+    title: Leading satellites by reported hour
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Report status mix by reported hour
+    chartSlug: fct-amsat-status-observations-report-status-mix
+    hideTitle: false
+    title: Report status mix by reported hour
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 37
+- h: 1
+  properties:
+    showDivider: true
+    text: Amsat status observations — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 47
+- h: 10
+  properties:
+    chartName: Distinct observation by satellite name
+    chartSlug: fct-amsat-status-observations
+    hideTitle: false
+    title: Distinct observation by satellite name
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 48
+- h: 10
+  properties:
+    chartName: Amsat status observations — observations
+    chartSlug: fct-amsat-status-observations-details
+    hideTitle: false
+    title: Amsat status observations — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 48
+version: 1

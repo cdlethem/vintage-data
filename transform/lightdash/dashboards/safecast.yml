@@ -1,0 +1,162 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Day
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 4e26881f-7b9c-5205-bbfe-e21d5d3127f7
+    label: 'Safecast radiation measurement: Measurement unit'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_safecast_radiation_measurement_measurement_unit
+      tableName: fct_safecast_radiation_measurement
+    values: []
+  - disabled: true
+    id: 4597fe2d-09cd-56df-a1a9-059476b6f970
+    label: 'Safecast radiation measurement: Height'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_safecast_radiation_measurement_height
+      tableName: fct_safecast_radiation_measurement
+    values: []
+  - disabled: true
+    id: c6c6855a-6331-5b04-b4d8-f4013ef51abd
+    label: 'Safecast radiation measurement: Latitude'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_safecast_radiation_measurement_latitude
+      tableName: fct_safecast_radiation_measurement
+    values: []
+  - disabled: true
+    id: 3685e9fb-466d-56ec-9349-acadb575c9df
+    label: 'Safecast radiation measurement: Longitude'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_safecast_radiation_measurement_longitude
+      tableName: fct_safecast_radiation_measurement
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Safecast
+slug: safecast
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical radiation readings published by the Safecast measurement API. Each row represents
+      one immutable Safecast measurement identified by its source and API measurement ID; non-radiation
+      status and temperature records are excluded, and repeated raw ingestion is reduced to the latest
+      loaded copy while preserving the measurement and load timestamps plus source lineage.
+
+
+      **Grain:** source, measurement_id
+
+
+      **What changes here:** how the current radiation-reading level and measurement mix move across five
+      collection days, with a short captured-time view of the same readings.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `safecast` — licence: Safecast — public, CC0-ish; attribution required: False. Source configuration:
+      `extract/sources/safecast.yml`.'
+    hideFrame: false
+    title: Safecast radiation measurement
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Safecast radiation measurement — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Radiation measurements represented per collection day
+    chartSlug: fct-safecast-radiation-measurement-readings-collected
+    hideTitle: false
+    title: Radiation measurements represented per collection day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean radiation reading per collection day
+    chartSlug: fct-safecast-radiation-measurement-radiation-level
+    hideTitle: false
+    title: Mean radiation reading per collection day
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Mean radiation reading per captured day
+    chartSlug: fct-safecast-radiation-measurement-captured-level
+    hideTitle: false
+    title: Mean radiation reading per captured day
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Radiation level mix by measurement unit
+    chartSlug: fct-safecast-radiation-measurement-unit-mix
+    hideTitle: false
+    title: Radiation level mix by measurement unit
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Safecast radiation measurement — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Mean observed measurement value by measurement unit
+    chartSlug: fct-safecast-radiation-measurement
+    hideTitle: false
+    title: Mean observed measurement value by measurement unit
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Safecast radiation measurement — observations
+    chartSlug: fct-safecast-radiation-measurement-details
+    hideTitle: false
+    title: Safecast radiation measurement — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

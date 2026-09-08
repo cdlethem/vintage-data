@@ -1,0 +1,40 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly physical history of STAC imagery items returned by the imagery discovery feed. Each
+  row is one imagery item observed at one fetch timestamp; repeated ingestion of the same item snapshot
+  is reduced to the latest loaded copy while the item attributes and raw-load lineage remain available.
+metricQuery:
+  dimensions: &id001
+  - fct_stac_imagery_observed_at
+  - fct_stac_imagery_item_id
+  - fct_stac_imagery_collection
+  - fct_stac_imagery_cloud_cover
+  - fct_stac_imagery_source_loaded_at
+  exploreName: fct_stac_imagery
+  filters:
+    dimensions:
+      and:
+      - id: 2001c72b-8df7-527e-a9ea-626ea15f9065
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_stac_imagery_observed_at
+        values:
+        - 30
+      id: 78c4abd9-0013-5331-8e3d-25ae8089392f
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_stac_imagery_observed_at
+  tableCalculations: []
+name: Stac imagery — observations
+slug: fct-stac-imagery-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_stac_imagery
+version: 1

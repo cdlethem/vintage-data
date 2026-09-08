@@ -1,0 +1,143 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: 9ef532a9-2150-5c15-8370-1aebc76c6e5a
+    label: 'Software heritage observations: Has visits'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_software_heritage_observations_has_visits
+      tableName: fct_software_heritage_observations
+    values: []
+  - disabled: true
+    id: 34bf026c-0031-560f-bda1-595a18f52900
+    label: 'Software heritage observations: Visit types'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_software_heritage_observations_visit_types
+      tableName: fct_software_heritage_observations
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Software Heritage
+slug: software-heritage
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Physical archive observation fact for Software Heritage origin records. Each row represents
+      one repository observation at one extractor fetch time, with visit summary attributes and raw-load
+      lineage retained for auditability. Duplicate copies of the same source, repository, and fetch timestamp
+      are reduced to the latest loaded record.
+
+
+      **Grain:** archive_source, repository_id, fetched_at
+
+
+      **What changes here:** how reported repository visit recency, visit volume, and visit-state composition
+      change across the archive''s sparse history.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - `software_heritage` — licence: unstated; attribution required: False. Source configuration: `extract/sources/software_heritage.yml`.'
+    hideFrame: false
+    title: Software heritage observations
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Software heritage observations — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Repositories by reported last visit month
+    chartSlug: fct-software-heritage-observations-repository-visits
+    hideTitle: false
+    title: Repositories by reported last visit month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Average reported visits by last visit month
+    chartSlug: fct-software-heritage-observations-average-visit-count
+    hideTitle: false
+    title: Average reported visits by last visit month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Repositories by visit state on fetch day
+    chartSlug: fct-software-heritage-observations-visit-state-mix
+    hideTitle: false
+    title: Repositories by visit state on fetch day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Repositories fetched each day
+    chartSlug: fct-software-heritage-observations-fetched-repository-level
+    hideTitle: false
+    title: Repositories fetched each day
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: Software heritage observations — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct repository by has visits
+    chartSlug: fct-software-heritage-observations
+    hideTitle: false
+    title: Distinct repository by has visits
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Software heritage observations — observations
+    chartSlug: fct-software-heritage-observations-details
+    hideTitle: false
+    title: Software heritage observations — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

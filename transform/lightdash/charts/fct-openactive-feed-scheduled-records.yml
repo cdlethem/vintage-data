@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_openactive_feed_starts_at_month
+          yRef:
+            field: fct_openactive_feed_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Starts at (Month)
+      yAxis:
+      - name: Distinct record
+    layout:
+      xField: fct_openactive_feed_starts_at_month
+      yField:
+      - fct_openactive_feed_distinct_entities
+  type: cartesian
+description: Distinct `record_id` values grouped by the scheduled slot start month. The axis includes
+  future activity through September 2027, so this is a planned-supply flow rather than completed participation;
+  months without source rows are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_openactive_feed_starts_at_month
+  exploreName: fct_openactive_feed
+  filters:
+    dimensions:
+      and:
+      - id: ddc4f573-d057-5dcf-8fdf-7eb7116fcdc2
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_openactive_feed_observed_at
+        values:
+        - 2
+      id: 47afbbd7-e025-5b40-b64e-0309091e8238
+  limit: 5000
+  metrics:
+  - fct_openactive_feed_distinct_entities
+  sorts:
+  - descending: false
+    fieldId: fct_openactive_feed_starts_at_month
+  tableCalculations: []
+name: Scheduled records by start month
+slug: fct-openactive-feed-scheduled-records
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openactive_feed_starts_at_month
+  - fct_openactive_feed_distinct_entities
+tableName: fct_openactive_feed
+version: 1

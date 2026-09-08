@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_prison_estate_metric
+          yRef:
+            field: fct_uk_prison_estate_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_uk_prison_estate_metric
+      yField:
+      - fct_uk_prison_estate_distinct_entities
+  type: cartesian
+description: Distinct `observation_id` values by `metric` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_uk_prison_estate_metric
+  exploreName: fct_uk_prison_estate
+  filters:
+    dimensions:
+      and:
+      - id: da67ab66-9651-5598-8445-490e0faba44c
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_prison_estate_observed_at
+        values:
+        - 30
+      id: 6ab2cc02-c32f-5806-b884-dfc0d757e854
+  limit: 20
+  metrics:
+  - fct_uk_prison_estate_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_uk_prison_estate_distinct_entities
+  tableCalculations: []
+name: Distinct observation by metric
+slug: fct-uk-prison-estate
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_prison_estate_metric
+  - fct_uk_prison_estate_distinct_entities
+tableName: fct_uk_prison_estate
+version: 1

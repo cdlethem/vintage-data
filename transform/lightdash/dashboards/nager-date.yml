@@ -1,0 +1,147 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Quarter
+  - Year
+  defaultDateZoomGranularity: Month
+  isDateZoomDisabled: false
+description: Source-family trends over time. Observation windows and aggregation notes are shown with
+  each chart.
+filters:
+  dimensions:
+  - disabled: true
+    id: f4099573-a0bf-571e-be3c-fe2414b7f073
+    label: 'Holiday calendar observations: Country code'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nager_date_holiday_observation_country_code
+      tableName: fct_nager_date_holiday_observation
+    values: []
+  - disabled: true
+    id: 004290e4-88fe-5025-8c92-14881bb78014
+    label: 'Holiday calendar observations: Observance scope'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nager_date_holiday_observation_observance_scope
+      tableName: fct_nager_date_holiday_observation
+    values: []
+  - disabled: true
+    id: 38f3bcbe-0a5a-5719-989a-596b4cb56cf1
+    label: 'Holiday calendar observations: Holiday types'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_nager_date_holiday_observation_holiday_types
+      tableName: fct_nager_date_holiday_observation
+    values: []
+  metrics: []
+  tableCalculations: []
+name: Nager Date
+slug: nager-date
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Daily physical history of Nager.Date holiday calendar observations. Grain is one source
+      and publisher-derived holiday variant per UTC fetch timestamp. Replay copies are deduplicated while
+      later observations remain auditable. Identity includes holiday types and subdivisions, so same-date
+      variants survive. Event-time analysis includes future published dates and all observed versions;
+      it is not a latest-only authoritative calendar or a guarantee of business closures.
+
+
+      **Grain:** source, holiday_id, observed_at
+
+
+      **What changes here:** See when holidays fall and distinguish nationwide observance from regional
+      calendar variants. Future dates are published calendar entries, not forecasts. Snapshot history
+      starts when collection began; it is not a complete historical calendar.
+
+
+      **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
+      their own axis and window. Empty charts mean no matching published observations; they do not establish
+      that no events occurred.
+
+
+      **Provenance**
+
+      - Nager.Date public holiday API — https://date.nager.at. Scheduled source: extract/sources/nager_date.yml;
+      currently US upcoming holidays only. Source configuration records licence as unstated; no broader
+      coverage or reuse rights are implied.'
+    hideFrame: false
+    title: Holiday calendar observations
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: Holiday calendar observations — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Published holiday variants by month
+    chartSlug: fct-nager-date-holiday-observation-holiday-variants-by-month
+    hideTitle: false
+    title: Published holiday variants by month
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Calendar dates with a holiday by month
+    chartSlug: fct-nager-date-holiday-observation-holiday-dates-by-month
+    hideTitle: false
+    title: Calendar dates with a holiday by month
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Nationwide and regional holidays by month
+    chartSlug: fct-nager-date-holiday-observation-holiday-scope-by-month
+    hideTitle: false
+    title: Nationwide and regional holidays by month
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 1
+  properties:
+    showDivider: true
+    text: Holiday calendar observations — latest window
+  type: heading
+  w: 36
+  x: 0
+  y: 27
+- h: 10
+  properties:
+    chartName: Holiday variants by observance scope
+    chartSlug: fct-nager-date-holiday-observation
+    hideTitle: false
+    title: Holiday variants by observance scope
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 28
+- h: 10
+  properties:
+    chartName: Holiday calendar observations — observations
+    chartSlug: fct-nager-date-holiday-observation-details
+    hideTitle: false
+    title: Holiday calendar observations — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 28
+version: 1

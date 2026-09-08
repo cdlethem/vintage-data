@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_deezer_chart_observation_observed_at_day
+          yRef:
+            field: fct_deezer_chart_observation_distinct_tracks
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct tracks
+    layout:
+      stack: true
+      xField: fct_deezer_chart_observation_observed_at_day
+      yField:
+      - fct_deezer_chart_observation_distinct_tracks
+  type: cartesian
+description: Distinct `track_id` values per `observed_at` day, stacked by `is_explicit`. This shows the
+  chart's metadata mix rather than a listening share; days without a retained chart are absent rather
+  than zero.
+metricQuery:
+  dimensions:
+  - fct_deezer_chart_observation_observed_at_day
+  - fct_deezer_chart_observation_is_explicit
+  exploreName: fct_deezer_chart_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_deezer_chart_observation_distinct_tracks
+  sorts:
+  - descending: true
+    fieldId: fct_deezer_chart_observation_distinct_tracks
+  - descending: false
+    fieldId: fct_deezer_chart_observation_observed_at_day
+  tableCalculations: []
+name: Chart tracks by explicit-content flag
+pivotConfig:
+  columns:
+  - fct_deezer_chart_observation_is_explicit
+slug: fct-deezer-chart-observation-explicit-content-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_deezer_chart_observation_observed_at_day
+  - fct_deezer_chart_observation_is_explicit
+  - fct_deezer_chart_observation_distinct_tracks
+tableName: fct_deezer_chart_observation
+version: 1

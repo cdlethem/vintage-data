@@ -1,0 +1,44 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_open311_service_request_observation_requested_at_week
+          yRef:
+            field: fct_open311_service_request_observation_distinct_service_codes
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Requested at (Week)
+      yAxis:
+      - name: Distinct service code
+    layout:
+      xField: fct_open311_service_request_observation_requested_at_week
+      yField:
+      - fct_open311_service_request_observation_distinct_service_codes
+  type: cartesian
+description: Distinct `service_code` values among requests submitted in each week across the full source
+  history. This measures breadth of demand, not the number of requests; weeks without submitted requests
+  are absent.
+metricQuery:
+  dimensions:
+  - fct_open311_service_request_observation_requested_at_week
+  exploreName: fct_open311_service_request_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_open311_service_request_observation_distinct_service_codes
+  sorts:
+  - descending: false
+    fieldId: fct_open311_service_request_observation_requested_at_week
+  tableCalculations: []
+name: Service codes represented by request week
+slug: fct-open311-service-request-observation-weekly-service-breadth
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_open311_service_request_observation_requested_at_week
+  - fct_open311_service_request_observation_distinct_service_codes
+tableName: fct_open311_service_request_observation
+version: 1

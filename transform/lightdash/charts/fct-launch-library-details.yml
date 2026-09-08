@@ -1,0 +1,41 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical daily snapshot fact for Launch Library launch records. Each row represents one launch
+  identifier from one upstream feed at one fetched_at observation timestamp. Repeated observations preserve
+  changing launch status, schedule, and source-update attributes, while duplicate raw rows for the same
+  source, launch, and observation timestamp are reduced to the latest loaded record and load lineage is
+  retained.
+metricQuery:
+  dimensions: &id001
+  - fct_launch_library_fetched_at
+  - fct_launch_library_launch_id
+  - fct_launch_library_status_name
+  - fct_launch_library_source_loaded_at
+  exploreName: fct_launch_library
+  filters:
+    dimensions:
+      and:
+      - id: 9836b3b5-1c10-5644-a32f-c8c0df085b21
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_launch_library_fetched_at
+        values:
+        - 30
+      id: 00f6765d-7c63-53c2-964c-a037d77503ac
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_launch_library_fetched_at
+  tableCalculations: []
+name: Launch library — observations
+slug: fct-launch-library-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_launch_library
+version: 1

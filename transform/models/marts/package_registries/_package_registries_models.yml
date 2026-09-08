@@ -1,0 +1,337 @@
+version: 2
+models:
+- name: fct_package_registry_release_observation
+  description: Physical history of package releases observed from the package registry. Each row represents
+    one registry source, package, version, and observation timestamp, with the latest insert-only copy
+    retained when a load is replayed. Package metadata and raw-load lineage are typed for dependable release
+    discovery and audit.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, package_name, package_version, observed_at
+      label: Package registry release observation
+      group_label: Package registries
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: package_release_c0fbdb
+      vintage:
+        visualization:
+          dimension: package_name
+          metric: distinct_entities
+          time: observed_at
+          window_days: 30
+          title: Distinct release by package name
+          description: Distinct `release_id` values by `package_name` among observations in the selected
+            window. Repeated observations of an entity count once within each group. An entity that changed
+            category can appear in multiple groups; these groups are not additive and do not represent
+            a current-state census.
+          detail_fields:
+          - observed_at
+          - release_id
+          - package_name
+          - source_loaded_at
+          sources:
+          - '`package_registries` — licence: PyPI / crates.io public feeds; attribution required: False.
+            Source configuration: `extract/sources/package_registries.yml`.'
+          analysis:
+            headline: how the observed package and release catalogue levels move and which packages and
+              authors account for the latest publication bursts.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - source_name
+            - source_relation
+            - author
+            trends:
+            - slug: observed-releases
+              kind: total
+              metric: distinct_entities
+              time: observed_at
+              grain: DAY
+              title: Distinct releases present each observation day
+              description: Distinct `release_id` values present in each extractor observation day. This is
+                a catalogue level rather than a publication flow because the registry feed republishes
+                releases; days without a successful extract are absent rather than zero.
+              width: half
+            - slug: observed-packages
+              kind: total
+              metric: distinct_packages
+              time: observed_at
+              grain: DAY
+              title: Distinct packages present each observation day
+              description: Distinct `package_name` values present in each extractor observation day. This
+                measures catalogue breadth and not new packages; absent observation days are not zeros.
+              width: half
+            - slug: published-release-bursts
+              kind: composition
+              metric: distinct_entities
+              breakdown: package_name
+              top_n: 8
+              time: published_at
+              grain: DAY
+              title: Published release bursts by leading package
+              description: Distinct `release_id` values stacked by `package_name` on the registry publication
+                date. The eight packages with the most releases over this shallow five-day history are shown
+                and the remainder is excluded rather than aggregated; sparse dates are absent rather than
+                zero.
+              width: full
+            - slug: published-author-bursts
+              kind: breakdown
+              metric: distinct_entities
+              breakdown: author
+              top_n: 8
+              time: published_at
+              grain: DAY
+              title: Published releases by leading author
+              description: Distinct `release_id` values by non-null `author` and publication day. The eight
+                authors with the most releases are shown and the remainder is excluded rather than
+                aggregated; releases without an author are omitted and missing dates are absent rather than
+                zero.
+              width: full
+  columns:
+  - name: package_release_observation_key
+    description: Stable hash of the registry source, package, version, and observation timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    - unique:
+        config:
+          where: source_loaded_at >= current_timestamp - interval '2 hours'
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Package release observation key
+          hidden: true
+          name: package_release_c0fbdb
+  - name: source_relation
+    description: Raw loader relation that supplied the package release observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source relation
+          hidden: false
+  - name: source_name
+    description: Package registry source that reported the release, such as pypi_release.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source name
+          hidden: false
+  - name: release_id
+    description: Source-provided identifier for the package release.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_entities:
+            type: count_distinct
+            label: Distinct release
+            description: Distinct `release_id` values by `package_name` among observations in the selected
+              window. Repeated observations of an entity count once within each group. An entity that
+              changed category can appear in multiple groups; these groups are not additive and do not
+              represent a current-state census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Release id
+          hidden: false
+  - name: package_name
+    description: Registry package name.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_packages:
+            type: count_distinct
+            label: Distinct package
+            description: Distinct `package_name` values present in each observation period. This is a
+              catalogue breadth level; repeated releases or observations do not turn it into a publication
+              count.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Package name
+          hidden: false
+  - name: package_version
+    description: Version string assigned to the package release.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Package version
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor observed the package release.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: summary
+    description: Registry-provided package summary, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Summary
+          hidden: false
+  - name: author
+    description: Registry-provided package author, when available.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Author
+          hidden: false
+  - name: published_at
+    description: UTC timestamp parsed from the registry's published release date, when available.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Published at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: release_url
+    description: Canonical registry URL for the package release.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Release url
+          hidden: false
+  - name: source_row_id
+    description: Raw loader row identifier for the retained release observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Extract batch identifier that produced the retained release observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw extract file containing the retained release observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained release observation in its raw extract file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Load-layer partition date for the retained release observation.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction began for the retained release observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: extract_51074f
+  - name: load_id
+    description: Load operation identifier that inserted the retained release observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained release observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+          name: source__2059e1
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              publisher copied this table.
+  - name: content_hash
+    description: Load-layer hash of the retained raw release record content.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_pubchem_compound_snapshot_fetched_at_day
+          yRef:
+            field: fct_pubchem_compound_snapshot_average_molecular_weight
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Fetched at (Day)
+      yAxis:
+      - name: Mean observed molecular weight
+    layout:
+      xField: fct_pubchem_compound_snapshot_fetched_at_day
+      yField:
+      - fct_pubchem_compound_snapshot_average_molecular_weight
+  type: cartesian
+description: Mean non-null `molecular_weight` across retained PubChem lookup rows on each fetch day. Each
+  row has equal weight and repeated polling can influence the result; this is a snapshot level rather
+  than a sum. Missing fetch days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_pubchem_compound_snapshot_fetched_at_day
+  exploreName: fct_pubchem_compound_snapshot
+  filters:
+    dimensions:
+      and:
+      - id: db041480-1e9c-5007-a292-23d7c1bece23
+        operator: equals
+        target:
+          fieldId: fct_pubchem_compound_snapshot_found
+        values:
+        - true
+      id: 36958075-b957-5ab8-a413-babd361a6ba5
+  limit: 5000
+  metrics:
+  - fct_pubchem_compound_snapshot_average_molecular_weight
+  sorts:
+  - descending: false
+    fieldId: fct_pubchem_compound_snapshot_fetched_at_day
+  tableCalculations: []
+name: Mean molecular weight per fetch day
+slug: fct-pubchem-compound-snapshot-molecular-weight-level
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_pubchem_compound_snapshot_fetched_at_day
+  - fct_pubchem_compound_snapshot_average_molecular_weight
+tableName: fct_pubchem_compound_snapshot
+version: 1

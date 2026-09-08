@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_open_library_change_change_kind
+          yRef:
+            field: fct_open_library_change_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_open_library_change_change_kind
+      yField:
+      - fct_open_library_change_distinct_entities
+  type: cartesian
+description: Distinct `change_id` values by `change_kind` among observations in the selected window. Repeated
+  observations of an entity count once within each group. An entity that changed category can appear in
+  multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_open_library_change_change_kind
+  exploreName: fct_open_library_change
+  filters:
+    dimensions:
+      and:
+      - id: 79ef3129-ec6b-5f5c-8ecf-8dbe1c0e1112
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_open_library_change_observed_at
+        values:
+        - 30
+      id: d1c55985-1159-5a49-8668-27b8e51b157c
+  limit: 20
+  metrics:
+  - fct_open_library_change_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_open_library_change_distinct_entities
+  tableCalculations: []
+name: Distinct change by change kind
+slug: fct-open-library-change
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_open_library_change_change_kind
+  - fct_open_library_change_distinct_entities
+tableName: fct_open_library_change
+version: 1

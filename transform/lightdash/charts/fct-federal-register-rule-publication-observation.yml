@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_federal_register_rule_publication_observation_document_type
+          yRef:
+            field: fct_federal_register_rule_publication_observation_m_a6e4e251
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_federal_register_rule_publication_observation_document_type
+      yField:
+      - fct_federal_register_rule_publication_observation_m_a6e4e251
+  type: cartesian
+description: Distinct `document_id` values by `document_type` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_federal_register_rule_publication_observation_document_type
+  exploreName: fct_federal_register_rule_publication_observation
+  filters:
+    dimensions:
+      and:
+      - id: 3473ffc9-6f9a-53ec-9fb7-1178ef73a3dd
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_federal_register_rule_publication_observation_da6ee
+        values:
+        - 30
+      id: ce140e54-3cbd-5865-93ab-032b063b371e
+  limit: 20
+  metrics:
+  - fct_federal_register_rule_publication_observation_m_a6e4e251
+  sorts:
+  - descending: true
+    fieldId: fct_federal_register_rule_publication_observation_m_a6e4e251
+  tableCalculations: []
+name: Distinct document by document type
+slug: fct-federal-register-rule-publication-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_federal_register_rule_publication_observation_document_type
+  - fct_federal_register_rule_publication_observation_m_a6e4e251
+tableName: fct_federal_register_rule_publication_observation
+version: 1

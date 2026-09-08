@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_bike_station_status_observed_at_day
+          yRef:
+            field: fct_bike_station_status_average_num_docks_available
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Mean observed num docks available
+    layout:
+      stack: true
+      xField: fct_bike_station_status_observed_at_day
+      yField:
+      - fct_bike_station_status_average_num_docks_available
+  type: cartesian
+description: Daily observation-weighted mean `num_docks_available` stacked by network. Segment heights
+  compare the two networks' reported dock levels; the stack is not a system-wide total because stations
+  are observed repeatedly.
+metricQuery:
+  dimensions:
+  - fct_bike_station_status_observed_at_day
+  - fct_bike_station_status_network
+  exploreName: fct_bike_station_status
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_bike_station_status_average_num_docks_available
+  sorts:
+  - descending: true
+    fieldId: fct_bike_station_status_average_num_docks_available
+  - descending: false
+    fieldId: fct_bike_station_status_observed_at_day
+  tableCalculations: []
+name: Mean available docks by network and day
+pivotConfig:
+  columns:
+  - fct_bike_station_status_network
+slug: fct-bike-station-status-docks-by-network
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_bike_station_status_observed_at_day
+  - fct_bike_station_status_network
+  - fct_bike_station_status_average_num_docks_available
+tableName: fct_bike_station_status
+version: 1

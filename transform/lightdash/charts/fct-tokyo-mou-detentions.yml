@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_tokyo_mou_detentions_flag_country
+          yRef:
+            field: fct_tokyo_mou_detentions_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_tokyo_mou_detentions_flag_country
+      yField:
+      - fct_tokyo_mou_detentions_distinct_entities
+  type: cartesian
+description: Distinct `detention_id` values by `flag_country` among observations in the selected window.
+  Repeated observations of an entity count once within each group. An entity that changed category can
+  appear in multiple groups; these groups are not additive and do not represent a current-state census.
+metricQuery:
+  dimensions:
+  - fct_tokyo_mou_detentions_flag_country
+  exploreName: fct_tokyo_mou_detentions
+  filters:
+    dimensions:
+      and:
+      - id: b08ad33c-425e-5cc9-b848-cf305ad99607
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_tokyo_mou_detentions_observed_at
+        values:
+        - 30
+      id: f5903c39-a640-5964-bc45-dc21b1e36389
+  limit: 20
+  metrics:
+  - fct_tokyo_mou_detentions_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_tokyo_mou_detentions_distinct_entities
+  tableCalculations: []
+name: Distinct detention by flag country
+slug: fct-tokyo-mou-detentions
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_tokyo_mou_detentions_flag_country
+  - fct_tokyo_mou_detentions_distinct_entities
+tableName: fct_tokyo_mou_detentions
+version: 1

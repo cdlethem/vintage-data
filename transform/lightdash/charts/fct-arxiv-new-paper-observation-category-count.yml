@@ -1,0 +1,43 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_arxiv_new_paper_observation_published_at_hour
+          yRef:
+            field: fct_arxiv_new_paper_observation_distinct_categories
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Published at (Hour)
+      yAxis:
+      - name: Distinct subject categories
+    layout:
+      xField: fct_arxiv_new_paper_observation_published_at_hour
+      yField:
+      - fct_arxiv_new_paper_observation_distinct_categories
+  type: cartesian
+description: Distinct `primary_category` values among papers published in each reported hour. This measures
+  subject breadth rather than paper volume; hours without papers are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_arxiv_new_paper_observation_published_at_hour
+  exploreName: fct_arxiv_new_paper_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_arxiv_new_paper_observation_distinct_categories
+  sorts:
+  - descending: false
+    fieldId: fct_arxiv_new_paper_observation_published_at_hour
+  tableCalculations: []
+name: Subject categories represented by publication hour
+slug: fct-arxiv-new-paper-observation-category-count
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_arxiv_new_paper_observation_published_at_hour
+  - fct_arxiv_new_paper_observation_distinct_categories
+tableName: fct_arxiv_new_paper_observation
+version: 1

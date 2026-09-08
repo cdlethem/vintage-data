@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    columnLimit: 6
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_food_alert_observation_created_date_week
+          yRef:
+            field: fct_uk_food_alert_observation_distinct_entities
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Created date (Week)
+      yAxis:
+      - name: Distinct alert
+    layout:
+      xField: fct_uk_food_alert_observation_created_date_week
+      yField:
+      - fct_uk_food_alert_observation_distinct_entities
+  type: cartesian
+description: Distinct alerts by `created_date` week for the six businesses with the largest alert counts
+  in the selected result. Remaining businesses are excluded rather than aggregated, so the lines compare
+  major named reporters and are not a total.
+metricQuery:
+  dimensions:
+  - fct_uk_food_alert_observation_created_date_week
+  - fct_uk_food_alert_observation_reporting_business
+  exploreName: fct_uk_food_alert_observation
+  filters: {}
+  limit: 5000
+  metrics:
+  - fct_uk_food_alert_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_uk_food_alert_observation_distinct_entities
+  - descending: false
+    fieldId: fct_uk_food_alert_observation_created_date_week
+  tableCalculations: []
+name: Distinct alerts by reporting business each week
+pivotConfig:
+  columns:
+  - fct_uk_food_alert_observation_reporting_business
+slug: fct-uk-food-alert-observation-alerts-by-business
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_food_alert_observation_created_date_week
+  - fct_uk_food_alert_observation_reporting_business
+  - fct_uk_food_alert_observation_distinct_entities
+tableName: fct_uk_food_alert_observation
+version: 1
