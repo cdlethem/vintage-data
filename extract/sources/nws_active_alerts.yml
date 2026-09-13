@@ -1,0 +1,14 @@
+name: nws_active_alerts
+script: fetch_nws_active_alerts.py
+args: []
+schedule: "7 * * * *"  # UTC
+enabled: true
+retries: 2
+timeout_minutes: 5
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "active weather alerts; hourly snapshots preserve alert changes while polling conservatively"
+rate_limit: "no published hard limit; identify requests with User-Agent and keep one sequential request stream"
+licence: "National Weather Service / NOAA — US Government work, public domain"
+attribution_required: false
