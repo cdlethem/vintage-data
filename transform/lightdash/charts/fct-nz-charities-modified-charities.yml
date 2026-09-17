@@ -10,22 +10,34 @@ chartConfig:
         type: line
         yAxisIndex: 0
       xAxis:
-      - name: Modifiedon (Day)
+      - name: Source modified on (UTC day)
       yAxis:
-      - name: Distinct id
+      - name: Distinct charities
     layout:
       xField: fct_nz_charities_modifiedon_day
       yField:
       - fct_nz_charities_distinct_entities
   type: cartesian
-description: Distinct `id` values by `modifiedon` day. This is a count of registered entities whose source
-  record was revised, not a count of newly registered charities; days with no revision are absent rather
-  than zero.
+description: Distinct charities by the source `modifiedon` UTC day in the rolling 30-day event-time window.
+  This non-additive distinct-entity count measures represented revisions, not registrations or a current-state
+  census; absent days are not zero. New Zealand Charities Register data is licensed CC BY 3.0 NZ; attribution required.
 metricQuery:
   dimensions:
   - fct_nz_charities_modifiedon_day
   exploreName: fct_nz_charities
-  filters: {}
+  filters:
+    dimensions:
+      and:
+      - id: 743af8e8-4959-5fd8-9f17-e2fda81f5655
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nz_charities_modifiedon
+        values:
+        - 30
+      id: 65288477-b660-5cad-9893-0e149da965b0
   limit: 5000
   metrics:
   - fct_nz_charities_distinct_entities
@@ -33,7 +45,7 @@ metricQuery:
   - descending: false
     fieldId: fct_nz_charities_modifiedon_day
   tableCalculations: []
-name: Charities modified per day
+name: Charities revised per source day
 slug: fct-nz-charities-modified-charities
 spaceSlug: vintage-marts
 tableConfig:

@@ -56,26 +56,28 @@ tiles:
 - h: 6
   properties:
     content: 'Physical daily snapshot of New Zealand Charities Register organisation observations. Each
-      row is one source, organisation identifier, and fetch timestamp, with the published organisation
-      attributes and nested register details retained alongside load lineage. Repeated copies of the same
-      observation grain are resolved to the latest loaded file row.
+      row is one source, organisation identifier, and UTC fetch timestamp. Published attributes, the complete
+      raw payload, and load lineage are retained; replay copies at the same grain resolve to the latest loaded
+      file row. This is SCD2-like observation history without validity ranges, not a current-state table.
 
 
       **Grain:** source, id, fetched_at
 
 
-      **What changes here:** when registered charities are revised and how their published overseas-spending
-      profile varies by organisation type.
+      **What changes here:** represented source revisions and registrations, plus the reported overseas-spending
+      profile. Distinct-entity counts are non-additive across changing groups, and percentage-point averages
+      are non-summable across snapshots, dates, or groups.
 
 
-      **Window:** ranked and record tiles cover the past 30 days of `fetched_at` (UTC); trend tiles state
-      their own axis and window. Empty charts mean no matching published observations; they do not establish
-      that no events occurred.
+      **Window:** every chart uses a rolling 30-day UTC bound. Ranked and record tiles use `fetched_at`;
+      revision trends use source `modifiedon`; the registration trend uses source `dateregistered`. Empty
+      charts mean no matching published observations and do not prove no events occurred.
 
 
       **Provenance**
 
-      - `nz_charities` — licence: CC BY 3.0 NZ; attribution required: True. Source configuration: `extract/sources/nz_charities.yml`.'
+      - New Zealand Charities Register data (`nz_charities`) — licensed CC BY 3.0 NZ; attribution required.
+      Source configuration: `extract/sources/nz_charities.yml`.'
     hideFrame: false
     title: Nz charities
   type: markdown
@@ -92,10 +94,10 @@ tiles:
   y: 6
 - h: 10
   properties:
-    chartName: Charities modified per day
+    chartName: Charities revised per source day
     chartSlug: fct-nz-charities-modified-charities
     hideTitle: false
-    title: Charities modified per day
+    title: Charities revised per source day
   type: saved_chart
   w: 18
   x: 0
@@ -140,10 +142,10 @@ tiles:
   y: 37
 - h: 10
   properties:
-    chartName: Distinct id by registrationstatus
+    chartName: Distinct charities by registration status
     chartSlug: fct-nz-charities
     hideTitle: false
-    title: Distinct id by registrationstatus
+    title: Distinct charities by registration status
   type: saved_chart
   w: 18
   x: 0

@@ -14,24 +14,37 @@ chartConfig:
         type: bar
         yAxisIndex: 0
       xAxis:
-      - name: Dateregistered (Day)
+      - name: Source registered on (UTC day)
       yAxis:
-      - name: Distinct id
+      - name: Distinct charities
     layout:
       stack: true
       xField: fct_nz_charities_dateregistered_day
       yField:
       - fct_nz_charities_distinct_entities
   type: cartesian
-description: Distinct `id` values stacked by postal city on each `dateregistered` day. Bars show the mix
-  among the eight largest cities and exclude the remainder rather than aggregating it; a missing day means
-  no registrations in the mart.
+description: Distinct charities by source `dateregistered` UTC day in the rolling 30-day event-time window,
+  stacked across the eight largest postal cities. The remainder is excluded; this source-event flow is not a
+  snapshot census, and absent days are not zero. New Zealand Charities Register data is licensed CC BY 3.0 NZ;
+  attribution required.
 metricQuery:
   dimensions:
   - fct_nz_charities_dateregistered_day
   - fct_nz_charities_postaladdresscity
   exploreName: fct_nz_charities
-  filters: {}
+  filters:
+    dimensions:
+      and:
+      - id: 743af8e8-4959-5fd8-9f17-e2fda81f5655
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_nz_charities_dateregistered
+        values:
+        - 30
+      id: 65288477-b660-5cad-9893-0e149da965b0
   limit: 5000
   metrics:
   - fct_nz_charities_distinct_entities

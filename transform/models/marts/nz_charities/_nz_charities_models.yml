@@ -2,9 +2,10 @@ version: 2
 models:
 - name: fct_nz_charities
   description: Physical daily snapshot of New Zealand Charities Register organisation observations. Each
-    row is one source, organisation identifier, and fetch timestamp, with the published organisation attributes
-    and nested register details retained alongside load lineage. Repeated copies of the same observation
-    grain are resolved to the latest loaded file row.
+    row is one source, organisation identifier, and UTC fetch timestamp, with published organisation attributes,
+    the complete raw payload, and load lineage retained. This is SCD2-like observation history without validity
+    ranges, not a current-state table. Replay copies at the same grain are resolved to the latest loaded file row.
+    New Zealand Charities Register data is licensed CC BY 3.0 NZ; attribution required.
   config:
     contract:
       enforced: true
@@ -22,19 +23,19 @@ models:
           metric: distinct_entities
           time: fetched_at
           window_days: 30
-          title: Distinct id by registrationstatus
-          description: Distinct `id` values by `registrationstatus` among observations in the selected
-            window. Repeated observations of an entity count once within each group. An entity that changed
-            category can appear in multiple groups; these groups are not additive and do not represent
-            a current-state census.
+          title: Distinct charities by registration status
+          description: Distinct `id` values by `registrationstatus` among observations fetched in the rolling
+            30-day UTC window. Repeated observations of an entity count once within each group. An entity that
+            changed category can appear in multiple groups; this distinct-entity count is non-additive and is
+            not a current-state census. New Zealand Charities Register data is licensed CC BY 3.0 NZ; attribution required.
           detail_fields:
           - fetched_at
           - id
           - registrationstatus
           - source_loaded_at
           sources:
-          - '`nz_charities` — licence: CC BY 3.0 NZ; attribution required: True. Source configuration:
-            `extract/sources/nz_charities.yml`.'
+          - 'New Zealand Charities Register data (`nz_charities`) — licensed CC BY 3.0 NZ; attribution
+            required. Source configuration: `extract/sources/nz_charities.yml`.'
           analysis:
             headline: when registered charities are revised and how their published overseas-spending
               profile varies by organisation type.
@@ -51,10 +52,13 @@ models:
               metric: distinct_entities
               time: modifiedon
               grain: DAY
-              title: Charities modified per day
-              description: Distinct `id` values by `modifiedon` day. This is a count of registered entities
-                whose source record was revised, not a count of newly registered charities; days with no
-                revision are absent rather than zero.
+              title: Charities revised per source day
+              description: Distinct `id` values by the source `modifiedon` UTC day during the rolling 30-day
+                event-time window. This non-additive distinct-entity count measures represented revisions,
+                not new registrations or a current census; absent days are not zero. New Zealand Charities
+                Register data is licensed CC BY 3.0 NZ; attribution required.
+              time_label: Source modified on (UTC day)
+              window_days: 30
               width: half
             - slug: overseas-spending
               kind: total
@@ -62,9 +66,12 @@ models:
               time: modifiedon
               grain: DAY
               title: Reported overseas spending share by revision day
-              description: Mean non-null `percentagespentoverseas` among records by `modifiedon` day. Most
-                rows do not report this field, so the average describes only reporting organisations and
-                days with no reported value are absent rather than zero.
+              description: Mean non-null `percentagespentoverseas` in percentage points by source `modifiedon`
+                UTC day during the rolling 30-day event-time window. The observation-weighted average excludes
+                unreported values, is non-summable across snapshots or groups, and absent days are not zero.
+                New Zealand Charities Register data is licensed CC BY 3.0 NZ; attribution required.
+              time_label: Source modified on (UTC day)
+              window_days: 30
               width: half
             - slug: revisions-by-legal-structure
               kind: breakdown
@@ -74,9 +81,12 @@ models:
               time: modifiedon
               grain: DAY
               title: Modified charities by legal structure
-              description: Distinct `id` values revised on each `modifiedon` day, compared across the
-                largest legal-structure groups. The remaining structures are excluded rather than
-                aggregated; this is revision activity, not a current census.
+              description: Distinct `id` values revised on each source `modifiedon` UTC day during the rolling
+                30-day event-time window, split across the seven largest legal-structure groups. The remainder
+                is excluded; groups are non-additive and do not form a current census. New Zealand Charities
+                Register data is licensed CC BY 3.0 NZ; attribution required.
+              time_label: Source modified on (UTC day)
+              window_days: 30
               width: full
             - slug: registrations-by-city
               kind: composition
@@ -86,9 +96,12 @@ models:
               time: dateregistered
               grain: DAY
               title: Registered charities by city and registration day
-              description: Distinct `id` values stacked by postal city on each `dateregistered` day. Bars
-                show the mix among the eight largest cities and exclude the remainder rather than
-                aggregating it; a missing day means no registrations in the mart.
+              description: Distinct `id` values by source `dateregistered` UTC day during the rolling 30-day
+                event-time window, stacked across the eight largest postal cities. The remainder is excluded;
+                this is a registration flow, not a snapshot census, and absent days are not zero. New Zealand
+                Charities Register data is licensed CC BY 3.0 NZ; attribution required.
+              time_label: Source registered on (UTC day)
+              window_days: 30
               width: full
   columns:
   - name: charity_observation_key
@@ -124,18 +137,17 @@ models:
         metrics:
           distinct_entities:
             type: count_distinct
-            label: Distinct id
-            description: Distinct `id` values by `registrationstatus` among observations in the selected
-              window. Repeated observations of an entity count once within each group. An entity that
-              changed category can appear in multiple groups; these groups are not additive and do not
-              represent a current-state census.
+            label: Distinct charities
+            description: Distinct `id` values represented by matching observations. Repeated snapshots of an
+              entity count once within each group, but an entity that changes category can appear in multiple
+              groups. This distinct-entity count is non-additive and is not a current-state census.
             format: '#,##0'
         dimension:
           type: string
           label: Id
           hidden: false
   - name: fetched_at
-    description: Timestamp at which the source organisation record was fetched.
+    description: UTC timestamp at which the source organisation record was fetched; part of the physical snapshot grain.
     data_type: timestamp with time zone
     config:
       meta:
@@ -461,7 +473,7 @@ models:
           label: Companiesofficenumber
           hidden: false
   - name: dateregistered
-    description: Timestamp when the organisation was registered.
+    description: Source event timestamp when the organisation was registered, interpreted on a UTC axis.
     data_type: timestamp with time zone
     config:
       meta:
@@ -577,17 +589,17 @@ models:
           label: Organisationaltype
           hidden: false
   - name: percentagespentoverseas
-    description: Reported percentage of expenditure spent overseas.
+    description: Reported share of expenditure spent overseas, measured in percentage points.
     data_type: bigint
     config:
       meta:
         metrics:
           average_percentagespentoverseas:
             type: average
-            label: Mean overseas spending percentage
-            description: Mean non-null `percentagespentoverseas` reported by charities in each selected
-              revision window. This measure excludes organisations with no reported percentage and is
-              not a sum of spending.
+            label: Mean overseas spending (percentage points)
+            description: Observation-weighted mean of non-null `percentagespentoverseas`, measured in percentage
+              points. It excludes organisations with no reported value and is non-summable across snapshots,
+              dates, or groups.
             format: '#,##0.00'
         dimension:
           type: number
@@ -595,7 +607,7 @@ models:
           hidden: false
           format: '#,##0'
   - name: registrationstatus
-    description: Current registration status reported by the register.
+    description: Registration status reported by the register for this fetched observation; not an asserted current state.
     data_type: varchar
     config:
       meta:
@@ -686,7 +698,7 @@ models:
           label: Othernames
           hidden: false
   - name: modifiedon
-    description: Timestamp when the source organisation record was last modified.
+    description: Source event timestamp when the publisher last modified the organisation record, interpreted on a UTC axis.
     data_type: timestamp with time zone
     config:
       meta:
@@ -744,6 +756,15 @@ models:
         dimension:
           type: string
           label: Socialnetworkname
+          hidden: false
+  - name: twittername
+    description: Twitter name reported by the organisation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Twittername
           hidden: false
   - name: overseasoperationafrica
     description: Whether overseas operations in Africa are reported.
@@ -917,6 +938,16 @@ models:
           type: string
           label: Legalstructure
           hidden: false
+  - name: _payload
+    description: Complete raw record payload retained for lineage and unpromoted schema additions.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: ' payload'
+          hidden: true
+          sql: CAST(${TABLE}._payload AS VARCHAR)
   - name: _batch_id
     description: Identifier of the raw batch that produced the retained observation.
     data_type: varchar
