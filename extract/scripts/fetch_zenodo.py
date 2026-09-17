@@ -52,13 +52,33 @@ from datetime import datetime, timezone
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 BASE = "https://zenodo.org/api/records"
 
+REQUEST_TIMEOUT_SECONDS = 30
+
+
+def _report_read_timeout(params, error):
+    """Write bounded transport context without exposing query values or bodies."""
+    diagnostic = {
+        "event": "zenodo_read_timeout",
+        "exception_class": type(error).__name__,
+        "request": {
+            "endpoint": BASE,
+            "query_present": "q" in params,
+            "timeout_seconds": REQUEST_TIMEOUT_SECONDS,
+        },
+    }
+    print(json.dumps(diagnostic, sort_keys=True), file=sys.stderr)
+
 
 def _get(**params):
     url = f"{BASE}?{urllib.parse.urlencode(params)}"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT,
                                                 "Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.load(resp)
+    try:
+        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as resp:
+            return json.load(resp)
+    except TimeoutError as error:
+        _report_read_timeout(params, error)
+        raise
 
 
 def fetch_recent(size: int = 25, query: str | None = None):
@@ -89,7 +109,12 @@ def fetch_recent(size: int = 25, query: str | None = None):
         }
 
 
-if __name__ == "__main__":
-    size = int(sys.argv[1]) if len(sys.argv) > 1 else 25
+def main(argv=None):
+    args = sys.argv[1:] if argv is None else argv
+    size = int(args[0]) if args else 25
     for rec in fetch_recent(size=size):
         print(json.dumps(rec, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()
