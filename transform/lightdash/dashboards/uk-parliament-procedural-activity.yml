@@ -1,0 +1,122 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Week
+  isDateZoomDisabled: false
+description: "UK Parliament BusinessItem observation history. Source attribution and interpretation limits are stated on every chart; observations and business dates are intentionally separate."
+filters:
+  dimensions:
+  - disabled: true
+    id: 96be0695-3a4b-4b46-b1c7-e7cb6e9659a7
+    label: 'UK Parliament procedural activity: Source relation'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_parliament_procedural_activity_source_relation
+      tableName: fct_uk_parliament_procedural_activity
+    values: []
+  - disabled: true
+    id: 029f4185-bbc1-42ee-bbe7-11c05aa11245
+    label: 'UK Parliament procedural activity: Scheduled date count'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_parliament_procedural_activity_business_item_date_count
+      tableName: fct_uk_parliament_procedural_activity
+    values: []
+  metrics: []
+  tableCalculations: []
+name: UK Parliament procedural activity
+slug: uk-parliament-procedural-activity
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 7
+  properties:
+    content: "Hourly append-only observation history of UK Parliament BusinessItem procedural records. Each row is one raw source relation, procedural item, and extractor observation timestamp; repeat deliveries at that grain retain the latest load.\n\n**Grain:** source_relation, procedural_item_id, observed_at\n\n**Interpretation:** `observed_at` is UTC extractor observation time. `laying_at`, `first_business_item_at`, and `last_business_item_at` are UTC Parliamentary business timestamps. This is neither a current snapshot nor SCD2 history: revisions remain as separate rows. Distinct-item measures de-duplicate only inside their selected group, and items with multiple scheduled dates can fall in overlapping categories; do not add categories or time buckets as if they were disjoint flows.\n\n**Windows:** ranked and record tiles cover the latest 30 observed UTC days. Event trend tiles cover the latest 365 days on their stated business-date axis. Empty buckets mean no matching retained observations, not proof that no Parliamentary event occurred.\n\n**Source and attribution:** UK Parliament BusinessItem OData feed. Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Source configuration: `extract/sources/uk_parliament_procedural_activity.yml`."
+    hideFrame: false
+    title: UK Parliament procedural activity — observation history
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: UK Parliament procedural activity — business-date trends
+  type: heading
+  w: 36
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Procedural items laid weekly
+    chartSlug: fct-uk-parliament-procedural-activity-items-laid-weekly
+    hideTitle: false
+    title: Procedural items laid weekly
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 8
+- h: 10
+  properties:
+    chartName: Procedural items first scheduled weekly
+    chartSlug: fct-uk-parliament-procedural-activity-scheduled-items-weekly
+    hideTitle: false
+    title: Procedural items first scheduled weekly
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 8
+- h: 10
+  properties:
+    chartName: Average scheduled dates per laid item weekly
+    chartSlug: fct-uk-parliament-procedural-activity-average-schedule-dates-weekly
+    hideTitle: false
+    title: Average scheduled dates per laid item weekly
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 18
+- h: 10
+  properties:
+    chartName: Procedural items by scheduled date count weekly
+    chartSlug: fct-uk-parliament-procedural-activity-schedule-date-count-mix
+    hideTitle: false
+    title: Procedural items by scheduled date count weekly
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 18
+- h: 1
+  properties:
+    showDivider: true
+    text: UK Parliament procedural activity — latest observations
+  type: heading
+  w: 36
+  x: 0
+  y: 28
+- h: 10
+  properties:
+    chartName: Procedural items by scheduled date count
+    chartSlug: fct-uk-parliament-procedural-activity
+    hideTitle: false
+    title: Procedural items by scheduled date count
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 29
+- h: 10
+  properties:
+    chartName: UK Parliament procedural activity — observations
+    chartSlug: fct-uk-parliament-procedural-activity-details
+    hideTitle: false
+    title: UK Parliament procedural activity — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 29
+version: 1

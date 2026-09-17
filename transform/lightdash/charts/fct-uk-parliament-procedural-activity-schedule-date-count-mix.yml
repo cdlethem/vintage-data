@@ -1,0 +1,65 @@
+chartConfig:
+  config:
+    columnLimit: 10
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_parliament_procedural_activity_laying_at_week
+          yRef:
+            field: fct_uk_parliament_procedural_activity_distinct_procedural_items
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Laid at (Week)
+      yAxis:
+      - name: Distinct procedural items
+    layout:
+      stack: true
+      xField: fct_uk_parliament_procedural_activity_laying_at_week
+      yField:
+      - fct_uk_parliament_procedural_activity_distinct_procedural_items
+  type: cartesian
+description: "Source: UK Parliament BusinessItem OData feed, Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Distinct procedural items by UTC laying week, stacked by raw scheduled BusinessItemDate count and limited to the latest 365 days of `laying_at`. Each item is counted once per count category within a week; revisions remain separate across weeks and the ten largest categories exclude smaller ones."
+metricQuery:
+  dimensions:
+  - fct_uk_parliament_procedural_activity_laying_at_week
+  - fct_uk_parliament_procedural_activity_business_item_date_count
+  exploreName: fct_uk_parliament_procedural_activity
+  filters:
+    dimensions:
+      and:
+      - id: 5766b19c-e11b-448d-b1ef-cd70bdc380e7
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_parliament_procedural_activity_laying_at
+        values:
+        - 365
+  limit: 5000
+  metrics:
+  - fct_uk_parliament_procedural_activity_distinct_procedural_items
+  sorts:
+  - descending: true
+    fieldId: fct_uk_parliament_procedural_activity_distinct_procedural_items
+  - descending: false
+    fieldId: fct_uk_parliament_procedural_activity_laying_at_week
+  tableCalculations: []
+name: Procedural items by scheduled date count weekly
+pivotConfig:
+  columns:
+  - fct_uk_parliament_procedural_activity_business_item_date_count
+slug: fct-uk-parliament-procedural-activity-schedule-date-count-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_parliament_procedural_activity_laying_at_week
+  - fct_uk_parliament_procedural_activity_business_item_date_count
+  - fct_uk_parliament_procedural_activity_distinct_procedural_items
+tableName: fct_uk_parliament_procedural_activity
+version: 1

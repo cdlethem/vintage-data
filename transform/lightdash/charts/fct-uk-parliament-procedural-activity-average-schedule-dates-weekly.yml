@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_parliament_procedural_activity_laying_at_week
+          yRef:
+            field: fct_uk_parliament_procedural_activity_avg_schedule_dates
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Laid at (Week)
+      yAxis:
+      - name: Average scheduled dates per laid item
+    layout:
+      xField: fct_uk_parliament_procedural_activity_laying_at_week
+      yField:
+      - fct_uk_parliament_procedural_activity_avg_schedule_dates
+  type: cartesian
+description: "Source: UK Parliament BusinessItem OData feed, Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Average raw BusinessItemDate entries per retained observation version, by UTC laying week and limited to the latest 365 days of `laying_at`. This is observation-weighted: revisions remain separate, so it is not the average for a deduplicated current schedule."
+metricQuery:
+  dimensions:
+  - fct_uk_parliament_procedural_activity_laying_at_week
+  exploreName: fct_uk_parliament_procedural_activity
+  filters:
+    dimensions:
+      and:
+      - id: 13826fd2-da3e-4f7f-9aea-b16859d11d17
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_parliament_procedural_activity_laying_at
+        values:
+        - 365
+  limit: 5000
+  metrics:
+  - fct_uk_parliament_procedural_activity_avg_schedule_dates
+  sorts:
+  - descending: false
+    fieldId: fct_uk_parliament_procedural_activity_laying_at_week
+  tableCalculations: []
+name: Average scheduled dates per laid item weekly
+slug: fct-uk-parliament-procedural-activity-average-schedule-dates-weekly
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_parliament_procedural_activity_laying_at_week
+  - fct_uk_parliament_procedural_activity_avg_schedule_dates
+tableName: fct_uk_parliament_procedural_activity
+version: 1

@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_parliament_procedural_activity_laying_at_week
+          yRef:
+            field: fct_uk_parliament_procedural_activity_distinct_procedural_items
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Laid at (Week)
+      yAxis:
+      - name: Distinct procedural items
+    layout:
+      xField: fct_uk_parliament_procedural_activity_laying_at_week
+      yField:
+      - fct_uk_parliament_procedural_activity_distinct_procedural_items
+  type: cartesian
+description: "Source: UK Parliament BusinessItem OData feed, Contains Parliamentary information licensed under the Open Parliament Licence v3.0. Distinct procedural items by UTC week when Parliament reports they were laid, limited to the latest 365 days of `laying_at`. Revisions count once within a week; the series is a business-date grouping, not extractor observation time or a current-item count."
+metricQuery:
+  dimensions:
+  - fct_uk_parliament_procedural_activity_laying_at_week
+  exploreName: fct_uk_parliament_procedural_activity
+  filters:
+    dimensions:
+      and:
+      - id: f8f4af79-fad4-493d-990a-b36d8bbb2a23
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_parliament_procedural_activity_laying_at
+        values:
+        - 365
+  limit: 5000
+  metrics:
+  - fct_uk_parliament_procedural_activity_distinct_procedural_items
+  sorts:
+  - descending: false
+    fieldId: fct_uk_parliament_procedural_activity_laying_at_week
+  tableCalculations: []
+name: Procedural items laid weekly
+slug: fct-uk-parliament-procedural-activity-items-laid-weekly
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_parliament_procedural_activity_laying_at_week
+  - fct_uk_parliament_procedural_activity_distinct_procedural_items
+tableName: fct_uk_parliament_procedural_activity
+version: 1
