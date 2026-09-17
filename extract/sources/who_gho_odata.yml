@@ -1,0 +1,40 @@
+name: who_gho_odata
+script: fetch_who_gho_odata.py
+# Exact admitted scope. Every selector and safety budget is explicit; failures exit
+# non-zero and the extract runner discards its staged stdout.
+args:
+  - "--indicator"
+  - "WHOSIS_000001"
+  - "--geography-type"
+  - "COUNTRY"
+  - "--geography"
+  - "USA"
+  - "--start-year"
+  - "2020"
+  - "--end-year"
+  - "2022"
+  - "--page-size"
+  - "100"
+  - "--timeout"
+  - "30"
+  - "--retries"
+  - "2"
+  - "--retry-delay"
+  - "1"
+  - "--max-pages"
+  - "10"
+  - "--max-records"
+  - "1000"
+schedule: "41 11 * * *"  # UTC; conservative daily check for revised WHO observations
+enabled: false
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Activation remains gated on recorded live smoke, pagination/filter evidence, raw
+# loading, warehouse build/tests, and an authorized deployment/scheduling decision.
+cadence_note: "daily bounded snapshot of WHOSIS_000001 for USA, annual periods 2020-2022; source remains disabled pending live validation and activation evidence"
+rate_limit: "WHO GHO OData API; serial requests, 100 rows/page, at most 10 pages and 1,000 observations per run, with two bounded retries"
+licence: "WHO data terms and conditions"
+attribution: "World Health Organization, Global Health Observatory, https://www.who.int/data/gho"
+attribution_required: true
