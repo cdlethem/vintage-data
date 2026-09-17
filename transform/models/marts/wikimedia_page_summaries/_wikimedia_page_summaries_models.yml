@@ -1,0 +1,143 @@
+version: 2
+models:
+- name: fct_wikimedia_page_summary_observation
+  description: >-
+    Bounded observations of explicitly configured Wikimedia page-summary identities. The grain is
+    source, normalized language/project/requested-title identity, and extractor observation time.
+    Exact replay copies are reduced to the latest raw load; later refreshes are retained even when
+    unchanged, so this is observation history rather than current page state or a page census.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, page_identity, observed_at
+      label: Wikimedia page summary observation
+      group_label: Wikimedia page summaries
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: wikimedia_page_summary_observation_key
+  columns:
+  - name: wikimedia_page_summary_observation_key
+    description: Stable hash of source, stable requested-page identity, and observation timestamp.
+    data_type: varchar
+    data_tests: [not_null, unique]
+  - name: source_name
+    description: Extractor source label, always wikimedia_page_summaries.
+    data_type: varchar
+    data_tests: [not_null]
+  - name: page_identity
+    description: Stable SHA-256 identity of normalized language, project, and requested title.
+    data_type: varchar
+    data_tests: [not_null]
+  - name: observed_at
+    description: UTC time at which the bounded configured batch was fetched.
+    data_type: timestamp with time zone
+    data_tests: [not_null]
+  - name: language
+    description: Normalized requested Wikimedia language code; part of page identity.
+    data_type: varchar
+    data_tests: [not_null]
+  - name: project
+    description: Allowlisted requested Wikimedia project; part of page identity.
+    data_type: varchar
+    data_tests: [not_null]
+  - name: requested_title
+    description: NFC and underscore-normalized configured title; part of page identity.
+    data_type: varchar
+    data_tests: [not_null]
+  - name: title
+    description: Resolved page title returned by Wikimedia.
+    data_type: varchar
+    data_tests: [not_null]
+  - name: is_redirect
+    description: Whether the normalized resolved title differs from the normalized requested title.
+    data_type: boolean
+    data_tests: [not_null]
+  - name: page_id
+    description: Positive Wikimedia page identifier.
+    data_type: bigint
+    data_tests: [not_null]
+  - name: revision_id
+    description: Wikimedia revision identifier represented by the summary response.
+    data_type: varchar
+    data_tests: [not_null]
+  - name: revision_timestamp
+    description: UTC timestamp of the represented Wikimedia revision.
+    data_type: timestamp with time zone
+    data_tests: [not_null]
+  - name: summary
+    description: Plain-text page extract returned by Wikimedia; an empty string is preserved.
+    data_type: varchar
+    data_tests: [not_null]
+  - name: description
+    description: Short Wikimedia description, nullable when the API omits it.
+    data_type: varchar
+  - name: wikibase_item
+    description: Associated Wikibase item identifier, nullable when absent.
+    data_type: varchar
+  - name: page_url
+    description: Validated canonical HTTPS desktop page URL on the requested Wikimedia host.
+    data_type: varchar
+    data_tests: [not_null]
+  - name: mobile_page_url
+    description: Validated canonical HTTPS mobile page URL on the requested Wikimedia host.
+    data_type: varchar
+    data_tests: [not_null]
+  - name: api_url
+    description: Validated and safely encoded REST summary request URL.
+    data_type: varchar
+    data_tests: [not_null]
+  - name: thumbnail_source
+    description: HTTPS upload.wikimedia.org thumbnail URL, nullable with all thumbnail metadata.
+    data_type: varchar
+  - name: thumbnail_width
+    description: Positive thumbnail width in pixels, nullable with thumbnail_source.
+    data_type: bigint
+  - name: thumbnail_height
+    description: Positive thumbnail height in pixels, nullable with thumbnail_source.
+    data_type: bigint
+  - name: original_image_source
+    description: HTTPS upload.wikimedia.org original-image URL, nullable with all image metadata.
+    data_type: varchar
+  - name: original_image_width
+    description: Positive original-image width in pixels, nullable with original_image_source.
+    data_type: bigint
+  - name: original_image_height
+    description: Positive original-image height in pixels, nullable with original_image_source.
+    data_type: bigint
+  - name: source_row_id
+    description: Raw loader row identifier retained after replay deduplication.
+    data_type: varchar
+    data_tests: [not_null]
+  - name: source_batch_id
+    description: Raw extract batch identifier retained after replay deduplication.
+    data_type: varchar
+    data_tests: [not_null]
+  - name: source_file
+    description: Raw NDJSON file retained after replay deduplication.
+    data_type: varchar
+    data_tests: [not_null]
+  - name: source_file_row_number
+    description: One-based row number in the retained raw file.
+    data_type: bigint
+    data_tests: [not_null]
+  - name: source_date
+    description: Raw sink partition date.
+    data_type: date
+    data_tests: [not_null]
+  - name: extract_started_at
+    description: Extract-run start time from the sink manifest, nullable for legacy artifacts.
+    data_type: timestamp with time zone
+  - name: load_id
+    description: Loader job identifier for the retained row.
+    data_type: varchar
+    data_tests: [not_null]
+  - name: source_loaded_at
+    description: UTC time at which the retained raw row was loaded.
+    data_type: timestamp with time zone
+    data_tests: [not_null]
+  - name: content_hash
+    description: Stable raw payload hash for lineage and replay diagnostics.
+    data_type: varchar
+    data_tests: [not_null]
