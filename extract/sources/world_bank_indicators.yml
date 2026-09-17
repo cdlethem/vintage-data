@@ -1,0 +1,36 @@
+name: world_bank_indicators
+script: fetch_world_bank_indicators.py
+# Scheduled runs use the extractor's bounded rolling two-year window and fixed
+# indicator/country allowlists. Page count and page size remain explicit here.
+args: ["--page-size", "100", "--max-pages", "10", "--timeout", "30"]
+schedule: "17 15 * * 2"  # UTC; conservative weekly refresh
+enabled: false
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Keep this source disabled until an operator records both a successful live-source
+# smoke check and a read-only Airflow import check. Do not enable or unpause it as
+# part of source implementation or offline verification.
+
+# Historical retrieval is a separate, paced operator action. Review the expanded
+# bounded plan and request/storage cost before execution; each unit requests one year.
+backfill:
+  unit: year
+  start: "1960"
+  end: "2024"
+  args: ["--start-year", "{yyyy}", "--end-year", "{yyyy}", "--page-size", "100", "--max-pages", "10", "--timeout", "30"]
+  pace_seconds: 5
+  timeout_minutes: 15
+
+# Keep the declared weekly schedule fixed; revisions are not a signal to increase
+# polling frequency.
+cadence:
+  auto: false
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "weekly bounded refresh of an explicit country and development-indicator basket; historical years are separately paced and bounded"
+rate_limit: "World Bank Indicators API has no published fixed public quota; requests are bounded and paginated conservatively"
+licence: "World Bank Dataset Terms of Use"
+attribution: "World Bank Open Data, https://data.worldbank.org/"
+attribution_required: true
