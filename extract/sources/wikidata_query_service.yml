@@ -1,0 +1,31 @@
+name: wikidata_query_service
+script: fetch_wikidata_query_service.py
+# Representative, deliberately small country/capital snapshot. The extractor validates
+# the real outer LIMIT before issuing its sole request; nested or textual LIMITs do not count.
+args:
+  - "--query"
+  - >-
+    SELECT ?country ?countryLabel ?capital ?capitalLabel WHERE {
+      VALUES ?country { wd:Q30 wd:Q145 wd:Q183 wd:Q142 wd:Q38 }
+      ?country wdt:P36 ?capital .
+      SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+    }
+    ORDER BY ?country ?capital
+    LIMIT 100
+schedule: "23 4 * * 1"  # UTC; conservative weekly request
+# Keep disabled until an operator records a live endpoint smoke and read-only Airflow import checks.
+enabled: false
+retries: 1
+timeout_minutes: 5
+sink: local
+
+# Fixed weekly cadence avoids treating WDQS availability as an activity signal.
+cadence:
+  auto: false
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "weekly UTC snapshot; one bounded request with no pagination"
+rate_limit: "Wikidata Query Service has no fixed public quota; identify the client, make one serial request per run, honor throttling, and keep queries below the configured 60-second timeout"
+licence: "Wikidata structured data is available under CC0 1.0"
+attribution: "Wikidata contributors, https://www.wikidata.org/; query service provided by Wikimedia Foundation"
+attribution_required: true
