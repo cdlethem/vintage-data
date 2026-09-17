@@ -1,0 +1,58 @@
+name: world_bank_indicators
+script: fetch_world_bank_indicators.py
+args:
+  - --indicator
+  - NY.GDP.MKTP.CD
+  - SP.POP.TOTL
+  - EN.ATM.CO2E.KT
+  - --country
+  - USA
+  - GBR
+  - DEU
+  - IND
+  - --start-date
+  - "2020"
+  - --end-date
+  - "2026"
+  - --page-size
+  - "100"
+  - --max-pages
+  - "20"
+schedule: "25 4 * * 1"  # UTC; annual series is repulled weekly for revisions
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Operator action only: each bounded annual request covers the configured four
+# countries and three indicators. Review the range and API cost before launch.
+backfill:
+  unit: year
+  start: "1960"
+  end: "2019"
+  args:
+    - --indicator
+    - NY.GDP.MKTP.CD
+    - SP.POP.TOTL
+    - EN.ATM.CO2E.KT
+    - --country
+    - USA
+    - GBR
+    - DEU
+    - IND
+    - --start-date
+    - "{yyyy}"
+    - --end-date
+    - "{yyyy}"
+    - --page-size
+    - "100"
+    - --max-pages
+    - "20"
+  pace_seconds: 2
+  timeout_minutes: 10
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "World Bank annual indicators are repulled weekly to capture published revisions. Historical backfill is deliberately bounded to 1960-2019 and requires operator review before execution."
+rate_limit: "unpublished; scheduled and backfill pulls use small, bounded requests"
+licence: "World Bank Open Data Terms of Use"
+attribution_required: true
