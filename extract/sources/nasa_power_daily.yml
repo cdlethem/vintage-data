@@ -1,0 +1,18 @@
+name: nasa_power_daily
+script: fetch_nasa_power_daily.py
+args: ["--latitude", "38.9072", "--longitude", "-77.0369", "--parameters", "T2M,T2M_MAX,T2M_MIN,PRECTOTCORR", "--community", "AG", "--time-standard", "UTC", "--timeout", "30", "--smoke"]
+schedule: "23 10 * * *"  # UTC; conservative daily request for the previous complete UTC day
+enabled: false
+retries: 1
+timeout_minutes: 5
+sink: local
+
+# Keep disabled until an operator records a successful live NASA POWER smoke and a
+# successful read-only Airflow import check. Confined verification must not contact
+# production services or mutate Airflow metadata.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "one daily point request for the previous complete UTC day at 38.9072,-77.0369; no grid, regional, or catalog requests"
+rate_limit: "one bounded serial request per run; NASA POWER asks clients to avoid concurrent requests and excessive polling"
+licence: "NASA POWER data are provided for public use; retain NASA POWER and source-dataset attribution"
+attribution: "NASA Prediction Of Worldwide Energy Resources (POWER), https://power.larc.nasa.gov/"
+attribution_required: true
