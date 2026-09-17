@@ -1,0 +1,34 @@
+name: wikidata_query_service
+script: fetch_wikidata_query_service.py
+args:
+  - "--query"
+  - >-
+    SELECT ?item ?itemLabel ?itemDescription WHERE {
+      VALUES ?item {
+        wd:Q525 wd:Q111 wd:Q7547 wd:Q2 wd:Q308 wd:Q313 wd:Q319 wd:Q324 wd:Q339 wd:Q596
+      }
+      SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+    }
+    ORDER BY ?item
+    LIMIT 10
+  - "--id-variable"
+  - "item"
+  - "--timeout"
+  - "30"
+schedule: "17 4 * * 1"  # UTC; weekly and off the hour
+# Disabled until operators complete a live endpoint smoke check and Airflow import check.
+enabled: false
+retries: 1
+timeout_minutes: 5
+sink: local
+run_summary:
+  required: true
+
+# Dataset contract: metadata for the ten explicitly listed Solar System objects.
+# The final LIMIT is mandatory and enforced by the fetcher; one run is one GET and
+# pagination is deliberately disabled. Downstream models wait for a stable shape.
+cadence_note: "small reusable entity-metadata snapshot; weekly is sufficient"
+rate_limit: "Wikidata Query Service has dynamic limits; one bounded request per weekly run, with no pagination"
+licence: "Wikidata structured data — CC0 1.0"
+attribution: "Wikidata contributors; https://www.wikidata.org/"
+attribution_required: true
