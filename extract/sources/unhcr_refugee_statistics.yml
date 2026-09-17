@@ -1,0 +1,16 @@
+name: unhcr_refugee_statistics
+script: fetch_unhcr_refugee_statistics.py
+args: []
+schedule: "0 6 15 6 *"  # UTC; annual update after reporting-year publication
+enabled: false
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Enable only after an operator has recorded a live endpoint smoke check and an
+# Airflow import check.  This file does not alter Airflow metadata itself.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "UNHCR annual population statistics; default run requests the current reporting year"
+rate_limit: "self-imposed one request per second; at most 50 requests and 5,000 rows per run"
+licence: "UNHCR Refugee Data Finder terms; attribution required"
+attribution_required: true
