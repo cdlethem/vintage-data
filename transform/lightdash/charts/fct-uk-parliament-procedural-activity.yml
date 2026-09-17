@@ -1,0 +1,53 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_parliament_procedural_activity_source
+          yRef:
+            field: fct_uk_parliament_procedural_activity_distinct_items
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_uk_parliament_procedural_activity_source
+      yField:
+      - fct_uk_parliament_procedural_activity_distinct_items
+  type: cartesian
+description: Distinct `procedural_item_id` values by upstream source among observations from the past 30
+  UTC days. Repeated versions count once within each source; this is not an additive count across windows
+  or a current-state census.
+metricQuery:
+  dimensions:
+  - fct_uk_parliament_procedural_activity_source
+  exploreName: fct_uk_parliament_procedural_activity
+  filters:
+    dimensions:
+      and:
+      - id: 00000000-0000-5000-8000-000000000001
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_parliament_procedural_activity_observed_at
+        values:
+        - 30
+      id: 00000000-0000-5000-8000-000000000002
+  limit: 20
+  metrics:
+  - fct_uk_parliament_procedural_activity_distinct_items
+  sorts:
+  - descending: true
+    fieldId: fct_uk_parliament_procedural_activity_distinct_items
+  tableCalculations: []
+name: Distinct procedural items by source
+slug: fct-uk-parliament-procedural-activity
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_parliament_procedural_activity_source
+  - fct_uk_parliament_procedural_activity_distinct_items
+tableName: fct_uk_parliament_procedural_activity
+version: 1

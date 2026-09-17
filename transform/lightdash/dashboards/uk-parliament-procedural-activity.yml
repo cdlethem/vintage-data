@@ -1,0 +1,143 @@
+config:
+  dateZoomGranularities:
+  - Day
+  - Week
+  - Month
+  - Year
+  defaultDateZoomGranularity: Week
+  isDateZoomDisabled: false
+description: UK Parliament procedural-item observation and business-date trends. Every chart states its
+  UTC window and whether it counts unique items or append-only observed versions.
+filters:
+  dimensions:
+  - disabled: true
+    id: 00000000-0000-5000-8000-000000000015
+    label: 'UK Parliament procedural activity: Source'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_parliament_procedural_activity_source
+      tableName: fct_uk_parliament_procedural_activity
+    values: []
+  - disabled: true
+    id: 00000000-0000-5000-8000-000000000016
+    label: 'UK Parliament procedural activity: Business item date count'
+    operator: equals
+    required: false
+    target:
+      fieldId: fct_uk_parliament_procedural_activity_business_item_date_count
+      tableName: fct_uk_parliament_procedural_activity
+    values: []
+  metrics: []
+  tableCalculations: []
+name: UK Parliament Procedural Activity
+slug: uk-parliament-procedural-activity
+spaceSlug: vintage-marts
+tabs: []
+tiles:
+- h: 6
+  properties:
+    content: 'Hourly append-only observation history of UK Parliament procedural BusinessItems. Replayed
+      raw copies of the same observation are reduced deterministically to the latest loaded lineage record;
+      all distinct extractor observation times remain as versions. Raw `BusinessItemDate` JSON is retained,
+      while malformed individual schedule dates become null summaries rather than rejecting the observation.
+
+
+      **Grain:** source_relation, procedural_item_id, observed_at
+
+
+      **Interpretation:** item charts count distinct procedural items within each group. Version charts count
+      retained observations and are non-additive across overlapping windows. The average is observation-weighted:
+      every retained version contributes equally, so frequently revised items can contribute repeatedly. It
+      is not an average over one current snapshot.
+
+
+      **Time:** `observed_at` is collector observation time; `laid_at`, `first_scheduled_at`, and
+      `last_scheduled_at` are publisher business times. All filters are bounded UTC windows stated on each chart.
+
+
+      **Provenance:** UK Parliament API, Open Parliament Licence v3.0; attribution required. Source configuration:
+      `extract/sources/uk_parliament_procedural_activity.yml`.'
+    hideFrame: false
+    title: UK Parliament procedural activity
+  type: markdown
+  w: 36
+  x: 0
+  y: 0
+- h: 1
+  properties:
+    showDivider: true
+    text: UK Parliament procedural activity — change over time
+  type: heading
+  w: 36
+  x: 0
+  y: 6
+- h: 10
+  properties:
+    chartName: Distinct items laid by week
+    chartSlug: fct-uk-parliament-procedural-activity-items-laid-weekly
+    hideTitle: false
+    title: Distinct items laid by week
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 7
+- h: 10
+  properties:
+    chartName: Distinct scheduled items by first schedule week
+    chartSlug: fct-uk-parliament-procedural-activity-scheduled-items-weekly
+    hideTitle: false
+    title: Distinct scheduled items by first schedule week
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 7
+- h: 10
+  properties:
+    chartName: Observed schedule-date count mix by week
+    chartSlug: fct-uk-parliament-procedural-activity-schedule-date-count-mix
+    hideTitle: false
+    title: Observed schedule-date count mix by week
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 17
+- h: 10
+  properties:
+    chartName: Average schedule dates per observed version by week
+    chartSlug: fct-uk-parliament-procedural-activity-average-schedule-dates-weekly
+    hideTitle: false
+    title: Average schedule dates per observed version by week
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 27
+- h: 1
+  properties:
+    showDivider: true
+    text: UK Parliament procedural activity — latest observation window
+  type: heading
+  w: 36
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Distinct procedural items by source
+    chartSlug: fct-uk-parliament-procedural-activity
+    hideTitle: false
+    title: Distinct procedural items by source
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: UK Parliament procedural activity — observations
+    chartSlug: fct-uk-parliament-procedural-activity-details
+    hideTitle: false
+    title: UK Parliament procedural activity — observations
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+version: 1

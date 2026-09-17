@@ -1,0 +1,57 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_uk_parliament_procedural_activity_observed_at_week
+          yRef:
+            field: fct_uk_parliament_procedural_activity_m_e7deb827
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Week, UTC)
+      yAxis:
+      - name: Average schedule dates per observed version
+    layout:
+      xField: fct_uk_parliament_procedural_activity_observed_at_week
+      yField:
+      - fct_uk_parliament_procedural_activity_m_e7deb827
+  type: cartesian
+description: Public metric `average_business_item_date_count`, resolved by bounded semantic alias
+  `m_e7deb827`. This is the observation-weighted average `business_item_date_count` per retained version
+  in each UTC observation week. Every version has equal weight, so frequently revised items can contribute
+  repeatedly; this is not a current-snapshot item average or an additive total.
+metricQuery:
+  dimensions:
+  - fct_uk_parliament_procedural_activity_observed_at_week
+  exploreName: fct_uk_parliament_procedural_activity
+  filters:
+    dimensions:
+      and:
+      - id: 00000000-0000-5000-8000-000000000013
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_parliament_procedural_activity_observed_at
+        values:
+        - 90
+      id: 00000000-0000-5000-8000-000000000014
+  limit: 5000
+  metrics:
+  - fct_uk_parliament_procedural_activity_m_e7deb827
+  sorts:
+  - descending: false
+    fieldId: fct_uk_parliament_procedural_activity_observed_at_week
+  tableCalculations: []
+name: Average schedule dates per observed version by week
+slug: fct-uk-parliament-procedural-activity-average-schedule-dates-weekly
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_uk_parliament_procedural_activity_observed_at_week
+  - fct_uk_parliament_procedural_activity_m_e7deb827
+tableName: fct_uk_parliament_procedural_activity
+version: 1
