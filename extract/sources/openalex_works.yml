@@ -1,0 +1,14 @@
+name: openalex_works
+script: fetch_openalex_works.py
+args: ["--topic-id", "T13090", "--days-back", "7", "--max-pages", "10", "--max-records", "1000"]
+schedule: "20 3 * * *"  # UTC
+enabled: false
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Narrow seven-day primary-topic publication-date poll with deliberate overlap between runs. Publication date is not an exact newly-indexed-record feed: late-indexed or amended older works can be missed. Consumers deduplicate by stable OpenAlex work ID. Enable only after an operator live smoke check and Airflow import check."
+rate_limit: "Cursor pagination uses 100 works/request and is limited to 10 pages / 1,000 records. The extractor fails if the complete result set exceeds either limit, rather than truncating it. Follow OpenAlex's current API budgets and rate-limit guidance; OPENALEX_API_KEY is optional and EXTRACT_USER_AGENT identifies the client."
+licence: "OpenAlex metadata — CC0 1.0 Universal"
+attribution_required: false
