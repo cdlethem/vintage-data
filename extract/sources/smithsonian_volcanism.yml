@@ -6,6 +6,14 @@ enabled: true
 retries: 1
 timeout_minutes: 10
 sink: local
+run_summary:
+  required: true
+
+# The script caps HTTP attempts, response reads, and in-script backoff at
+# 120 seconds per task attempt. With the existing one Airflow retry, at most
+# two task attempts consume 240 seconds of Smithsonian request/retry time;
+# scheduler retry delay is separate and each task remains under the 10-minute
+# Airflow timeout.
 
 # Vetting metadata (documentation only, not read by the DAG factory)
 cadence_note: "low-frequency eruption events; daily poll catches new activity promptly"
