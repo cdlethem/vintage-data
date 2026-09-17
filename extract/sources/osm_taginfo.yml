@@ -1,0 +1,32 @@
+name: osm_taginfo
+script: fetch_osm_taginfo.py
+# Four maintained OSM keys; each run makes exactly two read-only requests per key:
+# key/stats plus page 1 of key/values, sorted by descending count and capped at 50.
+args: ["--key", "amenity", "--key", "building", "--key", "highway", "--key", "shop", "--value-limit", "50", "--timeout", "30"]
+schedule: "23 7 12 * *"  # UTC; conservative monthly refresh for slowly changing tag statistics
+enabled: false
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Keep disabled until an operator records a successful live Taginfo smoke and a
+# read-only Airflow import check. Offline verification mocks HTTP and does not read
+# or mutate Airflow metadata.
+#
+# Endpoint scope and service-use constraints:
+# - https://taginfo.openstreetmap.org/taginfo/apidoc documents the public API.
+# - This source uses only /api/4/key/stats and the first bounded page of
+#   /api/4/key/values for explicitly configured keys. It is not a bulk Taginfo
+#   database export or a crawl of the key catalog.
+# - One scheduled run makes two requests per configured key (eight by default),
+#   serially, with a descriptive User-Agent and 30-second per-request timeout.
+# - Retries and manual runs are additional service use. Keep requests infrequent;
+#   Taginfo is a community-operated OpenStreetMap service without an advertised
+#   per-client request quota on the cited API documentation.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "monthly bounded snapshot of selected OSM key statistics and top 50 value frequencies"
+rate_limit: "local cap: two serial requests per configured key, at most 10 keys and 100 values/key; no published per-client quota in the cited API docs"
+licence: "OpenStreetMap data is ODbL 1.0; Taginfo software and site terms may also apply"
+attribution: "OpenStreetMap contributors and Taginfo, https://taginfo.openstreetmap.org/"
+attribution_required: true
+coverage_note: "Selected-key observations only; value frequencies are the first count-descending page, not complete value coverage or a bulk database extraction. data_until records upstream freshness and fetched_at records request time."

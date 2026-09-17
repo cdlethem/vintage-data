@@ -9990,6 +9990,81 @@ sources:
     - name: snapshot_time
       description: Raw `snapshot_time` value supplied by `opensky`.
       data_type: BIGINT
+  - name: osm_taginfo
+    description: Insert-only raw records loaded for `osm_taginfo`.
+    columns: &id168
+    - name: _row_id
+      description: Raw `_row_id` value supplied by `osm_taginfo`.
+      data_type: VARCHAR
+    - name: _source
+      description: Raw `_source` value supplied by `osm_taginfo`.
+      data_type: VARCHAR
+    - name: _batch_id
+      description: Identifier of the raw load batch that produced this row.
+      data_type: VARCHAR
+    - name: _source_file
+      description: Raw source file from which this row was loaded.
+      data_type: VARCHAR
+    - name: _file_row_num
+      description: One-based row position in the raw source file.
+      data_type: BIGINT
+    - name: _dt
+      description: Raw `_dt` value supplied by `osm_taginfo`.
+      data_type: DATE
+    - name: _extract_started_at
+      description: Raw `_extract_started_at` value supplied by `osm_taginfo`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _load_id
+      description: Identifier of the load job that inserted this row.
+      data_type: VARCHAR
+    - name: _loaded_at
+      description: UTC timestamp at which the load layer inserted this row.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _content_hash
+      description: Stable hash of the raw record content used for lineage and deduplication.
+      data_type: VARCHAR
+    - name: _payload
+      description: Complete raw record payload retained for lineage and schema evolution.
+      data_type: JSON
+    - name: source
+      description: Raw `source` value supplied by `osm_taginfo`.
+      data_type: VARCHAR
+    - name: id
+      description: Raw `id` value supplied by `osm_taginfo`.
+      data_type: VARCHAR
+    - name: fetched_at
+      description: Raw `fetched_at` value supplied by `osm_taginfo`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: endpoint
+      description: Raw `endpoint` value supplied by `osm_taginfo`.
+      data_type: VARCHAR
+    - name: key
+      description: Raw `key` value supplied by `osm_taginfo`.
+      data_type: VARCHAR
+    - name: value
+      description: Raw `value` value supplied by `osm_taginfo`.
+      data_type: VARCHAR
+    - name: observation_type
+      description: Raw `observation_type` value supplied by `osm_taginfo`.
+      data_type: VARCHAR
+    - name: count
+      description: Raw `count` value supplied by `osm_taginfo`.
+      data_type: BIGINT
+    - name: fraction
+      description: Raw `fraction` value supplied by `osm_taginfo`.
+      data_type: DOUBLE
+    - name: values_count
+      description: Raw `values_count` value supplied by `osm_taginfo`.
+      data_type: BIGINT
+    - name: data_until
+      description: Raw `data_until` value supplied by `osm_taginfo`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: response_metadata
+      description: Raw `response_metadata` value supplied by `osm_taginfo`.
+      data_type: JSON
+    - name: raw_payload
+      description: Raw `raw_payload` value supplied by `osm_taginfo`.
+      data_type: JSON
   - name: package_registries
     description: Insert-only raw records loaded for `package_registries`.
     columns: &id118
@@ -13946,6 +14021,10 @@ models:
   description: Thin governed view over the `opensky` raw source. Values and load lineage are preserved
     without semantic cleaning.
   columns: *id117
+- name: base_osm_taginfo
+  description: Thin governed view over the `osm_taginfo` raw source. Values and load lineage are preserved
+    without semantic cleaning.
+  columns: *id168
 - name: base_package_registries
   description: Thin governed view over the `package_registries` raw source. Values and load lineage are
     preserved without semantic cleaning.
