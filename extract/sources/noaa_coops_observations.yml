@@ -1,0 +1,14 @@
+name: noaa_coops_observations
+script: fetch_noaa_coops_observations.py
+args: ["--station", "9414290"]
+schedule: "17 4 * * *"  # UTC; one completed UTC day per run
+enabled: true
+retries: 2
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "CO-OPS verified water levels update continuously; daily completed-day snapshots avoid partial-day revisions."
+rate_limit: "NOAA CO-OPS Data API: one bounded station request per daily run; retries are paced by the scheduler and remain well below documented public-service limits."
+licence: "NOAA data are public-domain US Government works; acknowledge NOAA CO-OPS."
+attribution_required: true
