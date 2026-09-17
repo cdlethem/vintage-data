@@ -1,0 +1,28 @@
+name: nasa_power_daily
+script: fetch_nasa_power_daily.py
+args:
+  - "--latitude"
+  - "38.9072"
+  - "--longitude"
+  - "-77.0369"
+  - "--parameters"
+  - "T2M,PRECTOTCORR,ALLSKY_SFC_SW_DWN"
+  - "--community"
+  - "RE"
+  - "--time-standard"
+  - "UTC"
+  - "--start"
+  - "{date}"
+  - "--end"
+  - "{date}"
+schedule: "20 8 * * *"  # UTC; previous complete day should be scheduled by the operator
+enabled: false
+retries: 1
+timeout_minutes: 5
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "One Washington, DC point and three daily meteorological parameters. Run once per day for a complete prior UTC day; this source intentionally does not sweep a catalog or global grid. Enable only after an operator smoke check."
+rate_limit: "NASA POWER advises conservative, bounded requests; this source makes one unpaginated point request per daily run and treats HTTP 429 as a visible failure."
+licence: "NASA POWER data access and use conditions; cite NASA POWER / NASA Langley Research Center."
+attribution_required: true
