@@ -19,11 +19,14 @@ Stdlib only. Verified live 2026-09-06.
 """
 
 import argparse
+import email.utils
 import hashlib
 import json
+import math
 import os
 import sys
 import tempfile
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -40,6 +43,10 @@ STATE_VERSION = 1
 RECONCILIATION_INTERVAL_DAYS = 7
 SELECT = "LocalId,LayingDate,WithdrawalDate,BusinessItemDate"
 EXPECTED_FIELDS = frozenset(SELECT.split(","))
+MAX_502_ATTEMPTS = 4
+DEFAULT_RETRY_DELAY_SECONDS = 1
+MAX_RETRY_DELAY_SECONDS = 30
+MAX_RETRY_CUMULATIVE_DELAY_SECONDS = 60
 
 
 def parse_timestamp(value, name):
@@ -63,29 +70,74 @@ def canonical_hash(row):
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
+def retry_after_delay(headers, now=None):
+    value = headers.get("Retry-After") if headers is not None else None
+    try:
+        delay = int(value)
+        if delay < 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        try:
+            retry_at = email.utils.parsedate_to_datetime(value)
+            if retry_at.tzinfo is None:
+                raise ValueError
+            delay = max(0, math.ceil((retry_at - (now or datetime.now(timezone.utc))).total_seconds()))
+        except (TypeError, ValueError, IndexError, OverflowError):
+            delay = DEFAULT_RETRY_DELAY_SECONDS
+    return min(delay, MAX_RETRY_DELAY_SECONDS)
+
+
+def http_error_message(url, status, body):
+    return f"GET {url} returned HTTP {status}; response body omitted ({len(body)} bytes read)"
+
+
 def request_json(url, timeout):
     request = urllib.request.Request(
         url,
         headers={"Accept": "application/json", "User-Agent": USER_AGENT},
     )
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            status = response.status
-            body = response.read()
-    except urllib.error.HTTPError as error:
-        body = error.read(1000).decode("utf-8", "replace")
-        raise RuntimeError(f"GET {url} returned HTTP {error.code}: {body!r}") from error
-    except urllib.error.URLError as error:
-        raise RuntimeError(f"GET {url} failed: {error.reason}") from error
-    if status != 200:
-        raise RuntimeError(f"GET {url} returned HTTP {status}: {body[:1000]!r}")
-    try:
-        document = json.loads(body)
-    except json.JSONDecodeError as error:
-        raise RuntimeError(f"GET {url} returned invalid JSON: {body[:1000]!r}") from error
-    if not isinstance(document, dict):
-        raise RuntimeError(f"GET {url} returned {type(document).__name__}, expected object")
-    return document
+    cumulative_delay = 0
+    for attempt in range(1, MAX_502_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                status = response.status
+                headers = response.headers
+                body = response.read()
+        except urllib.error.HTTPError as error:
+            if error.code != 502:
+                try:
+                    body = error.read(1000)
+                finally:
+                    error.close()
+                raise RuntimeError(http_error_message(url, error.code, body)) from error
+            error.close()
+            status = error.code
+            headers = error.headers
+        except urllib.error.URLError as error:
+            raise RuntimeError(f"GET {url} failed: {error.reason}") from error
+        if status == 200:
+            try:
+                document = json.loads(body)
+            except json.JSONDecodeError as error:
+                raise RuntimeError(
+                    f"GET {url} returned invalid JSON; response body omitted ({len(body[:1000])} bytes read)"
+                ) from error
+            if not isinstance(document, dict):
+                raise RuntimeError(f"GET {url} returned {type(document).__name__}, expected object")
+            return document
+        if status != 502:
+            raise RuntimeError(http_error_message(url, status, body))
+        if attempt == MAX_502_ATTEMPTS:
+            raise RuntimeError(f"GET {url} returned HTTP 502 after {attempt} attempts; retry limit exhausted")
+        delay = retry_after_delay(headers)
+        if cumulative_delay + delay > MAX_RETRY_CUMULATIVE_DELAY_SECONDS:
+            raise RuntimeError(
+                f"GET {url} returned HTTP 502; retry delay budget exhausted after "
+                f"{attempt} attempts and {cumulative_delay} seconds"
+            )
+        time.sleep(delay)
+        cumulative_delay += delay
+    raise AssertionError("unreachable")
 
 
 def load_state(path):
