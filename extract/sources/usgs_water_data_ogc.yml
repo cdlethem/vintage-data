@@ -1,0 +1,14 @@
+name: usgs_water_data_ogc
+script: fetch_usgs_water_data_ogc.py
+args: ["--station", "01646500", "--parameter-code", "00060", "--days-back", "14", "--max-pages", "10", "--max-records", "500"]
+schedule: "20 7 * * *"  # UTC; daily values are published and revised daily
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "bounded daily discharge observations for USGS site 01646500 (Potomac River near Washington, DC)"
+rate_limit: "extractor paces requests and caps each run at 10 pages / 500 observations"
+licence: "USGS public domain data; attribution requested"
+attribution_required: true
