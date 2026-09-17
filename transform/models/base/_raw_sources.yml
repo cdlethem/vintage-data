@@ -9636,6 +9636,84 @@ sources:
     - name: data
       description: Raw `data` value supplied by `openactive_feeds`.
       data_type: JSON
+  - name: openfda
+    description: Insert-only raw records loaded for `openfda`.
+    columns: &id167
+    - name: _row_id
+      description: Raw `_row_id` value supplied by `openfda`.
+      data_type: VARCHAR
+    - name: _source
+      description: Raw `_source` value supplied by `openfda`.
+      data_type: VARCHAR
+    - name: _batch_id
+      description: Identifier of the raw load batch that produced this row.
+      data_type: VARCHAR
+    - name: _source_file
+      description: Raw source file from which this row was loaded.
+      data_type: VARCHAR
+    - name: _file_row_num
+      description: One-based row position in the raw source file.
+      data_type: BIGINT
+    - name: _dt
+      description: Raw `_dt` value supplied by `openfda`.
+      data_type: DATE
+    - name: _extract_started_at
+      description: Raw `_extract_started_at` value supplied by `openfda`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _load_id
+      description: Identifier of the load job that inserted this row.
+      data_type: VARCHAR
+    - name: _loaded_at
+      description: UTC timestamp at which the load layer inserted this row.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _content_hash
+      description: Stable hash of the raw record content used for lineage and deduplication.
+      data_type: VARCHAR
+    - name: _payload
+      description: Complete raw record payload retained for lineage and schema evolution.
+      data_type: JSON
+    - name: source
+      description: Raw `source` value supplied by `openfda`.
+      data_type: VARCHAR
+    - name: id
+      description: Raw `id` value supplied by `openfda`.
+      data_type: VARCHAR
+    - name: fetched_at
+      description: Raw `fetched_at` value supplied by `openfda`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: report_date
+      description: Raw `report_date` value supplied by `openfda`.
+      data_type: VARCHAR
+    - name: recall_initiation_date
+      description: Raw `recall_initiation_date` value supplied by `openfda`.
+      data_type: VARCHAR
+    - name: status
+      description: Raw `status` value supplied by `openfda`.
+      data_type: VARCHAR
+    - name: classification
+      description: Raw `classification` value supplied by `openfda`.
+      data_type: VARCHAR
+    - name: firm
+      description: Raw `firm` value supplied by `openfda`.
+      data_type: VARCHAR
+    - name: state
+      description: Raw `state` value supplied by `openfda`.
+      data_type: VARCHAR
+    - name: country
+      description: Raw `country` value supplied by `openfda`.
+      data_type: VARCHAR
+    - name: product
+      description: Raw `product` value supplied by `openfda`.
+      data_type: VARCHAR
+    - name: reason
+      description: Raw `reason` value supplied by `openfda`.
+      data_type: VARCHAR
+    - name: quantity
+      description: Raw `quantity` value supplied by `openfda`.
+      data_type: VARCHAR
+    - name: distribution
+      description: Raw `distribution` value supplied by `openfda`.
+      data_type: VARCHAR
   - name: openfema_declarations
     description: Insert-only raw records loaded for `openfema_declarations`.
     columns: &id115
@@ -13852,6 +13930,10 @@ models:
   description: Thin governed view over the `openactive_feeds` raw source. Values and load lineage are
     preserved without semantic cleaning.
   columns: *id114
+- name: base_openfda
+  description: Thin governed view over the `openfda` raw source. Values and load lineage are preserved
+    without semantic cleaning.
+  columns: *id167
 - name: base_openfema_declarations
   description: Thin governed view over the `openfema_declarations` raw source. Values and load lineage
     are preserved without semantic cleaning.

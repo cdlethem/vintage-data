@@ -1,0 +1,43 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical observation fact for openFDA food-enforcement recalls. Each row is one source,
+  recall identifier, and UTC fetch timestamp. Daily polling republishes recalls, so records are repeated
+  observations rather than SCD2 states; duplicate copies at that grain retain the latest load lineage.
+metricQuery:
+  dimensions: &id001
+  - fct_openfda_recall_observation_observed_at
+  - fct_openfda_recall_observation_recall_id
+  - fct_openfda_recall_observation_firm
+  - fct_openfda_recall_observation_classification
+  - fct_openfda_recall_observation_status
+  - fct_openfda_recall_observation_country
+  - fct_openfda_recall_observation_report_date
+  - fct_openfda_recall_observation_source_loaded_at
+  exploreName: fct_openfda_recall_observation
+  filters:
+    dimensions:
+      and:
+      - id: 904391b0-d66a-55cf-b182-0d27d623bed4
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_openfda_recall_observation_observed_at
+        values:
+        - 30
+      id: 1494064b-36f7-5895-b131-d59220907384
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_openfda_recall_observation_observed_at
+  tableCalculations: []
+name: OpenFDA recall observation — observations
+slug: fct-openfda-recall-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_openfda_recall_observation
+version: 1

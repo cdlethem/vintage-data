@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_openfda_recall_observation_observed_at_day
+          yRef:
+            field: fct_openfda_recall_observation_distinct_firms
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct firms
+    layout:
+      xField: fct_openfda_recall_observation_observed_at_day
+      yField:
+      - fct_openfda_recall_observation_distinct_firms
+  type: cartesian
+description: Distinct `firm` values present in each UTC fetch day during the past 30 days. This is a polled
+  catalogue level, not newly reported recalls; days without a successful poll are absent rather than zero,
+  and later source revisions can change the level.
+metricQuery:
+  dimensions:
+  - fct_openfda_recall_observation_observed_at_day
+  exploreName: fct_openfda_recall_observation
+  filters:
+    dimensions:
+      and:
+      - id: 9196188f-ab8b-5a2c-9f03-b46a76dba7c4
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_openfda_recall_observation_observed_at
+        values:
+        - 30
+      id: 459a3ee6-a595-5634-be28-fdc9f0fa680f
+  limit: 5000
+  metrics:
+  - fct_openfda_recall_observation_distinct_firms
+  sorts:
+  - descending: false
+    fieldId: fct_openfda_recall_observation_observed_at_day
+  tableCalculations: []
+name: Recalling firms present by fetch day
+slug: fct-openfda-recall-observation-observed-recalls
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openfda_recall_observation_observed_at_day
+  - fct_openfda_recall_observation_distinct_firms
+tableName: fct_openfda_recall_observation
+version: 1

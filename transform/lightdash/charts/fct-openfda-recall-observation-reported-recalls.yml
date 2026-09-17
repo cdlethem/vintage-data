@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_openfda_recall_observation_report_date_day
+          yRef:
+            field: fct_openfda_recall_observation_distinct_recalls
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Report date (Day)
+      yAxis:
+      - name: Distinct recalls
+    layout:
+      xField: fct_openfda_recall_observation_report_date_day
+      yField:
+      - fct_openfda_recall_observation_distinct_recalls
+  type: cartesian
+description: Distinct `recall_id` values by FDA `report_date` during the selected 30-day event window.
+  The current raw data spans only two report dates, so this is a sparse event series; missing dates are
+  absent rather than zero and repeated fetch observations are not summed.
+metricQuery:
+  dimensions:
+  - fct_openfda_recall_observation_report_date_day
+  exploreName: fct_openfda_recall_observation
+  filters:
+    dimensions:
+      and:
+      - id: 9bef83ec-5ee6-55ba-a27b-e46994e56483
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_openfda_recall_observation_report_date
+        values:
+        - 30
+      id: 865f2d41-621e-53c9-9a66-feebff45d6e9
+  limit: 5000
+  metrics:
+  - fct_openfda_recall_observation_distinct_recalls
+  sorts:
+  - descending: false
+    fieldId: fct_openfda_recall_observation_report_date_day
+  tableCalculations: []
+name: Recalls by FDA report date
+slug: fct-openfda-recall-observation-reported-recalls
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openfda_recall_observation_report_date_day
+  - fct_openfda_recall_observation_distinct_recalls
+tableName: fct_openfda_recall_observation
+version: 1
