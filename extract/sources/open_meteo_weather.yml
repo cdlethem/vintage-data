@@ -1,0 +1,17 @@
+name: open_meteo_weather
+script: fetch_open_meteo_weather.py
+args: []
+schedule: "17 */6 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 5
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+# Each run is an immutable forecast collection: the extractor intentionally keeps
+# later collections of the same valid hour as revisions rather than upserting.
+cadence_note: "Open-Meteo hourly forecasts are collected every 6 hours at :17 UTC. This conservative cadence records issue/collection time for forecast comparison without treating forecasts as observations. One bounded request covers the explicit configured locations and a three-day horizon."
+rate_limit: "keyless public API; one batched request per run (four per day), deliberately far below interactive-use limits. Do not add locations, variables, or retries without reviewing current Open-Meteo access terms."
+licence: "Open-Meteo weather API data — CC BY 4.0; underlying weather-model sources may have additional terms."
+attribution_required: true
+attribution: "Weather data by Open-Meteo.com (https://open-meteo.com/); retain required attribution and link in downstream presentation."
