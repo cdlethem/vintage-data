@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_sumo_rikishi_observation_current_rank
+          yRef:
+            field: fct_sumo_rikishi_observation_distinct_rikishi
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_sumo_rikishi_observation_current_rank
+      yField:
+      - fct_sumo_rikishi_observation_distinct_rikishi
+  type: cartesian
+description: Distinct `rikishi_id` values by snapshot `current_rank` among records fetched in the past
+  30 UTC days. Repeated snapshots and changing categories are not additive; a rikishi that changes rank
+  can appear in multiple groups. This is a latest collection window, not a canonical current roster census.
+  Source is sumo-api.com via `extract/sources/sumo.yml`.
+metricQuery:
+  dimensions:
+  - fct_sumo_rikishi_observation_current_rank
+  exploreName: fct_sumo_rikishi_observation
+  filters:
+    dimensions:
+      and:
+      - id: c93dbb34-9dff-53de-a910-4743796f5af0
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sumo_rikishi_observation_observed_at
+        values:
+        - 30
+      id: 75b8d1fb-ed57-5ff2-aec9-bb304d040ff9
+  limit: 20
+  metrics:
+  - fct_sumo_rikishi_observation_distinct_rikishi
+  sorts:
+  - descending: true
+    fieldId: fct_sumo_rikishi_observation_distinct_rikishi
+  tableCalculations: []
+name: Latest rank distribution
+slug: fct-sumo-rikishi-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sumo_rikishi_observation_current_rank
+  - fct_sumo_rikishi_observation_distinct_rikishi
+tableName: fct_sumo_rikishi_observation
+version: 1

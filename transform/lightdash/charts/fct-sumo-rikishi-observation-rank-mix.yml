@@ -1,0 +1,68 @@
+chartConfig:
+  config:
+    columnLimit: 8
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_sumo_rikishi_observation_updated_at_day
+          yRef:
+            field: fct_sumo_rikishi_observation_distinct_rikishi
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Updated at (Day)
+      yAxis:
+      - name: Distinct rikishi
+    layout:
+      stack: true
+      xField: fct_sumo_rikishi_observation_updated_at_day
+      yField:
+      - fct_sumo_rikishi_observation_distinct_rikishi
+  type: cartesian
+description: Distinct `rikishi_id` values stacked by snapshot `rank_division` for the prior 365 UTC days.
+  A rikishi that changed division may occur in more than one group or date, so stacks are not additive
+  across time or categories; sparse/null event timestamps are excluded. Source is sumo-api.com via `extract/sources/sumo.yml`.
+metricQuery:
+  dimensions:
+  - fct_sumo_rikishi_observation_updated_at_day
+  - fct_sumo_rikishi_observation_rank_division
+  exploreName: fct_sumo_rikishi_observation
+  filters:
+    dimensions:
+      and:
+      - id: fd75c9de-1d28-5024-ba1f-319b44672079
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sumo_rikishi_observation_updated_at
+        values:
+        - 365
+      id: 326b2aba-0839-595f-898c-cc806cf26eb4
+  limit: 5000
+  metrics:
+  - fct_sumo_rikishi_observation_distinct_rikishi
+  sorts:
+  - descending: true
+    fieldId: fct_sumo_rikishi_observation_distinct_rikishi
+  - descending: false
+    fieldId: fct_sumo_rikishi_observation_updated_at_day
+  tableCalculations: []
+name: Rikishi by rank division and source update date
+pivotConfig:
+  columns:
+  - fct_sumo_rikishi_observation_rank_division
+slug: fct-sumo-rikishi-observation-rank-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_sumo_rikishi_observation_updated_at_day
+  - fct_sumo_rikishi_observation_rank_division
+  - fct_sumo_rikishi_observation_distinct_rikishi
+tableName: fct_sumo_rikishi_observation
+version: 1

@@ -1,0 +1,294 @@
+version: 2
+models:
+- name: fct_sumo_rikishi_observation
+  description: Insert-only physical history of sumo-api.com rikishi roster snapshots. Each row represents one
+    source system and rikishi identifier at one UTC fetched timestamp; repeated raw copies of that snapshot
+    are reduced to the latest loaded row while raw-load lineage is retained. Current rank, heya, names, and
+    physical attributes are values reported in that snapshot, not SCD2 intervals or additive roster records.
+    Source is sumo-api.com via `extract/sources/sumo.yml`.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_system, rikishi_id, observed_at
+      label: Sumo rikishi observation
+      group_label: Sumo
+      default_time_dimension:
+        field: updated_at
+        interval: DAY
+      primary_key: rikishi_observation_key
+      vintage:
+        visualization:
+          dimension: current_rank
+          metric: distinct_rikishi
+          time: observed_at
+          window_days: 30
+          title: Latest rank distribution
+          description: Distinct `rikishi_id` values by snapshot `current_rank` among records fetched in the
+            past 30 UTC days. Repeated snapshots and changing categories are not additive; a rikishi that
+            changes rank can appear in multiple groups. This is a latest collection window, not a canonical
+            current roster census. Source is sumo-api.com via `extract/sources/sumo.yml`.
+          detail_fields:
+          - observed_at
+          - updated_at
+          - rikishi_id
+          - shikona_en
+          - current_rank
+          - heya
+          - source_loaded_at
+          sources:
+          - '`sumo` — licence: sumo-api.com — public; attribution required: False. Source configuration: `extract/sources/sumo.yml`.'
+          analysis:
+            headline: how source-reported rikishi updates, stable identities, rank divisions, stables, and
+              physical measurements appear across sparse roster snapshots.
+            event_time: updated_at
+            grain: DAY
+            controls:
+            - rank_division
+            - heya
+            - source_system
+            trends:
+            - slug: rikishi-updated
+              kind: total
+              metric: distinct_rikishi
+              time: updated_at
+              grain: DAY
+              window_days: 365
+              title: Distinct rikishi by source update date
+              description: Distinct `rikishi_id` values by source-reported `updated_at` date over the prior
+                365 UTC days. `updated_at` is sparse and nullable, so missing dates and null timestamps are
+                excluded rather than zero; repeated snapshots do not add wrestlers. Source is sumo-api.com via
+                `extract/sources/sumo.yml`.
+              width: half
+            - slug: heya-breadth
+              kind: total
+              metric: distinct_heya
+              time: updated_at
+              grain: DAY
+              window_days: 365
+              title: Distinct heya by source update date
+              description: Distinct non-null snapshot `heya` values by source-reported `updated_at` date over
+                the prior 365 UTC days. Heya changes and repeated snapshots make time buckets non-additive;
+                sparse or null event timestamps are excluded rather than zero. Source is sumo-api.com via
+                `extract/sources/sumo.yml`.
+              width: half
+            - slug: rank-mix
+              kind: composition
+              metric: distinct_rikishi
+              breakdown: rank_division
+              time: updated_at
+              grain: DAY
+              window_days: 365
+              title: Rikishi by rank division and source update date
+              description: Distinct `rikishi_id` values stacked by snapshot `rank_division` for the prior 365
+                UTC days. A rikishi that changed division may occur in more than one group or date, so stacks
+                are not additive across time or categories; sparse/null event timestamps are excluded. Source is
+                sumo-api.com via `extract/sources/sumo.yml`.
+              width: full
+            - slug: average-height
+              kind: total
+              metric: average_height_cm
+              time: observed_at
+              grain: DAY
+              window_days: 30
+              title: Average height by collection date
+              description: Non-additive average snapshot `height_cm` by UTC collection date for records fetched
+                in the past 30 days. Repeated snapshots and changing categories are not additive; null measurements
+                are excluded from each mean. Source is sumo-api.com via `extract/sources/sumo.yml`.
+              width: half
+            - slug: average-weight
+              kind: total
+              metric: average_weight_kg
+              time: observed_at
+              grain: DAY
+              window_days: 30
+              title: Average weight by collection date
+              description: Non-additive average snapshot `weight_kg` by UTC collection date for records fetched
+                in the past 30 days. Repeated snapshots and changing categories are not additive; null measurements
+                are excluded from each mean. Source is sumo-api.com via `extract/sources/sumo.yml`.
+              width: half
+  columns:
+  - name: rikishi_observation_key
+    description: Stable hash of source system, rikishi identifier, and UTC snapshot timestamp.
+    data_type: varchar
+    data_tests:
+    - not_null
+    - unique
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Rikishi observation key
+          hidden: true
+  - name: source_system
+    description: Extractor source system that supplied the roster snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source system
+          hidden: false
+  - name: rikishi_id
+    description: Upstream sumo-api.com identifier for the rikishi.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_rikishi:
+            type: count_distinct
+            label: Distinct rikishi
+            description: Distinct `rikishi_id` values in the selected window. Repeated snapshots count once,
+              but grouping by changing rank or heya can place a rikishi in multiple groups; grouped totals
+              are not additive and do not represent a current roster census.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Rikishi id
+          hidden: false
+  - name: observed_at
+    description: UTC timestamp when the extractor fetched this roster snapshot; use for collection freshness
+      and latest-window views, not as the source event time.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Fetched at
+          hidden: false
+          time_intervals: [RAW, DAY, WEEK, MONTH, YEAR]
+  - name: updated_at
+    description: UTC timestamp last updated by sumo-api.com for this rikishi where supplied. It is the source
+      event axis but is sparse and nullable; null timestamps cannot appear in event-time trends.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Updated at
+          hidden: false
+          time_intervals: [RAW, DAY, WEEK, MONTH, YEAR]
+  - name: shikona_en
+    description: Romanized shikona reported in the snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Shikona (English), hidden: false}
+  - name: shikona_jp
+    description: Japanese-script shikona reported in the snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Shikona (Japanese), hidden: false}
+  - name: current_rank
+    description: Current rank text reported in the snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Current rank, hidden: false}
+  - name: rank_division
+    description: Visualization grouping derived from snapshot current_rank. It is not a canonical upstream
+      division field and may change between snapshots.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Rank division, hidden: false}
+  - name: heya
+    description: Stable or training room reported in the snapshot; it may change between snapshots.
+    data_type: varchar
+    config:
+      meta:
+        metrics:
+          distinct_heya:
+            type: count_distinct
+            label: Distinct heya
+            description: Distinct non-null `heya` values in the selected window. This measures stable breadth,
+              not a sum of roster rows; changing heya values and repeated snapshots make grouped totals non-additive.
+            format: '#,##0'
+        dimension: {type: string, label: Heya, hidden: false}
+  - name: height_cm
+    description: Height in centimetres reported in the snapshot.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_height_cm:
+            type: average
+            label: Average height (cm)
+            description: Non-additive mean snapshot height in centimetres. Repeated snapshots and changing
+              categories affect the population, so do not sum or combine grouped averages.
+            format: '#,##0.0'
+        dimension: {type: number, label: Height (cm), hidden: false, format: '#,##0.0'}
+  - name: weight_kg
+    description: Weight in kilograms reported in the snapshot.
+    data_type: double
+    config:
+      meta:
+        metrics:
+          average_weight_kg:
+            type: average
+            label: Average weight (kg)
+            description: Non-additive mean snapshot weight in kilograms. Repeated snapshots and changing
+              categories affect the population, so do not sum or combine grouped averages.
+            format: '#,##0.0'
+        dimension: {type: number, label: Weight (kg), hidden: false, format: '#,##0.0'}
+  - name: debut
+    description: Upstream debut value retained as source text because its precision and format are not governed.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Debut, hidden: false}
+  - name: source_row_id
+    description: Raw row identifier retained for exact source-row lineage.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Source row id, hidden: true}
+  - name: source_batch_id
+    description: Raw load batch identifier that supplied this snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Source batch id, hidden: true}
+  - name: source_file
+    description: Raw extract file that supplied this snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Source file, hidden: true}
+  - name: source_file_row_number
+    description: Row number in the raw extract file that supplied this snapshot.
+    data_type: bigint
+    config:
+      meta:
+        dimension: {type: number, label: Source file row number, hidden: true, format: '#,##0'}
+  - name: source_date
+    description: Raw partition date retained for lineage.
+    data_type: date
+    config:
+      meta:
+        dimension: {type: date, label: Source date, hidden: true, time_intervals: [RAW, DAY, WEEK, MONTH, YEAR]}
+  - name: extract_started_at
+    description: UTC time at which extraction of the raw file started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension: {type: timestamp, label: Extract started at, hidden: true, time_intervals: [RAW, DAY, WEEK, MONTH, YEAR]}
+  - name: load_id
+    description: Raw load job identifier that supplied this snapshot.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Load id, hidden: true}
+  - name: source_loaded_at
+    description: UTC time when the warehouse loaded the retained raw record.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension: {type: timestamp, label: Source loaded at, hidden: false, time_intervals: [RAW, DAY, WEEK, MONTH, YEAR]}
+  - name: content_hash
+    description: Hash of the original raw record content retained for lineage and replay.
+    data_type: varchar
+    config:
+      meta:
+        dimension: {type: string, label: Content hash, hidden: true}

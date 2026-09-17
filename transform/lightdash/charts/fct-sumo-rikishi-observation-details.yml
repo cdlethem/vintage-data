@@ -1,0 +1,44 @@
+chartConfig:
+  config: {}
+  type: table
+description: Insert-only physical history of sumo-api.com rikishi roster snapshots. Each row represents
+  one source system and rikishi identifier at one UTC fetched timestamp; repeated raw copies of that snapshot
+  are reduced to the latest loaded row while raw-load lineage is retained. Current rank, heya, names,
+  and physical attributes are values reported in that snapshot, not SCD2 intervals or additive roster
+  records. Source is sumo-api.com via `extract/sources/sumo.yml`.
+metricQuery:
+  dimensions: &id001
+  - fct_sumo_rikishi_observation_observed_at
+  - fct_sumo_rikishi_observation_updated_at
+  - fct_sumo_rikishi_observation_rikishi_id
+  - fct_sumo_rikishi_observation_shikona_en
+  - fct_sumo_rikishi_observation_current_rank
+  - fct_sumo_rikishi_observation_heya
+  - fct_sumo_rikishi_observation_source_loaded_at
+  exploreName: fct_sumo_rikishi_observation
+  filters:
+    dimensions:
+      and:
+      - id: c93dbb34-9dff-53de-a910-4743796f5af0
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sumo_rikishi_observation_observed_at
+        values:
+        - 30
+      id: 75b8d1fb-ed57-5ff2-aec9-bb304d040ff9
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_sumo_rikishi_observation_observed_at
+  tableCalculations: []
+name: Sumo rikishi observation — observations
+slug: fct-sumo-rikishi-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_sumo_rikishi_observation
+version: 1
