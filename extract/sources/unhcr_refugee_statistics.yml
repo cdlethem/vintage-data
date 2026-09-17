@@ -1,0 +1,19 @@
+name: unhcr_refugee_statistics
+script: fetch_unhcr_refugee_statistics.py
+# No positional argument means the current UTC reporting year. Historical runs may
+# supply one explicit year without widening a request across reporting years.
+args: ["--page-size", "100", "--limit", "1000"]
+schedule: "43 8 15 1 *"  # UTC; annual refresh for revisions to population statistics
+enabled: false
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Do not enable until an operator records a successful live endpoint smoke and a
+# read-only Airflow import check. Offline tests mock HTTP and do not touch metadata.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "annual bounded snapshot of the current UTC reporting year"
+rate_limit: "serial requests, at most 100 rows each and 100 requests per run, with 0.25 seconds between pages"
+licence: "UNHCR Refugee Data Finder terms of use"
+attribution: "United Nations High Commissioner for Refugees (UNHCR), https://www.unhcr.org/refugee-statistics/"
+attribution_required: true
