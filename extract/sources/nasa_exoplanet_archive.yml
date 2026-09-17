@@ -1,0 +1,31 @@
+name: nasa_exoplanet_archive
+script: fetch_nasa_exoplanet_archive.py
+args: ["--timeout", "60"]
+schedule: "37 6 * * *"  # UTC; fixed daily snapshot while this source remains disabled
+enabled: false
+retries: 1
+timeout_minutes: 5
+sink: local
+
+# Keep the declared daily schedule fixed. The synchronous public TAP query reads only
+# pscomppars and deterministically orders an explicit pl_name/hostname/pl_rade projection.
+cadence:
+  auto: false
+
+# This anonymous public endpoint requires no credentials. Each run is fixed at 10,000
+# rows; bounded results are not necessarily the complete NASA exoplanet catalogue.
+# Do not enable until an authorized network-capable operator records a live smoke for
+# the exact revision: timestamp, exit status, bounded redacted diagnostics, nonempty
+# NDJSON, cap compliance, source name, unique stable IDs, UTC timestamps, all requested
+# catalogue fields, and valid null-radius handling. Source scheduling must coordinate
+# daily activation only after that evidence exists and a configured run proves records
+# land under raw/source=nasa_exoplanet_archive. Merge or fixture routing is not live or
+# deployment evidence; activation and completion remain blocked until the external gates
+# and trusted observed merge are recorded.
+#
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily bounded snapshot of composite planet parameters; fixed cadence"
+rate_limit: "one public synchronous TAP request per daily run, capped at 10,000 rows"
+licence: "NASA Exoplanet Archive public data; acknowledge the archive and originating publications"
+attribution: "NASA Exoplanet Archive, https://exoplanetarchive.ipac.caltech.edu/"
+attribution_required: true
