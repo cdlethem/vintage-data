@@ -7245,6 +7245,87 @@ sources:
     - name: last_updated
       description: Raw `last_updated` value supplied by `launch_library`.
       data_type: TIMESTAMP WITH TIME ZONE
+  - name: library_of_congress
+    description: Insert-only raw records loaded for `library_of_congress`.
+    columns: &id169
+    - name: _row_id
+      description: Raw `_row_id` value supplied by `library_of_congress`.
+      data_type: VARCHAR
+    - name: _source
+      description: Raw `_source` value supplied by `library_of_congress`.
+      data_type: VARCHAR
+    - name: _batch_id
+      description: Identifier of the raw load batch that produced this row.
+      data_type: VARCHAR
+    - name: _source_file
+      description: Raw source file from which this row was loaded.
+      data_type: VARCHAR
+    - name: _file_row_num
+      description: One-based row position in the raw source file.
+      data_type: BIGINT
+    - name: _dt
+      description: Raw `_dt` value supplied by `library_of_congress`.
+      data_type: DATE
+    - name: _extract_started_at
+      description: Raw `_extract_started_at` value supplied by `library_of_congress`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _load_id
+      description: Identifier of the load job that inserted this row.
+      data_type: VARCHAR
+    - name: _loaded_at
+      description: UTC timestamp at which the load layer inserted this row.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _content_hash
+      description: Stable hash of the raw record content used for lineage and deduplication.
+      data_type: VARCHAR
+    - name: _payload
+      description: Complete raw record payload retained for lineage and schema evolution.
+      data_type: JSON
+    - name: source
+      description: Raw `source` value supplied by `library_of_congress`.
+      data_type: VARCHAR
+    - name: id
+      description: Raw `id` value supplied by `library_of_congress`.
+      data_type: VARCHAR
+    - name: fetched_at
+      description: Raw `fetched_at` value supplied by `library_of_congress`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: title
+      description: Raw `title` value supplied by `library_of_congress`.
+      data_type: VARCHAR
+    - name: date
+      description: Raw `date` value supplied by `library_of_congress`.
+      data_type: VARCHAR
+    - name: dates
+      description: Raw `dates` value supplied by `library_of_congress`.
+      data_type: JSON
+    - name: contributors
+      description: Raw `contributors` value supplied by `library_of_congress`.
+      data_type: JSON
+    - name: subjects
+      description: Raw `subjects` value supplied by `library_of_congress`.
+      data_type: JSON
+    - name: digitized
+      description: Raw `digitized` value supplied by `library_of_congress`.
+      data_type: BOOLEAN
+    - name: online_formats
+      description: Raw `online_formats` value supplied by `library_of_congress`.
+      data_type: JSON
+    - name: mime_types
+      description: Raw `mime_types` value supplied by `library_of_congress`.
+      data_type: JSON
+    - name: canonical_url
+      description: Raw `canonical_url` value supplied by `library_of_congress`.
+      data_type: VARCHAR
+    - name: resources
+      description: Raw `resources` value supplied by `library_of_congress`.
+      data_type: JSON
+    - name: resource_links
+      description: Raw `resource_links` value supplied by `library_of_congress`.
+      data_type: JSON
+    - name: raw
+      description: Raw `raw` value supplied by `library_of_congress`.
+      data_type: JSON
   - name: lichess
     description: Insert-only raw records loaded for `lichess`.
     columns: &id085
@@ -13885,6 +13966,10 @@ models:
   description: Thin governed view over the `launch_library` raw source. Values and load lineage are preserved
     without semantic cleaning.
   columns: *id084
+- name: base_library_of_congress
+  description: Thin governed view over the `library_of_congress` raw source. Values and load lineage are
+    preserved without semantic cleaning.
+  columns: *id169
 - name: base_lichess
   description: Thin governed view over the `lichess` raw source. Values and load lineage are preserved
     without semantic cleaning.
