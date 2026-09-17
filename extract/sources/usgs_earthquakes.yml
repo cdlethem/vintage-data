@@ -1,0 +1,14 @@
+name: usgs_earthquakes
+script: fetch_usgs_earthquakes.py
+args: ["--timeout", "30"]
+schedule: "7-59/15 * * * *"  # UTC
+enabled: false  # Enable after operator live-source smoke and Airflow import checks
+retries: 2
+timeout_minutes: 5
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "USGS updates the rolling all_day GeoJSON feed every minute; poll conservatively every 15 minutes to capture event revisions"
+rate_limit: "one request per run for the complete daily FeatureCollection; no pagination"
+licence: "Official USGS-authored earthquake data are public domain; non-USGS material, logos, and trademarks remain subject to their stated terms"
+attribution_required: true  # Credit the U.S. Geological Survey and preserve source metadata when redistributing
