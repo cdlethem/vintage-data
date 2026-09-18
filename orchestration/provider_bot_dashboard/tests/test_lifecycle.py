@@ -17,6 +17,8 @@ from airflow.providers.vintage.bot_dashboard import execution, maintenance, repo
 from airflow.providers.vintage.bot_dashboard.artifacts import put_artifact
 from airflow.providers.vintage.bot_dashboard.git_provider import GitHubProvider, GitLabProvider, RepositoryConfig
 from airflow.providers.vintage.bot_dashboard.models import Event, Execution, Task, metadata
+from airflow.models.variable import Variable
+from airflow.models.connection import Connection
 from airflow.providers.vintage.bot_dashboard.projection import persist_run_envelope
 from airflow.providers.vintage.bot_dashboard.report_schemas import TaskProposalV1
 from airflow.providers.vintage.bot_dashboard.service import (
@@ -111,6 +113,16 @@ class LifecycleTest(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.engine = create_engine(f"sqlite:///{self.root / 'dashboard.sqlite'}")
         metadata.create_all(self.engine)
+        if not self.engine.dialect.has_table(self.engine.connect(), "variable"):
+            Variable.__table__.create(self.engine)
+        if not self.engine.dialect.has_table(self.engine.connect(), "connection"):
+            Connection.__table__.create(self.engine)
+        with Session(self.engine) as seed:
+            seed.add(Connection(conn_id="bot_dashboard_model_gateway", conn_type="generic", password="test-key",
+                                extra=json.dumps({"name": "Gateway", "base_url": "https://model.example/v1"})))
+            seed.add(Variable(key="bot_dashboard_model_assignments",
+                              val=json.dumps([{"role": "executor_junior", "provider_id": "gateway", "model": "small"}])))
+            seed.commit()
         self.remote = self.root / "remote.git"
         self.shared = self.root / "shared"
         _git("init", "--bare", str(self.remote), cwd=self.root)

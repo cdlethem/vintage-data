@@ -29,10 +29,13 @@ def _extract_source(content: bytes, root: pathlib.Path, error_type) -> pathlib.P
     archive_path.chmod(0o600)
     workdir = root / "workdir"
     workdir.mkdir(mode=0o700)
-    with tarfile.open(archive_path, mode="r:") as archive:
-        members = archive.getmembers()
-        total = 0
-        for member in members:
+    # The parent may gzip large sources; read headers one at a time so an
+    # oversized declared size is rejected without decompressing its body.
+    mode = "r:gz" if content[:2] == b"\x1f\x8b" else "r:"
+    total, count = 0, 0
+    with tarfile.open(archive_path, mode=mode) as archive:
+        while (member := archive.next()) is not None:
+            count += 1
             path = pathlib.PurePosixPath(member.name)
             if (
                 path.is_absolute()
@@ -43,8 +46,9 @@ def _extract_source(content: bytes, root: pathlib.Path, error_type) -> pathlib.P
             ):
                 raise error_type("source_archive_unsafe", "terminal")
             total += max(member.size, 0)
-        if len(members) > 20_000 or total > 512 * 1024 * 1024:
-            raise error_type("source_archive_outside_bounds", "terminal")
+            if count > 20_000 or total > 512 * 1024 * 1024:
+                raise error_type("source_archive_outside_bounds", "terminal")
+    with tarfile.open(archive_path, mode=mode) as archive:
         archive.extractall(workdir, filter="data")
     return workdir
 
@@ -223,6 +227,21 @@ def _write_review_context(root: pathlib.Path, admission: dict, patch: bytes, rep
     return path
 
 
+def _apply_revision_seed(admission: dict, client, workdir: pathlib.Path, metadata: pathlib.Path, error_type) -> None:
+    """Restore a prior revision's patch before a fresh executor attempt continues it.
+
+    A no-op unless the admission carries a seed. Fetched bytes are verified against
+    the admission's own digest before being applied, same as the reviewer's patch.
+    """
+    seed_digest = admission.get("seed_patch_sha256")
+    if not seed_digest:
+        return
+    seed = client.get_artifact(seed_digest)
+    if hashlib.sha256(seed).hexdigest() != seed_digest:
+        raise error_type("revision_seed_digest_invalid", "terminal")
+    _git(workdir, metadata, "apply", "--binary", "-", binary=True, input_data=seed)
+
+
 
 def run(context: dict, cfg: dict, runner, dashboard_module):
     from airflow.providers.vintage.bot_dashboard.report_schemas import (
@@ -282,6 +301,8 @@ def run(context: dict, cfg: dict, runner, dashboard_module):
             source = client.get_artifact(admission["source_artifact"]["sha256"])
             workdir = _extract_source(source, root, dashboard_module.ControlPlaneError)
             metadata = _initialize_baseline(root, workdir)
+            if kind == "executor":
+                _apply_revision_seed(admission, client, workdir, metadata, dashboard_module.ControlPlaneError)
             if kind == "pr_reviewer":
                 patch = client.get_artifact(admission["patch_sha256"])
                 if hashlib.sha256(patch).hexdigest() != admission["patch_sha256"]:
