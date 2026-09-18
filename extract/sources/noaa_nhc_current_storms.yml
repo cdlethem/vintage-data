@@ -1,0 +1,22 @@
+name: noaa_nhc_current_storms
+script: fetch_noaa_nhc_current_storms.py
+args: ["--timeout", "30"]
+schedule: "23 * * * *"  # UTC; proposed hourly current-storm snapshots
+# Keep disabled until an authorized operator records the required live NHC smoke,
+# actual raw load/source synchronization, and warehouse dbt parse/build evidence.
+enabled: false
+retries: 2
+timeout_minutes: 5
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "hourly snapshots; storm observations are keyed by official NHC storm id plus fetch timestamp, so unchanged storms remain observable over time"
+rate_limit: "one keyless CurrentStorms.json request per run; proposed hourly polling is conservative"
+licence: "United States government work; attribute NOAA/National Hurricane Center"
+attribution: "NOAA National Hurricane Center, https://www.nhc.noaa.gov/"
+attribution_required: true
+# Repository replay semantics: the insert-only loader records each committed NDJSON
+# path and skips that same file after a successful load. A new extraction is a new
+# snapshot with a new fetched_at and observation id, even when storm data is unchanged.
+replay_note: "successful committed files are ledger-idempotent; rerunning extraction intentionally creates a new timestamped snapshot"
+activation_note: "requires authorized live endpoint smoke, actual raw load and source synchronization, warehouse base-model build, scheduling approval, and a successful scheduled run"
