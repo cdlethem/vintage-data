@@ -1,0 +1,27 @@
+name: entrez
+script: fetch_entrez.py
+args: ["--db", "pubmed", "--term", "climate change", "--retmax", "25", "--page-size", "10", "--max-pages", "3", "--timeout", "30", "--retries", "2", "--request-interval", "0.34"]
+schedule: "47 6 * * *"  # UTC; inert while disabled
+enabled: false
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Keep disabled until the external gates below are recorded. NCBI_EMAIL is mandatory;
+# NCBI_TOOL may override the default tool name. Neither identifier belongs in this file.
+# One run makes at most 3 ESearch requests plus 25 one-record EFetch requests, paced to
+# no more than roughly 3 requests/second without an API key. Script retries are bounded
+# to two retries per request; the runner retry is a separate bounded invocation.
+#
+# External activation gates: an authorized network workflow must perform the specified
+# keyless PubMed smoke and repeated-run payload-retention check, then run database-backed
+# raw-source synchronization and validate the synchronized dbt project. Generated raw
+# source metadata must come from that synchronization workflow, not a manual edit.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "disabled daily bounded PubMed query; at most 25 records discovered across 3 search pages per run"
+rate_limit: "keyless NCBI E-utilities; serial requests paced at 0.34 seconds, at most 28 requests before bounded retries"
+licence: "PubMed citation metadata; record-level rights and NLM terms apply"
+attribution: "National Library of Medicine PubMed and NCBI Entrez E-utilities"
+attribution_required: true
+deduplication_note: "stable PMID is the entity identifier; fetched_at distinguishes observations and raw_payload retains each exact one-record EFetch response"
+coverage_note: "bounded query sample, not an exhaustive PubMed mirror; publication-date ordering and result changes can move records between runs"
