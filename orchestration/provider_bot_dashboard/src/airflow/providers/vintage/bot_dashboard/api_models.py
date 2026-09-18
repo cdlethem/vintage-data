@@ -310,8 +310,10 @@ class ManagerContextResponse(StrictBody):
     missing_agents: list[str]
     failed_agents: list[str]
     freshness_ok: bool
+    workload: dict[str, Any]
     bot_health: list[dict[str, Any]]
     backlog: list[dict[str, Any]]
+    context_summary: dict[str, Any] = Field(default_factory=dict)
 
 
 class ReconcileResponse(StrictBody):
@@ -377,10 +379,14 @@ class FollowUpTriggerConf(StrictBody):
     execution_id: str
 
 
+class PlanningTriggerConf(FollowUpTriggerConf):
+    planning_request_id: int = Field(strict=True, ge=1)
+
+
 class TriggerArguments(StrictBody):
     trigger_dag_id: str
     trigger_run_id: str
-    conf: TriggerConf | FollowUpTriggerConf
+    conf: TriggerConf | FollowUpTriggerConf | PlanningTriggerConf
     skip_when_already_exists: Literal[True]
     wait_for_completion: Literal[False]
 
@@ -396,6 +402,7 @@ class ProviderSyncResponse(StrictBody):
 
 
 class MaintenanceResponse(StrictBody):
+    failed_dispatches: int = 0
     expired_leases: int
     pruned_reports: int
     pruned_artifacts: int

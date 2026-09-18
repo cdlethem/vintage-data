@@ -197,6 +197,32 @@ def _validated_checks(admission: dict, payload: dict, error_type) -> list[dict]:
         raise error_type("verification_failed", "terminal")
     return checks
 
+def _write_review_context(root: pathlib.Path, admission: dict, patch: bytes, report: bytes, error_type) -> pathlib.Path:
+    """Give the reviewer sandbox the trusted, parent-verified patch and executor report.
+
+    The admission carries only digests; the parent fetches and validates the actual
+    evidence bytes once here so the sandboxed model never has to trust its own input.
+    """
+    if len(patch) > 700_000 or len(report) > 700_000:
+        raise error_type("outside_bounds", "terminal")
+    if hashlib.sha256(patch).hexdigest() != admission["patch_sha256"]:
+        raise error_type("digest_invalid", "terminal")
+    if hashlib.sha256(report).hexdigest() != admission["executor_report_sha256"]:
+        raise error_type("digest_invalid", "terminal")
+    try:
+        report_object = json.loads(report)
+    except json.JSONDecodeError:
+        raise error_type("report_invalid", "terminal") from None
+    if not isinstance(report_object, dict) or report_object.get("task_id") != admission["task_id"]:
+        raise error_type("report_invalid", "terminal")
+    context = {"patch_text": patch.decode(), "executor_report": report_object}
+    path = root / "review-context.json"
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o400)
+    with os.fdopen(descriptor, "w") as handle:
+        handle.write(json.dumps(context, sort_keys=True, separators=(",", ":")))
+    return path
+
+
 
 def run(context: dict, cfg: dict, runner, dashboard_module):
     from airflow.providers.vintage.bot_dashboard.report_schemas import (
@@ -261,6 +287,8 @@ def run(context: dict, cfg: dict, runner, dashboard_module):
                 if hashlib.sha256(patch).hexdigest() != admission["patch_sha256"]:
                     raise dashboard_module.ControlPlaneError("patch_digest_invalid", "terminal")
                 _git(workdir, metadata, "apply", "--binary", "-", binary=True, input_data=patch)
+                report = client.get_artifact(admission["executor_report_sha256"])
+                _write_review_context(root, admission, patch, report, dashboard_module.ControlPlaneError)
             before = _snapshot_tree(workdir, dashboard_module.ControlPlaneError)
             admission_path = root / "admission.json"
             admission_path.write_bytes(canonical_admission)

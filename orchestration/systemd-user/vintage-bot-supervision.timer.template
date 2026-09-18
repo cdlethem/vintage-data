@@ -1,0 +1,11 @@
+[Unit]
+Description=Supervise the Vintage bot backlog every ten minutes
+
+[Timer]
+OnCalendar=*:0/10
+Persistent=true
+AccuracySec=15s
+Unit=vintage-bot-supervision.service
+
+[Install]
+WantedBy=timers.target

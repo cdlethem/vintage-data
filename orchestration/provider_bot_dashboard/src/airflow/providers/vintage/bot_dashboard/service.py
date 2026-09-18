@@ -82,7 +82,11 @@ def _fingerprint(event_type: str, actor_kind: str, actor_id: str, from_state: st
 
 def _event(session: Session, task: Task, event_type: str, actor_kind: str, actor_id: str, *, from_state: str | None = None, to_state: str | None = None, payload: dict[str, Any] | None = None) -> Event:
     payload = _bounded_payload(payload or {})
-    sequence = session.scalar(select(func.coalesce(func.max(Event.sequence), 0)).where(Event.task_id == task.id)) + 1
+    # Airflow sessions disable autoflush. Include audit rows already staged in
+    # this transaction so multiple events cannot reuse the persisted maximum.
+    pending_sequence = max((row.sequence for row in session.new if isinstance(row, Event) and row.task_id == task.id), default=0)
+    persisted_sequence = session.scalar(select(func.coalesce(func.max(Event.sequence), 0)).where(Event.task_id == task.id))
+    sequence = max(pending_sequence, persisted_sequence) + 1
     row = Event(task_id=task.id, sequence=sequence, event_type=event_type, actor_kind=actor_kind, actor_id=str(actor_id), from_state=from_state, to_state=to_state, payload=payload, fingerprint=_fingerprint(event_type, actor_kind, str(actor_id), from_state, to_state, payload))
     session.add(row)
     return row
@@ -137,7 +141,7 @@ def lifecycle_durations(
 
 
 
-def task_dict(task: Task, *, detail: bool = False) -> dict[str, Any]:
+def task_dict(task: Task, *, detail: bool = False, dispatch_pending: bool = False) -> dict[str, Any]:
     value = {
         "id": str(task.id), "related_task_id": str(task.related_task_id) if task.related_task_id else None,
         "owning_dag_id": task.owning_dag_id, "source": task.source,
@@ -148,7 +152,7 @@ def task_dict(task: Task, *, detail: bool = False) -> dict[str, Any]:
         "assignee_id": task.assignee_id, "assignee_name": task.assignee_name,
         "assignee_profile": task.assignee_profile, "reviewer_required": task.reviewer_required,
         "blocked_from_state": task.blocked_from_state, "version": task.version,
-        "next_actor": "human" if task.state in HUMAN_ACTION_STATES else "bot" if task.state == "in_progress" and task.assignee_kind == "bot" else None,
+        "next_actor": "dispatcher" if dispatch_pending and task.state == "accepted" and task.assignee_kind == "bot" else "human" if task.state in HUMAN_ACTION_STATES else "bot" if task.state == "in_progress" and task.assignee_kind == "bot" else None,
         "created_at": task.created_at.isoformat(), "updated_at": task.updated_at.isoformat(),
         "accepted_at": task.accepted_at.isoformat() if task.accepted_at else None,
         "completed_at": task.completed_at.isoformat() if task.completed_at else None,
@@ -197,10 +201,11 @@ def get_task(session: Session, task_id: str) -> dict:
     task = session.scalar(select(Task).where(Task.id == uuid.UUID(task_id)).options(selectinload(Task.revisions), selectinload(Task.events)))
     if task is None:
         raise NotFound("task not found")
-    value = task_dict(task, detail=True)
     executions = session.scalars(select(Execution).where(Execution.task_id == task.id).order_by(Execution.sequence, Execution.revision)).all()
+    value = task_dict(task, detail=True, dispatch_pending=any(row.terminal_at is None and row.dispatch_state in {"pending", "leased"} for row in executions))
     value["lifecycle_durations_ms"] = lifecycle_durations(task, executions[-1] if executions else None, events=task.events)
     value["executions"] = [{
+        "admission_kind": row.admission_kind,
         "sequence": row.sequence, "revision": row.revision, "dispatch_state": row.dispatch_state,
         "stage": row.stage, "profile": row.profile, "reviewer_required": row.reviewer_required,
         "branch": row.branch, "provider": row.provider, "repository": row.repository,
@@ -212,6 +217,7 @@ def get_task(session: Session, task_id: str) -> dict:
         "executor_deadline_at": row.executor_deadline_at.isoformat() if row.executor_deadline_at else None,
         "review_deadline_at": row.review_deadline_at.isoformat() if row.review_deadline_at else None,
         "synced_at": row.synced_at.isoformat() if row.synced_at else None,
+        "terminal_at": row.terminal_at.isoformat() if row.terminal_at else None,
         "terminal_reason_code": getattr(row, "terminal_reason_code", None),
         "terminal_failure_class": getattr(row, "terminal_failure_class", None),
         "lifecycle_durations_ms": lifecycle_durations(task, row, events=task.events),
@@ -251,10 +257,15 @@ def list_tasks(session: Session, *, states: Iterable[str] = (), category: str | 
     if ordering is None: raise DomainError("invalid sort")
     start = _offset(cursor)
     total = session.scalar(select(func.count()).select_from(Task).where(where))
-    rows = session.scalars(select(Task).where(where).order_by(*ordering).offset(start).limit(limit + 1)).all()
+    dispatch_pending = select(Execution.id).where(
+        Execution.task_id == Task.id,
+        Execution.terminal_at.is_(None),
+        Execution.dispatch_state.in_(("pending", "leased")),
+    ).exists()
+    rows = session.execute(select(Task, dispatch_pending).where(where).order_by(*ordering).offset(start).limit(limit + 1)).all()
     more = len(rows) > limit
     rows = rows[:limit]
-    return {"items": [task_dict(row) for row in rows], "total": total, "next_cursor": _cursor(start + limit) if more else None}
+    return {"items": [task_dict(row, dispatch_pending=pending) for row, pending in rows], "total": total, "next_cursor": _cursor(start + limit) if more else None}
 
 
 def create_manual_task(session: Session, *, title: str, category: str, priority: int, planned_resolution: str, actor_id: str, actor_name: str, evidence: list[dict] | None = None) -> dict:
@@ -277,6 +288,7 @@ def patch_task(
     version: int,
     actor_id: str,
     changes: dict[str, Any],
+    actor_kind: str = "user",
 ) -> dict:
     task = _locked_task(session, task_id, version)
     allowed = {
@@ -331,10 +343,8 @@ def patch_task(
                 suggested_executor=latest.suggested_executor,
                 resurface_task_id=latest.resurface_task_id,
                 resurface_reason=latest.resurface_reason,
-                source_dag_id=latest.source_dag_id,
-                source_run_id=latest.source_run_id,
-                source_task_id=latest.source_task_id,
-                source_map_index=latest.source_map_index,
+                # Source identity belongs to the ingested report revision only.
+                # Human edits retain its evidence and link back through the audit event.
                 actor_id=actor_id,
                 evidence=latest.evidence,
                 verification_commands=changes.get(
@@ -355,15 +365,15 @@ def patch_task(
         session,
         task,
         "task_edited",
-        "user",
+        actor_kind,
         actor_id,
-        payload={"before": before, "after": changes},
+        payload={"before": before, "after": changes, "previous_revision": latest.revision_number},
     )
     session.flush()
     return task_dict(task)
 
 
-def assign_task(session: Session, task_id: str, *, version: int, actor_id: str, actor_name: str, kind: str, profile: str | None = None, reviewer_required: bool = True) -> dict:
+def assign_task(session: Session, task_id: str, *, version: int, actor_id: str, actor_name: str, kind: str, profile: str | None = None, reviewer_required: bool = True, actor_kind: str = "user") -> dict:
     task = _locked_task(session, task_id, version)
     if kind == "human":
         task.assignee_kind, task.assignee_id, task.assignee_name, task.assignee_profile = "human", actor_id, actor_name, None
@@ -372,18 +382,18 @@ def assign_task(session: Session, task_id: str, *, version: int, actor_id: str, 
         task.reviewer_required = reviewer_required
     else: raise DomainError("invalid assignment")
     task.version += 1; task.updated_at = utcnow()
-    _event(session, task, "assigned", "user", actor_id, payload={"kind": kind, "profile": profile, "reviewer_required": reviewer_required})
+    _event(session, task, "assigned", actor_kind, actor_id, payload={"kind": kind, "profile": profile, "reviewer_required": reviewer_required})
     session.flush(); return task_dict(task)
 
 
-def add_event_items(session: Session, task_id: str, *, version: int, actor_id: str, event_type: str, items: list[Any]) -> dict:
+def add_event_items(session: Session, task_id: str, *, version: int, actor_id: str, event_type: str, items: list[Any], actor_kind: str = "user") -> dict:
     task = _locked_task(session, task_id, version)
-    _event(session, task, event_type, "user", actor_id, payload={"items": items})
+    _event(session, task, event_type, actor_kind, actor_id, payload={"items": items})
     task.version += 1; task.updated_at = utcnow(); session.flush()
     return task_dict(task)
 
 
-def transition_task(session: Session, task_id: str, *, version: int, actor_id: str, to_state: str, reason: str | None = None) -> dict:
+def transition_task(session: Session, task_id: str, *, version: int, actor_id: str, to_state: str, reason: str | None = None, actor_kind: str = "user") -> dict:
     task = _locked_task(session, task_id, version)
     previous = task.state
     if to_state == "blocked" and previous not in {"blocked", "completed", "dismissed"}:
@@ -459,18 +469,21 @@ def transition_task(session: Session, task_id: str, *, version: int, actor_id: s
         if not verified:
             raise PreconditionFailed("ready requires verified no-change evidence")
     if to_state == "completed":
-        comments = session.scalar(select(func.count()).select_from(Event).where(Event.task_id == task.id, Event.event_type == "comment_added", Event.actor_kind == "user"))
-        evidence = session.scalar(select(func.count()).select_from(Event).where(Event.task_id == task.id, Event.event_type == "evidence_added", Event.actor_kind == "user"))
-        if not comments or not evidence: raise PreconditionFailed("completion requires a human note and evidence")
+        decision_maker = Event.actor_kind == "user"
+        if actor_kind == "system" and actor_id == "executive":
+            decision_maker = or_(decision_maker, and_(Event.actor_kind == "system", Event.actor_id == "executive"))
+        comments = session.scalar(select(func.count()).select_from(Event).where(Event.task_id == task.id, Event.event_type == "comment_added", decision_maker))
+        evidence = session.scalar(select(func.count()).select_from(Event).where(Event.task_id == task.id, Event.event_type == "evidence_added", decision_maker))
+        if not comments or not evidence: raise PreconditionFailed("completion requires a decision-maker note and evidence")
         task.completed_at = utcnow()
     if to_state == "dismissed": task.dismissed_at = utcnow()
     if to_state == "accepted": task.accepted_at = utcnow()
     task.state = to_state; task.version += 1; task.updated_at = utcnow()
-    _event(session, task, "state_changed", "user", actor_id, from_state=previous, to_state=to_state, payload={"reason": reason} if reason else {})
+    _event(session, task, "state_changed", actor_kind, actor_id, from_state=previous, to_state=to_state, payload={"reason": reason} if reason else {})
     session.flush(); return task_dict(task)
 
 
-def start_task(session: Session, task_id: str, *, version: int, actor_id: str, idempotency_key: str, revision: bool = False, max_queued: int = 20) -> dict:
+def start_task(session: Session, task_id: str, *, version: int, actor_id: str, idempotency_key: str, revision: bool = False, max_queued: int = 20, actor_kind: str = "user") -> dict:
     try:
         identity = uuid.UUID(str(task_id))
     except ValueError as exc:
@@ -499,7 +512,26 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
         or task.assignee_profile not in {"junior", "senior", "staff"}
     ):
         raise PreconditionFailed("task must be assigned to an allowed bot profile")
-    if task.state not in ({"in_review"} if revision else {"accepted"}):
+    retry_previous = None
+    if task.state == "blocked" and not revision:
+        retry_previous = session.scalar(
+            select(Execution).where(Execution.task_id == task.id)
+            .order_by(Execution.sequence.desc()).limit(1).with_for_update()
+        )
+        published = session.scalar(select(Execution.id).where(
+            Execution.task_id == task.id,
+            or_(Execution.pr_number.is_not(None), Execution.pr_url.is_not(None)),
+        ).limit(1))
+        if (
+            task.blocked_from_state not in {"accepted", "in_progress"}
+            or retry_previous is None or retry_previous.terminal_at is None
+            or retry_previous.admission_kind != "executor"
+            or not retry_previous.terminal_reason_code
+            or retry_previous.terminal_reason_code == "no_change"
+            or published is not None
+        ):
+            raise PreconditionFailed("retry requires a failed terminal execution without a published PR; resolve other blockers before starting")
+    if retry_previous is None and task.state not in ({"in_review"} if revision else {"accepted"}):
         raise PreconditionFailed("task state cannot start this execution")
     latest_revision = session.scalar(
         select(Revision)
@@ -512,7 +544,6 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
         or latest_revision is None
         or not latest_revision.verification_commands
         or not latest_revision.allowed_path_globs
-        or latest_revision.suggested_executor not in {"junior", "senior", "staff"}
     ):
         raise PreconditionFailed(
             "bot execution requires resolution, argv verification, path policy, and profile"
@@ -534,6 +565,19 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
     )
     if active is None and queued >= max_queued:
         raise PreconditionFailed("execution admission queue is full")
+    from .revision_seed import capture_seed, get_seed, restore_source
+    seed = None
+    if active is not None:
+        seed = capture_seed(session, active)
+    elif retry_previous is not None:
+        seed = get_seed(session, retry_previous)
+    if retry_previous is not None:
+        task.state = "accepted"
+        task.blocked_from_state = None
+        task.accepted_at = utcnow()
+        _event(session, task, "execution_retry_requested", actor_kind, actor_id,
+               from_state="blocked", to_state="accepted",
+               payload={"previous_sequence": retry_previous.sequence, "previous_reason_code": retry_previous.terminal_reason_code})
     if active is None:
         sequence = (
             session.scalar(
@@ -561,6 +605,7 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
             raise PreconditionFailed(
                 "a revised execution requires a newer task recommendation revision"
             )
+        row.admission_kind = "executor"
         row.revision = latest_revision.revision_number
         row.execution_id = secrets.token_hex(32)
         row.idempotency_key = idempotency_key
@@ -597,13 +642,17 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
         row.provider_fingerprint = None
         row.synced_at = None
         row.terminal_at = None
+    # Start from the previous candidate, but require new checks and independent
+    # review of the complete cumulative patch against its immutable base.
+    restore_source(row, seed)
     _event(
         session,
         task,
         "execution_admitted",
-        "user",
+        actor_kind,
         actor_id,
-        payload={"sequence": row.sequence, "revision": row.revision},
+        payload={"sequence": row.sequence, "revision": row.revision,
+                 "execution_id": row.execution_id, "revision_seed": seed},
     )
     task.version += 1
     task.updated_at = utcnow()
@@ -659,6 +708,9 @@ def reconcile_manager(session: Session, report: dict, *, dag_id: str, run_id: st
             if duplicate: continue
             revision_number = session.scalar(select(func.coalesce(func.max(Revision.revision_number), 0)).where(Revision.task_id == existing.id)) + 1
             existing.priority = item["priority"]; existing.version += 1; existing.updated_at = utcnow()
+            if existing.state == "proposed":
+                existing.title = item["title"]
+                existing.planned_resolution = item["action"]
             revised += 1
         else:
             existing = Task(source="manager", recommendation_key=item["recommendation_key"], title=item["title"], category=item["category"], state="proposed", priority=item["priority"], planned_resolution=item["action"])
@@ -746,11 +798,13 @@ def _same_work_resources(left: set[str], right: set[str]) -> bool:
     )
 
 
-def _matching_open_task(session: Session, proposal: dict, bot: str | None = None) -> Task | None:
+def _matching_open_task(session: Session, proposal: dict, bot: str | None = None, exclude_task_id=None) -> Task | None:
     candidates = session.scalars(select(Task).where(Task.state.not_in(("completed", "dismissed")), Task.category == proposal["category"]).options(selectinload(Task.revisions)).order_by(Task.created_at).with_for_update()).all()
     title = re.sub(r"[^a-z0-9]+", " ", proposal["title"].lower()).strip()
     resources = set(proposal.get("resource_keys") or [])
     for candidate in candidates:
+        if candidate.id == exclude_task_id:
+            continue
         if re.sub(r"[^a-z0-9]+", " ", candidate.title.lower()).strip() == title:
             return candidate
         latest = candidate.revisions[-1] if candidate.revisions else None
@@ -904,13 +958,13 @@ def overview(session: Session) -> dict:
 
 
 SPECIALIST_FRESHNESS_MINUTES = {
-    "source_discovery": 390,
-    "source_vetting": 420,
-    "source_scheduling": 420,
-    "cadence_review": 300,
+    "source_discovery": 1500,
+    "source_vetting": 780,
+    "source_scheduling": 180,
+    "cadence_review": 540,
     "failure_triage": 90,
     "analytics_engineer": 1440,
-    "data_analyst": 1440,
+    "data_analyst": 1500,
 }
 
 
@@ -1224,6 +1278,8 @@ def _freshness_entry(session: Session, bot: str, now: datetime) -> dict:
         freshness = "missing"
     elif latest.outcome in {"failed", "timed_out"}:
         freshness = "failed"
+    elif latest.outcome == "skipped" and latest.reason_code == "resolution_capacity_reserved":
+        freshness = "not_due" if age is not None and age <= sla * 60 else "stale"
     elif bot in {"analytics_engineer", "data_analyst"} and useful is None:
         active = session.scalar(
             select(func.count())
@@ -1284,7 +1340,10 @@ def manager_context(session: Session, *, days: int = 7) -> dict:
             .order_by(Revision.task_id, Revision.revision_number)
         ).all()
     }
-    return {
+    from .context_budget import compact_manager_context
+    from . import workload
+
+    return compact_manager_context({
         "context_schema_version": 1,
         "context_kind": "manager",
         "generated_at": now.isoformat(),
@@ -1294,12 +1353,13 @@ def manager_context(session: Session, *, days: int = 7) -> dict:
         "missing_agents": missing,
         "failed_agents": failed,
         "freshness_ok": not (stale or missing or failed),
+        "workload": workload.status(session),
         "bot_health": [run_report_dict(row) for row in health_rows],
         "backlog": [
             {**task_dict(task), "resource_keys": resources.get(task.id, [])}
             for task in backlog
         ],
-    }
+    })
 
 
 def _task_proposals(payload_schema: str, payload: dict) -> list[dict]:
@@ -1341,15 +1401,22 @@ def reconcile_recommendations(
     created = revised = delegated = 0
     if _before_epoch(report.started_at, epoch):
         return {"created": 0, "revised": 0, "delegated": 0}
+    from . import follow_up
+    planning_parent = follow_up.record(session, report, payload)
     for proposal in _task_proposals(report.report_schema or "", payload):
         recommendation_key = _recommendation_identity(report.bot_name, proposal, epoch)
+        if planning_parent:
+            recommendation_key = hashlib.sha256(f"planning:{planning_parent}:{recommendation_key}".encode()).hexdigest()
         task = session.scalar(
             select(Task)
             .where(Task.recommendation_key == recommendation_key)
             .with_for_update()
         )
         if task is None:
-            task = _matching_open_task(session, proposal, report.bot_name)
+            task = _matching_open_task(session, proposal, report.bot_name, exclude_task_id=planning_parent)
+        if task and planning_parent:
+            from . import planning
+            planning.link(session, planning_parent, task, report)
         # A fresh report must not overwrite an admitted human scope or reopen
         # dismissed/completed work. Execution always keeps its admitted revision.
         if task and task.state != "proposed":
@@ -1367,6 +1434,7 @@ def reconcile_recommendations(
             continue
         if task is None:
             task = Task(
+                related_task_id=planning_parent,
                 source="specialist",
                 source_bot=report.bot_name,
                 recommendation_key=recommendation_key,
@@ -1425,7 +1493,7 @@ def reconcile_recommendations(
             .limit(1)
             .with_for_update()
         )
-        if task.state == "proposed" and policy and policy.mode in {
+        if not planning_parent and task.state == "proposed" and policy and policy.mode in {
             "auto_accept",
             "auto_delegate",
         }:
@@ -1446,6 +1514,9 @@ def reconcile_recommendations(
             payload={"source_report_id": str(report.id), "policy": policy.mode if policy else "manual"},
         )
         session.flush()
+        if planning_parent:
+            from . import planning
+            planning.link(session, planning_parent, task, report)
         if (
             policy
             and policy.mode == "auto_delegate"

@@ -1,5 +1,6 @@
 """Trusted Git materialization and publication; credentials stay in child env."""
 from __future__ import annotations
+import gzip
 import hashlib
 import io
 import json
@@ -94,7 +95,9 @@ def create_source_artifact(session: Session, execution: Execution) -> dict:
         stored = put_artifact(
             session,
             kind="source",
-            content=archive.stdout,
+            # Artifact limits apply to transport bytes. Keep the immutable Git
+            # archive compact and reproducible without wall-clock gzip metadata.
+            content=gzip.compress(archive.stdout, compresslevel=6, mtime=0),
             owner_execution_id=execution.execution_id,
         )
     execution.base_sha = base_sha
@@ -144,6 +147,10 @@ def publish_execution_change(
             "pr_url": execution.pr_url,
             "trusted_head_sha": execution.trusted_head_sha,
         }
+    if execution.patch_sha256 and (execution.patch_sha256 != patch_sha
+            or execution.executor_report_sha256 != result.get("report_sha256")
+            or execution.verification_manifest != manifest):
+        raise GitProviderError("publication retry changed checkpointed evidence")
     config = load_repository_config()
     if config.provider != execution.provider or config.project != execution.repository:
         raise GitProviderError("repository configuration changed after admission")
@@ -164,6 +171,24 @@ def publish_execution_change(
         token=config.token,
     )
     validate_changed_paths(narrowed, changed_paths, len(patch))
+    # Persist immutable evidence BEFORE external effects. A provider outage after
+    # push must resume this patch rather than run the model again on retry.
+    from .report_schemas import VerificationManifestV1
+    verified = VerificationManifestV1.model_validate(manifest)
+    if (verified.task_id, verified.execution_id, verified.revision, verified.base_sha, verified.patch_sha256) != (str(task.id), execution.execution_id, execution.revision, execution.base_sha, patch_sha):
+        raise GitProviderError("publication checkpoint identity mismatch")
+    if not result.get("report_sha256"):
+        raise GitProviderError("publication checkpoint requires executor report")
+    read_artifact(session, result["report_sha256"])
+    execution.patch_sha256 = patch_sha
+    execution.patch_byte_count = len(patch)
+    execution.executor_report_sha256 = result["report_sha256"]
+    execution.verification_manifest = manifest
+    session.commit()
+    session.refresh(execution, with_for_update=True)
+    session.refresh(task, with_for_update=True)
+    if execution.execution_id != verified.execution_id or execution.terminal_at is not None or task.state in {"completed", "dismissed"}:
+        raise GitProviderError("execution changed after publication checkpoint")
     branch = f"bot-dashboard/{task.id}/{execution.sequence}-r{execution.revision}"
     with tempfile.TemporaryDirectory(prefix="bot-dashboard-publish-") as temporary:
         root = pathlib.Path(temporary)
@@ -184,7 +209,7 @@ def publish_execution_change(
         if sorted(actual_paths) != sorted(changed_paths):
             raise GitProviderError("trusted changed paths differ from executor manifest")
         _git(repository, config, "checkout", "-b", branch)
-        _git(repository, config, "commit", "-m", f"bot-dashboard: {task.title[:160]}")
+        _git(repository, config, "commit", "-m", f"bot-dashboard: {revision.title[:160]}")
         head_sha = _git(repository, config, "rev-parse", "HEAD")
         _git(repository, config, "push", "origin", f"HEAD:refs/heads/{branch}")
     provider = get_provider(config)

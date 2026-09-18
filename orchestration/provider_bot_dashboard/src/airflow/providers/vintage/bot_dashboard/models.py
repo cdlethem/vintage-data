@@ -82,6 +82,7 @@ class Revision(Base):
             "task_id", "revision_number", name="uq_bd_revision_task_number"
         ),
         UniqueConstraint(
+            "task_id",
             "source_dag_id",
             "source_run_id",
             "source_task_id",

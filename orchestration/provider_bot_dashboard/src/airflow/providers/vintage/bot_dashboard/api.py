@@ -51,6 +51,7 @@ from .api_models import (
     ExecutionFinalizeRequest,
     ExecutionPublishRequest,
     FinalizeResponse,
+    InternalIdentity,
     MaintenanceRequest,
     MaintenanceResponse,
     ManagerContextResponse,
@@ -143,11 +144,30 @@ def _write_guard() -> None:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "SimpleAuthManager writes are disabled")
 
 
-def _executor_guard() -> None:
+def _git_connection_codes() -> list[str]:
+    """Match publication's connection resolver, including configured secret backends."""
+    from airflow.exceptions import AirflowNotFoundException
+
+    conn_id = conf.get("bot_dashboard", "git_conn_id", fallback="bot_dashboard_git")
+    try:
+        connection = Connection.get_connection_from_secrets(conn_id)
+    except AirflowNotFoundException:
+        return ["git_connection_missing"]
+    except Exception:
+        # Backend exceptions can contain credential-bearing endpoint details.
+        return ["git_connection_unavailable"]
+    return [] if connection is not None else ["git_connection_missing"]
+
+
+def _executor_guard(session: SessionDep) -> None:
     _write_guard()
     from .execution import executor_preconditions
 
     codes = executor_preconditions()
+    pool_name = conf.get("bot_dashboard", "executor_pool", fallback="bot_dashboard_executor")
+    if session.scalar(select(Pool.pool).where(Pool.pool == pool_name)) is None:
+        codes.append("executor_pool_missing")
+    codes.extend(_git_connection_codes())
     if codes:
         raise HTTPException(
             status.HTTP_412_PRECONDITION_FAILED,
@@ -208,13 +228,20 @@ def _failure_log_tail(task: TaskInstance) -> tuple[str, str]:
         lines: list[str] = []
         for _ in range(64):
             chunks, metadata = reader.read_log_chunks(task, task.try_number, metadata)
-            if not isinstance(chunks, (list, tuple)):
+            # Airflow 3 returns a lazy stream of structured messages. Wrapping
+            # that iterator would expose its repr instead of the task's logs.
+            if isinstance(chunks, str) or hasattr(chunks, "event"):
                 chunks = [chunks]
             for chunk in chunks:
                 event = getattr(chunk, "event", chunk)
                 if event is not None:
                     lines.extend(str(event).splitlines())
-                    del lines[:-30]
+                exceptions = getattr(chunk, "error_detail", None) or getattr(chunk, "exception", None)
+                if isinstance(exceptions, list):
+                    for exception in exceptions[-5:]:
+                        if isinstance(exception, dict) and isinstance(exception.get("exc_type"), str):
+                            lines.extend(f"{exception['exc_type']}: {exception.get('exc_value', '')}".splitlines())
+                del lines[:-30]
             if metadata.get("end_of_log"):
                 break
         if not lines:
@@ -350,13 +377,7 @@ def health(session: SessionDep):
 
         codes.extend(executor_preconditions())
         try:
-            conn_id = conf.get(
-                "bot_dashboard", "git_conn_id", fallback="bot_dashboard_git"
-            )
-            if session.scalar(
-                select(Connection.conn_id).where(Connection.conn_id == conn_id)
-            ) is None:
-                codes.append("git_connection_missing")
+            codes.extend(_git_connection_codes())
             pool_name = conf.get(
                 "bot_dashboard",
                 "executor_pool",
@@ -379,6 +400,8 @@ WRITE_DEPS = [WRITE_TASK, Depends(_schema_guard), Depends(_write_guard), Depends
 
 @auth.get("/capabilities")
 def capabilities(response: Response, user: GetUserDep):
+    from .execution import executor_preconditions
+
     token = _new_csrf()
     base = urlsplit(_base_url())
     secure = _setting_bool("csrf_cookie_secure", True)
@@ -387,8 +410,9 @@ def capabilities(response: Response, user: GetUserDep):
     response.set_cookie(CSRF_COOKIE, token, max_age=1800, secure=secure, httponly=False, samesite="strict", path=base.path.rstrip("/") + "/bot-dashboard")
     reasons = []
     if not write: reasons.append("writes_disabled")
-    if not _setting_bool("executor_enabled"): reasons.append("executor_disabled")
-    return {"write_enabled": write, "executor_enabled": write and _setting_bool("executor_enabled"), "csrf_token": token, "reasons": reasons}
+    executor_reasons = executor_preconditions()
+    reasons.extend(executor_reasons)
+    return {"write_enabled": write, "executor_enabled": write and not executor_reasons, "csrf_token": token, "reasons": reasons}
 
 @auth.get("/summary", dependencies=[READ_TASK, Depends(_schema_guard)])
 def get_summary(session: SessionDep): return queue_summary(session)
@@ -431,6 +455,11 @@ def assign(task_id: str, body: Assignment, session: SessionDep, user: GetUserDep
 
 @auth.post("/tasks/{task_id}/start", dependencies=[WRITE_TASK, Depends(_schema_guard), Depends(_executor_guard), Depends(_same_origin), Depends(action_logging())])
 def start(task_id: str, body: Start, session: SessionDep, user: GetUserDep):
+    from .model_settings import model_for_role
+    task = get_task(session, task_id)
+    model_for_role(session, f"executor_{task.get('assignee_profile')}")
+    if task.get('reviewer_required'):
+        model_for_role(session, "pr_reviewer")
     return start_task(
         session,
         task_id,
@@ -442,6 +471,16 @@ def start(task_id: str, body: Start, session: SessionDep, user: GetUserDep):
             "bot_dashboard", "max_queued_executions", fallback=20
         ),
     )
+
+@auth.post("/tasks/{task_id}/retry-model", dependencies=[WRITE_TASK, Depends(_schema_guard), Depends(_executor_guard), Depends(_same_origin), Depends(action_logging())])
+def retry_model_task(task_id: str, body: Start, session: SessionDep, user: GetUserDep):
+    from .model_recovery import retry_model
+    if body.revision:
+        raise HTTPException(422, "Model recovery does not revise the approved plan")
+    return retry_model(session, task_id, version=body.version, actor_id=_identity(user)[0],
+                       idempotency_key=body.idempotency_key,
+                       max_queued=conf.getint("bot_dashboard", "max_queued_executions", fallback=20))
+
 
 @auth.post("/tasks/{task_id}/comments", dependencies=WRITE_DEPS)
 def comments(task_id: str, body: CommentBody, session: SessionDep, user: GetUserDep):
@@ -792,7 +831,11 @@ def internal_airflow_failures(
     session: SessionDep,
     hours: int = Query(default=24, ge=1, le=720),
     limit: int = Query(default=100, ge=1, le=100),
+    dag_id: str | None = Query(default=None, min_length=1, max_length=250),
+    run_id: str | None = Query(default=None, min_length=1, max_length=250),
 ):
+    if run_id and not dag_id:
+        raise HTTPException(422, "A run lookup requires a DAG identity")
     cutoff = utcnow() - timedelta(hours=hours)
     filters = (
         DagRun.state == "failed",
@@ -803,6 +846,10 @@ def internal_airflow_failures(
         TaskInstance.dag_id == DagRun.dag_id,
         TaskInstance.run_id == DagRun.run_id,
     )
+    if dag_id:
+        filters += (DagRun.dag_id == dag_id,)
+    if run_id:
+        filters += (DagRun.run_id == run_id,)
     total = session.scalar(
         select(func.count())
         .select_from(TaskInstance)
@@ -957,6 +1004,103 @@ def internal_maintenance(body: MaintenanceRequest, session: SessionDep):
     from .maintenance import run_maintenance
 
     return run_maintenance(session, limit=body.limit)
+
+
+from .model_settings import (
+    ProviderBody, SettingsBody, get_settings, runtime_settings,
+    save_assignments, save_provider, test_provider,
+)
+
+
+from . import autopilot, concurrency, workload
+
+
+@internal.get("/workload")
+def workload_status(session: SessionDep):
+    return workload.status(session)
+
+
+@internal.post("/follow-ups/context")
+def scheduling_follow_up(body: InternalIdentity, session: SessionDep):
+    from . import follow_up
+    return follow_up.context(session, body.model_dump())
+
+
+@auth.get("/concurrency", dependencies=[READ_TASK, Depends(_schema_guard)])
+def concurrency_settings(session: SessionDep):
+    return concurrency.get_settings(session)
+
+
+@auth.put("/concurrency", dependencies=WRITE_DEPS)
+def concurrency_save(body: concurrency.Settings, session: SessionDep, user: GetUserDep):
+    return concurrency.set_settings(session, body, _identity(user)[0])
+
+
+@auth.get("/autopilot", dependencies=[READ_TASK, Depends(_schema_guard)])
+def autopilot_status(session: SessionDep):
+    return autopilot.status(session)
+
+
+@auth.put("/autopilot", dependencies=WRITE_DEPS)
+def autopilot_toggle(body: autopilot.Toggle, session: SessionDep, user: GetUserDep):
+    return autopilot.set_enabled(session, body, _identity(user)[0])
+
+
+@internal.get("/autopilot/repository")
+def autopilot_repository():
+    from .repository_context import repository_inventory
+    return repository_inventory()
+
+
+@internal.post("/autopilot/claim")
+def autopilot_claim(body: autopilot.ClaimRequest, session: SessionDep):
+    _write_guard()
+    return autopilot.claim(session, body.identity.model_dump() if body.identity else None)
+
+
+@internal.post("/autopilot/failure")
+def autopilot_failure(body: autopilot.FailedDecision, session: SessionDep):
+    return autopilot.failed(session, body)
+
+
+@internal.post("/autopilot/decide")
+def autopilot_decide(body: autopilot.Decision, session: SessionDep):
+    _write_guard()
+    if body.action in {"start", "revise"}:
+        _executor_guard(session)
+    return autopilot.decide(session, body)
+
+
+@auth.get("/model-settings", dependencies=[READ_TASK, Depends(_schema_guard)])
+def get_model_settings(session: SessionDep):
+    return get_settings(session)
+
+
+@auth.post("/model-settings/test", dependencies=WRITE_DEPS)
+def test_model_settings(body: ProviderBody, session: SessionDep):
+    return test_provider(session, body)
+
+
+@auth.post("/model-settings/providers", dependencies=WRITE_DEPS)
+def connect_model_provider(body: ProviderBody, session: SessionDep):
+    return save_provider(session, body)
+
+
+@auth.put("/model-settings", dependencies=WRITE_DEPS)
+def update_model_settings(body: SettingsBody, session: SessionDep):
+    return save_assignments(session, body)
+
+
+@internal.get("/executions/readiness")
+def execution_readiness():
+    from .execution import executor_preconditions
+    reasons = executor_preconditions()
+    return {"ready": not reasons, "reasons": reasons}
+
+
+@internal.get("/model-settings")
+def internal_model_settings(session: SessionDep):
+    return runtime_settings(session)
 
 
 app.include_router(internal)

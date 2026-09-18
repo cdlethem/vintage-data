@@ -238,8 +238,14 @@ class SourceSchedulingV2(StrictModel):
     schema_version: Literal[2]
     agent: Literal["source_scheduling"]
     status: Literal["ok", "degraded_evidence"]
-    plans: list[ImplementationPlanV2] = Field(min_length=1, max_length=1)
+    plans: list[ImplementationPlanV2] = Field(max_length=1)
     summary: str = Field(min_length=1, max_length=20_000)
+
+    @model_validator(mode="after")
+    def empty_plan_requires_evidence_blocker(self):
+        if not self.plans and self.status != "degraded_evidence":
+            raise ValueError("An observation-only scheduling report requires degraded_evidence")
+        return self
 
 
 class CadenceSourceReviewV2(StrictModel):
@@ -292,8 +298,14 @@ class AnalyticsEngineerV2(StrictModel):
     status: Literal["ok", "degraded_evidence"]
     datasets: list[str] = Field(max_length=20)
     decisions: list[str] = Field(max_length=50)
-    plans: list[AnalyticsPlanV2] = Field(min_length=1, max_length=1)
+    plans: list[AnalyticsPlanV2] = Field(max_length=1)
     summary: str = Field(min_length=1, max_length=20_000)
+
+    @model_validator(mode="after")
+    def observation_requires_degraded_evidence(self):
+        if not self.plans and self.status != "degraded_evidence":
+            raise ValueError("An observation-only analytics report requires degraded_evidence")
+        return self
 
 
 class DimensionProfileV1(StrictModel):
@@ -354,10 +366,20 @@ class DataAnalystV1(StrictModel):
     agent: Literal["data_analyst"]
     status: Literal["ok", "degraded_evidence"]
     family: str = Field(min_length=1, max_length=100)
-    queries: list[str] = Field(min_length=1, max_length=40, description="exploratory SQL actually executed")
-    analyses: list[MartAnalysisV1] = Field(min_length=1, max_length=6)
-    plans: list[AnalyticsPlanV2] = Field(min_length=1, max_length=1)
+    queries: list[str] = Field(max_length=40, description="exploratory SQL actually executed; empty when evidence is unavailable")
+    analyses: list[MartAnalysisV1] = Field(max_length=6)
+    plans: list[AnalyticsPlanV2] = Field(max_length=1)
     summary: str = Field(min_length=1, max_length=20_000)
+
+    @model_validator(mode="after")
+    def proposals_require_measured_analysis(self):
+        if self.status == "ok" and not self.plans:
+            raise ValueError("An observation-only analyst report requires degraded_evidence")
+        if self.plans and (not self.queries or not self.analyses):
+            raise ValueError("An analyst proposal requires executed queries and measured analyses")
+        if self.analyses and not self.queries:
+            raise ValueError("Measured analyses require executed queries")
+        return self
 
 
 class Resurface(StrictModel):
@@ -370,6 +392,9 @@ class ManagerPlanItemV3(StrictModel):
     title: str = Field(min_length=1, max_length=200)
     priority: int = Field(ge=1, le=7)
     category: TaskCategory
+    action: str = Field(min_length=1, max_length=20_000)
+    why_now: str = Field(min_length=1, max_length=20_000)
+    expected_benefit: str = Field(min_length=1, max_length=20_000)
     resources: str = Field(min_length=1, max_length=20_000)
     risk: str = Field(min_length=1, max_length=20_000)
     rollback: str = Field(min_length=1, max_length=20_000)
@@ -456,12 +481,19 @@ class ExecutorTaskV2(StrictModel):
     resource_keys: list[str] = Field(max_length=50)
 
 
+class ExecutionModelV1(StrictModel):
+    provider_id: str = Field(min_length=1, max_length=40)
+    model: str = Field(min_length=1, max_length=200)
+    base_url: str = Field(min_length=1, max_length=2000)
+
+
 class ExecutorAdmissionV2(StrictModel):
     protocol_version: Literal[2]
     kind: Literal["executor"]
     task_id: str = Field(min_length=36, max_length=36)
     profile: Literal["junior", "senior", "staff"]
     model_role: Literal["@task", "@default", "@plan"]
+    model: ExecutionModelV1 | None = None
     reviewer_required: bool
     sequence: int = Field(ge=1)
     revision: int = Field(ge=1)
@@ -470,14 +502,32 @@ class ExecutorAdmissionV2(StrictModel):
     task: ExecutorTaskV2
     source_artifact: ArtifactReferenceV1
     base_sha: str = Field(pattern=r"^[a-f0-9]{40,64}$")
-    patch_sha256: None = None
-    trusted_head_sha: None = None
-    pr_number: None = None
-    pr_url: None = None
-    verification_manifest: None = None
-    executor_report_sha256: None = None
+    seed_patch_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    patch_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    trusted_head_sha: str | None = Field(default=None, pattern=r"^[a-f0-9]{40,64}$")
+    pr_number: int | None = Field(default=None, ge=1)
+    pr_url: str | None = Field(default=None, min_length=1, max_length=2000)
+    verification_manifest: dict[str, Any] | None = None
+    executor_report_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     repository_policy: RepositoryPolicyV1
     source_report_reference: str | None = Field(default=None, max_length=1000)
+
+
+    @model_validator(mode="after")
+    def complete_publication_for_resume(self):
+        publication = (self.trusted_head_sha, self.pr_number, self.pr_url)
+        if any(value is not None for value in publication) and any(value is None for value in publication):
+            raise ValueError("published executor resume requires complete publication identity")
+        fields = (self.patch_sha256, self.verification_manifest, self.executor_report_sha256)
+        if any(value is not None for value in (*fields, *publication)):
+            if any(value is None for value in fields):
+                raise ValueError("published executor resume requires complete publication evidence")
+            manifest = VerificationManifestV1.model_validate(self.verification_manifest)
+            if (manifest.task_id, manifest.execution_id, manifest.revision,
+                manifest.base_sha, manifest.patch_sha256) != (
+                    self.task_id, self.execution_id, self.revision, self.base_sha, self.patch_sha256):
+                raise ValueError("published executor manifest identity does not match admission")
+        return self
 
 
 class ReviewerAdmissionV2(StrictModel):
@@ -486,6 +536,7 @@ class ReviewerAdmissionV2(StrictModel):
     task_id: str = Field(min_length=36, max_length=36)
     profile: Literal["junior", "senior", "staff"]
     model_role: Literal["@task", "@default", "@plan"]
+    model: ExecutionModelV1 | None = None
     reviewer_required: Literal[True]
     sequence: int = Field(ge=1)
     revision: int = Field(ge=1)
@@ -566,6 +617,15 @@ class PrReviewerV2(StrictModel):
 ReviewerResultV2.model_rebuild()
 
 
+class ExecutiveV1(StrictModel):
+    schema_version: Literal[1]
+    agent: Literal["executive"]
+    task_id: str = Field(max_length=36)
+    action: str = Field(max_length=30)
+    rationale: str = Field(min_length=10, max_length=8000)
+    result: Literal["applied", "deferred", "already_applied"]
+
+
 SCHEMAS: dict[str, type[StrictModel]] = {
     "source_discovery_v2": SourceDiscoveryV2,
     "source_vetting_v2": SourceVettingV2,
@@ -575,6 +635,7 @@ SCHEMAS: dict[str, type[StrictModel]] = {
     "analytics_engineer_v2": AnalyticsEngineerV2,
     "data_analyst_v1": DataAnalystV1,
     "manager_v3": ManagerV3,
+    "executive_v1": ExecutiveV1,
     "task_executor_v2": TaskExecutorV2,
     "pr_reviewer_v2": PrReviewerV2,
 }

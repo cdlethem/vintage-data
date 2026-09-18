@@ -183,6 +183,10 @@ class DashboardClient:
             body={"identity": identity, "try_number": try_number},
         )
 
+    def model_settings(self) -> dict:
+        """Trusted parent only: the result contains provider credentials."""
+        return self._request("GET", "internal/model-settings")
+
     def airflow_failures(self, hours: int = 24, limit: int = 100) -> dict:
         value = self._request(
             "GET", "airflow/failures", params={"hours": hours, "limit": limit}

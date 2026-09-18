@@ -108,6 +108,21 @@ def claim_run(
     )
     if revision is None:
         raise PreconditionFailed("admitted task revision is unavailable")
+    if kind == "executor" and row.pr_number is not None:
+        from .git_provider import get_provider, load_repository_config
+
+        config = load_repository_config()
+        if config.provider != row.provider or config.project != row.repository:
+            raise PreconditionFailed("published execution repository identity changed before resume")
+        observation = get_provider(config).read_change(row.pr_number)
+        expected = {
+            "provider": row.provider, "number": row.pr_number,
+            "head_ref": row.branch, "base_ref": row.target_branch,
+            "author_id": row.service_account_id, "head_sha": row.trusted_head_sha,
+            "state": "open",
+        }
+        if any(value is None or observation.get(key) != value for key, value in expected.items()):
+            raise PreconditionFailed("published execution identity, trusted head, or open state changed before resume")
     row.claimed_run_id = run_id
     row.dispatch_state = "running" if kind == "executor" else "reviewing"
     row.stage = "claimed"
@@ -152,21 +167,25 @@ def claim_run(
         if revision.source_dag_id
         else None
     )
+    from .model_settings import model_for_role
+
+    selected_model = model_for_role(session, "pr_reviewer" if kind == "pr_reviewer" else f"executor_{row.profile}")
     admission = {
         "protocol_version": 2,
         "kind": kind,
         "task_id": str(task.id),
         "profile": row.profile,
         "model_role": PROFILE_ALIASES[row.profile],
+        "model": selected_model,
         "reviewer_required": row.reviewer_required,
         "sequence": row.sequence,
         "revision": row.revision,
         "execution_id": row.execution_id,
         "deadline_at": deadline_at.isoformat(),
         "task": {
-            "title": task.title,
+            "title": revision.title,
             "category": task.category,
-            "planned_resolution": task.planned_resolution,
+            "planned_resolution": revision.action,
             "verification_commands": revision.verification_commands,
             "allowed_path_globs": revision.allowed_path_globs,
             "resource_keys": revision.resource_keys,
@@ -183,6 +202,14 @@ def claim_run(
         "source_report_reference": source_report_reference,
     }
     from .report_schemas import ExecutorAdmissionV2, ReviewerAdmissionV2
+
+    if kind == "executor":
+        from .revision_seed import get_seed
+        seed = get_seed(session, row)
+        if seed and (row.base_sha != seed["base_sha"] or row.source_artifact_sha256 != seed["source_artifact_sha256"]
+                     or row.repository != config.project or row.provider != config.provider or row.target_branch != config.base_branch):
+            raise PreconditionFailed("Revision seed source or repository identity changed")
+        admission["seed_patch_sha256"] = seed["patch_sha256"] if seed else None
 
     contract = ExecutorAdmissionV2 if kind == "executor" else ReviewerAdmissionV2
     return contract.model_validate(admission).model_dump(mode="json")
@@ -212,7 +239,16 @@ def _record_terminal_metadata(
         row.terminal_detail = "run report unavailable"
         return
     row.terminal_failure_class = (report.failure_class or "TerminalOutcome")[:100]
-    row.terminal_detail = (report.failure_detail or "")[:8192]
+    detail = report.failure_detail or ""
+    if not detail and reason_code == "execution_blocked" and isinstance(report.body_json, dict):
+        # A completed worker can intentionally return a blocked result rather
+        # than raise an exception. Preserve its explanation on the execution.
+        from airflow._shared.secrets_masker import redact
+        summary = report.body_json.get("summary")
+        if isinstance(summary, str):
+            detail = str(redact(summary, "summary", max_depth=20))
+            row.terminal_failure_class = "ExecutionBlocked"
+    row.terminal_detail = detail[:8192]
 
 
 
