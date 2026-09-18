@@ -185,12 +185,16 @@ class DashboardClient:
 
     def model_settings(self) -> dict:
         """Trusted parent only: the result contains provider credentials."""
-        return self._request("GET", "internal/model-settings")
+        return self._request("GET", "model-settings")
 
-    def airflow_failures(self, hours: int = 24, limit: int = 100) -> dict:
-        value = self._request(
-            "GET", "airflow/failures", params={"hours": hours, "limit": limit}
-        )
+    def airflow_failures(self, hours: int = 24, limit: int = 100, *,
+                         dag_id: str | None = None, run_id: str | None = None) -> dict:
+        params = {"hours": hours, "limit": limit}
+        if dag_id:
+            params["dag_id"] = dag_id
+        if run_id:
+            params["run_id"] = run_id
+        value = self._request("GET", "airflow/failures", params=params)
         if not isinstance(value, dict) or not isinstance(value.get("items"), list):
             raise ControlPlaneError("failure_response_invalid", "terminal")
         remaining = value.get("remaining_after_batch")
