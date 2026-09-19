@@ -286,6 +286,9 @@ class DashboardClient:
     def claim_dispatch(self, limit: int) -> list[dict]:
         return self._request("POST", "dispatch/claim", body={"limit": limit})["items"]
 
+    def execution_readiness(self) -> dict:
+        return self._request("GET", "executions/readiness")
+
     def maintenance(self, limit: int = 100) -> dict:
         return self._request("POST", "maintenance/run", body={"limit": limit})
 

@@ -23,6 +23,73 @@ except ImportError:
 _MAX_RESULT = 1_048_576
 
 
+def _sandbox_attempt(model_role: str, started_at: datetime, duration_ms: int) -> dict:
+    usage = usage_tools.normalize({}, format="openai")
+    return {
+        "ordinal": 1, "alias": model_role, "provider": "confined_launcher",
+        "started_at": started_at.isoformat(), "finished_at": datetime.now(timezone.utc).isoformat(),
+        "duration_ms": duration_ms, "outcome": "succeeded", "fallback_used": False,
+        "reason_code": "sandbox_succeeded", "usage": usage,
+        **{key: usage[key] for key in ("input_tokens", "output_tokens", "total_tokens")},
+    }
+
+
+def _admitted_gateway(admission, client, root, deadline_at, error_type):
+    from model_gateway import model_gateway
+    model = admission.get("model")
+    if not model:
+        raise error_type("admitted_model_missing", "terminal")
+    settings = client.model_settings()
+    provider = next((p for p in settings.get("providers", []) if p["id"] == model["provider_id"]), None)
+    if provider is None or provider["base_url"] != model["base_url"]:
+        raise error_type("admitted_provider_changed", "terminal")
+    return model_gateway(provider, model["model"], deadline_at=deadline_at, socket_path=root / "model.sock")
+
+
+def _resume_published(admission, client, cfg, runner, dashboard_module,
+                      identity, started_at, deadline_at, context_digest):
+    """Deliver verified durable evidence without repeating sandbox work."""
+    from airflow.providers.vintage.bot_dashboard.report_schemas import TaskExecutorV2, VerificationManifestV1
+    error = dashboard_module.ControlPlaneError
+    report = client.get_artifact(admission["executor_report_sha256"])
+    patch = client.get_artifact(admission["patch_sha256"])
+    if (hashlib.sha256(report).hexdigest() != admission["executor_report_sha256"]
+            or hashlib.sha256(patch).hexdigest() != admission["patch_sha256"]):
+        raise error("digest_invalid", "terminal")
+    manifest = admission["verification_manifest"]
+    if any(manifest.get(key) != admission[key] for key in ("task_id", "execution_id", "revision", "base_sha", "patch_sha256")):
+        raise error("manifest_invalid", "terminal")
+    manifest = VerificationManifestV1.model_validate(manifest).model_dump(mode="json")
+    payload = TaskExecutorV2.model_validate(json.loads(report)).model_dump(mode="json")
+    if (payload["task_id"] != admission["task_id"] or payload["status"] not in {"ok", "no_change"}
+            or sorted(payload["changed_paths"]) != sorted(manifest["changed_paths"])
+            or len(patch) != manifest["patch_bytes"]):
+        raise error("manifest_invalid", "terminal")
+    _validate_paths(admission, payload["changed_paths"], len(patch), error)
+    if _validated_checks(admission, payload, error) != manifest["checks"]:
+        raise error("manifest_invalid", "terminal")
+    if admission.get("pr_number"):
+        publication = {key: admission[key] for key in ("pr_number", "pr_url", "trusted_head_sha")}
+        publication["status"] = "published"
+        reason = "published_report_recovered"
+    else:
+        publication = client.publish_execution(identity["dag_id"], identity["run_id"], {
+            "status": payload["status"], "patch_sha256": admission["patch_sha256"],
+            "changed_paths": payload["changed_paths"], "verification_manifest": manifest,
+            "report_sha256": admission["executor_report_sha256"],
+        })
+        reason = "pending_publication_resumed"
+    envelope = runner._envelope(cfg=cfg, identity=identity, started_at=started_at, deadline_at=deadline_at,
+        outcome="succeeded", retry_class="none", reason_code=reason, failure=None,
+        selected_model=admission["model_role"], attempts=[], context_digest=context_digest, payload=payload)
+    projection = client.submit_run(envelope)
+    client.finalize_execution(identity["dag_id"], identity["run_id"], "executor", {
+        "projection": projection, "publication": publication,
+        "result_artifact_sha256": admission["executor_report_sha256"],
+    })
+    return runner.RunResult(projection, "succeeded", "none", reason)
+
+
 def _extract_source(content: bytes, root: pathlib.Path, error_type) -> pathlib.Path:
     archive_path = root / "source.tar"
     archive_path.write_bytes(content)
@@ -171,17 +238,23 @@ def _validate_paths(admission: dict, paths: list[str], diff_size: int, error_typ
             raise error_type("changed_path_invalid", "terminal")
         seen.add(folded)
         if not any(fnmatch.fnmatchcase(path, rule) for rule in task_allowed):
-            raise error_type("task_path_policy_rejected", "terminal")
+            exc = error_type("task_path_policy_rejected", "terminal")
+            exc.rejected_path = path
+            raise exc
         if not any(
             fnmatch.fnmatchcase(path, rule)
             for rule in policy["allowed_path_globs"]
         ):
-            raise error_type("repository_path_policy_rejected", "terminal")
+            exc = error_type("repository_path_policy_rejected", "terminal")
+            exc.rejected_path = path
+            raise exc
         if any(
             fnmatch.fnmatchcase(path, rule)
             for rule in policy["denied_path_globs"]
         ):
-            raise error_type("repository_path_denied", "terminal")
+            exc = error_type("repository_path_denied", "terminal")
+            exc.rejected_path = path
+            raise exc
 
 
 def _validated_checks(admission: dict, payload: dict, error_type) -> list[dict]:
@@ -288,6 +361,9 @@ def run(context: dict, cfg: dict, runner, dashboard_module):
         "byte_count": len(canonical_admission),
         "build_ms": int((datetime.now(timezone.utc) - started_at).total_seconds() * 1000),
     }
+    if kind == "executor" and admission.get("verification_manifest"):
+        return _resume_published(admission, client, cfg, runner, dashboard_module,
+                                 identity, started_at, deadline_at, context_digest)
     attempts: list[dict] = []
     payload = None
     failure = None
@@ -318,28 +394,32 @@ def run(context: dict, cfg: dict, runner, dashboard_module):
             launcher = pathlib.Path(os.environ["BOT_DASHBOARD_SANDBOX_LAUNCHER"])
             attempt_started_at = datetime.now(timezone.utc)
             attempt_started = time.monotonic()
-            process = subprocess.run(
-                [
-                    str(launcher),
-                    "--protocol",
-                    "v2",
-                    "--workdir",
-                    str(workdir),
-                    "--admission",
-                    str(admission_path),
-                    "--result",
-                    str(result_path),
-                ],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=budget.timeout(cfg["model_budget_minutes"] * 60),
-                check=False,
-                env={
-                    key: value
-                    for key, value in os.environ.items()
-                    if key in {"PATH", "LANG", "LC_ALL", "TZ"}
-                },
-            )
+            with _admitted_gateway(admission, client, root, deadline_at, dashboard_module.ControlPlaneError) as gateway:
+                process = subprocess.run(
+                    [
+                        str(launcher),
+                        "--protocol",
+                        "v2",
+                        "--workdir",
+                        str(workdir),
+                        "--admission",
+                        str(admission_path),
+                        "--result",
+                        str(result_path),
+                    ],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=budget.timeout(cfg["model_budget_minutes"] * 60),
+                    check=False,
+                    env={
+                        key: value
+                        for key, value in os.environ.items()
+                        if key in {"PATH", "LANG", "LC_ALL", "TZ"}
+                    },
+                )
+                if gateway.telemetry.get("last_error") == "model_rate_limited":
+                    from model_gateway import ModelRateLimited
+                    raise ModelRateLimited()
             duration_ms = int((time.monotonic() - attempt_started) * 1000)
             if process.returncode:
                 raise dashboard_module.ControlPlaneError(
@@ -349,21 +429,7 @@ def run(context: dict, cfg: dict, runner, dashboard_module):
             result_type = ExecutorResultV2 if kind == "executor" else ReviewerResultV2
             result = result_type.model_validate(raw_result).model_dump(mode="json")
             payload = result["report"]
-            attempts.append(
-                {
-                    "ordinal": 1,
-                    "alias": admission["model_role"],
-                    "provider": "confined_launcher",
-                    "started_at": attempt_started_at.isoformat(),
-                    "finished_at": datetime.now(timezone.utc).isoformat(),
-                    "duration_ms": duration_ms,
-                    "usage": usage_tools.normalize({}, format="openai"),
-                    "reason_code": "sandbox_succeeded",
-                    "input_tokens": 0,
-                    "output_tokens": 0,
-                    "total_tokens": 0,
-                }
-            )
+            attempts.append(_sandbox_attempt(admission["model_role"], attempt_started_at, duration_ms))
             after = _snapshot_tree(workdir, dashboard_module.ControlPlaneError)
             if kind == "pr_reviewer":
                 if before != after:

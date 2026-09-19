@@ -37,6 +37,22 @@ class ExecutionRetryTest(unittest.TestCase):
             self.assertEqual(2,len(session.scalars(select(Execution)).all()))
             sequences=session.scalars(select(Event.sequence).where(Event.task_id==task.id).order_by(Event.sequence)).all()
             self.assertEqual(list(range(1,len(sequences)+1)),sequences)
+    def test_restored_in_progress_terminal_execution_can_be_retried_explicitly(self):
+        from airflow.providers.vintage.bot_dashboard.autopilot import _actions
+        from airflow.providers.vintage.bot_dashboard.service import get_task
+        with Session(self.engine) as session:
+            task,prior=self.fixture(session)
+            task.state='in_progress';task.blocked_from_state=None
+            session.commit()
+            self.assertIn('start',_actions(get_task(session,str(task.id))))
+            result=start_task(session,str(task.id),version=task.version,actor_id='executive',idempotency_key='explicit-retry')
+            self.assertEqual(2,result['admission']['sequence'])
+            self.assertIsNotNone(prior.terminal_at)
+            session.commit()
+            self.assertEqual([], _actions(get_task(session,str(task.id))))
+            event=session.scalar(select(Event).where(Event.event_type=='execution_retry_requested'))
+            self.assertEqual('in_progress',event.from_state)
+
     def test_rate_limited_review_preserves_pr_evidence_and_replays_safely(self):
         from airflow.providers.vintage.bot_dashboard.model_recovery import retry_model
         with Session(self.engine) as session:
@@ -58,6 +74,33 @@ class ExecutionRetryTest(unittest.TestCase):
                 with self.assertRaises(PreconditionFailed):
                     retry_model(session,str(task.id),version=task.version,actor_id='user',idempotency_key='another-retry')
             self.assertEqual(1,len(session.scalars(select(Execution)).all()))
+
+    def test_launch_retry_requires_same_open_head_and_no_existing_verdict(self):
+        from types import SimpleNamespace
+        from airflow.providers.vintage.bot_dashboard.model_recovery import retry_review_launch
+        with Session(self.engine) as session:
+            task,row=self.fixture(session)
+            task.state='in_review';row.admission_kind='pr_reviewer';row.pr_number=17
+            row.pr_url='https://example.test/pr/17';row.trusted_head_sha='a'*40
+            row.source_artifact_sha256='b'*64;row.terminal_reason_code='sandbox_exit_1'
+            row.provider='github';row.repository='owner/repo';row.branch='candidate';row.target_branch='main';row.service_account_id='bot'
+            session.commit();version=task.version
+            observed={'provider':'github','number':17,'head_sha':'c'*40,'head_ref':'candidate','base_ref':'main','author_id':'bot','state':'open'}
+            with patch('airflow.providers.vintage.bot_dashboard.model_recovery.model_for_role'), patch('airflow.providers.vintage.bot_dashboard.git_provider.load_repository_config', return_value=SimpleNamespace(provider='github',project='owner/repo')), patch('airflow.providers.vintage.bot_dashboard.git_provider.get_provider') as provider:
+                provider.return_value.read_change.return_value=observed
+                with self.assertRaises(PreconditionFailed):
+                    retry_review_launch(session,str(task.id),version=version,actor_id='operator',idempotency_key='repair')
+                self.assertIsNotNone(row.terminal_at)
+                observed['head_sha']='a'*40
+                row.review_verdict='changes_requested'
+                with self.assertRaises(PreconditionFailed):
+                    retry_review_launch(session,str(task.id),version=version,actor_id='operator',idempotency_key='repair')
+                row.review_verdict=None
+                result=retry_review_launch(session,str(task.id),version=version,actor_id='operator',idempotency_key='repair')
+                self.assertEqual('queued',result['status']);self.assertEqual('in_review',task.state)
+                self.assertEqual('a'*40,row.trusted_head_sha);self.assertEqual('b'*64,row.source_artifact_sha256)
+                self.assertTrue(row.reviewer_required);self.assertIsNone(row.review_verdict)
+                self.assertEqual('already_requested',retry_review_launch(session,str(task.id),version=version,actor_id='operator',idempotency_key='repair')['status'])
 
     def test_revision_dispatch_switches_reviewer_back_to_executor(self):
         with Session(self.engine) as session:

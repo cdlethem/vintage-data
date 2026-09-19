@@ -513,7 +513,7 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
     ):
         raise PreconditionFailed("task must be assigned to an allowed bot profile")
     retry_previous = None
-    if task.state == "blocked" and not revision:
+    if task.state in {"blocked", "in_progress"} and not revision:
         retry_previous = session.scalar(
             select(Execution).where(Execution.task_id == task.id)
             .order_by(Execution.sequence.desc()).limit(1).with_for_update()
@@ -523,7 +523,7 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
             or_(Execution.pr_number.is_not(None), Execution.pr_url.is_not(None)),
         ).limit(1))
         if (
-            task.blocked_from_state not in {"accepted", "in_progress"}
+            (task.state == "blocked" and task.blocked_from_state not in {"accepted", "in_progress"})
             or retry_previous is None or retry_previous.terminal_at is None
             or retry_previous.admission_kind != "executor"
             or not retry_previous.terminal_reason_code
@@ -572,11 +572,12 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
     elif retry_previous is not None:
         seed = get_seed(session, retry_previous)
     if retry_previous is not None:
+        previous_state = task.state
         task.state = "accepted"
         task.blocked_from_state = None
         task.accepted_at = utcnow()
         _event(session, task, "execution_retry_requested", actor_kind, actor_id,
-               from_state="blocked", to_state="accepted",
+               from_state=previous_state, to_state="accepted",
                payload={"previous_sequence": retry_previous.sequence, "previous_reason_code": retry_previous.terminal_reason_code})
     if active is None:
         sequence = (

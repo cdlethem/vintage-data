@@ -1117,3 +1117,88 @@ database, scheduler/DAG processor, worker/gateway/broker, control loops and time
 remain healthy. No new repair or restart was warranted. Preserve 14/2/4 v4,
 Autopilot, intake hold and draining phase; no clean-backlog baseline exists.
 Refreshed supervision state and retained periodic checks.
+
+## September 19, 08:43–09:00 UTC recovery
+
+Live backlog: 37 open, three genuine completions in the preceding 24 hours,
+no recent arrivals. Human model assignments are now Anthropic models through
+omp-gateway; the earlier Astra-only guard was intentionally removed. Preserve
+these settings. Executive polling is scheduled normally but actual decisions are
+rate limited (last successful decision 06:35 UTC). API, database, scheduler and
+DAG processor are healthy, with no import errors. Direct reads of 26 open-ticket
+PRs matched every stored trusted head; no closed-unmerged mismatch was found.
+
+Recovered additional code lost from the live checkout:
+- Dispatch's SDK-side executor_enabled lookup always returned false despite the
+  authoritative API having execution enabled and all confinement checks passing.
+  Dispatch now calls the existing authenticated executions/readiness endpoint;
+  disabled/unavailable readiness still fails closed. Normal dispatch launched all
+  five previously stranded admissions. No enable flag or approval was changed.
+- bots_dag now applies saved scheduler_limits and separate worker pools again.
+  Verified applied 14 executor / 2 reviewer limits, saved version 4 unchanged;
+  executive remains 4. No baseline or step-down window exists.
+- The admitted parent had lost its per-run model.sock gateway and all five launches
+  initially failed sandbox_exit_1. Restored the credential-isolating gateway,
+  pinned to the admitted provider/model/endpoint. An actual installed confinement
+  probe using this exact helper passed. Four unpublished executions were retried
+  via normal start_task, retaining their previously approved revisions and scope.
+  They launched and saved valid reports, but all reported upstream rate limits and
+  remained blocked. Their succeeded envelope means delivery, not completed work.
+  Two analytics runs also retained real WHO project-validation failures; neither
+  those failures nor missing source tests were treated as passing evidence.
+- Restored strict attempt fields for both specialist and admitted envelopes,
+  fixing specialist HTTP 422 report delivery. Cadence review's existing failed TI
+  was cleared once with its original deadline; attempt 3 succeeded at 08:54:17,
+  storing capacity_unavailable/provider_capacity rather than losing its report.
+- Restored specialist dashboard model mapping, private OMP home, gateway cleanup,
+  scheduler-managed capacity, and verified-evidence executor resume without a
+  model call or republishing. Restored safe rejected-relative-path diagnostics.
+  A read-only replay using actual immutable report/patch artifacts validated their
+  digests, admitted manifest/checks and strict envelope; it performed no writes.
+
+Added explicit retry_review_launch for a terminal sandbox_exit_1 reviewer launch
+with no existing verdict. It validates the current open provider identity and
+trusted head, preserves source/patch evidence and independent review, and records
+an idempotent audit event. Wikimedia PR 106's retry launched and delivered a valid
+report at 08:58, but its model process failed and the verdict is unable_to_review.
+No independent approval has been established. Do not treat transport recovery as
+review recovery, and do not override this verdict. Actual cause of this reviewer
+process failure is not included in the installed worker's bounded report.
+
+Operator writes must use create_session(scoped=False): nested Airflow provider
+connection lookups can close a shared scoped session, detaching loaded objects.
+The first Wikimedia recovery audit event recorded the intended requeue but the
+execution changes did not persist. A second independent-session invocation was
+verified in a fresh DB read and then in the actual reviewer TI/report. Recovery
+now explicitly rejects detached objects before mutating or recording a queue event.
+Historical audit events and all original failure reports remain intact.
+
+Validation: 47 runner/gateway/envelope/DAG tests and 5 execution-recovery tests
+passed. DAG and bot code loads directly from this checkout; model_recovery.py was
+atomically copied to the installed provider. No service restart or root runtime
+modification was needed. The live model smoke could not create its isolated hello
+fixture; it is not a passing model smoke and its cause was not captured by that
+probe. The four real executor reports separately establish provider rate limits. The launch-only confinement probe did pass. Preserve model settings,
+Autopilot, 14/2/4 v4, intake hold and draining phase. Provider capacity, independent
+review failures, and external live/warehouse/activation evidence remain blockers.
+Periodic checks must continue through eventual baseline and tuning.
+
+09:02 UTC: investigated the remaining two in_progress tickets (Common Crawl and
+UK Parliament mart). Both actually have terminal unpublished executions. Prior
+executive restore decisions left them in_progress; subsequent decisions explicitly
+waited for a retry that was not offered. Restored normal start eligibility for
+this exact terminal/unpublished case in service.start_task and executive actions.
+Live/admitted work, existing PRs, missing scope and no_change remain ineligible.
+The executive still chooses configure/start; supervision did not start or change
+these two ticket decisions. Added a regression covering the restored state and
+normal new admission. The combined execution-recovery/autopilot suite passes
+33 tests, in addition to the 47 runner/gateway/envelope/DAG tests above. Deployed
+only service.py/autopilot.py after comparing installed copies; API was restarted
+at an idle scheduling boundary. Check fresh actions and API/control recovery
+before considering this deployment verified.
+
+09:02:40 UTC verification: fresh installed service/action reads offer configure/start
+for both stranded in_progress tickets. Added factual operational handoff comments
+without changing their decisions. API/database/scheduler/DAG processor are healthy;
+dispatch and maintenance succeed. Executive failures remain provider rate limits.
+Final observed backlog remains 37 with zero active executions; this is not empty.

@@ -11,7 +11,8 @@ import re
 import subprocess
 import sys
 import time
-from contextlib import contextmanager
+import tempfile
+from contextlib import contextmanager, ExitStack
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -290,6 +291,34 @@ def _model_aliases(cfg: dict, models_cfg: dict) -> list[str | None]:
     return list(dict.fromkeys(aliases))
 
 
+def dashboard_model(cfg, models_cfg, control, resources, deadline_at):
+    """Use the saved assignment through a credential-isolating per-run gateway."""
+    from model_gateway import model_gateway, write_omp_config
+    settings = control.model_settings()
+    assignment = next((a for a in settings.get("assignments", []) if a["role"] == cfg["name"]), None)
+    if assignment is None:
+        return None
+    provider = next((p for p in settings.get("providers", []) if p["id"] == assignment["provider_id"]), None)
+    if provider is None:
+        raise BotError("mapped model provider is missing")
+    template = resolve_model(_model_aliases(cfg, models_cfg)[0], models_cfg)
+    if template["provider"] != "command":
+        raise BotError("mapped model requires a command runner")
+    missing = set(cfg.get("requires_capabilities", [])) - set(template["capabilities"])
+    if missing:
+        raise BotError("mapped model runner lacks required capabilities")
+    gateway = resources.enter_context(model_gateway(provider, assignment["model"], deadline_at=deadline_at))
+    home = pathlib.Path(resources.enter_context(tempfile.TemporaryDirectory(prefix="bot-model-home-")))
+    write_omp_config(home, gateway.base_url, assignment["model"])
+    for key in ("api_key_env", "preflight", "pass_env"):
+        template.pop(key, None)
+    template.update(model="gateway/" + assignment["model"], alias=assignment["model"],
+                    inherit_env=False, pass_env=[], cwd=template.get("cwd") or str(REPO_ROOT),
+                    env={"HOME": str(home), "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"), "LANG": "C.UTF-8"},
+                    _dashboard_managed=True, _gateway_telemetry=gateway.telemetry)
+    return template
+
+
 def resolve_bot_models(cfg: dict, models_cfg: dict) -> list[dict]:
     aliases = _model_aliases(cfg, models_cfg)
     models: list[dict] = []
@@ -467,6 +496,9 @@ def _acquire_one(scope: str, maximum: int):
 
 @contextmanager
 def _inference_slot(models_cfg: dict, model: dict):
+    if model.get("_dashboard_managed"):
+        yield
+        return
     acquired = []
     try:
         global_handle = _acquire_one("global", int((models_cfg.get("concurrency") or {}).get("max_active", 2)))
@@ -519,6 +551,9 @@ def _failure_detail(exc: Exception) -> str:
     detail = str(exc) or type(exc).__name__
     detail = re.sub(r"(?i)https?://[^\s/@:]+:[^\s/@]+@", "https://***@", detail)
     detail = re.sub(r"(?<![\w.])/(?:[^\s/]+/)+[^\s]+", "<path>", detail)
+    rejected_path = getattr(exc, "rejected_path", None)
+    if isinstance(rejected_path, str):
+        detail += " Rejected repository path: " + json.dumps(rejected_path[:1024])
     return detail[:8192]
 
 
@@ -667,6 +702,7 @@ def run(
             projection = control.submit_run(envelope)
             projection["reason_code"] = "deadline_exhausted"
         return RunResult(projection, "timed_out", "terminal", "deadline_exhausted")
+    model_resources = ExitStack()
     try:
         prompt, context, context_digest = build_prompt(cfg, budget)
         if dry_run:
@@ -676,7 +712,8 @@ def run(
             outcome, retry_class, reason_code = "skipped", "none", cfg["gate"]["reason_code"]
         else:
             models_cfg = load_models(models_config)
-            models = resolve_bot_models(cfg, models_cfg)
+            mapped = dashboard_model(cfg, models_cfg, control, model_resources, deadline_at) if not ephemeral else None
+            models = [mapped] if mapped else resolve_bot_models(cfg, models_cfg)
             model_deadline = min(
                 budget._monotonic_deadline - cleanup,
                 time.monotonic() + cfg["model_budget_minutes"] * 60,
@@ -701,6 +738,10 @@ def run(
                             prompt,
                             timeout_s=min(remaining_model, budget.remaining()),
                         )
+                    if (model.get("_gateway_telemetry") or {}).get("last_error") == "model_rate_limited":
+                        busy = providers.ProviderBusy("The selected model is rate limited")
+                        busy.code = "model_rate_limited"
+                        raise busy
                     raw_usage = result.usage if result is not None else None
                     usage_for_attempt = usage_tools.price(
                         raw_usage,
@@ -711,6 +752,9 @@ def run(
                     payload = _json_report(result.text, cfg)
                     selected_model = model["alias"]
                 except (providers.ProviderFailure, BotError) as exc:
+                    if (model.get("_gateway_telemetry") or {}).get("last_error") == "model_rate_limited":
+                        exc = providers.ProviderBusy("The selected model is rate limited")
+                        exc.code = "model_rate_limited"
                     attempt_failure = exc
                     last_failure = exc
                     usage_for_attempt = getattr(exc, "usage", None)
@@ -736,6 +780,8 @@ def run(
                         "output_tokens": usage_for_attempt.get("output_tokens") if usage_for_attempt else None,
                         "total_tokens": usage_for_attempt.get("total_tokens") if usage_for_attempt else None,
                         "usage": usage_for_attempt,
+                        "fallback_used": ordinal > 1,
+                        "reason_code": "model_succeeded" if attempt_failure is None else getattr(attempt_failure, "code", "runner_failed"),
                     }
                 )
                 if attempt_failure is None:
@@ -764,6 +810,8 @@ def run(
     except (BotError, providers.ProviderFailure) as exc:
         failure = exc
         outcome, retry_class, reason_code = "failed", getattr(exc, "retry_class", "terminal"), getattr(exc, "code", "runner_failed")
+    finally:
+        model_resources.close()
     if retry_class in {"capacity", "transient"} and retry_class not in cfg["retry_on"]:
         retry_class = "terminal"
     envelope = _envelope(

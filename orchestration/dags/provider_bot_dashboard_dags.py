@@ -25,8 +25,9 @@ def _enabled() -> bool:
 
 
 def _executor_available() -> bool:
-    """No admission can exist while the executor is fail-closed; skip, never fail."""
-    return conf.getboolean("bot_dashboard", "executor_enabled", fallback=False)
+    """Read authoritative readiness; SDK workers omit server-only configuration."""
+    readiness = provider_dashboard.DashboardClient.from_environment().execution_readiness()
+    return readiness.get("ready") is True
 
 
 def _claim() -> list[dict]:

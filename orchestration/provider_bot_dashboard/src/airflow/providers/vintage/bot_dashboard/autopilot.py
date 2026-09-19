@@ -193,7 +193,12 @@ def _actions(detail):
     if state == "proposed": actions += ["accept", "dismiss", "block"]
     if state == "accepted": actions += ["assign", "configure", "start", "dismiss", "block"]
     if state == "blocked": actions += ["restore", "configure", "start", "dismiss"]
-    if state == "in_progress": actions += ["ready", "block"]
+    if state == "in_progress":
+        actions += ["ready", "block"]
+        if (latest and latest.get("terminal_at") and latest.get("admission_kind") == "executor"
+                and latest.get("terminal_reason_code") not in {None, "no_change"}
+                and not any(e.get("pr_number") or e.get("pr_url") for e in detail["executions"])):
+            actions += ["configure", "start"]
     if state == "in_review": actions += ["configure", "revise", "block"]
     if state in {"in_review", "ready"} and latest and latest["pr_number"]:
         if latest["review_verdict"] == "approved" or not latest["reviewer_required"]:
