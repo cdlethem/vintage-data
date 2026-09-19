@@ -1,0 +1,20 @@
+name: github_public_repositories
+script: fetch_github_public_repositories.py
+# Organization-only, non-atomic snapshot. The extractor follows terminal Link pagination
+# and exits nonzero if this safety cap is reached, so a scheduled run cannot silently
+# publish a capped inventory as complete.
+args: ["--org", "github", "--max-pages", "100", "--page-size", "100", "--timeout", "30", "--retries", "2"]
+schedule: "41 6 * * *"  # UTC; daily repository metadata snapshot
+enabled: false
+retries: 1
+timeout_minutes: 20
+sink: local
+
+# Do not enable until independent review plus authorized live-source, raw synchronization,
+# fresh dbt-manifest validation, and scheduled-run acceptance evidence are recorded.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily non-atomic snapshot of repositories visible for the explicitly configured public organization github"
+rate_limit: "GitHub REST unauthenticated limit is normally 60 requests/hour; serial pagination retries transient failures and fails closed on exhaustion or page-cap truncation"
+licence: "GitHub Terms of Service; repository metadata remains subject to repository and contributor rights"
+attribution: "GitHub REST API, https://docs.github.com/en/rest/repos/repos#list-organization-repositories"
+attribution_required: true

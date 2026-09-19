@@ -13734,6 +13734,150 @@ sources:
     - name: keywords
       description: Raw `keywords` value supplied by `zenodo`.
       data_type: JSON
+  - name: github_public_repositories
+    description: Insert-only raw records loaded for `github_public_repositories`.
+    columns: &id167
+    - name: _row_id
+      description: Raw `_row_id` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: _source
+      description: Raw `_source` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: _batch_id
+      description: Identifier of the raw load batch that produced this row.
+      data_type: VARCHAR
+    - name: _source_file
+      description: Raw source file from which this row was loaded.
+      data_type: VARCHAR
+    - name: _file_row_num
+      description: One-based row position in the raw source file.
+      data_type: BIGINT
+    - name: _dt
+      description: Raw `_dt` value supplied by `github_public_repositories`.
+      data_type: DATE
+    - name: _extract_started_at
+      description: Raw `_extract_started_at` value supplied by `github_public_repositories`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _load_id
+      description: Identifier of the load job that inserted this row.
+      data_type: VARCHAR
+    - name: _loaded_at
+      description: UTC timestamp at which the load layer inserted this row.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _content_hash
+      description: Stable hash of the raw record content used for lineage and deduplication.
+      data_type: VARCHAR
+    - name: _payload
+      description: Complete raw record payload retained for lineage and schema evolution.
+      data_type: JSON
+    - name: source
+      description: Raw `source` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: id
+      description: Raw `id` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: fetched_at
+      description: Raw `fetched_at` value supplied by `github_public_repositories`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: repository_id
+      description: Raw `repository_id` value supplied by `github_public_repositories`.
+      data_type: BIGINT
+    - name: node_id
+      description: Raw `node_id` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: organization
+      description: Raw `organization` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: name
+      description: Raw `name` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: full_name
+      description: Raw `full_name` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: owner_login
+      description: Raw `owner_login` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: private
+      description: Raw `private` value supplied by `github_public_repositories`.
+      data_type: BOOLEAN
+    - name: visibility
+      description: Raw `visibility` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: fork
+      description: Raw `fork` value supplied by `github_public_repositories`.
+      data_type: BOOLEAN
+    - name: archived
+      description: Raw `archived` value supplied by `github_public_repositories`.
+      data_type: BOOLEAN
+    - name: disabled
+      description: Raw `disabled` value supplied by `github_public_repositories`.
+      data_type: BOOLEAN
+    - name: language
+      description: Raw `language` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: description
+      description: Raw `description` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: created_at
+      description: Raw `created_at` value supplied by `github_public_repositories`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: updated_at
+      description: Raw `updated_at` value supplied by `github_public_repositories`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: pushed_at
+      description: Raw `pushed_at` value supplied by `github_public_repositories`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: has_issues
+      description: Raw `has_issues` value supplied by `github_public_repositories`.
+      data_type: BOOLEAN
+    - name: has_projects
+      description: Raw `has_projects` value supplied by `github_public_repositories`.
+      data_type: BOOLEAN
+    - name: has_wiki
+      description: Raw `has_wiki` value supplied by `github_public_repositories`.
+      data_type: BOOLEAN
+    - name: has_pages
+      description: Raw `has_pages` value supplied by `github_public_repositories`.
+      data_type: BOOLEAN
+    - name: has_discussions
+      description: Raw `has_discussions` value supplied by `github_public_repositories`.
+      data_type: BOOLEAN
+    - name: open_issues_count
+      description: Raw `open_issues_count` value supplied by `github_public_repositories`.
+      data_type: BIGINT
+    - name: stargazers_count
+      description: Raw `stargazers_count` value supplied by `github_public_repositories`.
+      data_type: BIGINT
+    - name: watchers_count
+      description: Raw `watchers_count` value supplied by `github_public_repositories`.
+      data_type: BIGINT
+    - name: forks_count
+      description: Raw `forks_count` value supplied by `github_public_repositories`.
+      data_type: BIGINT
+    - name: html_url
+      description: Raw `html_url` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: api_url
+      description: Raw `api_url` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: clone_url
+      description: Raw `clone_url` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: git_url
+      description: Raw `git_url` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: ssh_url
+      description: Raw `ssh_url` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: svn_url
+      description: Raw `svn_url` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: homepage
+      description: Raw `homepage` value supplied by `github_public_repositories`.
+      data_type: VARCHAR
+    - name: raw_repository
+      description: Complete GitHub repository object retained for source-specific compatibility.
+      data_type: JSON
 models:
 - name: base_amsat_status
   description: Thin governed view over the `amsat_status` raw source. Values and load lineage are preserved
@@ -14411,3 +14555,7 @@ models:
   description: Thin governed view over the `zenodo` raw source. Values and load lineage are preserved
     without semantic cleaning.
   columns: *id166
+- name: base_github_public_repositories
+  description: Thin governed view over the `github_public_repositories` raw source. Values and load lineage
+    are preserved without semantic cleaning.
+  columns: *id167
