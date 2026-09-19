@@ -13569,6 +13569,111 @@ sources:
     - name: tags
       description: Raw `tags` value supplied by `wikimedia_changes`.
       data_type: JSON
+  - name: wikimedia_page_summaries
+    description: Insert-only raw records loaded for `wikimedia_page_summaries`.
+    columns: &wikimedia_page_summaries_columns
+    - name: _row_id
+      description: Raw `_row_id` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: _source
+      description: Raw `_source` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: _batch_id
+      description: Identifier of the raw load batch that produced this row.
+      data_type: VARCHAR
+    - name: _source_file
+      description: Raw source file from which this row was loaded.
+      data_type: VARCHAR
+    - name: _file_row_num
+      description: One-based row position in the raw source file.
+      data_type: BIGINT
+    - name: _dt
+      description: Raw `_dt` value supplied by `wikimedia_page_summaries`.
+      data_type: DATE
+    - name: _extract_started_at
+      description: Raw `_extract_started_at` value supplied by `wikimedia_page_summaries`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _load_id
+      description: Identifier of the load job that inserted this row.
+      data_type: VARCHAR
+    - name: _loaded_at
+      description: UTC timestamp at which the load layer inserted this row.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _content_hash
+      description: Stable hash of the raw record content used for lineage and deduplication.
+      data_type: VARCHAR
+    - name: _payload
+      description: Complete raw record payload retained for lineage and schema evolution.
+      data_type: JSON
+    - name: source
+      description: Raw `source` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: id
+      description: Raw `id` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: fetched_at
+      description: Raw `fetched_at` value supplied by `wikimedia_page_summaries`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: language
+      description: Raw `language` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: project
+      description: Raw `project` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: requested_title
+      description: Raw `requested_title` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: title
+      description: Raw `title` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: is_redirect
+      description: Raw `is_redirect` value supplied by `wikimedia_page_summaries`.
+      data_type: BOOLEAN
+    - name: page_id
+      description: Raw `page_id` value supplied by `wikimedia_page_summaries`.
+      data_type: BIGINT
+    - name: revision_id
+      description: Raw `revision_id` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: revision_timestamp
+      description: Raw `revision_timestamp` value supplied by `wikimedia_page_summaries`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: summary
+      description: Raw `summary` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: description
+      description: Raw `description` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: wikibase_item
+      description: Raw `wikibase_item` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: page_url
+      description: Raw `page_url` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: mobile_page_url
+      description: Raw `mobile_page_url` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: api_url
+      description: Raw `api_url` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: thumbnail_source
+      description: Raw `thumbnail_source` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: thumbnail_width
+      description: Raw `thumbnail_width` value supplied by `wikimedia_page_summaries`.
+      data_type: BIGINT
+    - name: thumbnail_height
+      description: Raw `thumbnail_height` value supplied by `wikimedia_page_summaries`.
+      data_type: BIGINT
+    - name: original_image_source
+      description: Raw `original_image_source` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: original_image_width
+      description: Raw `original_image_width` value supplied by `wikimedia_page_summaries`.
+      data_type: BIGINT
+    - name: original_image_height
+      description: Raw `original_image_height` value supplied by `wikimedia_page_summaries`.
+      data_type: BIGINT
   - name: wspr_live
     description: Insert-only raw records loaded for `wspr_live`.
     columns: &id165
@@ -14403,6 +14508,10 @@ models:
   description: Thin governed view over the `wikimedia_changes` raw source. Values and load lineage are
     preserved without semantic cleaning.
   columns: *id164
+- name: base_wikimedia_page_summaries
+  description: Thin governed view over the `wikimedia_page_summaries` raw source. Values and load lineage
+    are preserved without semantic cleaning.
+  columns: *wikimedia_page_summaries_columns
 - name: base_wspr_live
   description: Thin governed view over the `wspr_live` raw source. Values and load lineage are preserved
     without semantic cleaning.
