@@ -206,6 +206,8 @@ def _actions(detail):
     if state == "ready" and (not latest or not latest["pr_number"]): actions += ["complete", "block"]
     if detail.get("follow_up_options"):
         actions += ["request_follow_up"]
+    if detail.get("assignee_kind") != "bot" or detail.get("assignee_profile") not in {"junior", "senior", "staff"}:
+        actions = [action for action in actions if action not in {"start", "revise"}]
     return actions
 
 
@@ -358,6 +360,8 @@ def _perform(session, task, decision, lease):
             raise service.DomainError("The executive may edit only the execution plan and scope")
         service.patch_task(session, **kwargs, changes=changes)
     elif action in {"start", "revise"}:
+        if task.assignee_kind != "bot" or task.assignee_profile not in {"junior", "senior", "staff"}:
+            raise service.PreconditionFailed("Assign an allowed bot profile before starting execution")
         require_executor_preconditions()
         model_for_role(session, f"executor_{task.assignee_profile}")
         if task.reviewer_required: model_for_role(session, "pr_reviewer")

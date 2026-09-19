@@ -56,6 +56,32 @@ class AutopilotTest(unittest.TestCase):
         with self.assertRaises(Conflict):
             ap.set_enabled(self.session, ap.Toggle(enabled=False, version=0), "owner")
 
+    def test_unassigned_ticket_requires_assignment_before_start(self):
+        task = self.task("accepted")
+        self.enable()
+        claim = ap.claim(self.session)
+        self.assertIn("assign", claim["actions"])
+        self.assertNotIn("start", claim["actions"])
+        with patch.object(ap, "model_for_role") as model:
+            with self.assertRaisesRegex(PreconditionFailed, "Assign an allowed bot profile"):
+                ap._perform(self.session, task, SimpleNamespace(action="start"), {})
+            model.assert_not_called()
+        self.decide(claim, "assign", profile="senior")
+        detail = ap._snapshot(self.session, str(task.id))
+        self.assertIn("start", ap._actions(detail))
+        self.assertEqual([], self.session.scalars(select(Execution)).all())
+
+    def test_human_assignment_never_offers_model_execution(self):
+        task = self.task("accepted")
+        task.assignee_kind = "human"
+        task.assignee_profile = None
+        self.session.commit()
+        for state in ("accepted", "blocked", "in_review"):
+            detail = ap._snapshot(self.session, str(task.id))
+            detail["state"] = state
+            self.assertNotIn("start", ap._actions(detail))
+            self.assertNotIn("revise", ap._actions(detail))
+
     def test_claim_replay_recovers_lost_response_without_a_second_decision(self):
         self.task(); self.enable()
         owner = {"dag_id": "bot__executive", "run_id": "run-one", "task_id": "run", "map_index": -1}
