@@ -1,0 +1,43 @@
+chartConfig:
+  config: {}
+  type: table
+description: Hourly append-only UK Parliament procedural BusinessItem observation history. The raw
+  BusinessItemDate array and load lineage remain in the mart; this view shows observation time separately
+  from publisher laying and scheduling times. Replayed copies at the declared grain are deterministically
+  reduced to the latest loaded lineage record.
+metricQuery:
+  dimensions: &columns
+  - fct_uk_parliament_procedural_activity_observed_at
+  - fct_uk_parliament_procedural_activity_procedural_item_id
+  - fct_uk_parliament_procedural_activity_laid_at
+  - fct_uk_parliament_procedural_activity_business_item_date_count
+  - fct_uk_parliament_procedural_activity_first_scheduled_at
+  - fct_uk_parliament_procedural_activity_last_scheduled_at
+  - fct_uk_parliament_procedural_activity_source_loaded_at
+  exploreName: fct_uk_parliament_procedural_activity
+  filters:
+    dimensions:
+      and:
+      - id: 00000000-0000-5000-8000-000000000003
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_uk_parliament_procedural_activity_observed_at
+        values:
+        - 30
+      id: 00000000-0000-5000-8000-000000000004
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_uk_parliament_procedural_activity_observed_at
+  tableCalculations: []
+name: UK Parliament procedural activity — observations
+slug: fct-uk-parliament-procedural-activity-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *columns
+tableName: fct_uk_parliament_procedural_activity
+version: 1
