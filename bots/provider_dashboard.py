@@ -187,6 +187,12 @@ class DashboardClient:
         """Trusted parent only: the result contains provider credentials."""
         return self._request("GET", "model-settings")
 
+    def workload(self) -> dict:
+        value = self._request("GET", "workload")
+        if not isinstance(value, dict) or type(value.get("allowed")) is not bool:
+            raise ControlPlaneError("workload_response_invalid", "terminal")
+        return value
+
     def airflow_failures(self, hours: int = 24, limit: int = 100, *,
                          dag_id: str | None = None, run_id: str | None = None) -> dict:
         params = {"hours": hours, "limit": limit}

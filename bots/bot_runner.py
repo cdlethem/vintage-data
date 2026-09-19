@@ -651,7 +651,7 @@ def run(
         raise BotError("run identity is incomplete")
     total_seconds = cfg["timeout_minutes"] * 60
     cleanup = cfg["cleanup_margin_seconds"]
-    from provider_dashboard import DashboardClient
+    from provider_dashboard import ControlPlaneError, DashboardClient
 
     control = client
     if dry_run or ephemeral:
@@ -704,8 +704,16 @@ def run(
         return RunResult(projection, "timed_out", "terminal", "deadline_exhausted")
     model_resources = ExitStack()
     try:
-        prompt, context, context_digest = build_prompt(cfg, budget)
-        if dry_run:
+        reserved = (
+            not dry_run and not ephemeral
+            and cfg["name"] in {"source_discovery", "source_vetting"}
+            and not control.workload()["allowed"]
+        )
+        if not reserved:
+            prompt, context, context_digest = build_prompt(cfg, budget)
+        if reserved:
+            outcome, retry_class, reason_code = "skipped", "none", "resolution_capacity_reserved"
+        elif dry_run:
             debug_prompt = prompt
             outcome, retry_class, reason_code = "skipped", "none", "dry_run"
         elif cfg.get("gate") and _gate_skips(cfg["gate"], context):
@@ -807,7 +815,7 @@ def run(
     except providers.ProviderTimeout as exc:
         failure = exc
         outcome, retry_class, reason_code = "timed_out", "terminal", exc.code
-    except (BotError, providers.ProviderFailure) as exc:
+    except (BotError, providers.ProviderFailure, ControlPlaneError) as exc:
         failure = exc
         outcome, retry_class, reason_code = "failed", getattr(exc, "retry_class", "terminal"), getattr(exc, "code", "runner_failed")
     finally:
