@@ -53,6 +53,21 @@ class ExecutionRetryTest(unittest.TestCase):
             event=session.scalar(select(Event).where(Event.event_type=='execution_retry_requested'))
             self.assertEqual('in_progress',event.from_state)
 
+    def test_superseded_published_execution_does_not_block_latest_unpublished_retry(self):
+        with Session(self.engine) as session:
+            task,prior=self.fixture(session)
+            prior.pr_number=111;prior.pr_url='https://example.test/pr/111'
+            prior.stage='superseded_conflict_repair';prior.terminal_reason_code='superseded_merge_conflict'
+            failed=Execution(execution_id='f'*64,task_id=task.id,sequence=2,revision=prior.revision,
+                idempotency_key='failed-replacement',target_run_id='failed-replacement-run',profile='senior',
+                reviewer_required=True,admission_kind='executor',stage='terminal',dispatch_state='terminal',
+                terminal_at=utcnow(),terminal_reason_code='unresolved_revision_seed_conflict')
+            session.add(failed);session.commit()
+            result=start_task(session,str(task.id),version=task.version,actor_id='executive',idempotency_key='retry-replacement')
+            self.assertEqual(3,result['admission']['sequence'])
+            self.assertEqual(111,prior.pr_number)
+            self.assertIsNone(failed.pr_number)
+
     def test_rate_limited_review_preserves_pr_evidence_and_replays_safely(self):
         from airflow.providers.vintage.bot_dashboard.model_recovery import retry_model
         with Session(self.engine) as session:

@@ -630,17 +630,14 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
             select(Execution).where(Execution.task_id == task.id)
             .order_by(Execution.sequence.desc()).limit(1).with_for_update()
         )
-        published = session.scalar(select(Execution.id).where(
-            Execution.task_id == task.id,
-            or_(Execution.pr_number.is_not(None), Execution.pr_url.is_not(None)),
-        ).limit(1))
         if (
             (task.state == "blocked" and task.blocked_from_state not in {"accepted", "in_progress"})
             or retry_previous is None or retry_previous.terminal_at is None
             or retry_previous.admission_kind != "executor"
             or not retry_previous.terminal_reason_code
             or retry_previous.terminal_reason_code == "no_change"
-            or published is not None
+            or retry_previous.pr_number is not None
+            or retry_previous.pr_url is not None
         ):
             raise PreconditionFailed("retry requires a failed terminal execution without a published PR; resolve other blockers before starting")
     if retry_previous is None and task.state not in ({"in_review"} if revision else {"accepted"}):
