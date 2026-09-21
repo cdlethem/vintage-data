@@ -439,7 +439,8 @@ def claim(session: Session, identity: dict | None = None) -> dict:
                  ((Task.state == "in_review") & (planned_revision > executed_revision), 5),
                  (Task.state == "in_review", 6), (prepared, 7), (Task.state == "accepted", 8),
                  (Task.state == "in_progress", 9), (Task.state == "proposed", 10), else_=11)
-    ordering = aging if now.minute % 5 == 0 else [phase, *aging]
+    retry_recency = case((retryable_blocked, latest_terminal_at), else_=None).desc().nullslast()
+    ordering = aging if now.minute % 5 == 0 else [phase, retry_recency, *aging]
     candidates = session.scalars(select(Task).outerjoin(last, Task.id == last.c.task_id)
         .where(Task.state.in_(["proposed", "accepted", "blocked", "in_progress", "in_review", "ready"]), ~active_worker)
         .order_by(*ordering).limit(100)).all()
