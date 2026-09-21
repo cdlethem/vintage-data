@@ -1,7 +1,9 @@
 """Queue behavior: stable matching, scope preservation, and auditable resets."""
+import json
 import unittest
 import uuid
 from datetime import timedelta
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -129,3 +131,8 @@ class QueueTest(unittest.TestCase):
             apps = plugin._react_apps()
         self.assertEqual(2, len(apps))
         self.assertTrue(all(app["bundle_url"].startswith("/airflow/bot-dashboard/static/") for app in apps))
+
+    def test_packaged_activity_bundle_includes_model_settings(self):
+        root = Path(__file__).parents[1] / "src/airflow/providers/vintage/bot_dashboard/static"
+        manifest = json.loads((root / "asset-manifest.json").read_text("utf-8"))
+        self.assertIn(b"Models & connections", (root / manifest["app"]).read_bytes())
