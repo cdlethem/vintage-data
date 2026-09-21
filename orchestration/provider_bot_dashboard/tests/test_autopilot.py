@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from airflow.models.variable import Variable
 from airflow.providers.vintage.bot_dashboard import autopilot as ap
-from airflow.providers.vintage.bot_dashboard.models import Event, Execution, Policy, Revision, Task, metadata
+from airflow.providers.vintage.bot_dashboard.models import Event, Execution, Policy, Revision, Task, metadata, utcnow
 from airflow.providers.vintage.bot_dashboard.service import Conflict, PreconditionFailed, create_manual_task, patch_task
 
 
@@ -167,6 +167,36 @@ class AutopilotTest(unittest.TestCase):
         execution.terminal_reason_code = "no_change"
         self.session.commit()
         self.assertNotIn("start", ap._actions(ap._snapshot(self.session, str(task.id))))
+
+    def test_superseded_pr_does_not_block_unpublished_repair_retry(self):
+        task = self.task("blocked")
+        task.assignee_kind = "bot"
+        task.assignee_profile = "senior"
+        task.blocked_from_state = "in_progress"
+        self.execution(
+            task,
+            sequence=1,
+            stage="superseded_conflict_repair",
+            dispatch_state="terminal",
+            terminal_at=utcnow(),
+            terminal_reason_code="superseded_merge_conflict",
+            pr_number=111,
+            pr_url="https://github.com/org/repo/pull/111",
+        )
+        self.execution(
+            task,
+            sequence=2,
+            execution_id="f" * 64,
+            idempotency_key="repair-attempt",
+            target_run_id="repair-run",
+            stage="terminal",
+            dispatch_state="terminal",
+            terminal_at=utcnow(),
+            terminal_reason_code="unresolved_revision_seed_conflict",
+            pr_number=None,
+            pr_url=None,
+        )
+        self.assertIn("start", ap._actions(ap._snapshot(self.session, str(task.id))))
 
     def test_exhausted_plan_offers_configuration_before_another_retry(self):
         task = self.task("accepted")

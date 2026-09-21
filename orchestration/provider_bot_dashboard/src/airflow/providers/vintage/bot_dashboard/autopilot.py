@@ -262,7 +262,7 @@ def _actions(detail):
         actions += ["ready"]
         if (latest and latest.get("terminal_at") and latest.get("admission_kind") == "executor"
                 and latest.get("terminal_reason_code") not in {None, "no_change"}
-                and not any(e.get("pr_number") or e.get("pr_url") for e in detail["executions"])):
+                and not latest.get("pr_number") and not latest.get("pr_url")):
             actions += ["configure", "start"]
     if state == "in_review":
         actions += ["configure"]
@@ -301,7 +301,7 @@ def _actions(detail):
         and latest and latest.get("terminal_at")
         and latest.get("admission_kind") == "executor"
         and latest.get("terminal_reason_code") not in {None, "no_change"}
-        and not any(e.get("pr_number") or e.get("pr_url") for e in detail["executions"])
+        and not latest.get("pr_number") and not latest.get("pr_url")
     ):
         actions = [action for action in actions if action != "start"]
     failures = sum(e.get("revision") == current_revision and bool(e.get("terminal_at"))
