@@ -13,7 +13,7 @@ from typing import Final
 # supplies this profile's root-owned proxy socket. It must reject private,
 # loopback, and link-local destinations before binding the socket into bwrap.
 # The command itself never shares the host network.
-# 
+#
 # The validation launcher provides the capability-specific network namespace.
 # These commands intentionally do not share the host network themselves.
 _BWRAP_PREFIX: Final[tuple[str, ...]] = (
