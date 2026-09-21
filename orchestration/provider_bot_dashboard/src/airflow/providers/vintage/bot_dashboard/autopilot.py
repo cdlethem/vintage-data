@@ -208,10 +208,17 @@ def _snapshot(session: Session, task_id: str) -> dict:
                                   .order_by(Revision.revision_number.desc()).limit(1))
         detail["follow_up_options"] = planning.options(session, session.get(Task, uuid.UUID(task_id)), execution, revision)
         detail["planning_requests"] = planning.status(session, execution.task_id)
-        from .model_recovery import new_review_evidence
-        from .conflict_recovery import conflict_repair_eligibility
-        detail["new_review_evidence"] = new_review_evidence(session, execution)
-        detail["conflict_repair"] = conflict_repair_eligibility(session, task_id)
+        try:
+            from .model_recovery import new_review_evidence
+            from .conflict_recovery import conflict_repair_eligibility
+        except ImportError:
+            # Keep the executive usable during rolling provider upgrades where
+            # these optional recovery helpers have not landed together yet.
+            detail["new_review_evidence"] = False
+            detail["conflict_repair"] = None
+        else:
+            detail["new_review_evidence"] = new_review_evidence(session, execution)
+            detail["conflict_repair"] = conflict_repair_eligibility(session, task_id)
         hashes = [execution.executor_report_sha256, execution.review_report_sha256]
         suffix = f"{task_id}__{execution.sequence}__r{execution.revision}"
         reports = session.scalars(select(RunReport).where(or_(
