@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_library_of_congress_item_observation_digitized
+          yRef:
+            field: fct_library_of_congress_item_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_library_of_congress_item_observation_digitized
+      yField:
+      - fct_library_of_congress_item_observation_distinct_entities
+  type: cartesian
+description: Distinct `item_id` values by the digitized status reported by the Library of Congress among
+  observations collected in the past 30 UTC days. Repeated snapshots count once within each status, but
+  an item whose status changes can occur in multiple groups; groups are not additive and do not represent
+  a catalogue census.
+metricQuery:
+  dimensions:
+  - fct_library_of_congress_item_observation_digitized
+  exploreName: fct_library_of_congress_item_observation
+  filters:
+    dimensions:
+      and:
+      - id: d59c9b04-7d93-557f-a9e7-3a648a2542d5
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_library_of_congress_item_observation_observed_at
+        values:
+        - 30
+      id: b69d1da3-c569-54b2-90df-863fe38ca48c
+  limit: 20
+  metrics:
+  - fct_library_of_congress_item_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_library_of_congress_item_observation_distinct_entities
+  tableCalculations: []
+name: Distinct items by reported digitized status
+slug: fct-library-of-congress-item-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_library_of_congress_item_observation_digitized
+  - fct_library_of_congress_item_observation_distinct_entities
+tableName: fct_library_of_congress_item_observation
+version: 1
