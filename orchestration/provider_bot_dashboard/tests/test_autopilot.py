@@ -82,6 +82,27 @@ class AutopilotTest(unittest.TestCase):
             self.assertNotIn("start", ap._actions(detail))
             self.assertNotIn("revise", ap._actions(detail))
 
+    def test_review_retry_does_not_offer_revision_without_a_new_plan(self):
+        task = self.task("in_review")
+        task.assignee_kind = "bot"
+        task.assignee_profile = "senior"
+        self.session.commit()
+        execution = self.execution(task, review_verdict="unable_to_review")
+        self.enable()
+        claim = ap.claim(self.session)
+        self.assertIn("configure", claim["actions"])
+        self.assertNotIn("revise", claim["actions"])
+        with self.assertRaisesRegex(ap.service.DomainError, "not available"):
+            self.decide(claim, "revise")
+        self.assertEqual(1, execution.revision)
+        self.assertEqual("unable_to_review", execution.review_verdict)
+        patch_task(self.session, str(task.id), version=task.version, actor_id="owner",
+                   changes={"planned_resolution": "Address a newly documented implementation finding"})
+        self.session.commit()
+        self.assertIn("revise", ap._actions(ap._snapshot(self.session, str(task.id))))
+        self.assertEqual(1, execution.revision)
+        self.assertEqual("unable_to_review", execution.review_verdict)
+
     def test_claim_replay_recovers_lost_response_without_a_second_decision(self):
         self.task(); self.enable()
         owner = {"dag_id": "bot__executive", "run_id": "run-one", "task_id": "run", "map_index": -1}

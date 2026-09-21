@@ -199,7 +199,13 @@ def _actions(detail):
                 and latest.get("terminal_reason_code") not in {None, "no_change"}
                 and not any(e.get("pr_number") or e.get("pr_url") for e in detail["executions"])):
             actions += ["configure", "start"]
-    if state == "in_review": actions += ["configure", "revise", "block"]
+    if state == "in_review":
+        actions += ["configure", "block"]
+        current_revision = max((r["revision_number"] for r in detail.get("revisions", [])), default=0)
+        # Revising a published execution consumes a newer admitted plan; it is
+        # not a way to retry an independent review of the same revision.
+        if not latest or latest["terminal_at"] or current_revision > latest["revision"]:
+            actions += ["revise"]
     if state in {"in_review", "ready"} and latest and latest["pr_number"]:
         if latest["review_verdict"] == "approved" or not latest["reviewer_required"]:
             actions += ["ready"] if state == "in_review" else ["merge", "complete"]
