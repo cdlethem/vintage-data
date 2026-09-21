@@ -189,6 +189,15 @@ def model_prompt(admission: dict, repair_checks: list[dict] | None = None) -> st
                        'independently run those commands after you finish. Return a concise plain-text engineering '
                        'summary as your final response. If you cannot complete the task, start the final '
                        'response with BLOCKED: and describe the prerequisite. Do not commit or publish.\n')
+        if admission.get('seed_patch_sha256'):
+            instruction += (
+                'This is an Autopilot-owned merge-conflict repair. A prior approved candidate was applied to the '
+                'current base before you started. Inspect the entire worktree for files ending in `.rej`; each is '
+                'a rejected patch hunk that you must reconcile into its adjacent target file, then delete. Preserve '
+                'the candidate intent while incorporating current-base changes, and resolve any related code or test '
+                'failures within the admitted paths. There is no external or human blocker: do the repair now. A '
+                'remaining `.rej` file makes the result invalid and prevents publication.\n'
+            )
         if repair_checks is not None:
             instruction += (
                 'This is the single bounded repair pass. The trusted worker ran the admitted commands after your '
