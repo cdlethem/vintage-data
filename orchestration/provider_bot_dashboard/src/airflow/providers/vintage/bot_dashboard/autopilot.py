@@ -208,6 +208,10 @@ def _snapshot(session: Session, task_id: str) -> dict:
                                   .order_by(Revision.revision_number.desc()).limit(1))
         detail["follow_up_options"] = planning.options(session, session.get(Task, uuid.UUID(task_id)), execution, revision)
         detail["planning_requests"] = planning.status(session, execution.task_id)
+        from .model_recovery import new_review_evidence
+        from .conflict_recovery import conflict_repair_eligibility
+        detail["new_review_evidence"] = new_review_evidence(session, execution)
+        detail["conflict_repair"] = conflict_repair_eligibility(session, task_id)
         hashes = [execution.executor_report_sha256, execution.review_report_sha256]
         suffix = f"{task_id}__{execution.sequence}__r{execution.revision}"
         reports = session.scalars(select(RunReport).where(or_(
@@ -290,9 +294,13 @@ def _actions(detail):
         actions += ["configure"]
     if detail.get("follow_up_options"):
         actions += ["request_follow_up"]
-    if (state in {"ready", "in_review", "blocked"} and latest and not latest.get("terminal_at")
+    if detail.get("new_review_evidence") and state in {"blocked", "in_review"} and "retry_review" not in actions:
+        actions += ["retry_review"]
+    if (((detail.get("conflict_repair") or {}).get("recoverable")
+            and (detail.get("conflict_repair") or {}).get("mode") == "terminal_seed") or (
+            state in {"ready", "in_review", "blocked"} and latest and not latest.get("terminal_at")
             and latest.get("pr_number") and not latest.get("merged_at")
-            and (latest.get("provider_state") or {}).get("mergeability") == "conflicting"):
+            and (latest.get("provider_state") or {}).get("mergeability") == "conflicting")):
         # A repository conflict is owned by Autopilot. Make the guarded repair
         # the only decision so it cannot be mislabeled as a wait or human blocker.
         actions = ["repair_conflict"]
@@ -419,27 +427,29 @@ def claim(session: Session, identity: dict | None = None) -> dict:
     prepared = ((Task.state == "accepted") & (Task.assignee_kind == "bot")
                 & Task.assignee_profile.in_(["junior", "senior", "staff"])
                 & (latest_action == "configure") & (latest_result == "applied"))
-    retryable_blocked = (
-        (Task.state == "blocked")
-        & Task.blocked_from_state.in_(["accepted", "in_progress"])
+    retryable_failed = (
+        (
+            (Task.state == "in_progress")
+            | ((Task.state == "blocked") & Task.blocked_from_state.in_(["accepted", "in_progress"]))
+        )
         & latest_terminal_at.is_not(None)
         & (latest_admission_kind == "executor")
         & latest_terminal_reason.is_not(None)
         & (latest_terminal_reason != "no_change")
         & latest_pr_number.is_(None)
     )
-    failed_conflict_repair = retryable_blocked & (
+    failed_conflict_repair = retryable_failed & (
         latest_terminal_reason == "unresolved_revision_seed_conflict"
     )
     phase = case((failed_conflict_repair, 0),
-                 (retryable_blocked, 1),
+                 (retryable_failed, 1),
                  (latest_mergeability == "conflicting", 2),
                  (Task.state == "ready", 3),
                  ((Task.state == "in_review") & (latest_verdict == "approved"), 4),
                  ((Task.state == "in_review") & (planned_revision > executed_revision), 5),
                  (Task.state == "in_review", 6), (prepared, 7), (Task.state == "accepted", 8),
                  (Task.state == "in_progress", 9), (Task.state == "proposed", 10), else_=11)
-    retry_recency = case((retryable_blocked, latest_terminal_at), else_=None).desc().nullslast()
+    retry_recency = case((retryable_failed, latest_terminal_at), else_=None).desc().nullslast()
     ordering = aging if now.minute % 5 == 0 else [phase, retry_recency, *aging]
     candidates = session.scalars(select(Task).outerjoin(last, Task.id == last.c.task_id)
         .where(Task.state.in_(["proposed", "accepted", "blocked", "in_progress", "in_review", "ready"]), ~active_worker)
