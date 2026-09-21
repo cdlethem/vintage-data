@@ -91,6 +91,11 @@ class RevisionSeedTest(unittest.TestCase):
             self.assertEqual('c'*64, admission['seed_patch_sha256'])
             self.assertEqual('a'*40, admission['base_sha'])
             self.assertIsNone(admission['patch_sha256'])
+            resolution = admission['task']['planned_resolution']
+            self.assertIn('Autopilot owns this revision repair', resolution)
+            self.assertIn('reconcile every rejected hunk', resolution)
+            self.assertIn('There is no external or human blocker', resolution)
+            self.assertIn('Retain implementation and fix review defect', resolution)
 
     def test_seed_retains_prior_tests_and_produces_cumulative_patch(self):
         with TemporaryDirectory() as tmp:

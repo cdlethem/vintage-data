@@ -15,6 +15,21 @@ from .service import PreconditionFailed, _event
 
 PROFILE_ALIASES = {"junior": "@task", "senior": "@default", "staff": "@plan"}
 
+REVISION_REPAIR_DIRECTIVE = (
+    "Autopilot owns this revision repair. A prior candidate has been applied to the current base. "
+    "Inspect the worktree for .rej files, reconcile every rejected hunk into its adjacent target "
+    "file, and delete each .rej file. Preserve the candidate intent while incorporating current-base "
+    "changes and fix related failures within the admitted paths. There is no external or human "
+    "blocker to delegate: complete the repair in this run."
+)
+
+
+def _planned_resolution(action: str, seed: dict | None) -> str:
+    if not seed:
+        return action
+    prefix = REVISION_REPAIR_DIRECTIVE + "\n\nOriginal planned resolution:\n"
+    return prefix + action[:20_000 - len(prefix)]
+
 
 def executor_preconditions() -> list[str]:
     """Return stable fail-closed codes; a command existing is not confinement proof."""
@@ -191,7 +206,7 @@ def claim_run(
         "task": {
             "title": revision.title,
             "category": task.category,
-            "planned_resolution": revision.action,
+            "planned_resolution": _planned_resolution(revision.action, seed),
             "verification_commands": revision.verification_commands,
             "allowed_path_globs": revision.allowed_path_globs,
             "resource_keys": revision.resource_keys,
