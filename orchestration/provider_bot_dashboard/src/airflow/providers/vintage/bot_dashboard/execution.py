@@ -138,11 +138,17 @@ def claim_run(
         _event(session, task, "execution_started", "executor", run_id, from_state=previous, to_state="in_progress", payload={"sequence": row.sequence, "revision": row.revision})
     source_artifact = None
     repository_policy = None
+    seed = None
     if kind == "executor":
         from .git_provider import load_repository_config
         from .repository_ops import create_source_artifact
+        from .revision_seed import get_seed
 
-        stored = create_source_artifact(session, row)
+        seed = get_seed(session, row)
+        repair_base_sha = seed.get("repair_base_sha") if seed else None
+        stored = create_source_artifact(
+            session, row, expected_base_sha=repair_base_sha,
+        )
         # The admission contract carries only the content-addressed reference.
         source_artifact = {"sha256": stored["sha256"], "byte_count": stored["byte_count"]}
         config = load_repository_config()
@@ -204,11 +210,24 @@ def claim_run(
     from .report_schemas import ExecutorAdmissionV2, ReviewerAdmissionV2
 
     if kind == "executor":
-        from .revision_seed import get_seed
-        seed = get_seed(session, row)
-        if seed and (row.base_sha != seed["base_sha"] or row.source_artifact_sha256 != seed["source_artifact_sha256"]
-                     or row.repository != config.project or row.provider != config.provider or row.target_branch != config.base_branch):
-            raise PreconditionFailed("Revision seed source or repository identity changed")
+        if seed:
+            if seed.get("repair_base_sha"):
+                valid_seed = (
+                    row.base_sha == seed["repair_base_sha"]
+                    and row.repository == config.project
+                    and row.provider == config.provider
+                    and row.target_branch == config.base_branch
+                )
+            else:
+                valid_seed = (
+                    row.base_sha == seed["base_sha"]
+                    and row.source_artifact_sha256 == seed["source_artifact_sha256"]
+                    and row.repository == config.project
+                    and row.provider == config.provider
+                    and row.target_branch == config.base_branch
+                )
+            if not valid_seed:
+                raise PreconditionFailed("Revision seed source or repository identity changed")
         admission["seed_patch_sha256"] = seed["patch_sha256"] if seed else None
 
     contract = ExecutorAdmissionV2 if kind == "executor" else ReviewerAdmissionV2

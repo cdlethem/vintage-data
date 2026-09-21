@@ -70,6 +70,9 @@ from .api_models import (
     Transition,
     ValidationGateCreate,
     ValidationGateResult,
+    ValidationClaimRequest,
+    ValidationStartRequest,
+    ValidationFinishRequest,
 )
 from .db_manager import BotDashboardDBManager
 from .service import (
@@ -1057,6 +1060,44 @@ def workload_status(session: SessionDep):
 def scheduling_follow_up(body: InternalIdentity, session: SessionDep):
     from . import follow_up
     return follow_up.context(session, body.model_dump())
+
+
+@internal.post("/validation-gates/claim")
+def validation_claim(body: ValidationClaimRequest, session: SessionDep):
+    from . import validation_lane
+    _write_guard()
+    return {"items": validation_lane.claim_pending(
+        session, **body.model_dump(),
+        autopilot_enabled=bool(autopilot.status(session)["enabled"]),
+    )}
+
+
+@internal.post("/validation-gates/{gate_id}/start")
+def validation_start(gate_id: str, body: ValidationStartRequest, session: SessionDep):
+    from . import validation_lane
+    _write_guard()
+    return validation_lane.start(
+        session, gate_id=gate_id, **body.model_dump(),
+        autopilot_enabled=bool(autopilot.status(session)["enabled"]),
+    )
+
+
+@internal.post("/validation-gates/{gate_id}/finish")
+def validation_finish(gate_id: str, body: ValidationFinishRequest, session: SessionDep):
+    from . import validation_lane
+    return validation_lane.finish(
+        session, gate_id=gate_id, **body.model_dump(),
+        autopilot_enabled=bool(autopilot.status(session)["enabled"]),
+    )
+
+
+@internal.post("/validation-gates/recover")
+def validation_recover(body: MaintenanceRequest, session: SessionDep):
+    from . import validation_lane
+    return {"recovered": validation_lane.recover_expired(
+        session, limit=body.limit,
+        autopilot_enabled=bool(autopilot.status(session)["enabled"]),
+    )}
 
 
 @auth.get("/concurrency", dependencies=[READ_TASK, Depends(_schema_guard)])

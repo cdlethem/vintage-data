@@ -102,3 +102,24 @@ if _enabled():
                        max_active_tis_per_dag=executive_concurrency,
                        execution_timeout=timedelta(minutes=4), do_xcom_push=False).expand(
                            op_kwargs=[{"decision_slot": slot} for slot in range(executive_concurrency)])
+
+    with DAG(
+        dag_id="bot_dashboard__validation",
+        schedule="* * * * *",
+        start_date=pendulum.datetime(2026, 9, 1, tz="UTC"),
+        catchup=False,
+        max_active_runs=1,
+        max_active_tasks=1,
+        dagrun_timeout=timedelta(minutes=5),
+        is_paused_upon_creation=False,
+        tags=["bot-dashboard", "validation"],
+        default_args={"retries": 0},
+    ) as bot_dashboard__validation:
+        def _validation(**context):
+            from validation_runner import run
+            return run(context)
+
+        PythonOperator(
+            task_id="run", python_callable=_validation,
+            execution_timeout=timedelta(minutes=4), do_xcom_push=False,
+        )

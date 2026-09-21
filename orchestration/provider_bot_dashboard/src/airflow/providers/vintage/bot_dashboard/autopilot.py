@@ -48,7 +48,7 @@ class ClaimRequest(StrictBody):
 
 class Decision(StrictBody):
     lease_id: str = Field(pattern=r"^[a-f0-9]{64}$")
-    action: Literal["accept", "assign", "configure", "start", "revise", "repair", "retry_review", "advance", "ready", "merge", "complete", "block", "dismiss", "restore", "wait", "request_follow_up"]
+    action: Literal["accept", "assign", "configure", "start", "revise", "repair", "repair_conflict", "retry_review", "advance", "ready", "merge", "complete", "block", "dismiss", "restore", "wait", "request_follow_up"]
     rationale: str = Field(min_length=10, max_length=8000)
     profile: Literal["junior", "senior", "staff"] | None = None
     changes: PatchTask | None = None
@@ -196,6 +196,7 @@ def _snapshot(session: Session, task_id: str) -> dict:
         revision = session.scalar(select(Revision).where(Revision.task_id == uuid.UUID(task_id))
                                   .order_by(Revision.revision_number.desc()).limit(1))
         detail["follow_up_options"] = planning.options(session, session.get(Task, uuid.UUID(task_id)), execution, revision)
+        detail["planning_requests"] = planning.status(session, execution.task_id)
         hashes = [execution.executor_report_sha256, execution.review_report_sha256]
         suffix = f"{task_id}__{execution.sequence}__r{execution.revision}"
         reports = session.scalars(select(RunReport).where(or_(
@@ -212,7 +213,7 @@ def _digest(detail):
     executions = [{k: v for k, v in e.items() if k not in {"synced_at", "lifecycle_durations_ms"}} for e in detail["executions"]]
     evidence = [detail["version"], detail["state"], detail.get("blocked_from_state"), executions,
                 detail["events"], detail.get("reports"), detail.get("follow_up_options"),
-                detail.get("linked_follow_ups")]
+                detail.get("linked_follow_ups"), detail.get("validation_gates"), detail.get("planning_requests")]
     return hashlib.sha256(json.dumps(evidence, sort_keys=True, default=str).encode()).hexdigest()
 
 
@@ -230,8 +231,8 @@ def _actions(detail):
     if latest and not latest["terminal_at"] and latest["stage"] not in {"reviewed", "provider_sync"}:
         return []  # An admitted executor/reviewer owns this decision point.
     actions = ["wait"]
-    if state == "proposed": actions += ["accept", "dismiss", "block"]
-    if state == "accepted": actions += ["assign", "configure", "start", "dismiss", "block"]
+    if state == "proposed": actions += ["accept", "dismiss"]
+    if state == "accepted": actions += ["assign", "configure", "start", "dismiss"]
     if state == "blocked":
         actions += ["restore", "configure", "start", "dismiss"]
         review_state = (latest or {}).get("provider_state") or {}
@@ -245,13 +246,13 @@ def _actions(detail):
         ):
             actions += ["retry_review"]
     if state == "in_progress":
-        actions += ["ready", "block"]
+        actions += ["ready"]
         if (latest and latest.get("terminal_at") and latest.get("admission_kind") == "executor"
                 and latest.get("terminal_reason_code") not in {None, "no_change"}
                 and not any(e.get("pr_number") or e.get("pr_url") for e in detail["executions"])):
             actions += ["configure", "start"]
     if state == "in_review":
-        actions += ["configure", "block"]
+        actions += ["configure"]
         review_state = (latest or {}).get("provider_state") or {}
         if (
             latest
@@ -271,9 +272,18 @@ def _actions(detail):
         if latest["review_verdict"] == "approved" or not latest["reviewer_required"]:
             actions += ["ready"] if state == "in_review" else ["merge", "complete"]
             actions += ["advance"]
-    if state == "ready" and (not latest or not latest["pr_number"]): actions += ["complete", "block"]
+    if state == "ready" and (not latest or not latest["pr_number"]): actions += ["complete"]
+    if state == "ready":
+        actions += ["configure"]
     if detail.get("follow_up_options"):
         actions += ["request_follow_up"]
+    if (state in {"ready", "in_review", "blocked"} and latest and not latest.get("terminal_at")
+            and latest.get("pr_number") and not latest.get("merged_at")
+            and current_revision == latest.get("revision")
+            and (latest.get("provider_state") or {}).get("mergeability") == "conflicting"):
+        # A repository conflict is owned by Autopilot. Make the guarded repair
+        # the only decision so it cannot be mislabeled as a wait or human blocker.
+        actions = ["repair_conflict"]
     if state == "blocked" and not (
         detail.get("blocked_from_state") in {"accepted", "in_progress"}
         and latest and latest.get("terminal_at")
@@ -285,9 +295,9 @@ def _actions(detail):
     failures = sum(e.get("revision") == current_revision and bool(e.get("terminal_at"))
                    for e in detail["executions"])
     if failures >= 3:
-        actions = [action for action in actions if action not in {"start", "revise", "repair"}]
+        actions = [action for action in actions if action not in {"start", "revise", "repair", "repair_conflict"}]
     if detail.get("assignee_kind") != "bot" or detail.get("assignee_profile") not in {"junior", "senior", "staff"}:
-        actions = [action for action in actions if action not in {"start", "revise", "repair"}]
+        actions = [action for action in actions if action not in {"start", "revise", "repair", "repair_conflict"}]
     elif state == "accepted" and "start" in actions:
         actions += ["advance"]
     return actions
@@ -526,7 +536,7 @@ def _perform(session, task, decision, lease):
         changes = decision.changes.model_dump(exclude_none=True, exclude={"version"})
         if decision.changes.version != task.version:
             raise service.Conflict("Execution settings version changed")
-        if not changes or set(changes) - {"planned_resolution", "verification_commands", "allowed_path_globs", "resource_keys", "follow_up_bots"}:
+        if not changes or set(changes) - {"planned_resolution", "verification_commands", "allowed_path_globs", "resource_keys", "follow_up_bots", "acceptance_gates"}:
             raise service.DomainError("The executive may edit only the execution plan and scope")
         service.patch_task(session, **kwargs, changes=changes)
     elif action == "retry_review":
@@ -536,10 +546,18 @@ def _perform(session, task, decision, lease):
             idempotency_key="executive:" + lease["id"],
             max_queued=conf.getint("bot_dashboard", "max_queued_executions", fallback=20),
         )
+    elif action == "repair_conflict":
+        require_executor_preconditions()
+        model_for_role(session, f"executor_{task.assignee_profile}")
+        model_for_role(session, "pr_reviewer")
+        service.start_task(
+            session, **kwargs, idempotency_key="executive:" + lease["id"], conflict_repair=True,
+            max_queued=conf.getint("bot_dashboard", "max_queued_executions", fallback=20),
+        )
     elif action == "repair":
         execution = _latest_execution(session, task)
         changes = _review_repair_changes(session, task, execution)
-        service.patch_task(session, **kwargs, changes=changes, actor_kind="system")
+        service.patch_task(session, **kwargs, changes=changes)
         require_executor_preconditions()
         model_for_role(session, f"executor_{task.assignee_profile}")
         model_for_role(session, "pr_reviewer")

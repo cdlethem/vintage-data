@@ -8,19 +8,37 @@ BOTS = {"analytics_engineer", "data_analyst", "source_scheduling"}
 
 
 def options(session, task, execution, revision):
-    if (task.state not in {"blocked", "in_review"} or not execution or not revision
+    if (task.state not in {"blocked", "in_review", "ready"} or not execution or not revision
             or execution.stage != "reviewed" or not execution.pr_number
             or not execution.trusted_head_sha or execution.merged_at
-            or execution.review_verdict != "changes_requested"
+            or execution.review_verdict not in {"changes_requested", "approved", "unable_to_review"}
             or (execution.provider_state or {}).get("state") != "open"
             or (execution.provider_state or {}).get("head_sha") != execution.trusted_head_sha):
         return []
-    requested = {e.payload.get("bot") for e in session.scalars(select(Event).where(
-        Event.task_id == task.id, Event.event_type == "planning_requested"))
-        if e.payload.get("execution_id") == execution.execution_id
-        and e.payload.get("revision_number") == revision.revision_number
-        and e.payload.get("head_sha") == execution.trusted_head_sha}
-    return sorted((set(revision.follow_up_bots or []) & BOTS) - requested)
+    requested = {}
+    for event in _requests(session, task, execution, revision):
+        requested.setdefault(event.payload.get("bot"), []).append(event)
+    available = []
+    for bot in sorted(set(revision.follow_up_bots or []) & BOTS):
+        attempts = requested.get(bot, [])
+        if not attempts:
+            available.append(bot)
+        elif len(attempts) < 2:
+            report = session.scalar(select(RunReport).where(
+                RunReport.run_id == attempts[-1].payload["run_id"], RunReport.bot_name == bot,
+            ).order_by(RunReport.try_number.desc()).limit(1))
+            if report and report.outcome in {"failed", "timed_out", "capacity_unavailable", "skipped"}:
+                available.append(bot)
+    return available
+
+
+def _requests(session, task, execution, revision):
+    return [event for event in session.scalars(select(Event).where(
+        Event.task_id == task.id, Event.event_type == "planning_requested",
+    ).order_by(Event.id)).all()
+        if event.payload.get("execution_id") == execution.execution_id
+        and event.payload.get("revision_number") == revision.revision_number
+        and event.payload.get("head_sha") == execution.trusted_head_sha]
 
 
 def request(session, task, bot, rationale):
@@ -31,9 +49,12 @@ def request(session, task, bot, rationale):
     if bot not in options(session, task, execution, revision):
         raise service.PreconditionFailed("A new, configured specialist planning handoff is not available")
     run_id = f"planning__{task.id}__{execution.sequence}__r{revision.revision_number}__{bot}"
+    attempt = 1 + sum(event.payload.get("bot") == bot for event in _requests(session, task, execution, revision))
+    if attempt > 1:
+        run_id += f"__retry_{attempt}"
     service._event(session, task, "planning_requested", "system", "executive", payload={
         "bot": bot, "execution_id": execution.execution_id, "head_sha": execution.trusted_head_sha,
-        "revision_number": revision.revision_number, "run_id": run_id, "request": rationale,
+        "revision_number": revision.revision_number, "run_id": run_id, "request": rationale, "attempt": attempt,
     })
     # This is only a planning request. Parent state, execution and review are unchanged.
 
@@ -70,6 +91,8 @@ def validate(session, identity, conf, task, execution, revision, bot):
     event = session.get(Event, event_id) if isinstance(event_id, int) and not isinstance(event_id, bool) else None
     p = event.payload if event else {}
     expected = f"planning__{task.id}__{execution.sequence}__r{revision.revision_number}__{bot}"
+    if p.get("attempt", 1) == 2:
+        expected += "__retry_2"
     if (not event or event.task_id != task.id or event.event_type != "planning_requested"
             or event.actor_id != "executive" or event.actor_kind != "system"
             or p.get("bot") != bot or p.get("execution_id") != execution.execution_id
@@ -99,3 +122,24 @@ def link(session, parent_id, child, report):
     # previous wait is cooling down; never change the parent's actual decision.
     parent.version += 1
     parent.updated_at = utcnow()
+
+
+def status(session, task_id):
+    """Distinguish finished/failed handoffs from actual active planning work."""
+    events = session.scalars(select(Event).where(
+        Event.task_id == task_id, Event.event_type == "planning_requested",
+    ).order_by(Event.id.desc()).limit(20)).all()
+    result = []
+    for event in events:
+        payload = event.payload
+        report = session.scalar(select(RunReport).where(
+            RunReport.run_id == payload.get("run_id"), RunReport.bot_name == payload.get("bot"),
+        ).order_by(RunReport.try_number.desc()).limit(1))
+        result.append({
+            "bot": payload.get("bot"), "run_id": payload.get("run_id"),
+            "head_sha": payload.get("head_sha"), "revision_number": payload.get("revision_number"),
+            "state": "reported" if report else "unreported",
+            "outcome": report.outcome if report else None,
+            "reason_code": report.reason_code if report else None,
+        })
+    return result

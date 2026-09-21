@@ -74,14 +74,19 @@ def _materialize(root: pathlib.Path, config: RepositoryConfig, base_sha: str | N
     return repository, resolved
 
 
-def create_source_artifact(session: Session, execution: Execution) -> dict:
+def create_source_artifact(
+    session: Session, execution: Execution, *, expected_base_sha: str | None = None,
+) -> dict:
     if execution.source_artifact_sha256:
+        if expected_base_sha and execution.base_sha != expected_base_sha:
+            raise GitProviderError("stored source does not match the admitted repair base")
         row, _ = read_artifact(session, execution.source_artifact_sha256)
         return {"sha256": row.sha256, "byte_count": row.byte_count}
     config = load_repository_config()
+    requested_base = expected_base_sha or getattr(execution, "base_sha", None)
     with tempfile.TemporaryDirectory(prefix="bot-dashboard-source-") as temporary:
         root = pathlib.Path(temporary)
-        repository, base_sha = _materialize(root, config)
+        repository, base_sha = _materialize(root, config, requested_base)
         archive = subprocess.run(
             ["git", "archive", "--format=tar", "HEAD"],
             cwd=repository,
@@ -190,7 +195,13 @@ def publish_execution_change(
     session.refresh(task, with_for_update=True)
     if execution.execution_id != verified.execution_id or execution.terminal_at is not None or task.state in {"completed", "dismissed"}:
         raise GitProviderError("execution changed after publication checkpoint")
-    branch = f"bot-dashboard/{task.id}/{execution.sequence}-r{execution.revision}"
+    from .revision_seed import get_seed
+    seed = get_seed(session, execution)
+    repair_suffix = (
+        f"-repair-{seed['execution_id'][:12]}"
+        if seed and seed.get("repair_base_sha") else ""
+    )
+    branch = f"bot-dashboard/{task.id}/{execution.sequence}-r{execution.revision}{repair_suffix}"
     with tempfile.TemporaryDirectory(prefix="bot-dashboard-publish-") as temporary:
         root = pathlib.Path(temporary)
         repository, base_sha = _materialize(root, config, execution.base_sha)

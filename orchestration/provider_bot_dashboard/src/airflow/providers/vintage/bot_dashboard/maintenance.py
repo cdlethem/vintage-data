@@ -103,7 +103,11 @@ def sync_provider(session: Session, limit: int = 25) -> dict:
         if not provider_changed and not readiness_changed:
             continue
         old = row.provider_state or {}
-        row.provider_state = observation
+        # Provider observations do not own independent-review diagnostics.
+        row.provider_state = {
+            **{key: old[key] for key in ("review_verdict", "review_failure_kind", "review_repair") if key in old},
+            **observation,
+        }
         row.provider_fingerprint = fingerprint
         changed += 1
         state = observation.get("state")

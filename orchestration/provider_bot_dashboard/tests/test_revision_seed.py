@@ -101,3 +101,29 @@ class RevisionSeedTest(unittest.TestCase):
             client.get_artifact.return_value = b'corrupt'
             with self.assertRaisesRegex(ValueError, 'revision_seed_digest_invalid'):
                 _apply_revision_seed(admission, client, work, metadata, lambda code, _: ValueError(code))
+
+    def test_seed_conflict_is_exposed_inside_the_confined_worktree_for_repair(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            old = root / "old"; old.mkdir()
+            (old / "extract.py").write_text("value = 'base'\n")
+            old_metadata = _initialize_baseline(root, old)
+            (old / "extract.py").write_text("value = 'candidate'\n")
+            _git(old, old_metadata, "add", "-A")
+            seed = _git(old, old_metadata, "diff", "--cached", "--binary", "HEAD", binary=True)
+
+            current = root / "current"; current.mkdir()
+            (current / "extract.py").write_text("value = 'upstream'\n")
+            metadata = _initialize_baseline(root, current)
+            client = Mock(); client.get_artifact.return_value = seed
+            admission = {"seed_patch_sha256": hashlib.sha256(seed).hexdigest()}
+            _apply_revision_seed(admission, client, current, metadata, lambda code, _: ValueError(code))
+            reject = current / "extract.py.rej"
+            self.assertTrue(reject.is_file())
+            self.assertIn("candidate", reject.read_text())
+
+            (current / "extract.py").write_text("value = 'repaired'\n")
+            reject.unlink()
+            _git(current, metadata, "add", "-A")
+            repaired = _git(current, metadata, "diff", "--cached", "--binary", "HEAD", binary=True)
+            self.assertIn(b"+value = 'repaired'", repaired)

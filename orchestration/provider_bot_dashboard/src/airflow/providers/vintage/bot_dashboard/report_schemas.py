@@ -167,6 +167,7 @@ class AcceptanceGateV1(StrictModel):
     dependencies: list[str] = Field(default_factory=list, max_length=20)
     recheck_condition: str = Field(min_length=1, max_length=2000)
     required: bool = True
+    recipe_args: dict[str, Any] = Field(default_factory=dict)
 
 
 class TaskProposalV1(StrictModel):

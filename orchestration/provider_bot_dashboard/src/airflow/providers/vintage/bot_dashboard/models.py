@@ -80,12 +80,13 @@ class ValidationGate(Base):
     __table_args__ = (
         UniqueConstraint("task_id", "gate_key", name="uq_bd_validation_gate_task_key"),
         CheckConstraint("stage in ('publication','merge','activation','completion')", name="stage"),
-        CheckConstraint("status in ('pending','running','passed','failed')", name="status"),
+        CheckConstraint("status in ('pending','leased','running','passed','failed')", name="status"),
         CheckConstraint(
             "recipe in ('public_source_smoke','disposable_schema_migration','warehouse_check','dag_inspection','lightdash_preview','manual')",
             name="recipe",
         ),
         Index("ix_bot_dashboard_validation_gate_queue", "status", "stage", "updated_at"),
+        Index("ix_bot_dashboard_validation_gate_lease", "status", "lease_expires_at"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     task_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("bot_dashboard_task.id"), nullable=False, index=True)
@@ -100,6 +101,12 @@ class ValidationGate(Base):
     evidence: Mapped[dict[str, Any] | None] = mapped_column(NULLABLE_JSON)
     recheck_condition: Mapped[str] = mapped_column(Text, nullable=False)
     required: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    recipe_args: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    lease_id: Mapped[str | None] = mapped_column(String(64))
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    lease_run_id: Mapped[str | None] = mapped_column(String(250))
+    attempt: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_error: Mapped[str | None] = mapped_column(Text)
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)

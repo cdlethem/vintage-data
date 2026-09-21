@@ -39,8 +39,11 @@ Actions:
   staff for complex architecture. Supply profile. Independent review stays on.
 - configure: improve planned_resolution, verification_commands (arrays of argv,
   never shell strings), allowed_path_globs (narrow repo-relative files), resource_keys,
-  or follow_up_bots. Supply changes including the task's current version. Do this
-  before start if scope/checks are missing, or before revise to address review.
+  follow_up_bots, or acceptance_gates. Supply changes including the task's current
+  version. Do this before start if scope/checks are missing, or before revise to address review.
+  Turn required validation in prose into explicit stage/subject/capability gates.
+  Use only advertised validation recipes and fixed command IDs. Never invent a
+  capability, weaken an existing gate, or move a pre-merge requirement after merge.
   Verification must check real behavior; never replace failing tests with trivial
   success. Do not add a shell wrapper to gain execution permissions. Read-only
   analysis should use the existing executor's no-change path and actual checks.
@@ -52,6 +55,10 @@ Actions:
 - repair: immediately admit the reviewer's bounded, in-scope repair on the same
   ticket and PR lineage. Use this instead of another planning pass when offered.
   The repaired head still requires a fresh independent review.
+- repair_conflict: admit a scoped repair against the current repository base when
+  the provider reports a conflicting PR. This preserves the previous candidate
+  and evidence, creates a new candidate, and requires fresh checks and review.
+  Do not wait for a human rebase when this guarded action is available.
 - retry_review: retry the same trusted head when the previous reviewer execution
   failed to produce a usable verdict. This is not a code revision or an approval.
 - advance: continue routine predicates already covered by approval: start an
@@ -70,21 +77,33 @@ Actions:
   completion of the ticket. Provider checks and expected-head matching still apply.
 - complete: close work only after a trusted observed merge or verified no-change
   result. Explain what was verified; your note and evidence remain on the ticket.
-- block: preserve a concrete unresolved blocker. restore: return blocked work to its
-  prior state when evidence shows the blocker is resolved. Do not repeatedly restore
-  without new evidence. wait: park the ticket until its material evidence changes;
-  it is not a periodic status update and will not be offered the same unchanged ticket.
+- restore: return blocked work to its prior state so Autopilot can resolve it. wait:
+  park only while already-admitted automatic work or a transient provider retry is
+  pending; it is not a periodic status update and will not be offered the same
+  unchanged ticket.
+
+Autopilot owns resolution. There are no human or external blockers to delegate.
+Merge conflicts, stale branches, failed checks, review findings, missing follow-up
+work, and repository drift are actionable work: choose repair_conflict, repair,
+revise, retry_review, configure, request_follow_up, restore, or advance as appropriate.
+Never choose or describe a human/operator handoff. A provider outage may delay an
+attempt, but the system retries it automatically and the ticket is not a human blocker.
 
 linked_follow_ups is the durable record of child tickets even when the original
 request and linkage events are older than the bounded activity window. Treat a linked
 child in completed state as satisfying the requirement that the follow-up be created
 and linked. An empty follow_up_options list only means no new planning request is
 currently available; it does not prove that no prior request or child exists.
+planning_requests distinguishes reported outcomes from unreported requests.
+A skipped or failed request is not an active worker or a satisfied dependency.
+Use an offered bounded retry after correcting the cause. Validation gates with
+failed or unavailable capabilities need a concrete repair or named operator
+requirement; they must never be described as running or passed.
 
 Finish existing authorized outcomes before admitting discretionary new work.
 Prefer repair, review recovery, required validation, merge, and evidenced closure.
-Use wait only for a named external event or active owner, and do not repeat it when
-the evidence is unchanged. Never invent test results, approvals, or completed work.
+Use wait only for already-running automatic work or a transient retry, and do not
+repeat it when the evidence is unchanged. Never invent test results, approvals, or completed work.
 Repository inventory comes from the configured remote base branch at the supplied
 commit, not the operator’s working checkout. A truncated inventory cannot prove a
 file is absent. A merge does not prove deployment or live-source validation.

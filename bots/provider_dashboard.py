@@ -193,6 +193,14 @@ class DashboardClient:
             raise ControlPlaneError("workload_response_invalid", "terminal")
         return value
 
+    def follow_up_context(self, identity: dict) -> dict:
+        value = self._request("POST", "follow-ups/context", body={
+            key: identity[key] for key in ("dag_id", "run_id", "task_id", "map_index")
+        })
+        if not isinstance(value, dict) or not isinstance(value.get("selected"), dict):
+            raise ControlPlaneError("follow_up_context_invalid", "terminal")
+        return value
+
     def airflow_failures(self, hours: int = 24, limit: int = 100, *,
                          dag_id: str | None = None, run_id: str | None = None) -> dict:
         params = {"hours": hours, "limit": limit}
@@ -297,6 +305,19 @@ class DashboardClient:
 
     def maintenance(self, limit: int = 100) -> dict:
         return self._request("POST", "maintenance/run", body={"limit": limit})
+
+    def claim_validation_gates(self, *, runner_id: str, limit: int = 20) -> list[dict]:
+        return self._request("POST", "validation-gates/claim",
+                             body={"runner_id": runner_id, "limit": limit})["items"]
+
+    def start_validation_gate(self, gate_id: str, **body) -> dict:
+        return self._request("POST", f"validation-gates/{gate_id}/start", body=body)
+
+    def finish_validation_gate(self, gate_id: str, **body) -> dict:
+        return self._request("POST", f"validation-gates/{gate_id}/finish", body=body)
+
+    def recover_validation_gates(self, limit: int = 100) -> dict:
+        return self._request("POST", "validation-gates/recover", body={"limit": limit})
 
 
 def enabled() -> bool:

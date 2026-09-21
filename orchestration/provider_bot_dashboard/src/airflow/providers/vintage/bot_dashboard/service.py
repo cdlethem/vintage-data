@@ -246,6 +246,8 @@ def gate_dict(row: ValidationGate) -> dict:
         "recheck_condition": row.recheck_condition, "required": row.required,
         "version": row.version, "created_at": row.created_at.isoformat(),
         "updated_at": row.updated_at.isoformat(),
+        "recipe_args": row.recipe_args, "attempt": row.attempt, "last_error": row.last_error,
+        "lease_expires_at": row.lease_expires_at.isoformat() if row.lease_expires_at else None,
     }
 
 
@@ -259,6 +261,16 @@ def require_validation_gates(session: Session, task_id: uuid.UUID, *stages: str)
     if pending:
         labels = ", ".join(f"{row.stage}:{row.gate_key} ({row.status}, owner={row.owner})" for row in pending[:5])
         raise PreconditionFailed("Required validation gates are incomplete: " + labels)
+    execution = session.scalar(select(Execution).where(Execution.task_id == task_id)
+                               .order_by(Execution.sequence.desc()).limit(1))
+    if execution and execution.trusted_head_sha:
+        passed = session.scalars(select(ValidationGate).where(
+            ValidationGate.task_id == task_id, ValidationGate.required.is_(True),
+            ValidationGate.stage.in_(stages), ValidationGate.status == "passed",
+        )).all()
+        if any(re.fullmatch(r"[a-f0-9]{40,64}", gate.subject)
+               and gate.subject != execution.trusted_head_sha for gate in passed):
+            raise PreconditionFailed("Validation evidence belongs to an earlier candidate head")
 
 
 def create_validation_gate(session: Session, task_id: str, *, version: int, actor_id: str, value: dict) -> dict:
@@ -291,6 +303,13 @@ def record_validation_gate(session: Session, gate_id: str, *, version: int, acto
         raise Conflict("Validation gate version is stale")
     if subject != row.subject:
         raise PreconditionFailed("Validation evidence belongs to a different subject")
+    if status not in {"passed", "failed"}:
+        raise DomainError("Validation result must be passed or failed")
+    execution = session.scalar(select(Execution).where(Execution.task_id == row.task_id)
+                               .order_by(Execution.sequence.desc()).limit(1))
+    if execution and execution.trusted_head_sha and re.fullmatch(r"[a-f0-9]{40,64}", subject):
+        if execution.trusted_head_sha != subject:
+            raise PreconditionFailed("Validation evidence belongs to an earlier candidate head")
     if not evidence.get("observation") and not evidence.get("url"):
         raise PreconditionFailed("Validation result requires an observed result or evidence URL")
     row.status = status; row.evidence = evidence; row.version += 1; row.updated_at = utcnow()
@@ -376,6 +395,7 @@ def patch_task(
         "resource_keys",
         "follow_up_bots",
         "reviewer_required",
+        "acceptance_gates",
     }
     if task.source == "manual":
         allowed |= {"title", "category", "priority"}
@@ -398,6 +418,12 @@ def patch_task(
     }
     before: dict[str, Any] = {}
     for key, value in changes.items():
+        if key == "acceptance_gates":
+            before[key] = [gate_dict(row) for row in session.scalars(
+                select(ValidationGate).where(ValidationGate.task_id == task.id)
+            ).all()]
+            _configure_acceptance_gates(session, task, value, actor_kind=actor_kind)
+            continue
         if key in revision_fields:
             before[key] = getattr(latest, key)
         else:
@@ -561,7 +587,15 @@ def transition_task(session: Session, task_id: str, *, version: int, actor_id: s
     session.flush(); return task_dict(task)
 
 
-def start_task(session: Session, task_id: str, *, version: int, actor_id: str, idempotency_key: str, revision: bool = False, max_queued: int = 20, actor_kind: str = "user") -> dict:
+def start_task(session: Session, task_id: str, *, version: int, actor_id: str, idempotency_key: str, revision: bool = False, conflict_repair: bool = False, max_queued: int = 20, actor_kind: str = "user") -> dict:
+    if conflict_repair:
+        if revision:
+            raise DomainError("conflict repair and plan revision are separate admissions")
+        from .conflict_recovery import admit_conflict_repair
+        return admit_conflict_repair(
+            session, task_id, version=version, actor_id=actor_id,
+            idempotency_key=idempotency_key, actor_kind=actor_kind, max_queued=max_queued,
+        )
     try:
         identity = uuid.UUID(str(task_id))
     except ValueError as exc:
@@ -1463,6 +1497,28 @@ def _task_proposals(payload_schema: str, payload: dict) -> list[dict]:
     return []
 
 
+def _configure_acceptance_gates(session: Session, task: Task, values: list[dict], *, actor_kind: str) -> None:
+    """Add executable requirements without deleting or weakening prior contracts."""
+    from .report_schemas import AcceptanceGateV1
+    for supplied in values:
+        value = AcceptanceGateV1.model_validate(supplied).model_dump(mode="json")
+        existing = session.scalar(select(ValidationGate).where(
+            ValidationGate.task_id == task.id, ValidationGate.gate_key == value["gate_key"],
+        ).with_for_update())
+        if existing is not None:
+            if existing.status != "pending":
+                if any(getattr(existing, key) != item for key, item in value.items()):
+                    raise PreconditionFailed("Observed validation contracts cannot be overwritten")
+                continue
+            if actor_kind != "user" and (
+                existing.stage != value["stage"] or existing.required != value["required"]
+                or existing.subject != value["subject"] or existing.recipe != value["recipe"]
+                or existing.dependencies != value["dependencies"]
+            ):
+                raise PreconditionFailed("The executive cannot weaken or reclassify an existing validation gate")
+        _reconcile_proposed_gates(session, task, {"acceptance_gates": [value]})
+
+
 def _reconcile_proposed_gates(session: Session, task: Task, proposal: dict) -> None:
     """Create/update pending gate contracts; never erase observed gate history."""
     for value in proposal.get("acceptance_gates", []):
@@ -1475,6 +1531,7 @@ def _reconcile_proposed_gates(session: Session, task: Task, proposal: dict) -> N
             "required_capability": value["required_capability"], "subject": value["subject"],
             "dependencies": value.get("dependencies", []),
             "recheck_condition": value["recheck_condition"], "required": value.get("required", True),
+            "recipe_args": value.get("recipe_args", {}),
         }
         if row is None:
             session.add(ValidationGate(task_id=task.id, gate_key=value["gate_key"], **fields))

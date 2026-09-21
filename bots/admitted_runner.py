@@ -301,10 +301,12 @@ def _write_review_context(root: pathlib.Path, admission: dict, patch: bytes, rep
 
 
 def _apply_revision_seed(admission: dict, client, workdir: pathlib.Path, metadata: pathlib.Path, error_type) -> None:
-    """Restore a prior revision's patch before a fresh executor attempt continues it.
+    """Restore a prior patch onto the admitted base, leaving real conflicts for repair.
 
-    A no-op unless the admission carries a seed. Fetched bytes are verified against
-    the admission's own digest before being applied, same as the reviewer's patch.
+    ``--reject`` applies every unambiguous hunk and writes only conflicted hunks as
+    adjacent ``.rej`` files.  Those files remain inside the credential-free executor
+    worktree; the model must resolve and remove them before the parent accepts the
+    resulting scoped diff.  A malformed seed is never mistaken for a conflict.
     """
     seed_digest = admission.get("seed_patch_sha256")
     if not seed_digest:
@@ -312,7 +314,34 @@ def _apply_revision_seed(admission: dict, client, workdir: pathlib.Path, metadat
     seed = client.get_artifact(seed_digest)
     if hashlib.sha256(seed).hexdigest() != seed_digest:
         raise error_type("revision_seed_digest_invalid", "terminal")
-    _git(workdir, metadata, "apply", "--binary", "-", binary=True, input_data=seed)
+    process = subprocess.run(
+        [
+            "git", f"--git-dir={metadata}", f"--work-tree={workdir}",
+            "apply", "--binary", "--reject", "--whitespace=nowarn", "-",
+        ],
+        cwd=workdir,
+        input=seed,
+        capture_output=True,
+        timeout=120,
+        check=False,
+        env={
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            "LANG": "C.UTF-8",
+            "GIT_AUTHOR_NAME": "bot-dashboard baseline",
+            "GIT_AUTHOR_EMAIL": "baseline@localhost",
+            "GIT_COMMITTER_NAME": "bot-dashboard baseline",
+            "GIT_COMMITTER_EMAIL": "baseline@localhost",
+            "GIT_AUTHOR_DATE": "2000-01-01T00:00:00Z",
+            "GIT_COMMITTER_DATE": "2000-01-01T00:00:00Z",
+        },
+    )
+    if process.returncode == 0:
+        return
+    if process.returncode == 1 and any(
+        path.is_file() for path in workdir.rglob("*.rej")
+    ):
+        return
+    raise error_type("revision_seed_apply_failed", "terminal")
 
 
 
@@ -460,6 +489,10 @@ def run(context: dict, cfg: dict, runner, dashboard_module):
                     ).splitlines()
                     if line
                 ]
+                if any(path.endswith(".rej") for path in paths):
+                    raise dashboard_module.ControlPlaneError(
+                        "unresolved_revision_seed_conflict", "terminal"
+                    )
                 _validate_paths(
                     admission,
                     paths,

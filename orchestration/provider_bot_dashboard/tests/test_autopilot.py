@@ -407,14 +407,25 @@ class AutopilotTest(unittest.TestCase):
         self.session.commit()
         self.assertEqual(str(task.id), ap.claim(self.session)["task"]["id"])
 
-    def test_block_parks_ticket_until_material_evidence_changes(self):
+    def test_autopilot_never_offers_human_blocking(self):
         task = self.task()
-        self.enable()
-        claim = ap.claim(self.session)
-        self.session.commit()
-        self.assertEqual("applied", self.decide(claim, "block")["status"])
-        self.assertEqual("blocked", task.state)
-        self.assertEqual("idle", ap.claim(self.session)["status"])
+        for state in ("proposed", "accepted", "in_progress", "in_review", "ready", "blocked"):
+            task.state = state
+            if state == "blocked":
+                task.blocked_from_state = "in_review"
+            self.session.commit()
+            self.assertNotIn("block", ap._actions(ap._snapshot(self.session, str(task.id))))
+
+    def test_merge_conflict_has_one_owned_resolution(self):
+        task = self.task("blocked")
+        task.blocked_from_state = "in_review"
+        task.assignee_kind = "bot"
+        task.assignee_profile = "senior"
+        self.execution(task, provider_state={
+            "state": "open", "draft": True, "head_sha": "a" * 40,
+            "mergeability": "conflicting",
+        })
+        self.assertEqual(["repair_conflict"], ap._actions(ap._snapshot(self.session, str(task.id))))
 
     def test_wait_is_audited_without_spamming_the_pull_request(self):
         task = self.task("in_review")

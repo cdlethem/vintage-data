@@ -714,6 +714,21 @@ def run(
             and not identity["run_id"].startswith(("follow_up__", "planning__"))
             and not control.workload()["allowed"]
         )
+        if not dry_run and not ephemeral and identity["run_id"].startswith(("follow_up__", "planning__")):
+            follow_up_keys = {
+                "source_scheduling": "SCHEDULING_CONTEXT",
+                "analytics_engineer": "ANALYTICS_CONTEXT",
+                "data_analyst": "ANALYST_CONTEXT",
+            }
+            context_key = follow_up_keys.get(cfg["name"])
+            if context_key is None:
+                raise BotError("unsupported specialist follow-up", code="follow_up_route_invalid")
+            # The provider verifies recorded DAG conf, exact parent and trusted
+            # head. A global no-work gate must not suppress an explicit handoff.
+            cfg = {**cfg, "_context_values": {
+                **(cfg.get("_context_values") or {}),
+                context_key: control.follow_up_context(identity),
+            }}
         if not reserved:
             prompt, context, context_digest = build_prompt(cfg, budget)
         if reserved:
