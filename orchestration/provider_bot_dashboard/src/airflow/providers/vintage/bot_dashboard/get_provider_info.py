@@ -26,7 +26,7 @@ def get_provider_info() -> dict:
         "package-name": "apache-airflow-provider-vintage-bot-dashboard",
         "name": "Vintage Bot Dashboard",
         "description": "Bot activity, reports, and a durable manager action queue.\n",
-        "versions": ["0.2.0"],
+        "versions": ["0.3.0"],
         "db-managers": [
             "airflow.provider.vintage.bot.dashboard.db_manager.BotDashboardDBManager"
         ],

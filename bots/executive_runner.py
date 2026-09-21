@@ -49,6 +49,15 @@ Actions:
 - revise: run a newer plan for an existing in-review PR, addressing reviewer findings.
   If the latest recommendation revision is already newer than the execution and
   addresses its review findings, choose revise instead of rewriting that plan again.
+- repair: immediately admit the reviewer's bounded, in-scope repair on the same
+  ticket and PR lineage. Use this instead of another planning pass when offered.
+  The repaired head still requires a fresh independent review.
+- retry_review: retry the same trusted head when the previous reviewer execution
+  failed to produce a usable verdict. This is not a code revision or an approval.
+- advance: continue routine predicates already covered by approval: start an
+  accepted assigned plan; promote and merge an approved exact head; merge a ready
+  exact head; or close a merge already observed with its evidence. The service
+  applies only the permitted current transition and records each state change.
 - ready: approve promotion of an independently reviewed, trusted PR from draft.
 - request_follow_up: ask one specialist from follow_up_options to plan a distinct
   prerequisite identified by review before merge. Supply specialist. Use this when
@@ -65,8 +74,10 @@ Actions:
   prior state when evidence shows the blocker is resolved. Do not repeatedly restore
   without new evidence. wait: defer with a precise dependency and reason.
 
-Keep making useful progress. Prefer correcting scope or addressing review findings
-over repeatedly waiting. Never invent test results, approvals, or completed work.
+Finish existing authorized outcomes before admitting discretionary new work.
+Prefer repair, review recovery, required validation, merge, and evidenced closure.
+Use wait only for a named external event or active owner, and do not repeat it when
+the evidence is unchanged. Never invent test results, approvals, or completed work.
 Repository inventory comes from the configured remote base branch at the supplied
 commit, not the operator’s working checkout. A truncated inventory cannot prove a
 file is absent. A merge does not prove deployment or live-source validation.

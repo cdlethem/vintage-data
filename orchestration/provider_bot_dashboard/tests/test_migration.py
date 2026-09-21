@@ -55,6 +55,7 @@ class MigrationTest(unittest.TestCase):
                 self.assertIn("bot_dashboard_run_budget_claim", tables)
                 self.assertIn("bot_dashboard_artifact", tables)
                 self.assertIn("bot_dashboard_legacy_import", tables)
+                self.assertIn("bot_dashboard_validation_gate", tables)
                 columns = {column["name"] for column in inspect(engine).get_columns("bot_dashboard_execution")}
                 self.assertTrue({"base_sha", "verification_manifest", "terminal_reason_code", "merged_at"} <= columns)
                 report_columns = {column["name"] for column in inspect(engine).get_columns("bot_dashboard_run_report")}

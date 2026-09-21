@@ -1,4 +1,4 @@
-"""Read-only admission pressure for discretionary source discovery and vetting.
+"""Read-only admission pressure for discretionary specialist work.
 
 This gates model work, never ticket recording or approval. In-flight reports remain
 valid; operational incidents and completion follow-ups are never discarded.
@@ -48,4 +48,7 @@ def status(session):
         completed_7d=count(Task.state == "completed", Task.completed_at >= week),
         new_sources_24h=count(Task.category == "new_source", Task.created_at >= day),
     )
-    return {**result, "observed_at": now.isoformat(), "gated_bots": ["source_discovery", "source_vetting"]}
+    return {**result, "observed_at": now.isoformat(), "gated_bots": [
+        "source_discovery", "source_vetting", "source_scheduling",
+        "analytics_engineer", "data_analyst", "cadence_review",
+    ]}

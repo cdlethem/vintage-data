@@ -121,6 +121,26 @@ class SyncRequest(StrictBody):
     version: int = Field(ge=1)
     idempotency_key: str = Field(min_length=8, max_length=128, pattern=r"^[A-Za-z0-9._:-]+$")
 
+
+class ValidationGateCreate(StrictBody):
+    version: int = Field(ge=1)
+    gate_key: str = Field(min_length=1, max_length=100, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+    stage: Literal["publication", "merge", "activation", "completion"]
+    recipe: Literal["public_source_smoke", "disposable_schema_migration", "warehouse_check", "dag_inspection", "lightdash_preview", "manual"]
+    owner: str = Field(min_length=1, max_length=250)
+    required_capability: str = Field(min_length=1, max_length=250)
+    subject: str = Field(min_length=1, max_length=512)
+    dependencies: list[str] = Field(default_factory=list, max_length=20)
+    recheck_condition: str = Field(min_length=1, max_length=2000)
+    required: bool = True
+
+
+class ValidationGateResult(StrictBody):
+    version: int = Field(ge=1)
+    status: Literal["passed", "failed"]
+    subject: str = Field(min_length=1, max_length=512)
+    evidence: Evidence
+
 class PromotionPolicy(StrictBody):
     category: Literal["*", "reliability", "new_source", "cadence", "load", "storage", "architecture", "credential", "cost"]
     mode: Literal["manual", "auto_accept", "auto_delegate"]

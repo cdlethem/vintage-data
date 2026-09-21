@@ -63,7 +63,8 @@ class WorkerTests(unittest.TestCase):
         self.admission['kind'] = 'pr_reviewer'
         review = {'schema_version': 2, 'agent': 'pr_reviewer', 'task_id': self.admission['task_id'],
                   'status': 'ok', 'verdict': 'approved', 'summary': 'Reviewed actual diff.',
-                  'comments': [], 'verification': ['Read exact patch.']}
+                  'comments': [], 'verification': ['Read exact patch.'],
+                  'failure_kind': None, 'repair': None}
         self.write_session([{'type': 'thinking', 'thinking': 'ignore'}, {'type': 'text', 'text': json.dumps(review)}])
         with patch.object(worker, 'bounded_run', return_value=(0, 'Working...\n'+json.dumps(review))):
             result = worker.execute(self.admission, self.work, self.root)
@@ -131,6 +132,14 @@ class WorkerTests(unittest.TestCase):
         self.assertEqual(checks[0]['argv'], commands[0])
         self.assertEqual(checks[0]['observation_sha256'], hashlib.sha256(checks[0]['observed'].encode()).hexdigest())
 
+    def test_capability_preflight_blocks_before_model(self):
+        self.admission['task']['verification_commands'] = [["definitely-not-a-real-command"]]
+        with patch.object(worker, 'bounded_run') as run:
+            report = worker.execute(self.admission, self.work, self.root)['report']
+        run.assert_not_called()
+        self.assertEqual('blocked', report['status'])
+        self.assertIn('unavailable', report['blockers'][0])
+
     def test_executor_runs_checks_independently_after_model_and_observes_changes(self):
         def model(argv, cwd, timeout, limit):
             self.assertIn('--no-extensions', argv)
@@ -152,9 +161,21 @@ class WorkerTests(unittest.TestCase):
         with patch.object(worker, 'bounded_run', side_effect=[(1, 'failed'), (0, 'passed')]):
             report = worker.execute(self.admission, self.work, self.root)['report']
         self.assertEqual(report['status'], 'blocked')
-        with patch.object(worker, 'bounded_run', side_effect=[(0, 'done'), (1, 'failed')]):
+        with patch.object(worker, 'bounded_run', side_effect=[
+                (0, 'done'), (1, 'first failure'), (0, 'repaired'), (0, 'passed')
+        ]), patch.object(worker, 'session_final_text', side_effect=['Implemented.', 'Repaired.']):
+            repaired = worker.execute(self.admission, self.work, self.root)['report']
+        self.assertEqual(repaired['status'], 'no_change')
+        self.assertEqual([1, 0], [attempt[0]['exit_code'] for attempt in repaired['verification_attempts']])
+
+    def test_failed_check_gets_only_one_bounded_repair_pass(self):
+        with patch.object(worker, 'bounded_run', side_effect=[
+                (0, 'done'), (1, 'first failure'), (0, 'repair'), (2, 'still failing')
+        ]), patch.object(worker, 'session_final_text', side_effect=['Implemented.', 'Tried repair.']) as final:
             report = worker.execute(self.admission, self.work, self.root)['report']
-        self.assertEqual(report['status'], 'blocked')
+        self.assertEqual('blocked', report['status'])
+        self.assertEqual(2, len(report['verification_attempts']))
+        self.assertEqual(2, final.call_count)
 
     def test_reviewer_invalid_output_never_approves(self):
         self.admission['kind'] = 'pr_reviewer'
@@ -167,10 +188,23 @@ class WorkerTests(unittest.TestCase):
     def test_review_identity_and_shape_checked(self):
         report = {'schema_version': 2, 'agent': 'pr_reviewer', 'task_id': 'a'*36,
                   'status': 'ok', 'verdict': 'approved', 'summary': 'Looks sound.',
-                  'comments': [], 'verification': ['Read the change.']}
+                  'comments': [], 'verification': ['Read the change.'],
+                  'failure_kind': None, 'repair': None}
         self.assertEqual(worker.validate_review(json.dumps(report), 'a'*36), report)
         with self.assertRaisesRegex(ValueError, 'identity'):
             worker.validate_review(json.dumps(report), 'b'*36)
+
+    def test_reviewer_can_request_a_bounded_repair(self):
+        report = {
+            'schema_version': 2, 'agent': 'pr_reviewer', 'task_id': 'a' * 36,
+            'status': 'ok', 'verdict': 'changes_requested', 'summary': 'One local defect.',
+            'comments': [{'body': 'Handle null input.', 'path': 'src/job.py', 'line': 8,
+                          'severity': 'blocking'}],
+            'verification': ['Read the exact patch.'], 'failure_kind': None,
+            'repair': {'instructions': 'Handle null input before parsing.', 'paths': ['src/job.py'],
+                       'check_expectations': ['The admitted unit test passes.']},
+        }
+        self.assertEqual(report, worker.validate_review(json.dumps(report), 'a' * 36))
 
     def test_result_is_private_and_cannot_overwrite_symlink(self):
         path = self.root / 'result.json'

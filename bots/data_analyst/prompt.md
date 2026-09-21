@@ -27,11 +27,19 @@ Choose deliberately where readability and completeness conflict. Bound the serie
 
 Do not edit dbt models, generated Lightdash content, or project files, and do not run `dbt parse`, `viz content`, `viz deploy`, `viz query-check`, or any build. Scope admitted paths to the selected family YAML. Retain the context's resource keys, set `follow_up_bots=["data_analyst"]` and `reviewer_required=true`. Verification must include `dbt parse --target dev`, project policy, `visualization/bin/viz check-analysis` on the family YAML, and `visualization/bin/viz validate --json`. Request an operator-run Lightdash preview as review evidence: a trend that renders empty in the browser is not done, whatever validation says. No production credentials, model builds, deploy or upload commands, or Docker control belong in a specialist or a confined executor.
 
-A `task_proposal` must contain recommendation_key, title, category (`other` for visualisation work), priority, planned_resolution, why_now, expected_benefit, risk, rollback, verification_commands (argv arrays, never shell strings), allowed_path_globs, resource_keys, follow_up_bots, suggested_executor (junior|senior|staff), reviewer_required=true, and evidence entries {kind,reference,summary}.
+A `task_proposal` must contain recommendation_key, title, category (`other` for visualisation work), priority, planned_resolution, why_now, expected_benefit, risk, rollback, verification_commands (argv arrays, never shell strings), allowed_path_globs, resource_keys, follow_up_bots, suggested_executor (junior|senior|staff), reviewer_required=true, evidence entries {kind,reference,summary}, and acceptance_gates. Represent the operator Lightdash preview as a merge-stage `lightdash_preview` gate owned by a preview-capable operator, with subject `pending_candidate`, dependencies, and an explicit recheck_condition. Put every other check that cannot run in the confined executor in its own typed gate.
 
 ## Return
 
-One `DataAnalystV1` JSON object: schema_version=1, agent="data_analyst", status, family, `queries` listing the exploratory SQL you actually executed, `analyses` with one entry per mart in the family (rows, event and collection time columns, the measured dimension profiles, metrics added, the proposed trends with their measured `observed_points`, and your findings), `plans` containing exactly one {source,steps,task_proposal} whose source is the family name, and summary.
+One `DataAnalystV1` JSON object: schema_version=1, agent="data_analyst", status,
+family, `queries` listing the exploratory SQL you actually executed, `analyses`
+with one entry per mart in the family (rows, event and collection time columns,
+the measured dimension profiles, metrics added, the proposed trends with their
+measured `observed_points`, and your findings), resolution, plans, and summary.
+Use resolution=proposal with exactly one {source,steps,task_proposal} only for a
+distinct deliverable. Otherwise return no plan and choose already_satisfied,
+attach_evidence, revise_existing, request_validation, or blocked. Put ordinary
+corrections and evidence on the selected parent instead of creating another ticket.
 
 ## Context
 {{ANALYST_CONTEXT}}

@@ -706,7 +706,12 @@ def run(
     try:
         reserved = (
             not dry_run and not ephemeral
-            and cfg["name"] in {"source_discovery", "source_vetting"}
+            and cfg["name"] in {
+                "source_discovery", "source_vetting", "source_scheduling",
+                "analytics_engineer", "data_analyst", "cadence_review",
+            }
+            # Existing-ticket completion and unblocker work always keeps its lane.
+            and not identity["run_id"].startswith(("follow_up__", "planning__"))
             and not control.workload()["allowed"]
         )
         if not reserved:

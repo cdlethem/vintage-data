@@ -67,7 +67,11 @@ def publish_review_comments(session: Session, *, dag_id: str, run_id: str) -> di
     ]
     for item in body["comments"]:
         location = f"{item.get('path') or ''}:{item.get('line') or ''}".strip(":")
-        lines.append(f"- {location + ': ' if location else ''}{item['body']}")
+        label = "Optional" if item.get("severity") == "optional" else "Blocking"
+        lines.append(f"- **{label}:** {location + ': ' if location else ''}{item['body']}")
+    if body.get("repair"):
+        lines.extend(["", "Bounded repair requested:", f"- {body['repair']['instructions']}"])
+        lines.append("- Paths: " + ", ".join(body["repair"]["paths"]))
     if body["verification"]:
         lines.extend(["", "Verification observations:"])
         lines.extend(f"- {value}" for value in body["verification"])

@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import re
 import selectors
+import shutil
 import signal
 import stat
 import subprocess
@@ -149,7 +150,30 @@ def verification(commands: list[list[str]], workdir: Path, deadline: float) -> l
     return checks
 
 
-def model_prompt(admission: dict) -> str:
+def capability_preflight(commands: list[list[str]], workdir: Path) -> list[str]:
+    """Detect an unavailable command before spending the implementation budget."""
+    missing = []
+    for argv in commands:
+        if not isinstance(argv, list) or not argv or not isinstance(argv[0], str):
+            missing.append("invalid_verification_argv")
+            continue
+        executable = argv[0]
+        if "/" in executable:
+            candidate = Path(executable) if executable.startswith("/") else (workdir / executable).resolve()
+            if not executable.startswith("/"):
+                try:
+                    candidate.relative_to(workdir.resolve())
+                except ValueError:
+                    missing.append(f"verification executable outside worktree: {executable}")
+                    continue
+            if not candidate.is_file() or not os.access(candidate, os.X_OK):
+                missing.append(f"verification executable unavailable: {executable}")
+        elif shutil.which(executable) is None:
+            missing.append(f"verification executable unavailable: {executable}")
+    return missing
+
+
+def model_prompt(admission: dict, repair_checks: list[dict] | None = None) -> str:
     common = ('You are an engineer handling an admitted task in an isolated repository. '
               'This run is unattended and the admitted work is already authorized. '
               'Do not ask for permission, confirmation, or interactive input. '
@@ -165,6 +189,15 @@ def model_prompt(admission: dict) -> str:
                        'independently run those commands after you finish. Return a concise plain-text engineering '
                        'summary as your final response. If you cannot complete the task, start the final '
                        'response with BLOCKED: and describe the prerequisite. Do not commit or publish.\n')
+        if repair_checks is not None:
+            instruction += (
+                'This is the single bounded repair pass. The trusted worker ran the admitted commands after your '
+                'first implementation. Fix only failures caused by or resolvable within this task, then return an '
+                'updated plain-text summary. Preserve passing behavior and do not weaken or edit the admitted '
+                'checks. If the failure is environmental or outside scope, start with BLOCKED:.\n'
+                'Trusted first-pass check observations:\n'
+                + json.dumps(repair_checks, sort_keys=True) + '\n'
+            )
     else:
         instruction = ('Review the patched, read-only worktree against the task and supplied verification manifest. '
                        'First read /review-context.json: it contains the trusted parent-verified patch text and '
@@ -177,8 +210,14 @@ def model_prompt(admission: dict) -> str:
                        'schema_version (2), agent ("pr_reviewer"), status ("ok" or "blocked"), '
                        'task_id (admitted task_id), verdict ("approved", "changes_requested", or "unable_to_review"), '
                        'summary (plain-English string), comments (array of {"body": string, "path": string or null, '
-                       '"line": positive integer or null}), verification (array of strings). '
-                       'Use blocked/unable_to_review when evidence is insufficient.\n')
+                       '"line": positive integer or null, "severity": "blocking" or "optional"}), '
+                       'verification (array of strings), failure_kind (null, or "evidence_unavailable" only when the '
+                       'trusted review context cannot support a verdict), and repair (null or, only for a small known '
+                       'changes_requested fix, {"instructions": string, "paths": one to three repository-relative '
+                       'paths, "check_expectations": array of strings}). Optional improvements never block approval. '
+                       'Request repair only for one local concern within the accepted scope; never request it for '
+                       'security, credentials, public contracts, production writes, schema migrations, or destructive '
+                       'changes. Use blocked/unable_to_review with evidence_unavailable when evidence is insufficient.\n')
     return common + instruction + '\nAdmission:\n' + json.dumps(admission, sort_keys=True)
 
 
@@ -188,13 +227,21 @@ def validate_review(raw: str, task_id: str) -> dict:
     if raw.startswith('```json\n') and raw.endswith('\n```'):
         raw = raw[len('```json\n'):-len('\n```')].strip()
     value = json.loads(raw)
-    fields = {'schema_version', 'agent', 'status', 'task_id', 'verdict', 'summary', 'comments', 'verification'}
+    fields = {'schema_version', 'agent', 'status', 'task_id', 'verdict', 'summary', 'comments',
+              'verification', 'failure_kind', 'repair'}
     if not isinstance(value, dict) or set(value) != fields:
         raise ValueError('review_fields_invalid')
     if value['schema_version'] != 2 or value['agent'] != 'pr_reviewer' or value['task_id'] != task_id:
         raise ValueError('review_identity_invalid')
     if value['status'] not in ('ok', 'blocked') or value['verdict'] not in ('approved', 'changes_requested', 'unable_to_review'):
         raise ValueError('review_outcome_invalid')
+    if value['failure_kind'] not in (None, 'transport_failed', 'format_failed', 'evidence_unavailable'):
+        raise ValueError('review_failure_kind_invalid')
+    if value['verdict'] == 'unable_to_review':
+        if value['status'] != 'blocked' or value['failure_kind'] is None or value['repair'] is not None:
+            raise ValueError('review_failure_contract_invalid')
+    elif value['failure_kind'] is not None:
+        raise ValueError('review_failure_contract_invalid')
     if not isinstance(value['summary'], str) or len(value['summary']) > 20_000:
         raise ValueError('review_summary_invalid')
     for name in ('comments', 'verification'):
@@ -203,7 +250,7 @@ def validate_review(raw: str, task_id: str) -> dict:
     if any(not isinstance(item, str) or len(item) > 20_000 for item in value['verification']):
         raise ValueError('review_verification_invalid')
     for comment in value['comments']:
-        if not isinstance(comment, dict) or set(comment) - {'body', 'path', 'line'}:
+        if not isinstance(comment, dict) or set(comment) != {'body', 'path', 'line', 'severity'}:
             raise ValueError('review_comment_invalid')
         if not isinstance(comment.get('body'), str) or not 1 <= len(comment['body']) <= 10_000:
             raise ValueError('review_comment_invalid')
@@ -211,6 +258,25 @@ def validate_review(raw: str, task_id: str) -> dict:
             raise ValueError('review_comment_invalid')
         if comment.get('line') is not None and (type(comment['line']) is not int or comment['line'] < 1):
             raise ValueError('review_comment_invalid')
+        if comment['severity'] not in ('blocking', 'optional'):
+            raise ValueError('review_comment_invalid')
+    repair = value['repair']
+    if repair is not None:
+        if value['verdict'] != 'changes_requested' or not isinstance(repair, dict) or set(repair) != {
+                'instructions', 'paths', 'check_expectations'}:
+            raise ValueError('review_repair_invalid')
+        if not isinstance(repair['instructions'], str) or not 1 <= len(repair['instructions']) <= 5000:
+            raise ValueError('review_repair_invalid')
+        paths, expectations = repair['paths'], repair['check_expectations']
+        if (not isinstance(paths, list) or not 1 <= len(paths) <= 3 or len(paths) != len(set(paths))
+                or any(not isinstance(path, str) or not path or len(path) > 1024 or path.startswith(('/', '../'))
+                       or '\\' in path or '..' in path.split('/') for path in paths)):
+            raise ValueError('review_repair_invalid')
+        if (not isinstance(expectations, list) or not 1 <= len(expectations) <= 10
+                or any(not isinstance(item, str) or not 1 <= len(item) <= 2000 for item in expectations)):
+            raise ValueError('review_repair_invalid')
+    if value['verdict'] == 'approved' and any(item['severity'] == 'blocking' for item in value['comments']):
+        raise ValueError('review_outcome_invalid')
     return value
 
 
@@ -222,6 +288,16 @@ def execute(admission: dict, workdir: Path, output_dir: Path) -> dict:
     deadline = datetime.fromisoformat(admission['deadline_at'].replace('Z', '+00:00')).timestamp()
     before = snapshot(workdir)
     is_executor = admission['kind'] == 'executor'
+    if is_executor:
+        missing = capability_preflight(admission['task']['verification_commands'], workdir)
+        if missing:
+            report = {
+                'schema_version': 2, 'agent': 'task_executor', 'task_id': admission['task_id'],
+                'status': 'blocked', 'summary': 'Execution capability preflight failed.',
+                'changed_paths': [], 'verification': [], 'verification_attempts': [],
+                'blockers': missing,
+            }
+            return {'protocol_version': 2, 'outcome': 'succeeded', 'report': report}
     tools = 'read,grep,glob,bash,edit,write' if is_executor else 'read,grep,glob,bash'
     reserve = min(300, 60 * len(admission['task']['verification_commands'])) if is_executor else 5
     model_seconds = max(0, deadline - time.time() - reserve - 5)
@@ -238,11 +314,41 @@ def execute(admission: dict, workdir: Path, output_dir: Path) -> dict:
             final_error = str(exc) if isinstance(exc, ValueError) else 'model_session_unreadable'
     if is_executor:
         after = snapshot(workdir)
-        changed = sorted(path for path in before.keys() | after.keys() if before.get(path) != after.get(path))
         checks = verification(admission['task']['verification_commands'], workdir, deadline)
+        verification_attempts = [checks]
+        failed_checks = [check for check in checks if check['exit_code']]
+        # One repair pass keeps a known local failure on the same admitted task.
+        # The worker, not the model, owns both check runs and retains both results.
+        rerun_reserve = min(300, 60 * len(admission['task']['verification_commands']))
+        repair_seconds = deadline - time.time() - rerun_reserve - 5
+        if code == 0 and not final_error and failed_checks and repair_seconds >= 30:
+            repair_output = output_dir / 'repair'
+            repair_argv = [
+                'omp', '-p', '--mode', 'text', '--model', admission['model_role'],
+                '--max-time', str(max(1, int(repair_seconds))),
+                '--session-dir', str(repair_output / 'sessions'), '--no-title', '--no-extensions',
+                '--no-skills', '--no-rules', '--no-lsp', '--no-pty', '--auto-approve',
+                '--tools', tools, model_prompt(admission, failed_checks),
+            ]
+            repair_code, repair_summary = bounded_run(
+                repair_argv, workdir, repair_seconds, MAX_MODEL_OUTPUT
+            )
+            repair_error = None
+            if repair_code == 0:
+                try:
+                    repair_summary = session_final_text(repair_output / 'sessions')
+                except (ValueError, OSError) as exc:
+                    repair_error = str(exc) if isinstance(exc, ValueError) else 'model_session_unreadable'
+            code = repair_code
+            final_error = repair_error
+            summary = repair_summary
+            after = snapshot(workdir)
+            checks = verification(admission['task']['verification_commands'], workdir, deadline)
+            verification_attempts.append(checks)
         # Verification-generated files are not model changes. The parent independently
         # validates the resulting Git diff; still reject unsafe entries created by checks.
         snapshot(workdir)
+        changed = sorted(path for path in before.keys() | after.keys() if before.get(path) != after.get(path))
         blockers = []
         if code:
             blockers.append(f'Model process failed with exit code {code}.')
@@ -253,7 +359,8 @@ def execute(admission: dict, workdir: Path, output_dir: Path) -> dict:
         blockers.extend(f"{check['name']} failed with exit code {check['exit_code']}." for check in checks if check['exit_code'])
         report = {'schema_version': 2, 'agent': 'task_executor', 'task_id': admission['task_id'],
                   'status': 'blocked' if blockers else ('ok' if changed else 'no_change'),
-                  'summary': summary[-20_000:], 'changed_paths': changed, 'verification': checks, 'blockers': blockers}
+                  'summary': summary[-20_000:], 'changed_paths': changed, 'verification': checks,
+                  'verification_attempts': verification_attempts, 'blockers': blockers}
     else:
         if snapshot(workdir) != before:
             raise ValueError('reviewer_modified_worktree')
@@ -267,7 +374,9 @@ def execute(admission: dict, workdir: Path, output_dir: Path) -> dict:
             report = {'schema_version': 2, 'agent': 'pr_reviewer', 'task_id': admission['task_id'],
                       'status': 'blocked', 'verdict': 'unable_to_review',
                       'summary': f'The reviewer did not produce a valid review ({reason[:100]}). A new review is required.',
-                      'comments': [], 'verification': []}
+                      'comments': [], 'verification': [],
+                      'failure_kind': 'transport_failed' if code or final_error else 'format_failed',
+                      'repair': None}
     return {'protocol_version': 2, 'outcome': 'succeeded', 'report': report}
 
 

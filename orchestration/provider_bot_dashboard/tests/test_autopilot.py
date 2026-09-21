@@ -103,6 +103,51 @@ class AutopilotTest(unittest.TestCase):
         self.assertEqual(1, execution.revision)
         self.assertEqual("unable_to_review", execution.review_verdict)
 
+    def test_typed_unusable_review_offers_retry_not_revision(self):
+        task = self.task("in_review")
+        task.assignee_kind = "bot"; task.assignee_profile = "senior"
+        self.execution(task, review_verdict="unable_to_review",
+                       provider_state={"review_verdict": "unable_to_review",
+                                       "review_failure_kind": "format_failed"})
+        detail = ap._snapshot(self.session, str(task.id))
+        self.assertIn("retry_review", ap._actions(detail))
+        self.assertNotIn("revise", ap._actions(detail))
+
+    def test_blocked_unusable_review_offers_same_head_retry(self):
+        task = self.task("blocked")
+        task.blocked_from_state = "in_review"
+        task.assignee_kind = "bot"; task.assignee_profile = "senior"
+        self.execution(task, review_verdict="unable_to_review",
+                       provider_state={"review_verdict": "unable_to_review"})
+        actions = ap._actions(ap._snapshot(self.session, str(task.id)))
+        self.assertIn("retry_review", actions)
+        self.assertNotIn("start", actions)
+
+    def test_small_review_repair_is_scoped_and_high_risk_repairs_fail_closed(self):
+        task = self.task("in_review")
+        task.assignee_kind = "bot"; task.assignee_profile = "senior"
+        revision = self.session.scalar(select(Revision).where(Revision.task_id == task.id))
+        revision.allowed_path_globs = ["src/**", "tests/**"]
+        revision.verification_commands = [["python3", "-m", "unittest"]]
+        execution = self.execution(task, review_verdict="changes_requested", provider_state={
+            "review_verdict": "changes_requested",
+            "review_repair": {"instructions": "Handle null input before parsing.",
+                              "paths": ["src/job.py"],
+                              "check_expectations": ["The admitted unit test passes."]},
+        })
+        detail = ap._snapshot(self.session, str(task.id))
+        self.assertIn("repair", ap._actions(detail))
+        changes = ap._review_repair_changes(self.session, task, execution)
+        self.assertIn("Handle null input", changes["planned_resolution"])
+        execution.provider_state["review_repair"]["paths"] = ["outside/job.py"]
+        with self.assertRaisesRegex(PreconditionFailed, "exceed"):
+            ap._review_repair_changes(self.session, task, execution)
+        execution.provider_state["review_repair"] = {
+            "instructions": "Apply a production schema migration.", "paths": ["src/job.py"],
+            "check_expectations": ["Migration passes."]}
+        with self.assertRaisesRegex(PreconditionFailed, "high risk"):
+            ap._review_repair_changes(self.session, task, execution)
+
     def test_blocked_start_requires_retryable_unpublished_execution(self):
         task = self.task("blocked")
         task.assignee_kind = "bot"
@@ -394,6 +439,16 @@ class AutopilotTest(unittest.TestCase):
         self.assertNotIn("Astra", comment)
         self.assertEqual("ready", task.state)
 
+    def test_advance_promotes_and_merges_an_approved_exact_head(self):
+        task = self.task("in_review"); self.execution(task); self.enable()
+        claim = ap.claim(self.session); self.session.commit()
+        self.assertIn("advance", claim["actions"])
+        provider = self.provider()
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=provider):
+            self.assertEqual("applied", self.decide(claim, "advance")["status"])
+        provider.merge_change.assert_called_once_with(17, "a" * 40)
+        self.assertEqual("ready", task.state)
+
     def test_completion_waits_for_observed_merge(self):
         task = self.task("ready"); self.execution(task)
         self.enable(); claim = ap.claim(self.session); self.session.commit()
@@ -451,7 +506,15 @@ class AutopilotTest(unittest.TestCase):
         event = self.session.scalar(select(Event).where(Event.event_type == "executive_error"))
         self.assertEqual(now + timedelta(minutes=15), datetime.fromisoformat(event.payload["revisit_at"]))
         with patch.object(ap, "utcnow", return_value=now + timedelta(seconds=61)):
-            self.assertEqual("idle", ap.claim(self.session)["status"])
+            self.assertEqual("capacity_wait", ap.claim(self.session)["status"])
+        with patch.object(ap, "utcnow", return_value=now + timedelta(minutes=16)):
+            probe = ap.claim(self.session)
+            self.assertEqual("claimed", probe["status"])
+            self.session.commit()
+            self.assertEqual("capacity_probe", ap.claim(self.session)["status"])
+            self.assertTrue(ap.status(self.session)["capacity_probe_active"])
+            self.decide(probe, "accept")
+            self.assertIsNone(ap.status(self.session)["capacity_recheck_at"])
 
     def test_human_work_still_requires_evidence_before_ready(self):
         task = self.task("in_progress"); self.enable(); claim = ap.claim(self.session); self.session.commit()

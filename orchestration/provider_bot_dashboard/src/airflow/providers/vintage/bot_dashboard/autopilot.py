@@ -7,6 +7,7 @@ leases; changed tickets or execution evidence require a new model decision.
 from __future__ import annotations
 
 import hashlib
+import fnmatch
 import json
 import secrets
 import uuid
@@ -45,7 +46,7 @@ class ClaimRequest(StrictBody):
 
 class Decision(StrictBody):
     lease_id: str = Field(pattern=r"^[a-f0-9]{64}$")
-    action: Literal["accept", "assign", "configure", "start", "revise", "ready", "merge", "complete", "block", "dismiss", "restore", "wait", "request_follow_up"]
+    action: Literal["accept", "assign", "configure", "start", "revise", "repair", "retry_review", "advance", "ready", "merge", "complete", "block", "dismiss", "restore", "wait", "request_follow_up"]
     rationale: str = Field(min_length=10, max_length=8000)
     profile: Literal["junior", "senior", "staff"] | None = None
     changes: PatchTask | None = None
@@ -116,6 +117,8 @@ def status(session: Session) -> dict:
         "task_ids": [lease["task_id"] for lease in active],
         "active_decisions": len(active),
         "concurrency": _concurrency(session),
+        "capacity_recheck_at": state.get("capacity_recheck_at"),
+        "capacity_probe_active": bool(state.get("capacity_probe_lease_id")),
     }
 
 
@@ -141,8 +144,13 @@ def failed(session: Session, body: FailedDecision) -> dict:
     state.update(leases=[item for item in _leases(state) if item["id"] != body.lease_id], last_error="The executive could not complete its decision. The executive will retry; the ticket remains available for manual action.")
     if body.reason_code == "model_rate_limited":
         state["last_error"] = "The executive connection is rate limited. Select another supported connection in Models & connections or wait for provider capacity; approval decisions remain pending."
+        state["capacity_recheck_at"] = (utcnow() + timedelta(minutes=15)).isoformat()
+        state["capacity_probe_lease_id"] = None
     elif body.reason_code == "decision_context_changed":
         state["last_error"] = "The decision context changed before it could be applied. The executive will reassess the current ticket shortly."
+    elif state.get("capacity_probe_lease_id") == body.lease_id:
+        state["capacity_recheck_at"] = None
+        state["capacity_probe_lease_id"] = None
     delay = 1 if body.reason_code == "decision_context_changed" else 15
     task = service._locked_task(session, lease["task_id"])
     service._event(session, task, "executive_error", "system", "executive", payload={
@@ -193,7 +201,18 @@ def _actions(detail):
     actions = ["wait"]
     if state == "proposed": actions += ["accept", "dismiss", "block"]
     if state == "accepted": actions += ["assign", "configure", "start", "dismiss", "block"]
-    if state == "blocked": actions += ["restore", "configure", "start", "dismiss"]
+    if state == "blocked":
+        actions += ["restore", "configure", "start", "dismiss"]
+        review_state = (latest or {}).get("provider_state") or {}
+        if (
+            detail.get("blocked_from_state") == "in_review"
+            and latest
+            and latest.get("review_verdict") == "unable_to_review"
+            and review_state.get("review_failure_kind") in {
+                None, "transport_failed", "format_failed", "evidence_unavailable"
+            }
+        ):
+            actions += ["retry_review"]
     if state == "in_progress":
         actions += ["ready", "block"]
         if (latest and latest.get("terminal_at") and latest.get("admission_kind") == "executor"
@@ -202,6 +221,17 @@ def _actions(detail):
             actions += ["configure", "start"]
     if state == "in_review":
         actions += ["configure", "block"]
+        review_state = (latest or {}).get("provider_state") or {}
+        if (
+            latest
+            and latest.get("review_verdict") == "unable_to_review"
+            and review_state.get("review_failure_kind") in {
+                None, "transport_failed", "format_failed", "evidence_unavailable"
+            }
+        ):
+            actions += ["retry_review"]
+        if latest and latest.get("review_verdict") == "changes_requested" and review_state.get("review_repair"):
+            actions += ["repair"]
         # Revising a published execution consumes a newer admitted plan; it is
         # not a way to retry an independent review of the same revision.
         if not latest or latest["terminal_at"] or current_revision > latest["revision"]:
@@ -209,6 +239,7 @@ def _actions(detail):
     if state in {"in_review", "ready"} and latest and latest["pr_number"]:
         if latest["review_verdict"] == "approved" or not latest["reviewer_required"]:
             actions += ["ready"] if state == "in_review" else ["merge", "complete"]
+            actions += ["advance"]
     if state == "ready" and (not latest or not latest["pr_number"]): actions += ["complete", "block"]
     if detail.get("follow_up_options"):
         actions += ["request_follow_up"]
@@ -223,9 +254,11 @@ def _actions(detail):
     failures = sum(e.get("revision") == current_revision and bool(e.get("terminal_at"))
                    for e in detail["executions"])
     if failures >= 3:
-        actions = [action for action in actions if action not in {"start", "revise"}]
+        actions = [action for action in actions if action not in {"start", "revise", "repair"}]
     if detail.get("assignee_kind") != "bot" or detail.get("assignee_profile") not in {"junior", "senior", "staff"}:
-        actions = [action for action in actions if action not in {"start", "revise"}]
+        actions = [action for action in actions if action not in {"start", "revise", "repair"}]
+    elif state == "accepted" and "start" in actions:
+        actions += ["advance"]
     return actions
 
 
@@ -282,6 +315,17 @@ def claim(session: Session, identity: dict | None = None) -> dict:
             if _digest(detail) != lease["digest"]:
                 raise service.Conflict("Ticket evidence changed before the executive could resume")
             return _claimed_response(lease, detail)
+    probe_id = state.get("capacity_probe_lease_id")
+    if probe_id and not any(item["id"] == probe_id for item in _leases(state)):
+        state["capacity_probe_lease_id"] = None
+        probe_id = None
+    recheck_at = state.get("capacity_recheck_at")
+    if recheck_at and recheck_at > now.isoformat():
+        _save(session, row, state)
+        return {"status": "capacity_wait", "recheck_at": recheck_at}
+    if recheck_at and probe_id:
+        _save(session, row, state)
+        return {"status": "capacity_probe", "recheck_at": recheck_at}
     if len(_leases(state)) >= _concurrency(session):
         _save(session, row, state)
         return {"status": "busy"}
@@ -334,6 +378,8 @@ def claim(session: Session, identity: dict | None = None) -> dict:
                  "owner": identity,
                  "expires_at": (now + timedelta(minutes=5)).isoformat()}
         _leases(state).append(lease)
+        if recheck_at:
+            state["capacity_probe_lease_id"] = lease["id"]
         _save(session, row, state)
         return _claimed_response(lease, detail)
     _save(session, row, state)
@@ -359,11 +405,79 @@ def _trusted_change(provider, execution):
     return value
 
 
+_REPAIR_EXCLUDED_WORDS = {
+    "credential", "secret", "security", "permission", "production", "deploy",
+    "migration", "schema migration", "drop table", "delete data", "destructive",
+    "public contract", "api contract",
+}
+
+
+def _review_repair_changes(session: Session, task: Task, execution: Execution) -> dict:
+    """Turn one small review finding into a scoped revision, or fail closed."""
+    repair = (execution.provider_state or {}).get("review_repair")
+    if not isinstance(repair, dict):
+        raise service.PreconditionFailed("Reviewer did not request a bounded repair")
+    if task.category in {"credential", "storage"}:
+        raise service.PreconditionFailed("This category requires explicit repair planning")
+    instructions = repair.get("instructions")
+    paths = repair.get("paths")
+    expectations = repair.get("check_expectations")
+    if (
+        not isinstance(instructions, str)
+        or not isinstance(paths, list)
+        or not 1 <= len(paths) <= 3
+        or len(paths) != len(set(paths))
+        or not isinstance(expectations, list)
+        or not 1 <= len(expectations) <= 10
+    ):
+        raise service.PreconditionFailed("Reviewer repair request is malformed")
+    lowered = " ".join([instructions, *[str(value) for value in expectations]]).lower()
+    if any(word in lowered for word in _REPAIR_EXCLUDED_WORDS):
+        raise service.PreconditionFailed("Review repair requires explicit planning because it is high risk")
+    revision = session.scalar(
+        select(Revision).where(Revision.task_id == task.id)
+        .order_by(Revision.revision_number.desc()).limit(1)
+    )
+    if revision is None or not revision.allowed_path_globs or not revision.verification_commands:
+        raise service.PreconditionFailed("Accepted repair scope or verification is unavailable")
+    if any(
+        not isinstance(path, str)
+        or path.startswith(("/", "../"))
+        or "\\" in path
+        or ".." in path.split("/")
+        or not any(fnmatch.fnmatchcase(path, pattern) for pattern in revision.allowed_path_globs)
+        for path in paths
+    ):
+        raise service.PreconditionFailed("Reviewer repair paths exceed the accepted scope")
+    review_text = (
+        task.planned_resolution.rstrip()
+        + "\n\nReviewer-requested bounded repair:\n"
+        + instructions.strip()
+        + "\nAffected paths: " + ", ".join(paths)
+        + "\nRegression expectations:\n- " + "\n- ".join(str(value).strip() for value in expectations)
+    )
+    if len(review_text) > 20_000:
+        raise service.PreconditionFailed("Reviewer repair instructions exceed the task plan bound")
+    return {"planned_resolution": review_text}
+
+
 def _perform(session, task, decision, lease):
     from .execution import require_executor_preconditions
     from .git_provider import get_provider
     action = decision.action
     kwargs = {"task_id": str(task.id), "version": task.version, **ACTOR}
+    if action == "advance":
+        if task.state == "accepted":
+            return _perform(session, task, decision.model_copy(update={"action": "start"}), lease)
+        if task.state == "in_review":
+            _perform(session, task, decision.model_copy(update={"action": "ready"}), lease)
+            return _perform(session, task, decision.model_copy(update={"action": "merge"}), lease)
+        if task.state == "ready":
+            execution = _latest_execution(session, task)
+            if execution and execution.merged_at and (execution.provider_state or {}).get("state") == "merged":
+                return _perform(session, task, decision.model_copy(update={"action": "complete"}), lease)
+            return _perform(session, task, decision.model_copy(update={"action": "merge"}), lease)
+        raise service.PreconditionFailed("No guarded continuation is available")
     if action == "wait": return
     if action == "assign":
         service.assign_task(session, **kwargs, actor_name="Executive", kind="bot", profile=decision.profile, reviewer_required=True)
@@ -377,6 +491,25 @@ def _perform(session, task, decision, lease):
         if not changes or set(changes) - {"planned_resolution", "verification_commands", "allowed_path_globs", "resource_keys", "follow_up_bots"}:
             raise service.DomainError("The executive may edit only the execution plan and scope")
         service.patch_task(session, **kwargs, changes=changes)
+    elif action == "retry_review":
+        from .model_recovery import retry_review_result
+        retry_review_result(
+            session, str(task.id), version=task.version, actor_id="executive",
+            idempotency_key="executive:" + lease["id"],
+            max_queued=conf.getint("bot_dashboard", "max_queued_executions", fallback=20),
+        )
+    elif action == "repair":
+        execution = _latest_execution(session, task)
+        changes = _review_repair_changes(session, task, execution)
+        service.patch_task(session, **kwargs, changes=changes, actor_kind="system")
+        require_executor_preconditions()
+        model_for_role(session, f"executor_{task.assignee_profile}")
+        model_for_role(session, "pr_reviewer")
+        service.start_task(
+            session, str(task.id), version=task.version, actor_id="executive",
+            actor_kind="system", idempotency_key="executive:" + lease["id"], revision=True,
+            max_queued=conf.getint("bot_dashboard", "max_queued_executions", fallback=20),
+        )
     elif action in {"start", "revise"}:
         if task.assignee_kind != "bot" or task.assignee_profile not in {"junior", "senior", "staff"}:
             raise service.PreconditionFailed("Assign an allowed bot profile before starting execution")
@@ -392,6 +525,12 @@ def _perform(session, task, decision, lease):
         service.start_task(session, **kwargs, idempotency_key="executive:" + lease["id"], revision=action == "revise",
                            max_queued=conf.getint("bot_dashboard", "max_queued_executions", fallback=20))
     elif action in {"ready", "merge", "complete"}:
+        stages = {
+            "ready": ("publication",),
+            "merge": ("publication", "merge"),
+            "complete": ("publication", "merge", "activation", "completion"),
+        }[action]
+        service.require_validation_gates(session, task.id, *stages)
         execution = _latest_execution(session, task)
         if execution and execution.pr_number:
             provider = get_provider()
@@ -478,7 +617,9 @@ def decide(session: Session, decision: Decision) -> dict:
         except (GitProviderError, httpx.HTTPError):
             service._event(session, task, "executive_comment_failed", "system", "executive",
                            payload={"reason": "PR comment could not be posted; the decision and rationale are retained on this ticket", "lease_id": lease["id"]})
-    state.update(leases=[item for item in _leases(state) if item["id"] != decision.lease_id], last_error=error, last_decision={"task_id": str(task.id), "title": task.title,
+    state.update(leases=[item for item in _leases(state) if item["id"] != decision.lease_id], last_error=error,
+                 capacity_recheck_at=None, capacity_probe_lease_id=None,
+                 last_decision={"task_id": str(task.id), "title": task.title,
                  "at": now.isoformat(), "action": decision.action, "rationale": decision.rationale, "result": result})
     state["receipts"] = (state.get("receipts", []) + [lease["id"]])[-50:]
     _save(session, row, state)

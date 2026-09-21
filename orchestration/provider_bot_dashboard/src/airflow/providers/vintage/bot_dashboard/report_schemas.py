@@ -154,6 +154,21 @@ class EvidenceReferenceV1(StrictModel):
     summary: str = Field(min_length=1, max_length=2000)
 
 
+class AcceptanceGateV1(StrictModel):
+    gate_key: str = Field(min_length=1, max_length=100, pattern=KEY_PATTERN)
+    stage: Literal["publication", "merge", "activation", "completion"]
+    recipe: Literal[
+        "public_source_smoke", "disposable_schema_migration", "warehouse_check",
+        "dag_inspection", "lightdash_preview", "manual",
+    ]
+    owner: str = Field(min_length=1, max_length=250)
+    required_capability: str = Field(min_length=1, max_length=250)
+    subject: str = Field(min_length=1, max_length=512)
+    dependencies: list[str] = Field(default_factory=list, max_length=20)
+    recheck_condition: str = Field(min_length=1, max_length=2000)
+    required: bool = True
+
+
 class TaskProposalV1(StrictModel):
     recommendation_key: str = Field(min_length=1, max_length=80, pattern=KEY_PATTERN)
     title: str = Field(min_length=1, max_length=200)
@@ -173,6 +188,7 @@ class TaskProposalV1(StrictModel):
     suggested_executor: Literal["junior", "senior", "staff"]
     reviewer_required: Literal[True]
     evidence: list[EvidenceReferenceV1] = Field(min_length=1, max_length=30)
+    acceptance_gates: list[AcceptanceGateV1] = Field(default_factory=list, max_length=20)
 
     @model_validator(mode="after")
     def safe_commands(self) -> "TaskProposalV1":
@@ -183,6 +199,8 @@ class TaskProposalV1(StrictModel):
             raise ValueError("allowed_path_globs must be unique")
         if len(set(self.resource_keys)) != len(self.resource_keys):
             raise ValueError("resource_keys must be unique")
+        if len({gate.gate_key for gate in self.acceptance_gates}) != len(self.acceptance_gates):
+            raise ValueError("acceptance gate keys must be unique")
         return self
 
 
@@ -239,11 +257,19 @@ class SourceSchedulingV2(StrictModel):
     agent: Literal["source_scheduling"]
     status: Literal["ok", "degraded_evidence"]
     plans: list[ImplementationPlanV2] = Field(max_length=1)
+    resolution: Literal[
+        "proposal", "already_satisfied", "attach_evidence", "revise_existing",
+        "request_validation", "blocked"
+    ] | None = None
     summary: str = Field(min_length=1, max_length=20_000)
 
     @model_validator(mode="after")
     def empty_plan_requires_evidence_blocker(self):
-        if not self.plans and self.status != "degraded_evidence":
+        if self.resolution == "proposal" and not self.plans:
+            raise ValueError("proposal resolution requires a plan")
+        if self.resolution not in {None, "proposal"} and self.plans:
+            raise ValueError("non-proposal resolution cannot create a plan")
+        if self.resolution is None and not self.plans and self.status != "degraded_evidence":
             raise ValueError("An observation-only scheduling report requires degraded_evidence")
         return self
 
@@ -299,11 +325,19 @@ class AnalyticsEngineerV2(StrictModel):
     datasets: list[str] = Field(max_length=20)
     decisions: list[str] = Field(max_length=50)
     plans: list[AnalyticsPlanV2] = Field(max_length=1)
+    resolution: Literal[
+        "proposal", "already_satisfied", "attach_evidence", "revise_existing",
+        "request_validation", "blocked"
+    ] | None = None
     summary: str = Field(min_length=1, max_length=20_000)
 
     @model_validator(mode="after")
     def observation_requires_degraded_evidence(self):
-        if not self.plans and self.status != "degraded_evidence":
+        if self.resolution == "proposal" and not self.plans:
+            raise ValueError("proposal resolution requires a plan")
+        if self.resolution not in {None, "proposal"} and self.plans:
+            raise ValueError("non-proposal resolution cannot create a plan")
+        if self.resolution is None and not self.plans and self.status != "degraded_evidence":
             raise ValueError("An observation-only analytics report requires degraded_evidence")
         return self
 
@@ -369,11 +403,19 @@ class DataAnalystV1(StrictModel):
     queries: list[str] = Field(max_length=40, description="exploratory SQL actually executed; empty when evidence is unavailable")
     analyses: list[MartAnalysisV1] = Field(max_length=6)
     plans: list[AnalyticsPlanV2] = Field(max_length=1)
+    resolution: Literal[
+        "proposal", "already_satisfied", "attach_evidence", "revise_existing",
+        "request_validation", "blocked"
+    ] | None = None
     summary: str = Field(min_length=1, max_length=20_000)
 
     @model_validator(mode="after")
     def proposals_require_measured_analysis(self):
-        if self.status == "ok" and not self.plans:
+        if self.resolution == "proposal" and not self.plans:
+            raise ValueError("proposal resolution requires a plan")
+        if self.resolution not in {None, "proposal"} and self.plans:
+            raise ValueError("non-proposal resolution cannot create a plan")
+        if self.status == "ok" and not self.plans and self.resolution is None:
             raise ValueError("An observation-only analyst report requires degraded_evidence")
         if self.plans and (not self.queries or not self.analyses):
             raise ValueError("An analyst proposal requires executed queries and measured analyses")
@@ -563,6 +605,7 @@ class TaskExecutorV2(StrictModel):
     summary: str = Field(max_length=20_000)
     changed_paths: list[str] = Field(max_length=200)
     verification: list[VerificationCheckV1] = Field(max_length=20)
+    verification_attempts: list[list[VerificationCheckV1]] = Field(default_factory=list, max_length=2)
     blockers: list[str] = Field(max_length=50)
 
 
@@ -601,6 +644,33 @@ class ReviewComment(StrictModel):
     body: str = Field(min_length=1, max_length=10_000)
     path: str | None = Field(default=None, max_length=1024)
     line: int | None = Field(default=None, ge=1)
+    severity: Literal["blocking", "optional"] = "blocking"
+
+
+class ReviewRepairRequest(StrictModel):
+    """A reviewer's bounded, advisory repair handoff.
+
+    The service still validates these paths against the accepted revision and
+    decides whether the repair is eligible for automatic admission.
+    """
+
+    instructions: str = Field(min_length=1, max_length=5000)
+    paths: list[str] = Field(min_length=1, max_length=3)
+    check_expectations: list[str] = Field(min_length=1, max_length=10)
+
+    @model_validator(mode="after")
+    def bounded_repository_paths(self):
+        if len(set(self.paths)) != len(self.paths):
+            raise ValueError("repair paths must be unique")
+        if any(
+            path.startswith(("/", "../"))
+            or "\\" in path
+            or ".." in path.split("/")
+            or len(path) > 1024
+            for path in self.paths
+        ):
+            raise ValueError("repair paths must be bounded repository-relative paths")
+        return self
 
 
 class PrReviewerV2(StrictModel):
@@ -612,6 +682,28 @@ class PrReviewerV2(StrictModel):
     summary: str = Field(max_length=20_000)
     comments: list[ReviewComment] = Field(max_length=50)
     verification: list[str] = Field(max_length=50)
+    failure_kind: Literal[
+        "transport_failed", "format_failed", "evidence_unavailable"
+    ] | None = None
+    repair: ReviewRepairRequest | None = None
+
+    @model_validator(mode="after")
+    def coherent_outcome(self):
+        if self.verdict == "unable_to_review":
+            # Adopt protocol-v2 results produced by the immediately preceding
+            # runtime. It had only one unable verdict and no typed failure key;
+            # unable was never a code approval or changes-requested verdict.
+            if self.failure_kind is None:
+                self.failure_kind = "evidence_unavailable"
+            if self.status != "blocked" or self.repair is not None:
+                raise ValueError("unable review requires a typed execution/evidence failure")
+        elif self.failure_kind is not None:
+            raise ValueError("a code verdict cannot carry a review execution failure")
+        if self.repair is not None and self.verdict != "changes_requested":
+            raise ValueError("only changes_requested may request a repair")
+        if self.verdict == "approved" and any(item.severity == "blocking" for item in self.comments):
+            raise ValueError("approved review cannot contain blocking comments")
+        return self
 
 
 ReviewerResultV2.model_rebuild()

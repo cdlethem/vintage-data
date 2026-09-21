@@ -18,7 +18,7 @@ and useful failure category without printing credentials or authenticated URLs.
 
 Keep required live-source smoke checks, warehouse builds, previews and activation
 checks as explicit separate acceptance gates in the plan, to be fulfilled through
-an appropriate bot or authorized operator workflow with actual recorded evidence.
+a named capable bot or authorized operator workflow with actual recorded evidence.
 Do not delete, weaken, or claim completion of those gates when moving their commands
 out of sandbox verification. If no approved validation path or evidence is available,
 retain the corresponding blocker. Fixture success never proves live-source success.
@@ -45,6 +45,6 @@ completed implementation and list those unresolved gates as remaining limitation
 not label its implementation BLOCKED solely because later stages have not run.
 Actual implementation failures, failed admitted checks, scope violations, or missing
 evidence explicitly required before publication remain blockers. Never relabel an
-existing blocked result or waive a gate: Astra must configure/approve the staged plan
+existing blocked result or waive a gate: the Executive must configure/approve the staged plan
 and the executor must produce a fresh report under that admission.
 """

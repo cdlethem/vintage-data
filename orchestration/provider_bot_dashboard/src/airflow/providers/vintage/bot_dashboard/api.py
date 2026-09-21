@@ -68,6 +68,8 @@ from .api_models import (
     Start,
     SyncRequest,
     Transition,
+    ValidationGateCreate,
+    ValidationGateResult,
 )
 from .db_manager import BotDashboardDBManager
 from .service import (
@@ -89,6 +91,8 @@ from .service import (
     start_task,
     task_dict,
     transition_task,
+    create_validation_gate,
+    record_validation_gate,
     usage_summary,
 )
 log = logging.getLogger(__name__)
@@ -480,6 +484,35 @@ def retry_model_task(task_id: str, body: Start, session: SessionDep, user: GetUs
     return retry_model(session, task_id, version=body.version, actor_id=_identity(user)[0],
                        idempotency_key=body.idempotency_key,
                        max_queued=conf.getint("bot_dashboard", "max_queued_executions", fallback=20))
+
+
+@auth.post("/tasks/{task_id}/retry-review", dependencies=[WRITE_TASK, Depends(_schema_guard), Depends(_executor_guard), Depends(_same_origin), Depends(action_logging())])
+def retry_review_task(task_id: str, body: Start, session: SessionDep, user: GetUserDep):
+    from .model_recovery import retry_review_result
+    if body.revision:
+        raise HTTPException(422, "Review recovery retries the same trusted head")
+    return retry_review_result(
+        session, task_id, version=body.version, actor_id=_identity(user)[0],
+        idempotency_key=body.idempotency_key,
+        max_queued=conf.getint("bot_dashboard", "max_queued_executions", fallback=20),
+    )
+
+
+@auth.post("/tasks/{task_id}/validation-gates", dependencies=WRITE_DEPS)
+def add_validation_gate(task_id: str, body: ValidationGateCreate, session: SessionDep, user: GetUserDep):
+    value = body.model_dump(exclude={"version"})
+    return create_validation_gate(
+        session, task_id, version=body.version, actor_id=_identity(user)[0], value=value
+    )
+
+
+@auth.post("/validation-gates/{gate_id}/result", dependencies=WRITE_DEPS)
+def validation_gate_result(gate_id: str, body: ValidationGateResult, session: SessionDep, user: GetUserDep):
+    return record_validation_gate(
+        session, gate_id, version=body.version, actor_id=_identity(user)[0],
+        status=body.status, subject=body.subject,
+        evidence=body.evidence.model_dump(exclude_none=True),
+    )
 
 
 @auth.post("/tasks/{task_id}/comments", dependencies=WRITE_DEPS)

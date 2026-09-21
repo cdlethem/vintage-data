@@ -102,6 +102,63 @@ class ExecutionRetryTest(unittest.TestCase):
                 self.assertTrue(row.reviewer_required);self.assertIsNone(row.review_verdict)
                 self.assertEqual('already_requested',retry_review_launch(session,str(task.id),version=version,actor_id='operator',idempotency_key='repair')['status'])
 
+    def test_unusable_review_result_retries_same_head_and_preserves_typed_failure_event(self):
+        from types import SimpleNamespace
+        from airflow.providers.vintage.bot_dashboard.model_recovery import retry_review_result
+        with Session(self.engine) as session:
+            task,row=self.fixture(session)
+            task.state='in_review';row.admission_kind='pr_reviewer';row.terminal_at=None
+            row.dispatch_state='running';row.stage='reviewed';row.review_verdict='unable_to_review'
+            row.pr_number=17;row.pr_url='https://example.test/pr/17';row.trusted_head_sha='a'*40
+            row.source_artifact_sha256='b'*64;row.provider='github';row.repository='owner/repo'
+            row.branch='candidate';row.target_branch='main';row.service_account_id='bot'
+            row.provider_state={'review_verdict':'unable_to_review','review_failure_kind':'format_failed'}
+            session.commit();version=task.version;prior_run=row.target_run_id
+            observed={'provider':'github','number':17,'head_sha':'a'*40,'head_ref':'candidate',
+                      'base_ref':'main','author_id':'bot','state':'open'}
+            with patch('airflow.providers.vintage.bot_dashboard.model_recovery.model_for_role'), patch(
+                    'airflow.providers.vintage.bot_dashboard.git_provider.load_repository_config',
+                    return_value=SimpleNamespace(provider='github',project='owner/repo')), patch(
+                    'airflow.providers.vintage.bot_dashboard.git_provider.get_provider') as provider:
+                provider.return_value.read_change.return_value=observed
+                result=retry_review_result(session,str(task.id),version=version,actor_id='executive',
+                                           idempotency_key='same-head-review')
+                self.assertEqual('queued',result['status']);self.assertEqual('pending',row.dispatch_state)
+                self.assertNotEqual(prior_run,row.target_run_id);self.assertIsNone(row.review_verdict)
+                self.assertIsNone(row.provider_state['review_failure_kind'])
+                event=session.scalar(select(Event).where(Event.event_type=='review_result_retry_requested'))
+                self.assertEqual('format_failed',event.payload['previous_failure_kind'])
+                self.assertEqual('system',event.actor_kind)
+                self.assertEqual('already_requested',retry_review_result(
+                    session,str(task.id),version=version,actor_id='executive',
+                    idempotency_key='same-head-review')['status'])
+
+    def test_blocked_unusable_review_returns_to_review_and_retries_same_head(self):
+        from types import SimpleNamespace
+        from airflow.providers.vintage.bot_dashboard.model_recovery import retry_review_result
+        with Session(self.engine) as session:
+            task,row=self.fixture(session)
+            task.blocked_from_state='in_review';row.admission_kind='pr_reviewer';row.terminal_at=None
+            row.dispatch_state='running';row.stage='reviewed';row.review_verdict='unable_to_review'
+            row.pr_number=17;row.pr_url='https://example.test/pr/17';row.trusted_head_sha='a'*40
+            row.provider='github';row.repository='owner/repo';row.branch='candidate'
+            row.target_branch='main';row.service_account_id='bot';row.provider_state={}
+            session.commit();version=task.version
+            observed={'provider':'github','number':17,'head_sha':'a'*40,'head_ref':'candidate',
+                      'base_ref':'main','author_id':'bot','state':'open'}
+            with patch('airflow.providers.vintage.bot_dashboard.model_recovery.model_for_role'), patch(
+                    'airflow.providers.vintage.bot_dashboard.git_provider.load_repository_config',
+                    return_value=SimpleNamespace(provider='github',project='owner/repo')), patch(
+                    'airflow.providers.vintage.bot_dashboard.git_provider.get_provider') as provider:
+                provider.return_value.read_change.return_value=observed
+                result=retry_review_result(session,str(task.id),version=version,actor_id='executive',
+                                           idempotency_key='blocked-review')
+            self.assertEqual('queued',result['status']);self.assertEqual('in_review',task.state)
+            self.assertIsNone(task.blocked_from_state);self.assertEqual('pending',row.dispatch_state)
+            event=session.scalar(select(Event).where(Event.event_type=='review_result_retry_requested'))
+            self.assertEqual(('blocked','in_review'),(event.from_state,event.to_state))
+            self.assertEqual('legacy_untyped',event.payload['previous_failure_kind'])
+
     def test_revision_dispatch_switches_reviewer_back_to_executor(self):
         with Session(self.engine) as session:
             task,row=self.fixture(session)

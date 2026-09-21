@@ -10,11 +10,12 @@ import stat
 import subprocess
 import tarfile
 import tempfile
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .artifacts import put_artifact, read_artifact
 from .git_provider import GitProviderError, RepositoryConfig, get_provider, load_repository_config, validate_changed_paths
-from .models import Execution, Revision, Task, utcnow
+from .models import Execution, Revision, Task, ValidationGate, utcnow
 from .service import _event
 
 
@@ -248,6 +249,16 @@ def publish_execution_change(
     ).hexdigest()
     execution.published_at = utcnow()
     execution.stage = "published"
+    # Proposal-time gates can name the future immutable candidate. Bind that
+    # placeholder exactly once at the trusted publication boundary.
+    for gate in session.scalars(select(ValidationGate).where(
+            ValidationGate.task_id == task.id,
+            ValidationGate.stage.in_(("publication", "merge")),
+            ValidationGate.subject.in_(("candidate_head", "pending_candidate")),
+            ValidationGate.status == "pending")).all():
+        gate.subject = head_sha
+        gate.version += 1
+        gate.updated_at = utcnow()
     _event(
         session,
         task,

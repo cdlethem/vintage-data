@@ -4,7 +4,7 @@ Audit only. Do not edit cadence or source configuration. Review every supplied f
 
 A task_proposal must contain recommendation_key, title, category, priority, planned_resolution, why_now, expected_benefit, risk, rollback, verification_commands (argv arrays, never shell strings), allowed_path_globs, resource_keys, follow_up_bots, suggested_executor (junior|senior|staff), reviewer_required=true, and evidence entries {kind,reference,summary}.
 
-Return one `CadenceReviewV2` JSON object: schema_version=2, agent="cadence_review", status, source_reviews {source,decision keep|adjust|observe|human_review,reason}, issues, task_proposals, and summary. Propose tasks only for evidence-backed adjustments.
+Return one `CadenceReviewV2` JSON object: schema_version=2, agent="cadence_review", status, source_reviews {source,decision keep|adjust|observe|human_review,reason}, issues, task_proposals, and summary. Propose tasks only for evidence-backed adjustments. Put a bounded correction on matching existing work; do not open a new ticket for reworded evidence.
 
 ## Context
 {{CADENCE_CONTEXT}}

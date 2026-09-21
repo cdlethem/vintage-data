@@ -315,11 +315,15 @@ def finalize_run(
         )
         publication = publish_review_comments(session, dag_id=dag_id, run_id=run_id)
         verdict = report.body_json.get("verdict")
+        failure_kind = report.body_json.get("failure_kind")
+        repair = report.body_json.get("repair")
         row.review_report_sha256 = report.sha256
         row.review_verdict = verdict
         row.provider_state = {
             **(row.provider_state or {}),
             "review_verdict": verdict,
+            "review_failure_kind": failure_kind,
+            "review_repair": repair,
         }
         target, code = previous, verdict or "review_failed"
         row.stage = "reviewed"

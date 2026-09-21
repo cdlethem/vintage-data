@@ -24,6 +24,7 @@ from .models import (
     RunBudgetClaim,
     RunReport,
     Task,
+    ValidationGate,
     TASK_STATES,
     utcnow,
 )
@@ -222,7 +223,77 @@ def get_task(session: Session, task_id: str) -> dict:
         "terminal_failure_class": getattr(row, "terminal_failure_class", None),
         "lifecycle_durations_ms": lifecycle_durations(task, row, events=task.events),
     } for row in executions]
+    value["validation_gates"] = [gate_dict(row) for row in session.scalars(
+        select(ValidationGate).where(ValidationGate.task_id == task.id)
+        .order_by(ValidationGate.stage, ValidationGate.gate_key)
+    ).all()]
     return value
+
+
+def gate_dict(row: ValidationGate) -> dict:
+    return {
+        "id": str(row.id), "task_id": str(row.task_id), "gate_key": row.gate_key,
+        "stage": row.stage, "recipe": row.recipe, "owner": row.owner,
+        "required_capability": row.required_capability, "subject": row.subject,
+        "dependencies": row.dependencies, "status": row.status, "evidence": row.evidence,
+        "recheck_condition": row.recheck_condition, "required": row.required,
+        "version": row.version, "created_at": row.created_at.isoformat(),
+        "updated_at": row.updated_at.isoformat(),
+    }
+
+
+def require_validation_gates(session: Session, task_id: uuid.UUID, *stages: str) -> None:
+    pending = session.scalars(select(ValidationGate).where(
+        ValidationGate.task_id == task_id,
+        ValidationGate.required.is_(True),
+        ValidationGate.stage.in_(stages),
+        ValidationGate.status != "passed",
+    ).order_by(ValidationGate.stage, ValidationGate.gate_key)).all()
+    if pending:
+        labels = ", ".join(f"{row.stage}:{row.gate_key} ({row.status}, owner={row.owner})" for row in pending[:5])
+        raise PreconditionFailed("Required validation gates are incomplete: " + labels)
+
+
+def create_validation_gate(session: Session, task_id: str, *, version: int, actor_id: str, value: dict) -> dict:
+    task = _locked_task(session, task_id, version)
+    if task.state in {"completed", "dismissed"}:
+        raise PreconditionFailed("Closed work cannot receive a new validation gate")
+    if session.scalar(select(ValidationGate.id).where(
+            ValidationGate.task_id == task.id, ValidationGate.gate_key == value["gate_key"])):
+        raise Conflict("Validation gate key already exists")
+    row = ValidationGate(task_id=task.id, **value)
+    session.add(row)
+    task.version += 1; task.updated_at = utcnow()
+    _event(session, task, "validation_gate_added", "user", actor_id,
+           payload={"gate_key": row.gate_key, "stage": row.stage, "recipe": row.recipe,
+                    "owner": row.owner, "subject": row.subject, "required": row.required})
+    session.flush()
+    return gate_dict(row)
+
+
+def record_validation_gate(session: Session, gate_id: str, *, version: int, actor_id: str,
+                           status: str, subject: str, evidence: dict) -> dict:
+    try:
+        identity = uuid.UUID(gate_id)
+    except ValueError as exc:
+        raise NotFound("validation gate not found") from exc
+    row = session.scalar(select(ValidationGate).where(ValidationGate.id == identity).with_for_update())
+    if row is None:
+        raise NotFound("validation gate not found")
+    if row.version != version:
+        raise Conflict("Validation gate version is stale")
+    if subject != row.subject:
+        raise PreconditionFailed("Validation evidence belongs to a different subject")
+    if not evidence.get("observation") and not evidence.get("url"):
+        raise PreconditionFailed("Validation result requires an observed result or evidence URL")
+    row.status = status; row.evidence = evidence; row.version += 1; row.updated_at = utcnow()
+    task = _locked_task(session, str(row.task_id))
+    task.version += 1; task.updated_at = utcnow()
+    _event(session, task, "validation_gate_recorded", "user", actor_id,
+           payload={"gate_key": row.gate_key, "stage": row.stage, "status": status,
+                    "subject": subject, "evidence": evidence})
+    session.flush()
+    return gate_dict(row)
 
 
 def _cursor(offset: int) -> str:
@@ -1385,6 +1456,30 @@ def _task_proposals(payload_schema: str, payload: dict) -> list[dict]:
     return []
 
 
+def _reconcile_proposed_gates(session: Session, task: Task, proposal: dict) -> None:
+    """Create/update pending gate contracts; never erase observed gate history."""
+    for value in proposal.get("acceptance_gates", []):
+        row = session.scalar(select(ValidationGate).where(
+            ValidationGate.task_id == task.id,
+            ValidationGate.gate_key == value["gate_key"],
+        ).with_for_update())
+        fields = {
+            "stage": value["stage"], "recipe": value["recipe"], "owner": value["owner"],
+            "required_capability": value["required_capability"], "subject": value["subject"],
+            "dependencies": value.get("dependencies", []),
+            "recheck_condition": value["recheck_condition"], "required": value.get("required", True),
+        }
+        if row is None:
+            session.add(ValidationGate(task_id=task.id, gate_key=value["gate_key"], **fields))
+        elif row.status == "pending":
+            changed = any(getattr(row, key) != item for key, item in fields.items())
+            for key, item in fields.items():
+                setattr(row, key, item)
+            if changed:
+                row.version += 1
+                row.updated_at = utcnow()
+
+
 def reconcile_recommendations(
     session: Session, report: RunReport, payload: dict
 ) -> dict[str, int]:
@@ -1487,6 +1582,7 @@ def reconcile_recommendations(
             source_map_index=report.map_index,
         )
         session.add(revision)
+        _reconcile_proposed_gates(session, task, proposal)
         policy = session.scalar(
             select(Policy)
             .where(Policy.category.in_((proposal["category"], "*")))
