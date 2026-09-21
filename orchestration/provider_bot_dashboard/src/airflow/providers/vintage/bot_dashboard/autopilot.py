@@ -165,6 +165,17 @@ def failed(session: Session, body: FailedDecision) -> dict:
 
 def _snapshot(session: Session, task_id: str) -> dict:
     detail = service.get_task(session, task_id)
+    from .validation_recipes import available_capabilities, installed_recipe_catalog, ValidationRecipeError
+    try:
+        capabilities = available_capabilities()
+        detail["validation_recipes"] = {
+            key: value for key, value in installed_recipe_catalog().items()
+            if value["capability"] in capabilities
+        }
+        detail["validation_capabilities"] = sorted(capabilities)
+    except ValidationRecipeError as exc:
+        detail["validation_recipes"] = {}
+        detail["validation_capability_error"] = str(exc)
     # Bound model context without changing the authoritative history. Preserve
     # material events separately so repeated executive bookkeeping cannot push
     # the evidence which should wake a parked ticket out of the model context.
@@ -213,7 +224,9 @@ def _digest(detail):
     executions = [{k: v for k, v in e.items() if k not in {"synced_at", "lifecycle_durations_ms"}} for e in detail["executions"]]
     evidence = [detail["version"], detail["state"], detail.get("blocked_from_state"), executions,
                 detail["events"], detail.get("reports"), detail.get("follow_up_options"),
-                detail.get("linked_follow_ups"), detail.get("validation_gates"), detail.get("planning_requests")]
+                detail.get("linked_follow_ups"), detail.get("validation_gates"), detail.get("planning_requests"),
+                detail.get("validation_recipes"), detail.get("validation_capabilities"),
+                detail.get("validation_capability_error")]
     return hashlib.sha256(json.dumps(evidence, sort_keys=True, default=str).encode()).hexdigest()
 
 
@@ -279,7 +292,6 @@ def _actions(detail):
         actions += ["request_follow_up"]
     if (state in {"ready", "in_review", "blocked"} and latest and not latest.get("terminal_at")
             and latest.get("pr_number") and not latest.get("merged_at")
-            and current_revision == latest.get("revision")
             and (latest.get("provider_state") or {}).get("mergeability") == "conflicting"):
         # A repository conflict is owned by Autopilot. Make the guarded repair
         # the only decision so it cannot be mislabeled as a wait or human blocker.

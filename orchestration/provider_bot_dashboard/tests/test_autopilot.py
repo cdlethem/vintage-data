@@ -425,6 +425,9 @@ class AutopilotTest(unittest.TestCase):
             "state": "open", "draft": True, "head_sha": "a" * 40,
             "mergeability": "conflicting",
         })
+        patch_task(self.session, str(task.id), version=task.version, actor_id="executive",
+                   actor_kind="system", changes={"planned_resolution": "Use the latest accepted scope for repair"})
+        self.session.commit()
         self.assertEqual(["repair_conflict"], ap._actions(ap._snapshot(self.session, str(task.id))))
 
     def test_wait_is_audited_without_spamming_the_pull_request(self):

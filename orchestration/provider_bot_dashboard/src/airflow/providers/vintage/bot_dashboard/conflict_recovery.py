@@ -41,8 +41,8 @@ def _require_current_candidate(task: Task, row: Execution) -> Revision:
                 row.service_account_id, row.trusted_head_sha, row.source_artifact_sha256)):
         raise PreconditionFailed("published candidate identity or immutable evidence is incomplete")
     revision = task.revisions[-1] if task.revisions else None
-    if revision is None or revision.revision_number != row.revision:
-        raise PreconditionFailed("merge-conflict repair requires the current accepted revision")
+    if revision is None:
+        raise PreconditionFailed("merge-conflict repair requires an accepted revision")
     if not revision.verification_commands or not revision.allowed_path_globs:
         raise PreconditionFailed("merge-conflict repair requires fresh verification and path scope")
     return revision
