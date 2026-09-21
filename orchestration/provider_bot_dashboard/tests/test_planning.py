@@ -77,6 +77,31 @@ class PlanningTest(unittest.TestCase):
         with self.assertRaises(service.PreconditionFailed):
             planning.validate(*args)
 
+    def test_failed_unpublished_execution_can_request_internal_dependency_planning(self):
+        self.task.blocked_from_state = "in_progress"
+        self.execution.stage = "terminal"
+        self.execution.dispatch_state = "terminal"
+        self.execution.admission_kind = "executor"
+        self.execution.terminal_at = utcnow()
+        self.execution.terminal_reason_code = "execution_blocked"
+        self.execution.pr_number = None
+        self.execution.pr_url = None
+        self.execution.trusted_head_sha = None
+        self.execution.review_verdict = None
+        self.execution.provider_state = {}
+        self.execution.base_sha = "b" * 40
+        self.s.commit()
+        self.assertEqual(["analytics_engineer"], planning.options(
+            self.s, self.task, self.execution, self.revision
+        ))
+        event = self.request()
+        self.assertEqual("b" * 40, event.payload["head_sha"])
+        identity = {"dag_id": "bot__analytics_engineer", "run_id": event.payload["run_id"]}
+        conf = {"planning_request_id": event.id}
+        self.assertIn("distinct analysis work", planning.validate(
+            self.s, identity, conf, self.task, self.execution, self.revision, "analytics_engineer"
+        ))
+
     def test_dispatch_is_idempotent_and_uses_only_recorded_identity(self):
         event = self.request()
         session = Mock()

@@ -7,13 +7,34 @@ from . import service
 BOTS = {"analytics_engineer", "data_analyst", "source_scheduling"}
 
 
+def _subject(execution):
+    return execution.trusted_head_sha or execution.base_sha
+
+
+def _eligible(task, execution) -> bool:
+    if task.state not in {"blocked", "in_review", "ready"} or not execution or execution.merged_at:
+        return False
+    published = (
+        execution.stage == "reviewed"
+        and bool(execution.pr_number and execution.trusted_head_sha)
+        and execution.review_verdict in {"changes_requested", "approved", "unable_to_review"}
+        and (execution.provider_state or {}).get("state") == "open"
+        and (execution.provider_state or {}).get("head_sha") == execution.trusted_head_sha
+    )
+    failed_unpublished = (
+        task.state == "blocked"
+        and execution.admission_kind == "executor"
+        and execution.terminal_at is not None
+        and execution.terminal_reason_code not in {None, "no_change"}
+        and not execution.pr_number
+        and not execution.pr_url
+        and bool(execution.base_sha)
+    )
+    return published or failed_unpublished
+
+
 def options(session, task, execution, revision):
-    if (task.state not in {"blocked", "in_review", "ready"} or not execution or not revision
-            or execution.stage != "reviewed" or not execution.pr_number
-            or not execution.trusted_head_sha or execution.merged_at
-            or execution.review_verdict not in {"changes_requested", "approved", "unable_to_review"}
-            or (execution.provider_state or {}).get("state") != "open"
-            or (execution.provider_state or {}).get("head_sha") != execution.trusted_head_sha):
+    if not revision or not _eligible(task, execution):
         return []
     requested = {}
     for event in _requests(session, task, execution, revision):
@@ -53,7 +74,7 @@ def request(session, task, bot, rationale):
     if attempt > 1:
         run_id += f"__retry_{attempt}"
     service._event(session, task, "planning_requested", "system", "executive", payload={
-        "bot": bot, "execution_id": execution.execution_id, "head_sha": execution.trusted_head_sha,
+        "bot": bot, "execution_id": execution.execution_id, "head_sha": _subject(execution),
         "revision_number": revision.revision_number, "run_id": run_id, "request": rationale, "attempt": attempt,
     })
     # This is only a planning request. Parent state, execution and review are unchanged.
@@ -93,16 +114,15 @@ def validate(session, identity, conf, task, execution, revision, bot):
     expected = f"planning__{task.id}__{execution.sequence}__r{revision.revision_number}__{bot}"
     if p.get("attempt", 1) == 2:
         expected += "__retry_2"
+    subject = _subject(execution)
     if (not event or event.task_id != task.id or event.event_type != "planning_requested"
             or event.actor_id != "executive" or event.actor_kind != "system"
             or p.get("bot") != bot or p.get("execution_id") != execution.execution_id
-            or p.get("head_sha") != execution.trusted_head_sha
+            or p.get("head_sha") != subject
             or p.get("revision_number") != revision.revision_number
             or p.get("run_id") != expected or identity["run_id"] != expected
             or task.state in {"completed", "dismissed"}
-            or not execution.pr_number or not execution.trusted_head_sha
-            or (execution.provider_state or {}).get("state") not in {"open", "merged"}
-            or (execution.provider_state or {}).get("head_sha") != execution.trusted_head_sha):
+            or not _eligible(task, execution)):
         raise service.PreconditionFailed("Planning requires its exact recorded executive request and trusted PR")
     return p["request"]
 
