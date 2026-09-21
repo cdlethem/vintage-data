@@ -12,7 +12,7 @@ def _subject(execution):
 
 
 def _eligible(task, execution) -> bool:
-    if task.state not in {"blocked", "in_review", "ready"} or not execution or execution.merged_at:
+    if task.state not in {"blocked", "in_progress", "in_review", "ready"} or not execution or execution.merged_at:
         return False
     published = (
         execution.stage == "reviewed"
@@ -22,7 +22,7 @@ def _eligible(task, execution) -> bool:
         and (execution.provider_state or {}).get("head_sha") == execution.trusted_head_sha
     )
     failed_unpublished = (
-        task.state == "blocked"
+        task.state in {"blocked", "in_progress"}
         and execution.admission_kind == "executor"
         and execution.terminal_at is not None
         and execution.terminal_reason_code not in {None, "no_change"}
