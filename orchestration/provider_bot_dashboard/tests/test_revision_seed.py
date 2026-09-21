@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 import test_execution_retry as fixtures
 from airflow.providers.vintage.bot_dashboard import service
 from airflow.providers.vintage.bot_dashboard.models import Execution, utcnow
-from airflow.providers.vintage.bot_dashboard.revision_seed import get_seed
+from airflow.providers.vintage.bot_dashboard.revision_seed import capture_seed, get_seed
 from bots.admitted_runner import _initialize_baseline, _git, _apply_revision_seed
 
 
@@ -20,6 +20,22 @@ class RevisionSeedTest(unittest.TestCase):
     setUp = fixtures.ExecutionRetryTest.setUp
     tearDown = fixtures.ExecutionRetryTest.tearDown
     fixture = fixtures.ExecutionRetryTest.fixture
+
+    def test_expired_optional_reports_do_not_block_reproducible_repair(self):
+        with Session(self.engine) as session:
+            _, row = self.fixture(session)
+            row.base_sha = "a" * 40
+            row.source_artifact_sha256 = "b" * 64
+            row.patch_sha256 = "c" * 64
+            row.executor_report_sha256 = "d" * 64
+            row.review_report_sha256 = "e" * 64
+            with patch("airflow.providers.vintage.bot_dashboard.artifacts.read_artifact") as read:
+                read.side_effect = lambda _, digest: (_ for _ in ()).throw(FileNotFoundError()) if digest in {"d" * 64, "e" * 64} else None
+                seed = capture_seed(session, row)
+            self.assertEqual("b" * 64, seed["source_artifact_sha256"])
+            self.assertEqual("c" * 64, seed["patch_sha256"])
+            self.assertIsNone(seed["executor_report_sha256"])
+            self.assertIsNone(seed["review_report_sha256"])
     def test_revision_and_retry_preserve_candidate_without_carrying_approval(self):
         with Session(self.engine) as session:
             task, row = self.fixture(session)

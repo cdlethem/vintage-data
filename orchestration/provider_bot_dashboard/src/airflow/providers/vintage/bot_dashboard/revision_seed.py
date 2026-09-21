@@ -26,16 +26,25 @@ def capture_seed(session, execution):
         raise PreconditionFailed("Revision requires the previous immutable source and patch")
     read_artifact(session, execution.source_artifact_sha256)
     read_artifact(session, execution.patch_sha256)
-    for digest in (execution.executor_report_sha256, execution.review_report_sha256):
+    report_digests = {}
+    for key in ("executor_report_sha256", "review_report_sha256"):
+        digest = getattr(execution, key)
         if digest:
-            read_artifact(session, digest)
+            try:
+                read_artifact(session, digest)
+            except FileNotFoundError:
+                # Reports are historical context, while source and patch are the
+                # executable repair seed. A retention expiry must not turn an
+                # otherwise reproducible conflict into a human blocker.
+                digest = None
+        report_digests[key] = digest
     return {
         **{key: getattr(execution, key) for key in (
             "base_sha", "source_artifact_sha256", "patch_sha256", "provider",
             "repository", "target_branch", "revision", "execution_id", "pr_number",
-            "pr_url", "trusted_head_sha", "executor_report_sha256",
-            "review_report_sha256", "verification_manifest",
+            "pr_url", "trusted_head_sha", "verification_manifest",
         )},
+        **report_digests,
         "review_failure_kind": (execution.provider_state or {}).get("review_failure_kind"),
         "review_repair": (execution.provider_state or {}).get("review_repair"),
     }
