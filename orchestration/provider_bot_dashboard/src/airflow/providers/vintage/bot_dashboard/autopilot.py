@@ -428,8 +428,8 @@ def claim(session: Session, identity: dict | None = None) -> dict:
         & (latest_terminal_reason != "no_change")
         & latest_pr_number.is_(None)
     )
-    phase = case((latest_mergeability == "conflicting", 0),
-                 (retryable_blocked, 1),
+    phase = case((retryable_blocked, 0),
+                 (latest_mergeability == "conflicting", 1),
                  (Task.state == "ready", 2),
                  ((Task.state == "in_review") & (latest_verdict == "approved"), 3),
                  ((Task.state == "in_review") & (planned_revision > executed_revision), 4),
