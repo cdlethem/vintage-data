@@ -429,6 +429,10 @@ class AutopilotTest(unittest.TestCase):
                    actor_kind="system", changes={"planned_resolution": "Use the latest accepted scope for repair"})
         self.session.commit()
         self.assertEqual(["repair_conflict"], ap._actions(ap._snapshot(self.session, str(task.id))))
+        self.enable()
+        claim = ap.claim(self.session)
+        self.assertEqual(str(task.id), claim["task"]["id"])
+        self.assertEqual(["repair_conflict"], claim["actions"])
 
     def test_wait_is_audited_without_spamming_the_pull_request(self):
         task = self.task("in_review")

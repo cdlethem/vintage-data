@@ -390,6 +390,9 @@ def claim(session: Session, identity: dict | None = None) -> dict:
     # Four cycles favor finishing work already underway. Every fifth cycle uses
     # pure age ordering so new recommendations and blockers cannot starve.
     latest_verdict = select(Execution.review_verdict).where(Execution.task_id == Task.id).order_by(Execution.sequence.desc()).limit(1).scalar_subquery()
+    latest_mergeability = select(Execution.provider_state["mergeability"].as_string()).where(
+        Execution.task_id == Task.id,
+    ).order_by(Execution.sequence.desc()).limit(1).scalar_subquery()
     executed_revision = select(Execution.revision).where(Execution.task_id == Task.id).order_by(Execution.sequence.desc()).limit(1).scalar_subquery()
     planned_revision = select(func.max(Revision.revision_number)).where(Revision.task_id == Task.id).scalar_subquery()
     latest_action = select(Event.payload["action"].as_string()).where(
@@ -404,11 +407,12 @@ def claim(session: Session, identity: dict | None = None) -> dict:
     prepared = ((Task.state == "accepted") & (Task.assignee_kind == "bot")
                 & Task.assignee_profile.in_(["junior", "senior", "staff"])
                 & (latest_action == "configure") & (latest_result == "applied"))
-    phase = case((Task.state == "ready", 0),
-                 ((Task.state == "in_review") & (latest_verdict == "approved"), 1),
-                 ((Task.state == "in_review") & (planned_revision > executed_revision), 2),
-                 (Task.state == "in_review", 3), (prepared, 4), (Task.state == "accepted", 5),
-                 (Task.state == "in_progress", 6), (Task.state == "proposed", 7), else_=8)
+    phase = case((latest_mergeability == "conflicting", 0),
+                 (Task.state == "ready", 1),
+                 ((Task.state == "in_review") & (latest_verdict == "approved"), 2),
+                 ((Task.state == "in_review") & (planned_revision > executed_revision), 3),
+                 (Task.state == "in_review", 4), (prepared, 5), (Task.state == "accepted", 6),
+                 (Task.state == "in_progress", 7), (Task.state == "proposed", 8), else_=9)
     ordering = aging if now.minute % 5 == 0 else [phase, *aging]
     candidates = session.scalars(select(Task).outerjoin(last, Task.id == last.c.task_id)
         .where(Task.state.in_(["proposed", "accepted", "blocked", "in_progress", "in_review", "ready"]), ~active_worker)
@@ -419,7 +423,7 @@ def claim(session: Session, identity: dict | None = None) -> dict:
             continue
         detail = _snapshot(session, str(task.id))
         actions = _actions(detail)
-        if len(actions) < 2:
+        if not actions:
             continue
         latest = session.scalar(select(Event).where(Event.task_id == task.id, Event.event_type.in_(["executive_decision", "executive_error"])).order_by(Event.sequence.desc()).limit(1))
         if latest:
