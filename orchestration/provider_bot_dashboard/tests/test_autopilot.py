@@ -103,6 +103,45 @@ class AutopilotTest(unittest.TestCase):
         self.assertEqual(1, execution.revision)
         self.assertEqual("unable_to_review", execution.review_verdict)
 
+    def test_blocked_start_requires_retryable_unpublished_execution(self):
+        task = self.task("blocked")
+        task.assignee_kind = "bot"
+        task.assignee_profile = "senior"
+        task.blocked_from_state = "in_progress"
+        self.session.commit()
+        self.assertNotIn("start", ap._actions(ap._snapshot(self.session, str(task.id))))
+        from airflow.providers.vintage.bot_dashboard.models import utcnow
+        execution = self.execution(task, stage="terminal", dispatch_state="terminal",
+                                   terminal_at=utcnow(), terminal_reason_code="execution_blocked",
+                                   pr_number=None, pr_url=None)
+        self.assertIn("start", ap._actions(ap._snapshot(self.session, str(task.id))))
+        execution.pr_number = 17
+        self.session.commit()
+        self.assertNotIn("start", ap._actions(ap._snapshot(self.session, str(task.id))))
+        execution.pr_number = None
+        execution.terminal_reason_code = "no_change"
+        self.session.commit()
+        self.assertNotIn("start", ap._actions(ap._snapshot(self.session, str(task.id))))
+
+    def test_exhausted_plan_offers_configuration_before_another_retry(self):
+        task = self.task("accepted")
+        task.assignee_kind = "bot"
+        task.assignee_profile = "senior"
+        self.session.commit()
+        from airflow.providers.vintage.bot_dashboard.models import utcnow
+        for sequence in range(1, 4):
+            self.execution(task, sequence=sequence, execution_id=str(sequence) * 64,
+                           idempotency_key=f"attempt-{sequence}", stage="terminal",
+                           dispatch_state="terminal", terminal_at=utcnow(),
+                           terminal_reason_code="execution_blocked", pr_number=None, pr_url=None)
+        actions = ap._actions(ap._snapshot(self.session, str(task.id)))
+        self.assertIn("configure", actions)
+        self.assertNotIn("start", actions)
+        patch_task(self.session, str(task.id), version=task.version, actor_id="owner",
+                   changes={"planned_resolution": "Resolve the diagnosed environment mismatch"})
+        self.session.commit()
+        self.assertIn("start", ap._actions(ap._snapshot(self.session, str(task.id))))
+
     def test_claim_replay_recovers_lost_response_without_a_second_decision(self):
         self.task(); self.enable()
         owner = {"dag_id": "bot__executive", "run_id": "run-one", "task_id": "run", "map_index": -1}

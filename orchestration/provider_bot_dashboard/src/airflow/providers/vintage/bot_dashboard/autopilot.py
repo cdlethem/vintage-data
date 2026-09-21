@@ -187,6 +187,7 @@ def _digest(detail):
 def _actions(detail):
     state = detail["state"]
     latest = detail["executions"][-1] if detail["executions"] else None
+    current_revision = max((r["revision_number"] for r in detail.get("revisions", [])), default=0)
     if latest and not latest["terminal_at"] and latest["stage"] not in {"reviewed", "provider_sync"}:
         return []  # An admitted executor/reviewer owns this decision point.
     actions = ["wait"]
@@ -201,7 +202,6 @@ def _actions(detail):
             actions += ["configure", "start"]
     if state == "in_review":
         actions += ["configure", "block"]
-        current_revision = max((r["revision_number"] for r in detail.get("revisions", [])), default=0)
         # Revising a published execution consumes a newer admitted plan; it is
         # not a way to retry an independent review of the same revision.
         if not latest or latest["terminal_at"] or current_revision > latest["revision"]:
@@ -212,6 +212,18 @@ def _actions(detail):
     if state == "ready" and (not latest or not latest["pr_number"]): actions += ["complete", "block"]
     if detail.get("follow_up_options"):
         actions += ["request_follow_up"]
+    if state == "blocked" and not (
+        detail.get("blocked_from_state") in {"accepted", "in_progress"}
+        and latest and latest.get("terminal_at")
+        and latest.get("admission_kind") == "executor"
+        and latest.get("terminal_reason_code") not in {None, "no_change"}
+        and not any(e.get("pr_number") or e.get("pr_url") for e in detail["executions"])
+    ):
+        actions = [action for action in actions if action != "start"]
+    failures = sum(e.get("revision") == current_revision and bool(e.get("terminal_at"))
+                   for e in detail["executions"])
+    if failures >= 3:
+        actions = [action for action in actions if action not in {"start", "revise"}]
     if detail.get("assignee_kind") != "bot" or detail.get("assignee_profile") not in {"junior", "senior", "staff"}:
         actions = [action for action in actions if action not in {"start", "revise"}]
     return actions
