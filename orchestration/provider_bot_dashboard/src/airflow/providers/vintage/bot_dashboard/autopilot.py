@@ -393,6 +393,18 @@ def claim(session: Session, identity: dict | None = None) -> dict:
     latest_mergeability = select(Execution.provider_state["mergeability"].as_string()).where(
         Execution.task_id == Task.id,
     ).order_by(Execution.sequence.desc()).limit(1).scalar_subquery()
+    latest_terminal_at = select(Execution.terminal_at).where(
+        Execution.task_id == Task.id,
+    ).order_by(Execution.sequence.desc()).limit(1).scalar_subquery()
+    latest_admission_kind = select(Execution.admission_kind).where(
+        Execution.task_id == Task.id,
+    ).order_by(Execution.sequence.desc()).limit(1).scalar_subquery()
+    latest_terminal_reason = select(Execution.terminal_reason_code).where(
+        Execution.task_id == Task.id,
+    ).order_by(Execution.sequence.desc()).limit(1).scalar_subquery()
+    latest_pr_number = select(Execution.pr_number).where(
+        Execution.task_id == Task.id,
+    ).order_by(Execution.sequence.desc()).limit(1).scalar_subquery()
     executed_revision = select(Execution.revision).where(Execution.task_id == Task.id).order_by(Execution.sequence.desc()).limit(1).scalar_subquery()
     planned_revision = select(func.max(Revision.revision_number)).where(Revision.task_id == Task.id).scalar_subquery()
     latest_action = select(Event.payload["action"].as_string()).where(
@@ -407,12 +419,22 @@ def claim(session: Session, identity: dict | None = None) -> dict:
     prepared = ((Task.state == "accepted") & (Task.assignee_kind == "bot")
                 & Task.assignee_profile.in_(["junior", "senior", "staff"])
                 & (latest_action == "configure") & (latest_result == "applied"))
+    retryable_blocked = (
+        (Task.state == "blocked")
+        & Task.blocked_from_state.in_(["accepted", "in_progress"])
+        & latest_terminal_at.is_not(None)
+        & (latest_admission_kind == "executor")
+        & latest_terminal_reason.is_not(None)
+        & (latest_terminal_reason != "no_change")
+        & latest_pr_number.is_(None)
+    )
     phase = case((latest_mergeability == "conflicting", 0),
-                 (Task.state == "ready", 1),
-                 ((Task.state == "in_review") & (latest_verdict == "approved"), 2),
-                 ((Task.state == "in_review") & (planned_revision > executed_revision), 3),
-                 (Task.state == "in_review", 4), (prepared, 5), (Task.state == "accepted", 6),
-                 (Task.state == "in_progress", 7), (Task.state == "proposed", 8), else_=9)
+                 (retryable_blocked, 1),
+                 (Task.state == "ready", 2),
+                 ((Task.state == "in_review") & (latest_verdict == "approved"), 3),
+                 ((Task.state == "in_review") & (planned_revision > executed_revision), 4),
+                 (Task.state == "in_review", 5), (prepared, 6), (Task.state == "accepted", 7),
+                 (Task.state == "in_progress", 8), (Task.state == "proposed", 9), else_=10)
     ordering = aging if now.minute % 5 == 0 else [phase, *aging]
     candidates = session.scalars(select(Task).outerjoin(last, Task.id == last.c.task_id)
         .where(Task.state.in_(["proposed", "accepted", "blocked", "in_progress", "in_review", "ready"]), ~active_worker)

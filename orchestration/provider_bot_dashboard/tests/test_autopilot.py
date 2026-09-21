@@ -253,6 +253,29 @@ class AutopilotTest(unittest.TestCase):
             value = ap.claim(self.session)
         self.assertEqual(str(proposed.id), value["task"]["id"])
 
+    def test_retryable_blocked_execution_is_prioritized_for_resolution(self):
+        from datetime import datetime, timezone
+        from airflow.providers.vintage.bot_dashboard.models import utcnow
+        self.task("ready")
+        blocked = self.task("blocked")
+        blocked.assignee_kind = "bot"
+        blocked.assignee_profile = "senior"
+        blocked.blocked_from_state = "in_progress"
+        self.execution(
+            blocked,
+            stage="terminal",
+            dispatch_state="terminal",
+            terminal_at=utcnow(),
+            terminal_reason_code="unresolved_revision_seed_conflict",
+            pr_number=None,
+            pr_url=None,
+        )
+        self.enable()
+        with patch.object(ap, "utcnow", return_value=datetime(2026, 9, 17, 16, 1, tzinfo=timezone.utc)):
+            result = ap.claim(self.session)
+        self.assertEqual(str(blocked.id), result["task"]["id"])
+        self.assertIn("start", result["actions"])
+
     def test_approved_review_precedes_an_unresolved_review(self):
         from datetime import datetime, timezone
         unresolved = self.task("in_review"); self.execution(unresolved, review_verdict="changes_requested")
