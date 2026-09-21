@@ -105,6 +105,13 @@ LIFECYCLE_PHASES = (
 def _milliseconds(start: datetime | None, end: datetime | None) -> int | None:
     if start is None or end is None:
         return None
+    # SQLite drops timezone metadata even for timezone-aware columns while
+    # freshly assigned lifecycle timestamps remain UTC-aware in the session.
+    # Normalize that mixed representation before calculating a duration.
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=timezone.utc)
+    if end.tzinfo is None:
+        end = end.replace(tzinfo=timezone.utc)
     return max(0, int((end - start).total_seconds() * 1000))
 
 

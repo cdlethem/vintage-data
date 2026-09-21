@@ -28,6 +28,8 @@ from . import service
 
 KEY = "bot_dashboard_autopilot"
 ACTOR = {"actor_id": "executive", "actor_kind": "system"}
+EXECUTIVE_META_EVENTS = {"executive_decision", "executive_error", "executive_comment_failed"}
+PARKING_ACTIONS = {"wait", "block"}
 
 
 class Toggle(StrictBody):
@@ -163,10 +165,30 @@ def failed(session: Session, body: FailedDecision) -> dict:
 
 def _snapshot(session: Session, task_id: str) -> dict:
     detail = service.get_task(session, task_id)
-    # Bound model context without changing the authoritative history.
+    # Bound model context without changing the authoritative history. Preserve
+    # material events separately so repeated executive bookkeeping cannot push
+    # the evidence which should wake a parked ticket out of the model context.
     detail["revisions"] = detail["revisions"][-2:]
-    detail["events"] = detail["events"][-20:]
+    events = detail["events"]
+    detail["events"] = [event for event in events if event["event_type"] not in EXECUTIVE_META_EVENTS][-20:]
+    detail["executive_history"] = [event for event in events if event["event_type"] == "executive_decision"][-5:]
     detail["executions"] = detail["executions"][-3:]
+    linked = session.scalars(select(Event).where(
+        Event.task_id == uuid.UUID(task_id), Event.event_type == "follow_up_ticket_linked",
+    ).order_by(Event.sequence.desc()).limit(20)).all()
+    child_ids = []
+    for event in linked:
+        try:
+            child_ids.append(uuid.UUID(str(event.payload.get("task_id"))))
+        except (TypeError, ValueError):
+            continue
+    children = {row.id: row for row in session.scalars(select(Task).where(Task.id.in_(child_ids))).all()} if child_ids else {}
+    detail["linked_follow_ups"] = [{
+        "task_id": str(child_id),
+        "title": event.payload.get("title"),
+        "state": children[child_id].state if child_id in children else "missing",
+        "completed_at": children[child_id].completed_at.isoformat() if child_id in children and children[child_id].completed_at else None,
+    } for event in reversed(linked) if (child_id := _payload_uuid(event.payload.get("task_id")))]
     rows = session.scalars(select(Execution).where(Execution.task_id == uuid.UUID(task_id)).order_by(Execution.sequence.desc()).limit(1)).all()
     if rows:
         execution = rows[0]
@@ -188,8 +210,17 @@ def _snapshot(session: Session, task_id: str) -> dict:
 def _digest(detail):
     # Sync timestamps/duration counters can move without changing evidence.
     executions = [{k: v for k, v in e.items() if k not in {"synced_at", "lifecycle_durations_ms"}} for e in detail["executions"]]
-    evidence = [detail["version"], executions, detail["events"], detail.get("reports"), detail.get("follow_up_options")]
+    evidence = [detail["version"], detail["state"], detail.get("blocked_from_state"), executions,
+                detail["events"], detail.get("reports"), detail.get("follow_up_options"),
+                detail.get("linked_follow_ups")]
     return hashlib.sha256(json.dumps(evidence, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def _payload_uuid(value):
+    try:
+        return uuid.UUID(str(value))
+    except (TypeError, ValueError):
+        return None
 
 
 def _actions(detail):
@@ -370,6 +401,13 @@ def claim(session: Session, identity: dict | None = None) -> dict:
             continue
         latest = session.scalar(select(Event).where(Event.task_id == task.id, Event.event_type.in_(["executive_decision", "executive_error"])).order_by(Event.sequence.desc()).limit(1))
         if latest:
+            parked_digest = latest.payload.get("result_context_sha256")
+            if (latest.event_type == "executive_decision"
+                    and latest.payload.get("action") in PARKING_ACTIONS
+                    and latest.payload.get("result") == "applied"
+                    and latest.payload.get("result_version") == task.version
+                    and parked_digest == _digest(detail)):
+                continue
             retry = latest.payload.get("revisit_at")
             if retry and retry > now.isoformat() and latest.payload.get("result_version") == task.version:
                 continue
@@ -600,14 +638,16 @@ def decide(session: Session, decision: Decision) -> dict:
         error = str(exc)[:500] if isinstance(exc, service.DomainError) else "Git provider could not apply this decision; existing checks remain in force"
     delay = 60 if result == "deferred" else 15 if decision.action == "wait" else 1
     now = utcnow()
+    result_digest = _digest(_snapshot(session, str(task.id)))
     payload = {"action": decision.action, "rationale": decision.rationale, "model": lease["model"]["model"],
                "result": result, "error": error, "lease_id": lease["id"], "context_sha256": lease["digest"],
-               "result_version": task.version, "revisit_at": (now + timedelta(minutes=delay)).isoformat()}
+               "result_context_sha256": result_digest, "result_version": task.version,
+               "revisit_at": (now + timedelta(minutes=delay)).isoformat()}
     event = service._event(session, task, "executive_decision", "system", "executive", payload=payload)
     session.flush()
     # Mirror reasoning onto the actual PR. A comment failure never undoes an action.
     execution = _latest_execution(session, task)
-    if execution and execution.pr_number:
+    if execution and execution.pr_number and decision.action != "wait":
         try:
             provider = get_provider()
             if provider.config.project == execution.repository and provider.config.provider == execution.provider:

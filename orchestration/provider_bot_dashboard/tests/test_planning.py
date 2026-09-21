@@ -123,6 +123,29 @@ class PlanningTest(unittest.TestCase):
         self.assertEqual(before_version + 1, self.task.version)
         self.assertEqual(1, self.s.scalar(select(func.count()).select_from(Event).where(Event.event_type == "follow_up_ticket_linked")))
 
+    def test_executive_context_retains_linked_child_after_decision_noise(self):
+        value = service.create_manual_task(
+            self.s, title="Add missing recall trends", category="other", priority=1,
+            planned_resolution="Implement the separately reviewed analytics work.",
+            actor_id="owner", actor_name="Owner",
+        )
+        child = self.s.get(Task, uuid.UUID(value["id"]))
+        child.related_task_id = self.task.id
+        child.state = "completed"
+        child.completed_at = utcnow()
+        service._event(self.s, self.task, "follow_up_ticket_linked", "system", "analytics_engineer",
+                       payload={"task_id": str(child.id), "title": child.title})
+        for index in range(30):
+            service._event(self.s, self.task, "executive_decision", "system", "executive",
+                           payload={"action": "wait", "result": "applied", "ordinal": index})
+        self.s.commit()
+
+        snapshot = ap._snapshot(self.s, str(self.task.id))
+        self.assertEqual([{"task_id": str(child.id), "title": child.title, "state": "completed",
+                           "completed_at": child.completed_at.isoformat()}], snapshot["linked_follow_ups"])
+        self.assertTrue(any(event["event_type"] == "follow_up_ticket_linked" for event in snapshot["events"]))
+        self.assertEqual(5, len(snapshot["executive_history"]))
+
     def test_decision_shape_cannot_hide_specialist_on_other_actions(self):
         with self.assertRaises(ValueError):
             ap.Decision(lease_id="a"*64, action="merge", specialist="analytics_engineer", rationale="Still requires independent approval")

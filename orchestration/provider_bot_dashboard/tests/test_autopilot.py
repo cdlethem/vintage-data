@@ -395,6 +395,40 @@ class AutopilotTest(unittest.TestCase):
         with self.assertRaises(Conflict): self.decide(claim, "accept")
         self.assertEqual("proposed", task.state)
 
+    def test_wait_parks_ticket_until_material_evidence_changes(self):
+        task = self.task()
+        self.enable()
+        claim = ap.claim(self.session)
+        self.session.commit()
+        self.assertEqual("applied", self.decide(claim, "wait")["status"])
+        self.assertEqual("idle", ap.claim(self.session)["status"])
+        patch_task(self.session, str(task.id), version=task.version, actor_id="owner",
+                   changes={"planned_resolution": "Updated requirements with new evidence"})
+        self.session.commit()
+        self.assertEqual(str(task.id), ap.claim(self.session)["task"]["id"])
+
+    def test_block_parks_ticket_until_material_evidence_changes(self):
+        task = self.task()
+        self.enable()
+        claim = ap.claim(self.session)
+        self.session.commit()
+        self.assertEqual("applied", self.decide(claim, "block")["status"])
+        self.assertEqual("blocked", task.state)
+        self.assertEqual("idle", ap.claim(self.session)["status"])
+
+    def test_wait_is_audited_without_spamming_the_pull_request(self):
+        task = self.task("in_review")
+        self.execution(task)
+        self.enable()
+        claim = ap.claim(self.session)
+        self.session.commit()
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider") as provider:
+            self.assertEqual("applied", self.decide(claim, "wait")["status"])
+        provider.assert_not_called()
+        audit = self.session.scalar(select(Event).where(Event.event_type == "executive_decision"))
+        self.assertEqual("wait", audit.payload["action"])
+        self.assertTrue(audit.payload["result_context_sha256"])
+
     def execution(self, task, **changes):
         values = dict(execution_id="e" * 64, task_id=task.id, sequence=1, revision=1, idempotency_key="test-execution",
             target_run_id="test-run", profile="senior", reviewer_required=True, stage="reviewed", dispatch_state="running",

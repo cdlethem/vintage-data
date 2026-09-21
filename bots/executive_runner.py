@@ -72,7 +72,14 @@ Actions:
   result. Explain what was verified; your note and evidence remain on the ticket.
 - block: preserve a concrete unresolved blocker. restore: return blocked work to its
   prior state when evidence shows the blocker is resolved. Do not repeatedly restore
-  without new evidence. wait: defer with a precise dependency and reason.
+  without new evidence. wait: park the ticket until its material evidence changes;
+  it is not a periodic status update and will not be offered the same unchanged ticket.
+
+linked_follow_ups is the durable record of child tickets even when the original
+request and linkage events are older than the bounded activity window. Treat a linked
+child in completed state as satisfying the requirement that the follow-up be created
+and linked. An empty follow_up_options list only means no new planning request is
+currently available; it does not prove that no prior request or child exists.
 
 Finish existing authorized outcomes before admitting discretionary new work.
 Prefer repair, review recovery, required validation, merge, and evidenced closure.
