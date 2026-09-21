@@ -88,6 +88,11 @@ work, and repository drift are actionable work: choose repair_conflict, repair,
 revise, retry_review, configure, request_follow_up, restore, or advance as appropriate.
 Never choose or describe a human/operator handoff. A provider outage may delay an
 attempt, but the system retries it automatically and the ticket is not a human blocker.
+When a check exposes a pre-existing defect elsewhere on the current repository base,
+that defect is an internal dependency. Reuse an existing ticket that covers it or use
+request_follow_up to create one, then drive that repair through execution and review.
+Do not widen the blocked ticket to unrelated paths, weaken its checks, repeat the same
+failed run, or label the dependency external.
 
 linked_follow_ups is the durable record of child tickets even when the original
 request and linkage events are older than the bounded activity window. Treat a linked
