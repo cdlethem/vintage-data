@@ -428,13 +428,17 @@ def claim(session: Session, identity: dict | None = None) -> dict:
         & (latest_terminal_reason != "no_change")
         & latest_pr_number.is_(None)
     )
-    phase = case((retryable_blocked, 0),
-                 (latest_mergeability == "conflicting", 1),
-                 (Task.state == "ready", 2),
-                 ((Task.state == "in_review") & (latest_verdict == "approved"), 3),
-                 ((Task.state == "in_review") & (planned_revision > executed_revision), 4),
-                 (Task.state == "in_review", 5), (prepared, 6), (Task.state == "accepted", 7),
-                 (Task.state == "in_progress", 8), (Task.state == "proposed", 9), else_=10)
+    failed_conflict_repair = retryable_blocked & (
+        latest_terminal_reason == "unresolved_revision_seed_conflict"
+    )
+    phase = case((failed_conflict_repair, 0),
+                 (retryable_blocked, 1),
+                 (latest_mergeability == "conflicting", 2),
+                 (Task.state == "ready", 3),
+                 ((Task.state == "in_review") & (latest_verdict == "approved"), 4),
+                 ((Task.state == "in_review") & (planned_revision > executed_revision), 5),
+                 (Task.state == "in_review", 6), (prepared, 7), (Task.state == "accepted", 8),
+                 (Task.state == "in_progress", 9), (Task.state == "proposed", 10), else_=11)
     ordering = aging if now.minute % 5 == 0 else [phase, *aging]
     candidates = session.scalars(select(Task).outerjoin(last, Task.id == last.c.task_id)
         .where(Task.state.in_(["proposed", "accepted", "blocked", "in_progress", "in_review", "ready"]), ~active_worker)
