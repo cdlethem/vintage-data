@@ -1,0 +1,68 @@
+chartConfig:
+  config:
+    columnLimit: 3
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_library_of_congress_item_observation_observed_at_day
+          yRef:
+            field: fct_library_of_congress_item_observation_distinct_entities
+        type: bar
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct items
+    layout:
+      stack: true
+      xField: fct_library_of_congress_item_observation_observed_at_day
+      yField:
+      - fct_library_of_congress_item_observation_distinct_entities
+  type: cartesian
+description: Distinct `item_id` values by reported digitized status for each UTC collection day in the
+  past 30 days. Repeated snapshots count once per day and status group; status groups are not additive
+  across the window, and missing collection days are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_library_of_congress_item_observation_observed_at_day
+  - fct_library_of_congress_item_observation_digitized
+  exploreName: fct_library_of_congress_item_observation
+  filters:
+    dimensions:
+      and:
+      - id: d44ddf18-66b3-5457-977a-b73251fb63c2
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_library_of_congress_item_observation_observed_at
+        values:
+        - 30
+      id: 634d35a4-bdda-5e19-88fa-e8a5c9c02012
+  limit: 5000
+  metrics:
+  - fct_library_of_congress_item_observation_distinct_entities
+  sorts:
+  - descending: true
+    fieldId: fct_library_of_congress_item_observation_distinct_entities
+  - descending: false
+    fieldId: fct_library_of_congress_item_observation_observed_at_day
+  tableCalculations: []
+name: Reported digitized status by collection day
+pivotConfig:
+  columns:
+  - fct_library_of_congress_item_observation_digitized
+slug: fct-library-of-congress-item-observation-digitization-mix
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_library_of_congress_item_observation_observed_at_day
+  - fct_library_of_congress_item_observation_digitized
+  - fct_library_of_congress_item_observation_distinct_entities
+tableName: fct_library_of_congress_item_observation
+version: 1

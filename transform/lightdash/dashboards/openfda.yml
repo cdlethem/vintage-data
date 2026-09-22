@@ -73,13 +73,14 @@ tiles:
       **Grain:** source_name, recall_id, observed_at
 
 
-      **What changes here:** distinct food-enforcement recalls across sparse FDA report dates,
-      classifications, and countries, plus catalogue levels across fetch days.
+      **What changes here:** distinct food-enforcement recalls, initiating firms, and leading states across
+      sparse FDA initiation and report dates, plus classifications, countries, and catalogue levels across
+      fetch days.
 
 
-      **Windows:** observation charts and records cover the past 30 days of `observed_at` (UTC). Event
-      trends use separate 30-day `report_date` windows. The current raw data spans only two report dates,
-      so absent dates are not zeroes and no dense daily series is implied.
+      **Windows:** observation charts and records cover the past 30 days of `observed_at` (UTC). Report-date
+      trends use 30-day windows; initiation-date trends use 180-day windows. Missing event dates and dates
+      without matching recalls are absent rather than zero, so no dense daily series is implied.
 
 
       **Limitations:** openFDA is polled daily, is not real time, and can batch or revise records over days
@@ -147,6 +148,36 @@ tiles:
   w: 36
   x: 0
   y: 28
+- h: 10
+  properties:
+    chartName: Recalls by FDA initiation date
+    chartSlug: fct-openfda-recall-observation-initiated-recalls
+    hideTitle: false
+    title: Recalls by FDA initiation date
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 38
+- h: 10
+  properties:
+    chartName: Initiating firm breadth by FDA initiation date
+    chartSlug: fct-openfda-recall-observation-initiating-firm-breadth
+    hideTitle: false
+    title: Initiating firm breadth by FDA initiation date
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 38
+- h: 10
+  properties:
+    chartName: Leading states by FDA initiation date
+    chartSlug: fct-openfda-recall-observation-leading-states
+    hideTitle: false
+    title: Leading states by FDA initiation date
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 48
 - h: 1
   properties:
     showDivider: true
@@ -154,7 +185,7 @@ tiles:
   type: heading
   w: 36
   x: 0
-  y: 38
+  y: 58
 - h: 10
   properties:
     chartName: Distinct recalls by classification
@@ -164,7 +195,7 @@ tiles:
   type: saved_chart
   w: 18
   x: 0
-  y: 39
+  y: 59
 - h: 10
   properties:
     chartName: OpenFDA recall observation — observations
@@ -174,5 +205,5 @@ tiles:
   type: saved_chart
   w: 18
   x: 18
-  y: 39
+  y: 59
 version: 1

@@ -26,5 +26,6 @@ select
     "lat",
     "long",
     "token",
-    "city"
+    "city",
+    "media_url"
 from {{ source('raw', 'open311') }}
