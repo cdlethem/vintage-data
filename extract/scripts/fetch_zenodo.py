@@ -45,6 +45,8 @@ Stdlib only.
 import json
 import os
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -52,33 +54,62 @@ from datetime import datetime, timezone
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 BASE = "https://zenodo.org/api/records"
 
-REQUEST_TIMEOUT_SECONDS = 30
+REQUEST_TIMEOUT_SECONDS = 60
+MAX_ATTEMPTS = 5
+RETRY_DELAYS_SECONDS = (2, 5, 10)
 
 
-def _report_read_timeout(params, error):
-    """Write bounded transport context without exposing query values or bodies."""
+def _is_timeout(error):
+    if isinstance(error, urllib.error.HTTPError):
+        return False
+    return isinstance(error, TimeoutError) or (
+        isinstance(error, urllib.error.URLError)
+        and isinstance(error.reason, TimeoutError)
+    )
+
+
+def _report_request_failure(params, error, attempt_count):
+    """Write bounded failure context without exposing query values or bodies."""
+    terminal_error = {"class": type(error).__name__}
+    if isinstance(error, urllib.error.URLError):
+        terminal_error["reason_class"] = type(error.reason).__name__
+
     diagnostic = {
-        "event": "zenodo_read_timeout",
-        "exception_class": type(error).__name__,
+        "attempt_count": attempt_count,
+        "event": "zenodo_request_failed",
         "request": {
             "endpoint": BASE,
             "query_present": "q" in params,
             "timeout_seconds": REQUEST_TIMEOUT_SECONDS,
         },
+        "terminal_error": terminal_error,
     }
     print(json.dumps(diagnostic, sort_keys=True), file=sys.stderr)
+
+
+def _validate_response(doc):
+    if not isinstance(doc, dict):
+        raise ValueError("Zenodo response must be an object")
+    hits = doc.get("hits")
+    if not isinstance(hits, dict) or not isinstance(hits.get("hits"), list):
+        raise ValueError("Zenodo response must contain a hits list")
+    return doc
 
 
 def _get(**params):
     url = f"{BASE}?{urllib.parse.urlencode(params)}"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT,
                                                 "Accept": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as resp:
-            return json.load(resp)
-    except TimeoutError as error:
-        _report_read_timeout(params, error)
-        raise
+    for attempt_count in range(1, MAX_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as resp:
+                return _validate_response(json.load(resp))
+        except Exception as error:
+            if _is_timeout(error) and attempt_count < MAX_ATTEMPTS:
+                time.sleep(RETRY_DELAYS_SECONDS[min(attempt_count - 1, len(RETRY_DELAYS_SECONDS) - 1)])
+                continue
+            _report_request_failure(params, error, attempt_count)
+            raise
 
 
 def fetch_recent(size: int = 25, query: str | None = None):

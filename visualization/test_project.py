@@ -81,6 +81,24 @@ class ContentTest(unittest.TestCase):
         self.assertEqual([rule['target']['fieldId'] for rule in dashboard['filters']['dimensions']],['fct_demo_category'])
         self.assertTrue(dashboard['filters']['dimensions'][0]['disabled'])
 
+    def test_trend_constant_filters_override_shared_visualization_filters(self):
+        manifest=model_fixture()
+        viz=manifest['nodes']['model.vintage_data.fct_demo']['config']['meta']['vintage']['visualization']
+        viz['filters']=[{'field':'category','values':['shared']}]
+        viz['analysis']['trends'][0]=dict(viz['analysis']['trends'][0],filters=[{'field':'category','values':['own']}])
+        outputs=content.render(manifest)
+        def equals_rules(chart):
+            rules=chart['metricQuery'].get('filters',{}).get('dimensions',{}).get('and',[])
+            return [rule['values'] for rule in rules if rule.get('operator')=='equals']
+        self.assertEqual(equals_rules(outputs['charts/fct-demo-volume.yml']),[['own']])
+        self.assertEqual(equals_rules(outputs['charts/fct-demo-by-category.yml']),[['shared']])
+        self.assertEqual(equals_rules(outputs['charts/fct-demo-details.yml']),[['shared']])
+        viz['analysis']['trends'][0]['filters']=[{'field':'missing','values':['x']}]
+        with tempfile.TemporaryDirectory() as directory:
+            report=project.coverage(manifest,pathlib.Path(directory))
+            self.assertFalse(report['ok'])
+            self.assertTrue(any('trend filter field' in issue for issue in report['models'][0]['issues']))
+
     def test_gaps_are_scheduled_work_and_bad_specifications_are_contract_issues(self):
         manifest=model_fixture()
         node=manifest['nodes']['model.vintage_data.fct_demo']
@@ -165,3 +183,25 @@ class ContentTest(unittest.TestCase):
             chart=content.render(manifest)['charts/fct-demo.yml']
             self.assertEqual(chart['metricQuery']['dimensions'],['fct_demo_cat'])
             self.assertEqual(chart['metricQuery']['filters']['dimensions']['and'][0]['target']['fieldId'],'fct_demo_time')
+
+    def test_long_lightdash_field_ids_are_queryable_but_physical_identifiers_are_bounded(self):
+        manifest=model_fixture()
+        node=manifest['nodes']['model.vintage_data.fct_demo']
+        node['name']='fct_uk_parliament_procedural_activity'
+        metric='average_business_item_date_count'
+        node['config']['meta']['metrics']={metric:{'type':'average','sql':'${TABLE}.amount'}}
+        visualization=node['config']['meta']['vintage']['visualization']
+        visualization['metric']=metric
+        for trend in visualization['analysis']['trends']:
+            trend['metric']=metric
+        field_id=f"{node['name']}_{metric}"
+        self.assertEqual(field_id,'fct_uk_parliament_procedural_activity_average_business_item_date_count')
+        self.assertGreater(len(field_id.encode()),63)
+        with tempfile.TemporaryDirectory() as directory:
+            path=pathlib.Path(directory)
+            content.write_content(manifest,destination=path)
+            self.assertTrue(project.coverage(manifest,path)['ok'])
+            self.assertIn(field_id,content.render(manifest)['charts/fct-uk-parliament-procedural-activity.yml']['metricQuery']['metrics'])
+            node['alias']='a'*64
+            with self.assertRaises(ValueError):
+                project.bundle(manifest,path,'serving_database')

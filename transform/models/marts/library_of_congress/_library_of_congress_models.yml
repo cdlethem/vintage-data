@@ -1,0 +1,397 @@
+version: 2
+models:
+- name: fct_library_of_congress_item_observation
+  description: >-
+    Physical observation fact for the bounded, changing Library of Congress robotics books search. Each row
+    is one source, stable item identifier, and UTC collection timestamp (`observed_at`). The configured query
+    returns a ranked slice of at most 200 observations per run, not a catalogue census. Collection-day counts
+    are catalogue levels rather than flows; missing collection days are absent rather than zero. Repeated
+    snapshots preserve later catalogue and ranking changes, while `item_date` is a free-form source label and
+    not event time.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source, item_id, observed_at
+      label: Library of Congress item observation
+      group_label: Library of Congress
+      default_time_dimension:
+        field: observed_at
+        interval: DAY
+      primary_key: library_of_congress_item_observation_key
+      vintage:
+        visualization:
+          dimension: digitized
+          metric: distinct_items
+          time: observed_at
+          window_days: 30
+          title: Distinct items by reported digitization status
+          description: Distinct `item_id` values by non-null digitization status reported by the Library of
+            Congress among observations collected in the past 30 UTC days. This is a catalogue level for the
+            bounded, changing robotics-search slice, not a flow or catalogue census. Repeated observations
+            count once within a status group, but items whose category changes can occur in both groups, so
+            the groups are not additive across snapshots.
+          detail_fields:
+          - observed_at
+          - source
+          - item_id
+          - title
+          - digitized
+          - item_date
+          - canonical_url
+          sources:
+          - 'Data provided by the Library of Congress. `library_of_congress` — licence: Library of Congress
+            catalog metadata; attribution required: True. Source configuration:
+            `extract/sources/library_of_congress.yml`. Rights for linked collection material vary by item;
+            consult the item-specific rights and access statement before reuse.'
+          analysis:
+            headline: how item and represented item-date-label coverage and reported digitization change
+              across daily observations of the bounded, changing Library of Congress robotics-search slice.
+            event_time: observed_at
+            grain: DAY
+            controls:
+            - digitized
+            trends:
+            - slug: observed-items
+              kind: total
+              metric: distinct_items
+              time: observed_at
+              grain: DAY
+              window_days: 90
+              title: Distinct observed items by collection day
+              description: Distinct `item_id` values present on each UTC `observed_at` collection day in the
+                past 90 days. This is a catalogue level for the bounded, changing robotics-search slice, not a
+                flow of new Library of Congress items or a catalogue census. Missing collection days are absent
+                rather than zero, and repeated observations within a day count once.
+              width: half
+            - slug: date-label-breadth
+              kind: total
+              metric: distinct_date_labels
+              time: observed_at
+              grain: DAY
+              window_days: 90
+              title: Represented item-date labels by collection day
+              description: Distinct non-null `item_date` labels represented on each UTC `observed_at`
+                collection day in the past 90 days. This is catalogue breadth for the bounded, changing slice,
+                not a flow of dated events; labels are free-form source text. Missing collection days are absent
+                rather than zero, and repeated observations within a day do not increase the count.
+              width: half
+            - slug: digitization-status
+              kind: breakdown
+              filters:
+              - field: digitized
+                values:
+                - true
+                - false
+              metric: distinct_items
+              breakdown: digitized
+              top_n: 2
+              time: observed_at
+              grain: DAY
+              window_days: 90
+              title: Distinct-item trajectories by reported digitization status
+              description: Unstacked daily trajectories of distinct `item_id` values for each non-null
+                digitization status reported on UTC collection days in the past 90 days. These are catalogue
+                levels for the bounded, changing slice, not flows. Repeated observations count once per day and
+                status, but category changes can place an item in both groups across snapshots, so groups are
+                not additive; missing collection days are absent rather than zero.
+              width: full
+  columns:
+  - name: library_of_congress_item_observation_key
+    description: Stable hash of source, item identifier, and observation timestamp defining the row grain.
+    data_type: varchar
+    data_tests:
+    - not_null
+    - unique
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Library of Congress item observation key
+          hidden: true
+  - name: source
+    description: Source identifier supplied by the extractor.
+    data_type: varchar
+    data_tests:
+    - not_null
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source
+          hidden: false
+  - name: item_id
+    description: Stable Library of Congress item identifier returned by the API.
+    data_type: varchar
+    data_tests:
+    - not_null
+    config:
+      meta:
+        metrics:
+          distinct_items:
+            type: count_distinct
+            label: Distinct items
+            description: Distinct `item_id` values in each selected collection-time and dimension group;
+              repeated observations count once within a group, while category changes can make groups
+              non-additive across snapshots.
+            format: '#,##0'
+        dimension:
+          type: string
+          label: Item id
+          hidden: false
+  - name: observed_at
+    description: UTC collection timestamp when the extractor observed the item; this is not source event time.
+    data_type: timestamp with time zone
+    data_tests:
+    - not_null
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Observed at
+          hidden: false
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: title
+    description: Item title supplied by the Library of Congress API, when present.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Title
+          hidden: false
+  - name: item_date
+    description: Free-form primary date label supplied by the API, when present; it is not event time.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Item date
+          hidden: false
+        metrics:
+          distinct_date_labels:
+            type: count_distinct
+            label: Distinct item-date labels
+            description: Distinct non-null free-form `item_date` labels represented in each collection-time
+              group; this is catalogue breadth rather than a flow of dated events.
+            format: '#,##0'
+  - name: dates
+    description: JSON array of free-form date values associated with the item; these are not an event-time axis.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Dates
+          hidden: true
+          sql: CAST(${TABLE}.dates AS VARCHAR)
+  - name: contributors
+    description: JSON array of contributor values associated with the item.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Contributors
+          hidden: true
+          sql: CAST(${TABLE}.contributors AS VARCHAR)
+  - name: subjects
+    description: JSON array of subject values associated with the item.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Subjects
+          hidden: true
+          sql: CAST(${TABLE}.subjects AS VARCHAR)
+  - name: digitized
+    description: Whether the API reports that the item is digitized, when supplied.
+    data_type: boolean
+    config:
+      meta:
+        dimension:
+          type: boolean
+          label: Digitized
+          hidden: false
+  - name: online_formats
+    description: JSON array of online format labels reported for the item.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Online formats
+          hidden: true
+          sql: CAST(${TABLE}.online_formats AS VARCHAR)
+  - name: mime_types
+    description: JSON array of MIME types reported for the item.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Mime types
+          hidden: true
+          sql: CAST(${TABLE}.mime_types AS VARCHAR)
+  - name: canonical_url
+    description: Canonical Library of Congress item URL returned by the API.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Canonical url
+          hidden: false
+  - name: resources
+    description: Complete JSON resource metadata returned by the API; linked content is not downloaded.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Resources
+          hidden: true
+          sql: CAST(${TABLE}.resources AS VARCHAR)
+  - name: resource_links
+    description: JSON array of resource URLs found in API metadata; the extractor does not request them.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Resource links
+          hidden: true
+          sql: CAST(${TABLE}.resource_links AS VARCHAR)
+  - name: raw_item
+    description: Complete Library of Congress API item object retained for schema evolution and audit.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Raw item
+          hidden: true
+          sql: CAST(${TABLE}.raw_item AS VARCHAR)
+  - name: source_payload
+    description: Complete extractor record retained by the raw loader.
+    data_type: json
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source payload
+          hidden: true
+          sql: CAST(${TABLE}.source_payload AS VARCHAR)
+  - name: source_row_id
+    description: Raw load row identifier for the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source row id
+          hidden: true
+  - name: source_batch_id
+    description: Identifier of the extract batch that supplied the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source batch id
+          hidden: true
+  - name: source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Source file
+          hidden: true
+  - name: source_file_row_number
+    description: One-based row position of the retained observation in its raw source file.
+    data_type: bigint
+    config:
+      meta:
+        dimension:
+          type: number
+          label: Source file row number
+          hidden: true
+          format: '#,##0'
+  - name: source_date
+    description: Source partition date assigned by the load layer.
+    data_type: date
+    config:
+      meta:
+        dimension:
+          type: date
+          label: Source date
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: extract_started_at
+    description: UTC timestamp when extraction of the retained source batch started.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Extract started at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+  - name: load_id
+    description: Identifier of the load operation that inserted the retained observation.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Load id
+          hidden: true
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+    config:
+      meta:
+        dimension:
+          type: timestamp
+          label: Source loaded at
+          hidden: true
+          time_intervals:
+          - RAW
+          - DAY
+          - WEEK
+          - MONTH
+          - YEAR
+        metrics:
+          latest_load:
+            type: max
+            label: Latest warehouse load
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              dashboard was generated or published.
+  - name: content_hash
+    description: Hash of the original raw extractor record for lineage and replay auditing.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Content hash
+          hidden: true

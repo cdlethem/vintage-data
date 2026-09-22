@@ -1,0 +1,76 @@
+chartConfig:
+  config:
+    columnLimit: 2
+    eChartsConfig:
+      legend:
+        orient: vertical
+        placement: outsideRight
+      series:
+      - encode:
+          xRef:
+            field: fct_library_of_congress_item_observation_observed_at_day
+          yRef:
+            field: fct_library_of_congress_item_observation_distinct_items
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct items
+    layout:
+      xField: fct_library_of_congress_item_observation_observed_at_day
+      yField:
+      - fct_library_of_congress_item_observation_distinct_items
+  type: cartesian
+description: Unstacked daily trajectories of distinct `item_id` values for each non-null digitization
+  status reported on UTC collection days in the past 90 days. These are catalogue levels for the bounded,
+  changing slice, not flows. Repeated observations count once per day and status, but category changes
+  can place an item in both groups across snapshots, so groups are not additive; missing collection days
+  are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_library_of_congress_item_observation_observed_at_day
+  - fct_library_of_congress_item_observation_digitized
+  exploreName: fct_library_of_congress_item_observation
+  filters:
+    dimensions:
+      and:
+      - id: deca3337-e594-5762-9d25-9b2c429f4b82
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_library_of_congress_item_observation_observed_at
+        values:
+        - 90
+      - id: 413b1ba6-9ff0-5aae-ba20-399a7ee84872
+        operator: equals
+        target:
+          fieldId: fct_library_of_congress_item_observation_digitized
+        values:
+        - true
+        - false
+      id: bd798e7b-bf63-50b4-8c4c-2b571d50040c
+  limit: 5000
+  metrics:
+  - fct_library_of_congress_item_observation_distinct_items
+  sorts:
+  - descending: true
+    fieldId: fct_library_of_congress_item_observation_distinct_items
+  - descending: false
+    fieldId: fct_library_of_congress_item_observation_observed_at_day
+  tableCalculations: []
+name: Distinct-item trajectories by reported digitization status
+pivotConfig:
+  columns:
+  - fct_library_of_congress_item_observation_digitized
+slug: fct-library-of-congress-item-observation-digitization-status
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_library_of_congress_item_observation_observed_at_day
+  - fct_library_of_congress_item_observation_digitized
+  - fct_library_of_congress_item_observation_distinct_items
+tableName: fct_library_of_congress_item_observation
+version: 1

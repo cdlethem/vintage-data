@@ -1,0 +1,21 @@
+name: osm_overpass
+script: fetch_osm_overpass.py
+# One explicit 0.01 x 0.01 degree area and one exact tag filter. The extractor
+# rejects absent, invalid, or broader bounds before any network request.
+args: ["--bbox", "51.50,-0.13,51.51,-0.12", "--tag", "amenity=drinking_water", "--http-timeout", "45", "--query-timeout", "25", "--retries", "2", "--retry-delay", "5"]
+schedule: "41 6 15 * *"  # UTC; conservative monthly snapshot while disabled
+enabled: false
+retries: 0  # HTTP retries are bounded inside the extractor; avoid multiplying them here
+timeout_minutes: 3
+sink: local
+
+# Keep disabled until independent review and an authorized network-enabled
+# operator records the prescribed live smoke against the tested commit. Offline
+# fixture tests do not prove live-source behavior or operational activation.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "monthly snapshot of drinking-water features in one fixed 0.01 x 0.01 degree area"
+rate_limit: "one serial POST per run; at most two bounded retries with 5/10-second backoff; no pagination"
+licence: "OpenStreetMap data is licensed under ODbL 1.0"
+attribution: "OpenStreetMap contributors, https://www.openstreetmap.org/copyright"
+attribution_required: true
+coverage_note: "Only elements matching amenity=drinking_water inside the configured central-London bounds; this is not a bulk OSM extract."

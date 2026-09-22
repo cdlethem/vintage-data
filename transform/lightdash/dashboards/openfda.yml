@@ -74,8 +74,8 @@ tiles:
       **Grain:** source_name, recall_id, observed_at
 
 
-      **What changes here:** how distinct food-enforcement recalls vary across sparse FDA report dates,
-      classifications, and countries while daily polling captures later revisions.
+      **What changes here:** how distinct food-enforcement recalls, initiating firms, and leading states
+      vary across sparse FDA initiation and report dates while daily polling captures later revisions.
 
 
       **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
@@ -141,6 +141,36 @@ tiles:
   w: 36
   x: 0
   y: 27
+- h: 10
+  properties:
+    chartName: Recalls by FDA initiation date
+    chartSlug: fct-openfda-recall-observation-initiated-recalls
+    hideTitle: false
+    title: Recalls by FDA initiation date
+  type: saved_chart
+  w: 18
+  x: 0
+  y: 37
+- h: 10
+  properties:
+    chartName: Initiating firm breadth by FDA initiation date
+    chartSlug: fct-openfda-recall-observation-initiating-firm-breadth
+    hideTitle: false
+    title: Initiating firm breadth by FDA initiation date
+  type: saved_chart
+  w: 18
+  x: 18
+  y: 37
+- h: 10
+  properties:
+    chartName: Leading states by FDA initiation date
+    chartSlug: fct-openfda-recall-observation-leading-states
+    hideTitle: false
+    title: Leading states by FDA initiation date
+  type: saved_chart
+  w: 36
+  x: 0
+  y: 47
 - h: 1
   properties:
     showDivider: true
@@ -148,7 +178,7 @@ tiles:
   type: heading
   w: 36
   x: 0
-  y: 37
+  y: 57
 - h: 10
   properties:
     chartName: Distinct recalls by classification
@@ -158,7 +188,7 @@ tiles:
   type: saved_chart
   w: 18
   x: 0
-  y: 38
+  y: 58
 - h: 10
   properties:
     chartName: OpenFDA recall observation — observations
@@ -168,5 +198,5 @@ tiles:
   type: saved_chart
   w: 18
   x: 18
-  y: 38
+  y: 58
 version: 1

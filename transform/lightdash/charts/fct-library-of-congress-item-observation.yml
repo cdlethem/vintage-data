@@ -1,0 +1,55 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_library_of_congress_item_observation_digitized
+          yRef:
+            field: fct_library_of_congress_item_observation_distinct_items
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      xField: fct_library_of_congress_item_observation_digitized
+      yField:
+      - fct_library_of_congress_item_observation_distinct_items
+  type: cartesian
+description: Distinct `item_id` values by non-null digitization status reported by the Library of Congress
+  among observations collected in the past 30 UTC days. This is a catalogue level for the bounded, changing
+  robotics-search slice, not a flow or catalogue census. Repeated observations count once within a status
+  group, but items whose category changes can occur in both groups, so the groups are not additive across
+  snapshots.
+metricQuery:
+  dimensions:
+  - fct_library_of_congress_item_observation_digitized
+  exploreName: fct_library_of_congress_item_observation
+  filters:
+    dimensions:
+      and:
+      - id: d59c9b04-7d93-557f-a9e7-3a648a2542d5
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_library_of_congress_item_observation_observed_at
+        values:
+        - 30
+      id: b69d1da3-c569-54b2-90df-863fe38ca48c
+  limit: 20
+  metrics:
+  - fct_library_of_congress_item_observation_distinct_items
+  sorts:
+  - descending: true
+    fieldId: fct_library_of_congress_item_observation_distinct_items
+  tableCalculations: []
+name: Distinct items by reported digitization status
+slug: fct-library-of-congress-item-observation
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_library_of_congress_item_observation_digitized
+  - fct_library_of_congress_item_observation_distinct_items
+tableName: fct_library_of_congress_item_observation
+version: 1

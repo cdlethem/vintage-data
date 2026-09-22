@@ -74,6 +74,9 @@ def trend_chart(node: dict, slug: str, spec: dict, extra_filters: list[dict]) ->
     kind = spec["kind"]
     metric = f"{name}_{spec['metric']}"
     breakdown = dimension_id(node, spec["breakdown"]) if spec.get("breakdown") else None
+    # A trend may carry its own constant filters, replacing the shared ones,
+    # so one trajectory can keep a predicate the other charts must not have.
+    trend_filters = spec.get("filters", extra_filters)
     x = time_field_id(node, spec["time"], spec["grain"], spec.get("time_dimension"))
     dimensions = [x] + ([breakdown] if breakdown else [])
     sorts = [{"fieldId": x, "descending": False}]
@@ -93,7 +96,7 @@ def trend_chart(node: dict, slug: str, spec: dict, extra_filters: list[dict]) ->
     chart = {"name": spec["title"], "description": spec["description"], "tableName": name,
              "slug": slug, "spaceSlug": "vintage-marts", "version": 1,
              "metricQuery": {"exploreName": name, "dimensions": dimensions, "metrics": [metric],
-                             "filters": window_filter(node, slug, spec["time"], spec["window_days"], extra_filters,
+                             "filters": window_filter(node, slug, spec["time"], spec["window_days"], trend_filters,
                                                       snapshot=spec.get("snapshot")),
                              "sorts": sorts, "limit": spec["limit"], "tableCalculations": []},
              "chartConfig": {"type": "cartesian", "config": config},

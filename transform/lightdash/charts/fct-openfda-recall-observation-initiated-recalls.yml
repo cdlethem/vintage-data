@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_openfda_recall_observation_recall_initiation_date_day
+          yRef:
+            field: fct_openfda_recall_observation_distinct_recalls
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Recall initiation date (Day)
+      yAxis:
+      - name: Distinct recalls
+    layout:
+      xField: fct_openfda_recall_observation_recall_initiation_date_day
+      yField:
+      - fct_openfda_recall_observation_distinct_recalls
+  type: cartesian
+description: Distinct `recall_id` values by FDA `recall_initiation_date` during the past 180 days. Repeated
+  fetch observations count once per day; records with a missing initiation date are excluded, and dates
+  without initiated recalls are absent rather than zero.
+metricQuery:
+  dimensions:
+  - fct_openfda_recall_observation_recall_initiation_date_day
+  exploreName: fct_openfda_recall_observation
+  filters:
+    dimensions:
+      and:
+      - id: 5a8482c8-16e5-5cce-bf31-bec141b1f192
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_openfda_recall_observation_recall_initiation_date
+        values:
+        - 180
+      id: cfec52a4-df85-52ce-8d2a-2b5b880943c6
+  limit: 5000
+  metrics:
+  - fct_openfda_recall_observation_distinct_recalls
+  sorts:
+  - descending: false
+    fieldId: fct_openfda_recall_observation_recall_initiation_date_day
+  tableCalculations: []
+name: Recalls by FDA initiation date
+slug: fct-openfda-recall-observation-initiated-recalls
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openfda_recall_observation_recall_initiation_date_day
+  - fct_openfda_recall_observation_distinct_recalls
+tableName: fct_openfda_recall_observation
+version: 1

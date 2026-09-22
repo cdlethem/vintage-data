@@ -1,0 +1,45 @@
+chartConfig:
+  config: {}
+  type: table
+description: Physical observation fact for the bounded, changing Library of Congress robotics books search.
+  Each row is one source, stable item identifier, and UTC collection timestamp (`observed_at`). The configured
+  query returns a ranked slice of at most 200 observations per run, not a catalogue census. Collection-day
+  counts are catalogue levels rather than flows; missing collection days are absent rather than zero.
+  Repeated snapshots preserve later catalogue and ranking changes, while `item_date` is a free-form source
+  label and not event time.
+metricQuery:
+  dimensions: &id001
+  - fct_library_of_congress_item_observation_observed_at
+  - fct_library_of_congress_item_observation_source
+  - fct_library_of_congress_item_observation_item_id
+  - fct_library_of_congress_item_observation_title
+  - fct_library_of_congress_item_observation_digitized
+  - fct_library_of_congress_item_observation_item_date
+  - fct_library_of_congress_item_observation_canonical_url
+  exploreName: fct_library_of_congress_item_observation
+  filters:
+    dimensions:
+      and:
+      - id: d59c9b04-7d93-557f-a9e7-3a648a2542d5
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_library_of_congress_item_observation_observed_at
+        values:
+        - 30
+      id: b69d1da3-c569-54b2-90df-863fe38ca48c
+  limit: 100
+  metrics: []
+  sorts:
+  - descending: true
+    fieldId: fct_library_of_congress_item_observation_observed_at
+  tableCalculations: []
+name: Library of Congress item observation — observations
+slug: fct-library-of-congress-item-observation-details
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder: *id001
+tableName: fct_library_of_congress_item_observation
+version: 1

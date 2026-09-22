@@ -1,0 +1,24 @@
+name: tvmaze_schedules
+script: fetch_tvmaze_schedules.py
+# One keyless daily-schedule request per run; defaults to the current UTC date and US.
+# This deliberately does not use TVMaze's full-schedule or show-catalog endpoints.
+args: ["--country", "US", "--timeout", "30"]
+schedule: "37 */6 * * *"  # UTC; four bounded daily-schedule snapshots per day
+enabled: false
+retries: 1
+timeout_minutes: 5
+sink: local
+
+# Keep the fixed six-hour schedule; adaptive scheduling must not activate this source.
+cadence:
+  auto: false
+
+# Do not enable until an authorized network-capable operator records a successful live
+# US-date extraction for the exact candidate revision, followed by source scheduling
+# validation and external acceptance. Offline fixtures and DAG imports do not satisfy it.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "six-hour UTC snapshots of TVMaze's bounded country/date daily schedule"
+rate_limit: "keyless TVMaze API; one daily-schedule request per run, four runs per day"
+licence: "TVMaze API licensing and attribution terms apply"
+attribution: "TVMaze, https://www.tvmaze.com/api"
+attribution_required: true

@@ -209,6 +209,15 @@ models:
           type: string
           label: Description
           hidden: true
+  - name: media_url
+    description: URL for media associated with the reported issue, as supplied by the Open311 endpoint.
+    data_type: varchar
+    config:
+      meta:
+        dimension:
+          type: string
+          label: Media url
+          hidden: true
   - name: requested_at
     description: UTC timestamp when the service request was originally submitted.
     data_type: timestamp with time zone

@@ -1,0 +1,29 @@
+name: usgs_water_data_ogc
+script: fetch_usgs_water_data_ogc.py
+args: ["--station", "USGS-01646500", "--station", "USGS-09380000", "--collection", "continuous", "--lookback-hours", "48", "--page-size", "100", "--max-pages", "4", "--max-records", "400", "--timeout", "30", "--request-delay", "1"]
+schedule: "23 7 * * *"  # UTC; one conservative bounded run per day
+enabled: false
+retries: 1
+timeout_minutes: 15
+sink: local
+run_summary:
+  required: true
+
+# Enablement remains blocked until an operator records all of the following in a
+# separate review: the actual provider catalog collection identifiers, a
+# representative live observation schema, a successful bounded live-source smoke,
+# and a successful read-only Airflow DAG import check. Mocked fixtures and the
+# script's candidate-collection allowlist do not verify the provider's actual daily
+# collection. Confined verification must not call production services or read or
+# mutate Airflow metadata.
+#
+# No API key is required or accepted. EXTRACT_USER_AGENT identifies requests. State
+# is written atomically outside the repository only after all stdout records flush.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily 48-hour rolling overlap for two explicitly selected stations; globally capped at four pages and 400 observations per run"
+rate_limit: "at most four serial OGC page requests per run, paced one second apart; one scheduled run per day, excluding the single Airflow retry and manual runs"
+licence: "United States government work; confirm collection-specific metadata before enablement"
+attribution: "U.S. Geological Survey Water Data for the Nation, https://waterdata.usgs.gov/"
+attribution_required: true
+deduplication_note: "rolling windows intentionally re-fetch observations; deduplicate by the stable measurement-aware SHA-256 id"
+coverage_note: "small explicit station sample only; bounded pagination can require consecutive runs, with fair target and in-page continuation persisted outside the checkout"
