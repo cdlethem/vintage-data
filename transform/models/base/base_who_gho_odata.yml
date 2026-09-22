@@ -5,36 +5,3 @@ models:
     description: >-
       Thin governed view over bounded WHO Global Health Observatory OData observations.
       Source values, dimension-distinct identity, and raw-load lineage are preserved.
-    columns:
-      - name: _row_id
-        description: Deterministic physical raw-row lineage identifier.
-      - name: _batch_id
-        description: Raw extract batch identifier.
-      - name: _source_file
-        description: Raw sink artifact loaded for this observation.
-      - name: _load_id
-        description: Loader job that inserted this raw row.
-      - name: _loaded_at
-        description: UTC timestamp at which the loader inserted this row.
-      - name: source
-        description: Extract source identifier.
-      - name: id
-        description: Stable hash of indicator, geography, period, and all dimension codes/types.
-      - name: observation_identity
-        description: Explicit copy of the stable dimension-distinct observation identity.
-      - name: fetched_at
-        description: UTC timestamp at which the WHO response was fetched.
-      - name: indicator_code
-        description: WHO indicator identity retained from IndicatorCode.
-      - name: geography_type
-        description: WHO spatial dimension type.
-      - name: geography_code
-        description: WHO spatial dimension code.
-      - name: period_type
-        description: WHO temporal dimension type.
-      - name: period
-        description: WHO annual observation period.
-      - name: dimensions
-        description: JSON object retaining all WHO secondary and data-source dimension type/code pairs.
-      - name: source_url
-        description: Fully filtered first-page WHO OData URL for the selection that produced the row.

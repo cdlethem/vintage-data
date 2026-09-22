@@ -9498,6 +9498,9 @@ sources:
     - name: city
       description: Raw `city` value supplied by `open311`.
       data_type: VARCHAR
+    - name: media_url
+      description: Raw `media_url` value supplied by `open311`.
+      data_type: VARCHAR
   - name: open_collective
     description: Insert-only raw records loaded for `open_collective`.
     columns: &id112
