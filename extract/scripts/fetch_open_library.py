@@ -20,6 +20,11 @@ Quirks that will cost someone an afternoon:
       record, a new work record, and a new edition/book record, each with its own
       `key` and `revision`. Don't assume one event = one entity; count `len(changes)`
       if you want a "how many things changed" metric.
+    * **The unfiltered endpoint flattens event fields** (observed 2026-09-17):
+      `author` arrives as a plain string and `changes` as a JSON-encoded string of
+      the `[{key, revision}, ...]` list shown above. Per-kind endpoints
+      (`/recentchanges/{kind}.json`) keep the rich object/list shape.
+      `_normalize_author` and `_normalize_changes` absorb both shapes.
     * **`kind` values span more than books**: `new-account` events appear in the same
       feed, with `author.key` pointing at the newly created account itself (its first
       edit is creating its own permission records) — filter on `kind` if you only want
@@ -66,6 +71,20 @@ def _normalize_author(author):
     raise ValueError("Open Library event author must be an object, string, or null")
 
 
+def _normalize_changes(changes):
+    """Return the event's changed-entity list, tolerating the feed's
+    stringified-JSON form and malformed values."""
+    if changes is None:
+        return []
+    if isinstance(changes, str):
+        try:
+            changes = json.loads(changes)
+        except ValueError:
+            return []
+    if not isinstance(changes, list):
+        return []
+    return changes
+
 def fetch_recent(limit: int = 100, kind: str | None = None):
     """Recent catalog edits, newest first. kind filters to one event type
     (add-book, edit-book, add-cover, new-account, ...)."""
@@ -74,7 +93,7 @@ def fetch_recent(limit: int = 100, kind: str | None = None):
     if kind:
         url = f"https://openlibrary.org/recentchanges/{kind}.json?limit={limit}"
     for r in _get(url):
-        changes = r.get("changes") or []
+        changes = _normalize_changes(r.get("changes"))
         yield {
             "source": "open_library",
             "fetched_at": now,
@@ -84,7 +103,7 @@ def fetch_recent(limit: int = 100, kind: str | None = None):
             "comment": r.get("comment"),
             "author": _normalize_author(r.get("author")),
             "n_changes": len(changes),
-            "changed_keys": [c.get("key") for c in changes],
+            "changed_keys": [c.get("key") for c in changes if isinstance(c, dict)],
         }
 
 

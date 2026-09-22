@@ -2,6 +2,7 @@
 """Behavioral tests for the Open Library recent-changes extractor."""
 import importlib.util
 import io
+import json
 import pathlib
 import unittest
 from unittest.mock import patch
@@ -21,14 +22,14 @@ class FixtureResponse(io.StringIO):
         self.close()
 
 
-def event(author, *, event_id=1, kind="edit-book"):
+def event(author, *, event_id=1, kind="edit-book", changes=...):
     record = {
         "id": event_id,
         "kind": kind,
         "timestamp": "2026-09-17T12:00:00Z",
         "comment": "updated record",
-        "changes": [{"key": "/books/OL1M"}, {"key": "/works/OL1W"}],
     }
+    record["changes"] = [{"key": "/books/OL1M"}, {"key": "/works/OL1W"}] if changes is ... else changes
     if author is not ...:
         record["author"] = author
     return record
@@ -94,6 +95,35 @@ class FetchRecentTests(unittest.TestCase):
         )
         self.assertEqual(records[0]["kind"], "add-cover")
         self.assertEqual(records[0]["author"], "editor")
+
+    def test_parses_stringified_changes_from_unfiltered_feed(self):
+        stringified = json.dumps([
+            {"key": "/people/marco_v3r/usergroup", "revision": 13},
+            {"key": "/people/marco_v3r/permission", "revision": 13},
+        ])
+        records, _ = self.fetch([
+            event("/people/marco_v3r", event_id=174163147, kind=None, changes=stringified)
+        ])
+
+        self.assertEqual(records[0]["author"], "/people/marco_v3r")
+        self.assertEqual(records[0]["n_changes"], 2)
+        self.assertEqual(
+            records[0]["changed_keys"],
+            ["/people/marco_v3r/usergroup", "/people/marco_v3r/permission"],
+        )
+
+    def test_tolerates_malformed_non_list_and_null_changes(self):
+        cases = [
+            ("not a json list", 0, []),
+            ('{"key": "/books/OL1M"}', 0, []),
+            (None, 0, []),
+            ([{"key": "/books/OL1M"}, "stray"], 2, ["/books/OL1M"]),
+        ]
+        for changes, n_changes, changed_keys in cases:
+            with self.subTest(changes=changes):
+                records, _ = self.fetch([event("editor", changes=changes)])
+                self.assertEqual(records[0]["n_changes"], n_changes)
+                self.assertEqual(records[0]["changed_keys"], changed_keys)
 
 
 if __name__ == "__main__":
