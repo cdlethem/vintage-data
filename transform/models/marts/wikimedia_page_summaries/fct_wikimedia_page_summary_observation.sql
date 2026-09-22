@@ -1,7 +1,7 @@
 {{ config(
     materialized='table',
     on_schema_change='fail',
-    tags=['weekly']
+    tags=['daily']
 ) }}
 
 with source_rows as (
