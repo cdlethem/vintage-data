@@ -9498,6 +9498,9 @@ sources:
     - name: city
       description: Raw `city` value supplied by `open311`.
       data_type: VARCHAR
+    - name: media_url
+      description: Raw `media_url` value supplied by `open311`.
+      data_type: VARCHAR
   - name: open_collective
     description: Insert-only raw records loaded for `open_collective`.
     columns: &id112
@@ -13839,6 +13842,63 @@ sources:
     - name: keywords
       description: Raw `keywords` value supplied by `zenodo`.
       data_type: JSON
+  - name: imf_datamapper
+    description: Insert-only raw records loaded for `imf_datamapper`.
+    columns: &imf_datamapper_columns
+    - name: _row_id
+      description: Raw `_row_id` value supplied by `imf_datamapper`.
+      data_type: VARCHAR
+    - name: _source
+      description: Raw `_source` value supplied by `imf_datamapper`.
+      data_type: VARCHAR
+    - name: _batch_id
+      description: Identifier of the raw load batch that produced this row.
+      data_type: VARCHAR
+    - name: _source_file
+      description: Raw source file from which this row was loaded.
+      data_type: VARCHAR
+    - name: _file_row_num
+      description: One-based row position in the raw source file.
+      data_type: BIGINT
+    - name: _dt
+      description: Raw `_dt` value supplied by `imf_datamapper`.
+      data_type: DATE
+    - name: _extract_started_at
+      description: Raw `_extract_started_at` value supplied by `imf_datamapper`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _load_id
+      description: Identifier of the load job that inserted this row.
+      data_type: VARCHAR
+    - name: _loaded_at
+      description: UTC timestamp at which the load layer inserted this row.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _content_hash
+      description: Stable hash of the raw record content used for lineage and deduplication.
+      data_type: VARCHAR
+    - name: _payload
+      description: Complete raw record payload retained for lineage and schema evolution.
+      data_type: JSON
+    - name: source
+      description: Raw `source` value supplied by `imf_datamapper`.
+      data_type: VARCHAR
+    - name: id
+      description: Raw `id` value supplied by `imf_datamapper`.
+      data_type: VARCHAR
+    - name: fetched_at
+      description: Raw `fetched_at` value supplied by `imf_datamapper`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: indicator
+      description: Raw `indicator` value supplied by `imf_datamapper`.
+      data_type: VARCHAR
+    - name: country
+      description: Raw `country` value supplied by `imf_datamapper`.
+      data_type: VARCHAR
+    - name: year
+      description: Raw `year` value supplied by `imf_datamapper`.
+      data_type: VARCHAR
+    - name: value
+      description: Raw `value` value supplied by `imf_datamapper`.
+      data_type: DOUBLE
 models:
 - name: base_amsat_status
   description: Thin governed view over the `amsat_status` raw source. Values and load lineage are preserved
@@ -14520,3 +14580,7 @@ models:
   description: Thin governed view over the `zenodo` raw source. Values and load lineage are preserved
     without semantic cleaning.
   columns: *id166
+- name: base_imf_datamapper
+  description: Thin governed view over the `imf_datamapper` raw source. Values and load lineage are preserved
+    without semantic cleaning.
+  columns: *imf_datamapper_columns

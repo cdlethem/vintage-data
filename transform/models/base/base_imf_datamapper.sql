@@ -14,18 +14,8 @@ select
     "source",
     "id",
     "fetched_at",
-    "service_request_id",
-    "status",
-    "status_notes",
-    "service_name",
-    "service_code",
-    "description",
-    "requested_datetime",
-    "updated_datetime",
-    "address",
-    "lat",
-    "long",
-    "token",
-    "city",
-    "media_url"
-from {{ source('raw', 'open311') }}
+    "indicator",
+    "country",
+    "year",
+    "value"
+from {{ source('raw', 'imf_datamapper') }}

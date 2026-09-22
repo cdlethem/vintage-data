@@ -55,6 +55,17 @@ def _get(url):
         return json.load(resp)
 
 
+def _normalize_author(author):
+    """Return the feed's author key/string, rejecting malformed values."""
+    if author is None:
+        return None
+    if isinstance(author, dict):
+        return author.get("key")
+    if isinstance(author, str):
+        return author
+    raise ValueError("Open Library event author must be an object, string, or null")
+
+
 def fetch_recent(limit: int = 100, kind: str | None = None):
     """Recent catalog edits, newest first. kind filters to one event type
     (add-book, edit-book, add-cover, new-account, ...)."""
@@ -71,7 +82,7 @@ def fetch_recent(limit: int = 100, kind: str | None = None):
             "kind": r.get("kind"),
             "timestamp": r.get("timestamp"),
             "comment": r.get("comment"),
-            "author": (r.get("author") or {}).get("key"),
+            "author": _normalize_author(r.get("author")),
             "n_changes": len(changes),
             "changed_keys": [c.get("key") for c in changes],
         }
