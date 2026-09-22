@@ -124,11 +124,13 @@ def _request_url(
     query = urllib.parse.urlencode(
         {
             "all_records": 1,
-            "modified_after": _format_window_time(start),
-            "modified_before": _format_window_time(end),
+            "occs_modified_after": _format_window_time(start),
+            "occs_modified_before": _format_window_time(end),
             "vocab": "pbdb",
             "show": SHOW_FIELDS,
-            "order": "occurrence_no",
+            "order": "id",
+            "rowcount": 1,
+            "strict": 1,
             "limit": page_size,
             "offset": offset,
         }
@@ -241,7 +243,7 @@ def fetch_occurrences(
         "lookback_hours": lookback_hours,
         "overlap_hours": OVERLAP_HOURS,
         "vocab": "pbdb",
-        "order": "occurrence_no",
+        "order": "id",
     }
     open_request = urllib.request.urlopen if opener is None else opener
     output: list[dict[str, Any]] = []

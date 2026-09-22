@@ -167,7 +167,7 @@ class PaleobiologyDatabaseTests(unittest.TestCase):
                 "lookback_hours": 24,
                 "overlap_hours": 48,
                 "vocab": "pbdb",
-                "order": "occurrence_no",
+                "order": "id",
             },
         )
 
@@ -177,11 +177,13 @@ class PaleobiologyDatabaseTests(unittest.TestCase):
         ]
         expected_common = {
             "all_records": ["1"],
-            "modified_after": ["2026-09-14 12:34:56"],
-            "modified_before": ["2026-09-17 12:34:56"],
+            "occs_modified_after": ["2026-09-14 12:34:56"],
+            "occs_modified_before": ["2026-09-17 12:34:56"],
             "vocab": ["pbdb"],
             "show": [MODULE.SHOW_FIELDS],
-            "order": ["occurrence_no"],
+            "order": ["id"],
+            "rowcount": ["1"],
+            "strict": ["1"],
             "limit": ["2"],
         }
         self.assertEqual(queries, [
