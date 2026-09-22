@@ -7,7 +7,6 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-
 REPO_ROOT = Path(__file__).parents[2]
 INCLUDE_DIR = REPO_ROOT / "orchestration" / "include"
 RUNNER_PATH = INCLUDE_DIR / "extract_runner.py"
@@ -53,6 +52,22 @@ class ExplodingPopen(FailingPopen):
         self.stdout = records()
 
 
+class InvalidSummaryPopen(FailingPopen):
+    """Exits 0 after emitting a summary with a contract-invalid value."""
+
+    returncode = 0
+
+    def __init__(self, command, *, cwd, stdout, stderr, text):
+        del command, cwd, stdout, text
+        stderr.write("ordinary log line token=summary-secret\n")
+        stderr.write('VINTAGE_RUN_SUMMARY\t{"health": "exploded", "requests": {"attempted": 1, "succeeded": 1}}\n')
+        self.stdout = iter([
+            json.dumps({"source": "invalid_summary_fixture",
+                        "fetched_at": "2026-09-21T00:00:00Z", "id": 1}) + "\n"
+        ])
+        self._returncode = type(self).returncode
+
+
 class ExtractRunnerFailureDiagnosticsTests(unittest.TestCase):
     def test_child_failure_persists_bounded_redacted_serialized_diagnostic(self):
         runner = load_runner()
@@ -62,6 +77,7 @@ class ExtractRunnerFailureDiagnosticsTests(unittest.TestCase):
             + "x" * (runner.FAILURE_STDERR_MAX_CHARS + 200)
             + "\nAuthorization: Bearer " + secret + "\n"
             "request https://alice:" + secret + "@example.test/path?access_token=" + secret + "\n"
+            'config {"token": "' + secret + '"}\n'
             "token=" + secret + "\n"
             "final useful child stderr\n"
         )
@@ -72,13 +88,13 @@ class ExtractRunnerFailureDiagnosticsTests(unittest.TestCase):
             "args": ["--api-key=" + secret],
         }
 
-        with tempfile.TemporaryDirectory() as directory:
-            with (
-                mock.patch.object(runner.subprocess, "Popen", FailingPopen),
-                mock.patch.dict("os.environ", {"EXTRACT_DATA_ROOT": directory}),
-            ):
-                with self.assertRaises(RuntimeError) as raised:
-                    runner.run(config)
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            mock.patch.object(runner.subprocess, "Popen", FailingPopen),
+            mock.patch.dict("os.environ", {"EXTRACT_DATA_ROOT": directory}),
+        ):
+            with self.assertRaises(RuntimeError) as raised:
+                runner.run(config)
 
             failure_files = list(Path(directory).rglob("*.fail.json"))
             self.assertEqual(len(failure_files), 1)
@@ -102,13 +118,13 @@ class ExtractRunnerFailureDiagnosticsTests(unittest.TestCase):
         ExplodingPopen.stderr_text = "child stderr token=child-secret\n"
         config = {"name": "iterator_fixture", "script": "broken.py", "sink": "local"}
 
-        with tempfile.TemporaryDirectory() as directory:
-            with (
-                mock.patch.object(runner.subprocess, "Popen", ExplodingPopen),
-                mock.patch.dict("os.environ", {"EXTRACT_DATA_ROOT": directory}),
-            ):
-                with self.assertRaises(RuntimeError) as raised:
-                    runner.run(config)
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            mock.patch.object(runner.subprocess, "Popen", ExplodingPopen),
+            mock.patch.dict("os.environ", {"EXTRACT_DATA_ROOT": directory}),
+        ):
+            with self.assertRaises(RuntimeError) as raised:
+                runner.run(config)
             manifest = json.loads(next(Path(directory).rglob("*.fail.json")).read_text())
 
         diagnostic = json.loads(manifest["error"])
@@ -131,6 +147,72 @@ class ExtractRunnerFailureDiagnosticsTests(unittest.TestCase):
         self.assertEqual(diagnostic["exit_status"], None)
         self.assertEqual(diagnostic["message"], "password=[REDACTED]")
         self.assertIn("ValueError: password=[REDACTED]", diagnostic["traceback"])
+
+    def test_redaction_covers_structured_and_split_forms(self):
+        runner = load_runner()
+        secret = "top-secret"
+
+        # Quoted object-member forms.
+        self.assertNotIn(secret, runner._redact('{"token": "top-secret"}'))
+        self.assertNotIn(secret, runner._redact("{'api_key': 'top-secret'}"))
+        self.assertNotIn(secret, runner._redact('{"Authorization": "Bearer top-secret"}'))
+        # Inline option=value form.
+        self.assertNotIn(secret, runner._redact("--api-key=" + secret))
+        # Split option/value argv pairs.
+        self.assertEqual(runner._redact_args(["--api-key", secret]),
+                         ["--api-key", "[REDACTED]"])
+        self.assertEqual(runner._redact_args(["--auth-token", secret, "--verbose"]),
+                         ["--auth-token", "[REDACTED]", "--verbose"])
+        self.assertEqual(runner._redact_args(["--api-key", "--verbose"]),
+                         ["--api-key", "--verbose"])
+        self.assertEqual(runner._redact_args(["-t", secret]), ["-t", secret])
+
+    def test_manifest_raised_error_and_logs_hide_split_secret(self):
+        runner = load_runner()
+        secret = "split-secret-value"
+        FailingPopen.stderr_text = "child saw token=" + secret + "\n"
+        config = {
+            "name": "split_fixture",
+            "script": "forced_failure.py",
+            "sink": "local",
+            "args": ["--api-key", secret],
+        }
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            mock.patch.object(runner.subprocess, "Popen", FailingPopen),
+            mock.patch.dict("os.environ", {"EXTRACT_DATA_ROOT": directory}),
+            self.assertLogs(runner.log.name, level="INFO") as captured,
+        ):
+            with self.assertRaises(RuntimeError) as raised:
+                runner.run(config)
+            manifest = json.loads(next(Path(directory).rglob("*.fail.json")).read_text())
+        self.assertIn("[REDACTED]", json.dumps(manifest))
+        self.assertNotIn(secret, json.dumps(manifest))
+        self.assertNotIn(secret, str(raised.exception))
+        self.assertNotIn(secret, "\n".join(captured.output))
+
+    def test_contract_invalid_summary_routes_through_failure_manifest(self):
+        runner = load_runner()
+        config = {"name": "invalid_summary_fixture", "script": "bad_summary.py", "sink": "local"}
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            mock.patch.object(runner.subprocess, "Popen", InvalidSummaryPopen),
+            mock.patch.dict("os.environ", {"EXTRACT_DATA_ROOT": directory}),
+        ):
+            with self.assertRaises(RuntimeError) as raised:
+                runner.run(config)
+            manifest = json.loads(next(Path(directory).rglob("*.fail.json")).read_text())
+
+        self.assertEqual(manifest["status"], "failed")
+        self.assertEqual(manifest["exit_code"], 0)
+        diagnostic = json.loads(manifest["error"])
+        self.assertEqual(diagnostic["exception_type"], "RunSummaryError")
+        self.assertEqual(diagnostic["exit_status"], 0)
+        self.assertIn("ordinary log line token=[REDACTED]", diagnostic["stderr"])
+        self.assertEqual(json.loads(str(raised.exception)), diagnostic)
+        # The staged records must not be published.
+        self.assertEqual(list(Path(directory).rglob("*.meta.json")), [])
+        self.assertEqual(list(Path(directory).rglob("*.ndjson")), [])
 
 
 if __name__ == "__main__":
