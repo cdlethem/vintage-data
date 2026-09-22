@@ -1,0 +1,22 @@
+name: imf_datamapper
+script: fetch_imf_datamapper.py
+# One bounded request to the official real-GDP-growth endpoint. DataMapper
+# publishes annual history and projections together; the extractor preserves
+# its years and does not infer actual/projected labels.
+args: ["NGDP_RPCH", "--timeout", "60"]
+schedule: "41 11 * * 3"  # UTC; weekly Wednesday refresh for IMF revisions
+enabled: true
+retries: 1
+timeout_minutes: 5
+sink: local
+
+# IMF DataMapper revisions are useful weekly snapshots, not an activity signal.
+cadence:
+  auto: false
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "weekly snapshot of the complete NGDP_RPCH annual series"
+rate_limit: "one bounded request per weekly run to the official IMF DataMapper NGDP_RPCH endpoint"
+licence: "IMF Copyright and Usage Terms"
+attribution: "International Monetary Fund, World Economic Outlook DataMapper, https://www.imf.org/external/datamapper/"
+attribution_required: true

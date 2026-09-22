@@ -5,7 +5,7 @@ script: fetch_bls_public_api.py
 # bounded historical retrieval without adding registration keys or credentials.
 args: []
 schedule: "1 16 * * *"  # UTC
-enabled: false
+enabled: true
 retries: 1
 timeout_minutes: 10
 sink: local
@@ -15,9 +15,9 @@ sink: local
 cadence:
   auto: false
 
-# Do not enable until an operator records a successful live BLS API smoke and a
-# read-only Airflow import check. Offline tests intentionally mock HTTP and do not
-# read or mutate Airflow metadata.
+# Proposed enablement: do not merge or deploy until an authorized operator records
+# a live BLS smoke covering all five configured series and a read-only Airflow
+# import check of this candidate DAG; offline tests mock HTTP and do not read or mutate Airflow metadata.
 # Vetting metadata (documentation only, not read by the DAG factory)
 cadence_note: "daily check after typical BLS release times; adaptive cadence disabled"
 rate_limit: "anonymous public API: 25 queries/day and at most 10 inclusive calendar years per query"

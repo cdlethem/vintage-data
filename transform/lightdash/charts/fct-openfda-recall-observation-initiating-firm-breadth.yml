@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_openfda_recall_observation_recall_initiation_date_day
+          yRef:
+            field: fct_openfda_recall_observation_distinct_firms
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Recall initiation date (Day)
+      yAxis:
+      - name: Distinct firms
+    layout:
+      xField: fct_openfda_recall_observation_recall_initiation_date_day
+      yField:
+      - fct_openfda_recall_observation_distinct_firms
+  type: cartesian
+description: Distinct non-null `firm` values associated with recalls on each FDA `recall_initiation_date`
+  during the past 180 days. Repeated fetch observations count a firm once per day; records with a missing
+  initiation date and dates without recalls are absent.
+metricQuery:
+  dimensions:
+  - fct_openfda_recall_observation_recall_initiation_date_day
+  exploreName: fct_openfda_recall_observation
+  filters:
+    dimensions:
+      and:
+      - id: 5d81e46a-679c-557a-9f9a-b42c155698b6
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_openfda_recall_observation_recall_initiation_date
+        values:
+        - 180
+      id: ba4b1870-ad14-53a6-aec1-f30765f8f775
+  limit: 5000
+  metrics:
+  - fct_openfda_recall_observation_distinct_firms
+  sorts:
+  - descending: false
+    fieldId: fct_openfda_recall_observation_recall_initiation_date_day
+  tableCalculations: []
+name: Initiating firm breadth by FDA initiation date
+slug: fct-openfda-recall-observation-initiating-firm-breadth
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_openfda_recall_observation_recall_initiation_date_day
+  - fct_openfda_recall_observation_distinct_firms
+tableName: fct_openfda_recall_observation
+version: 1

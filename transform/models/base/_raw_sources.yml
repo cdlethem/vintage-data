@@ -7245,6 +7245,87 @@ sources:
     - name: last_updated
       description: Raw `last_updated` value supplied by `launch_library`.
       data_type: TIMESTAMP WITH TIME ZONE
+  - name: library_of_congress
+    description: Insert-only raw records loaded for `library_of_congress`.
+    columns: &id169
+    - name: _row_id
+      description: Raw `_row_id` value supplied by `library_of_congress`.
+      data_type: VARCHAR
+    - name: _source
+      description: Raw `_source` value supplied by `library_of_congress`.
+      data_type: VARCHAR
+    - name: _batch_id
+      description: Identifier of the raw load batch that produced this row.
+      data_type: VARCHAR
+    - name: _source_file
+      description: Raw source file from which this row was loaded.
+      data_type: VARCHAR
+    - name: _file_row_num
+      description: One-based row position in the raw source file.
+      data_type: BIGINT
+    - name: _dt
+      description: Raw `_dt` value supplied by `library_of_congress`.
+      data_type: DATE
+    - name: _extract_started_at
+      description: Raw `_extract_started_at` value supplied by `library_of_congress`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _load_id
+      description: Identifier of the load job that inserted this row.
+      data_type: VARCHAR
+    - name: _loaded_at
+      description: UTC timestamp at which the load layer inserted this row.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _content_hash
+      description: Stable hash of the raw record content used for lineage and deduplication.
+      data_type: VARCHAR
+    - name: _payload
+      description: Complete raw record payload retained for lineage and schema evolution.
+      data_type: JSON
+    - name: source
+      description: Raw `source` value supplied by `library_of_congress`.
+      data_type: VARCHAR
+    - name: id
+      description: Raw `id` value supplied by `library_of_congress`.
+      data_type: VARCHAR
+    - name: fetched_at
+      description: Raw `fetched_at` value supplied by `library_of_congress`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: title
+      description: Raw `title` value supplied by `library_of_congress`.
+      data_type: VARCHAR
+    - name: date
+      description: Raw `date` value supplied by `library_of_congress`.
+      data_type: VARCHAR
+    - name: dates
+      description: Raw `dates` value supplied by `library_of_congress`.
+      data_type: JSON
+    - name: contributors
+      description: Raw `contributors` value supplied by `library_of_congress`.
+      data_type: JSON
+    - name: subjects
+      description: Raw `subjects` value supplied by `library_of_congress`.
+      data_type: JSON
+    - name: digitized
+      description: Raw `digitized` value supplied by `library_of_congress`.
+      data_type: BOOLEAN
+    - name: online_formats
+      description: Raw `online_formats` value supplied by `library_of_congress`.
+      data_type: JSON
+    - name: mime_types
+      description: Raw `mime_types` value supplied by `library_of_congress`.
+      data_type: JSON
+    - name: canonical_url
+      description: Raw `canonical_url` value supplied by `library_of_congress`.
+      data_type: VARCHAR
+    - name: resources
+      description: Raw `resources` value supplied by `library_of_congress`.
+      data_type: JSON
+    - name: resource_links
+      description: Raw `resource_links` value supplied by `library_of_congress`.
+      data_type: JSON
+    - name: raw
+      description: Raw `raw` value supplied by `library_of_congress`.
+      data_type: JSON
   - name: lichess
     description: Insert-only raw records loaded for `lichess`.
     columns: &id085
@@ -9416,6 +9497,9 @@ sources:
       data_type: VARCHAR
     - name: city
       description: Raw `city` value supplied by `open311`.
+      data_type: VARCHAR
+    - name: media_url
+      description: Raw `media_url` value supplied by `open311`.
       data_type: VARCHAR
   - name: open_collective
     description: Insert-only raw records loaded for `open_collective`.
@@ -13308,6 +13392,111 @@ sources:
     - name: watched_url
       description: Raw `watched_url` value supplied by `wayback_cdx`.
       data_type: VARCHAR
+  - name: who_gho_odata
+    description: Insert-only raw records loaded for `who_gho_odata`.
+    columns: &who_gho_odata
+    - name: _row_id
+      description: Raw `_row_id` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: _source
+      description: Raw `_source` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: _batch_id
+      description: Identifier of the raw load batch that produced this row.
+      data_type: VARCHAR
+    - name: _source_file
+      description: Raw source file from which this row was loaded.
+      data_type: VARCHAR
+    - name: _file_row_num
+      description: One-based row position in the raw source file.
+      data_type: BIGINT
+    - name: _dt
+      description: Raw `_dt` value supplied by `who_gho_odata`.
+      data_type: DATE
+    - name: _extract_started_at
+      description: Raw `_extract_started_at` value supplied by `who_gho_odata`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _load_id
+      description: Identifier of the load job that inserted this row.
+      data_type: VARCHAR
+    - name: _loaded_at
+      description: UTC timestamp at which the load layer inserted this row.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _content_hash
+      description: Stable hash of the raw record content used for lineage and deduplication.
+      data_type: VARCHAR
+    - name: _payload
+      description: Complete raw record payload retained for lineage and schema evolution.
+      data_type: JSON
+    - name: source
+      description: Raw `source` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: id
+      description: Raw `id` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: fetched_at
+      description: Raw `fetched_at` value supplied by `who_gho_odata`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: observation_identity
+      description: Raw `observation_identity` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: upstream_id
+      description: Raw `upstream_id` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: indicator_code
+      description: Raw `indicator_code` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: geography_type
+      description: Raw `geography_type` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: geography_code
+      description: Raw `geography_code` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: parent_geography_code
+      description: Raw `parent_geography_code` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: parent_geography_name
+      description: Raw `parent_geography_name` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: period_type
+      description: Raw `period_type` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: period
+      description: Raw `period` value supplied by `who_gho_odata`.
+      data_type: BIGINT
+    - name: numeric_value
+      description: Raw `numeric_value` value supplied by `who_gho_odata`.
+      data_type: DOUBLE
+    - name: display_value
+      description: Raw `display_value` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: low
+      description: Raw `low` value supplied by `who_gho_odata`.
+      data_type: DOUBLE
+    - name: high
+      description: Raw `high` value supplied by `who_gho_odata`.
+      data_type: DOUBLE
+    - name: comments
+      description: Raw `comments` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: date
+      description: Raw `date` value supplied by `who_gho_odata`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: time_dimension_value
+      description: Raw `time_dimension_value` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
+    - name: time_dimension_begin
+      description: Raw `time_dimension_begin` value supplied by `who_gho_odata`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: time_dimension_end
+      description: Raw `time_dimension_end` value supplied by `who_gho_odata`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: dimensions
+      description: Raw `dimensions` value supplied by `who_gho_odata`.
+      data_type: JSON
+    - name: source_url
+      description: Raw `source_url` value supplied by `who_gho_odata`.
+      data_type: VARCHAR
   - name: wikimedia_changes
     description: Insert-only raw records loaded for `wikimedia_changes`.
     columns: &id164
@@ -13383,6 +13572,111 @@ sources:
     - name: tags
       description: Raw `tags` value supplied by `wikimedia_changes`.
       data_type: JSON
+  - name: wikimedia_page_summaries
+    description: Insert-only raw records loaded for `wikimedia_page_summaries`.
+    columns: &wikimedia_page_summaries_columns
+    - name: _row_id
+      description: Raw `_row_id` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: _source
+      description: Raw `_source` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: _batch_id
+      description: Identifier of the raw load batch that produced this row.
+      data_type: VARCHAR
+    - name: _source_file
+      description: Raw source file from which this row was loaded.
+      data_type: VARCHAR
+    - name: _file_row_num
+      description: One-based row position in the raw source file.
+      data_type: BIGINT
+    - name: _dt
+      description: Raw `_dt` value supplied by `wikimedia_page_summaries`.
+      data_type: DATE
+    - name: _extract_started_at
+      description: Raw `_extract_started_at` value supplied by `wikimedia_page_summaries`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _load_id
+      description: Identifier of the load job that inserted this row.
+      data_type: VARCHAR
+    - name: _loaded_at
+      description: UTC timestamp at which the load layer inserted this row.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _content_hash
+      description: Stable hash of the raw record content used for lineage and deduplication.
+      data_type: VARCHAR
+    - name: _payload
+      description: Complete raw record payload retained for lineage and schema evolution.
+      data_type: JSON
+    - name: source
+      description: Raw `source` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: id
+      description: Raw `id` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: fetched_at
+      description: Raw `fetched_at` value supplied by `wikimedia_page_summaries`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: language
+      description: Raw `language` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: project
+      description: Raw `project` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: requested_title
+      description: Raw `requested_title` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: title
+      description: Raw `title` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: is_redirect
+      description: Raw `is_redirect` value supplied by `wikimedia_page_summaries`.
+      data_type: BOOLEAN
+    - name: page_id
+      description: Raw `page_id` value supplied by `wikimedia_page_summaries`.
+      data_type: BIGINT
+    - name: revision_id
+      description: Raw `revision_id` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: revision_timestamp
+      description: Raw `revision_timestamp` value supplied by `wikimedia_page_summaries`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: summary
+      description: Raw `summary` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: description
+      description: Raw `description` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: wikibase_item
+      description: Raw `wikibase_item` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: page_url
+      description: Raw `page_url` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: mobile_page_url
+      description: Raw `mobile_page_url` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: api_url
+      description: Raw `api_url` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: thumbnail_source
+      description: Raw `thumbnail_source` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: thumbnail_width
+      description: Raw `thumbnail_width` value supplied by `wikimedia_page_summaries`.
+      data_type: BIGINT
+    - name: thumbnail_height
+      description: Raw `thumbnail_height` value supplied by `wikimedia_page_summaries`.
+      data_type: BIGINT
+    - name: original_image_source
+      description: Raw `original_image_source` value supplied by `wikimedia_page_summaries`.
+      data_type: VARCHAR
+    - name: original_image_width
+      description: Raw `original_image_width` value supplied by `wikimedia_page_summaries`.
+      data_type: BIGINT
+    - name: original_image_height
+      description: Raw `original_image_height` value supplied by `wikimedia_page_summaries`.
+      data_type: BIGINT
   - name: wspr_live
     description: Insert-only raw records loaded for `wspr_live`.
     columns: &id165
@@ -13885,6 +14179,10 @@ models:
   description: Thin governed view over the `launch_library` raw source. Values and load lineage are preserved
     without semantic cleaning.
   columns: *id084
+- name: base_library_of_congress
+  description: Thin governed view over the `library_of_congress` raw source. Values and load lineage are
+    preserved without semantic cleaning.
+  columns: *id169
 - name: base_lichess
   description: Thin governed view over the `lichess` raw source. Values and load lineage are preserved
     without semantic cleaning.
@@ -14213,6 +14511,10 @@ models:
   description: Thin governed view over the `wikimedia_changes` raw source. Values and load lineage are
     preserved without semantic cleaning.
   columns: *id164
+- name: base_wikimedia_page_summaries
+  description: Thin governed view over the `wikimedia_page_summaries` raw source. Values and load lineage
+    are preserved without semantic cleaning.
+  columns: *wikimedia_page_summaries_columns
 - name: base_wspr_live
   description: Thin governed view over the `wspr_live` raw source. Values and load lineage are preserved
     without semantic cleaning.
