@@ -81,6 +81,24 @@ class ContentTest(unittest.TestCase):
         self.assertEqual([rule['target']['fieldId'] for rule in dashboard['filters']['dimensions']],['fct_demo_category'])
         self.assertTrue(dashboard['filters']['dimensions'][0]['disabled'])
 
+    def test_trend_constant_filters_override_shared_visualization_filters(self):
+        manifest=model_fixture()
+        viz=manifest['nodes']['model.vintage_data.fct_demo']['config']['meta']['vintage']['visualization']
+        viz['filters']=[{'field':'category','values':['shared']}]
+        viz['analysis']['trends'][0]=dict(viz['analysis']['trends'][0],filters=[{'field':'category','values':['own']}])
+        outputs=content.render(manifest)
+        def equals_rules(chart):
+            rules=chart['metricQuery'].get('filters',{}).get('dimensions',{}).get('and',[])
+            return [rule['values'] for rule in rules if rule.get('operator')=='equals']
+        self.assertEqual(equals_rules(outputs['charts/fct-demo-volume.yml']),[['own']])
+        self.assertEqual(equals_rules(outputs['charts/fct-demo-by-category.yml']),[['shared']])
+        self.assertEqual(equals_rules(outputs['charts/fct-demo-details.yml']),[['shared']])
+        viz['analysis']['trends'][0]['filters']=[{'field':'missing','values':['x']}]
+        with tempfile.TemporaryDirectory() as directory:
+            report=project.coverage(manifest,pathlib.Path(directory))
+            self.assertFalse(report['ok'])
+            self.assertTrue(any('trend filter field' in issue for issue in report['models'][0]['issues']))
+
     def test_gaps_are_scheduled_work_and_bad_specifications_are_contract_issues(self):
         manifest=model_fixture()
         node=manifest['nodes']['model.vintage_data.fct_demo']
