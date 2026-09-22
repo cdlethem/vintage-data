@@ -2,10 +2,12 @@ version: 2
 models:
 - name: fct_library_of_congress_item_observation
   description: >-
-    Physical observation fact for the bounded Library of Congress robotics books search. Each row is one
-    source, stable item identifier, and UTC collection timestamp (`observed_at`). The configured query is a
-    changing ranked slice of at most 200 observations per run, not a catalogue census. Repeated snapshots
-    preserve later catalogue and ranking changes; `item_date` is free-form source text and is not event time.
+    Physical observation fact for the bounded, changing Library of Congress robotics books search. Each row
+    is one source, stable item identifier, and UTC collection timestamp (`observed_at`). The configured query
+    returns a ranked slice of at most 200 observations per run, not a catalogue census. Collection-day counts
+    are catalogue levels rather than flows; missing collection days are absent rather than zero. Repeated
+    snapshots preserve later catalogue and ranking changes, while `item_date` is a free-form source label and
+    not event time.
   config:
     contract:
       enforced: true
@@ -20,30 +22,31 @@ models:
       vintage:
         visualization:
           dimension: digitized
-          metric: distinct_entities
+          metric: distinct_items
           time: observed_at
           window_days: 30
-          title: Distinct items by reported digitized status
-          description: Distinct `item_id` values by the digitized status reported by the Library of Congress
-            among observations collected in the past 30 UTC days. Repeated snapshots count once within each
-            status, but an item whose status changes can occur in multiple groups; groups are not additive
-            and do not represent a catalogue census.
+          title: Distinct items by reported digitization status
+          description: Distinct `item_id` values by non-null digitization status reported by the Library of
+            Congress among observations collected in the past 30 UTC days. This is a catalogue level for the
+            bounded, changing robotics-search slice, not a flow or catalogue census. Repeated observations
+            count once within a status group, but items whose category changes can occur in both groups, so
+            the groups are not additive across snapshots.
           detail_fields:
           - observed_at
+          - source
           - item_id
           - title
           - digitized
           - item_date
           - canonical_url
-          - source_loaded_at
           sources:
           - 'Data provided by the Library of Congress. `library_of_congress` — licence: Library of Congress
             catalog metadata; attribution required: True. Source configuration:
             `extract/sources/library_of_congress.yml`. Rights for linked collection material vary by item;
             consult the item-specific rights and access statement before reuse.'
           analysis:
-            headline: how item and title coverage and reported digitization vary across daily observations
-              of the changing bounded robotics search slice.
+            headline: how item and represented item-date-label coverage and reported digitization change
+              across daily observations of the bounded, changing Library of Congress robotics-search slice.
             event_time: observed_at
             grain: DAY
             controls:
@@ -51,39 +54,47 @@ models:
             trends:
             - slug: observed-items
               kind: total
-              metric: distinct_entities
+              metric: distinct_items
               time: observed_at
               grain: DAY
-              window_days: 30
-              title: Distinct items by collection day
-              description: Distinct `item_id` values present in each UTC `observed_at` collection day during
-                the past 30 days. This measures the changing ranked slice, not new catalogue items or a
-                catalogue census; missing collection days are absent rather than zero and repeated snapshots
-                are not summed.
+              window_days: 90
+              title: Distinct observed items by collection day
+              description: Distinct `item_id` values present on each UTC `observed_at` collection day in the
+                past 90 days. This is a catalogue level for the bounded, changing robotics-search slice, not a
+                flow of new Library of Congress items or a catalogue census. Missing collection days are absent
+                rather than zero, and repeated observations within a day count once.
               width: half
-            - slug: observed-titles
+            - slug: date-label-breadth
               kind: total
-              metric: distinct_titles
+              metric: distinct_date_labels
               time: observed_at
               grain: DAY
-              window_days: 30
-              title: Distinct titles by collection day
-              description: Distinct non-null `title` values present in each UTC `observed_at` collection day
-                during the past 30 days. Titles are source labels rather than stable identifiers; missing
-                collection days are absent rather than zero and repeated snapshots are not summed.
+              window_days: 90
+              title: Represented item-date labels by collection day
+              description: Distinct non-null `item_date` labels represented on each UTC `observed_at`
+                collection day in the past 90 days. This is catalogue breadth for the bounded, changing slice,
+                not a flow of dated events; labels are free-form source text. Missing collection days are absent
+                rather than zero, and repeated observations within a day do not increase the count.
               width: half
-            - slug: digitization-mix
-              kind: composition
-              metric: distinct_entities
+            - slug: digitization-status
+              kind: breakdown
+              filters:
+              - field: digitized
+                values:
+                - true
+                - false
+              metric: distinct_items
               breakdown: digitized
-              top_n: 3
+              top_n: 2
               time: observed_at
               grain: DAY
-              window_days: 30
-              title: Reported digitized status by collection day
-              description: Distinct `item_id` values by reported digitized status for each UTC collection day
-                in the past 30 days. Repeated snapshots count once per day and status group; status groups are
-                not additive across the window, and missing collection days are absent rather than zero.
+              window_days: 90
+              title: Distinct-item trajectories by reported digitization status
+              description: Unstacked daily trajectories of distinct `item_id` values for each non-null
+                digitization status reported on UTC collection days in the past 90 days. These are catalogue
+                levels for the bounded, changing slice, not flows. Repeated observations count once per day and
+                status, but category changes can place an item in both groups across snapshots, so groups are
+                not additive; missing collection days are absent rather than zero.
               width: full
   columns:
   - name: library_of_congress_item_observation_key
@@ -117,11 +128,12 @@ models:
     config:
       meta:
         metrics:
-          distinct_entities:
+          distinct_items:
             type: count_distinct
             label: Distinct items
             description: Distinct `item_id` values in each selected collection-time and dimension group;
-              repeated snapshots count once within a group.
+              repeated observations count once within a group, while category changes can make groups
+              non-additive across snapshots.
             format: '#,##0'
         dimension:
           type: string
@@ -149,13 +161,6 @@ models:
     data_type: varchar
     config:
       meta:
-        metrics:
-          distinct_titles:
-            type: count_distinct
-            label: Distinct titles
-            description: Distinct non-null source title values in each selected collection-time and dimension
-              group; titles are labels and are not stable item identifiers.
-            format: '#,##0'
         dimension:
           type: string
           label: Title
@@ -169,6 +174,13 @@ models:
           type: string
           label: Item date
           hidden: false
+        metrics:
+          distinct_date_labels:
+            type: count_distinct
+            label: Distinct item-date labels
+            description: Distinct non-null free-form `item_date` labels represented in each collection-time
+              group; this is catalogue breadth rather than a flow of dated events.
+            format: '#,##0'
   - name: dates
     description: JSON array of free-form date values associated with the item; these are not an event-time axis.
     data_type: json
@@ -361,7 +373,7 @@ models:
         dimension:
           type: timestamp
           label: Source loaded at
-          hidden: false
+          hidden: true
           time_intervals:
           - RAW
           - DAY
@@ -372,7 +384,8 @@ models:
           latest_load:
             type: max
             label: Latest warehouse load
-            description: Latest load timestamp represented by matching mart observations.
+            description: Latest raw load timestamp represented by matching mart rows; not the time the
+              dashboard was generated or published.
   - name: content_hash
     description: Hash of the original raw extractor record for lineage and replay auditing.
     data_type: varchar

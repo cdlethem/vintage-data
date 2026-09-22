@@ -28,18 +28,19 @@ tabs: []
 tiles:
 - h: 6
   properties:
-    content: 'Physical observation fact for the bounded Library of Congress robotics books search. Each
-      row is one source, stable item identifier, and UTC collection timestamp (`observed_at`). The configured
-      query is a changing ranked slice of at most 200 observations per run, not a catalogue census. Repeated
-      snapshots preserve later catalogue and ranking changes; `item_date` is free-form source text and
-      is not event time.
+    content: 'Physical observation fact for the bounded, changing Library of Congress robotics books search.
+      Each row is one source, stable item identifier, and UTC collection timestamp (`observed_at`). The
+      configured query returns a ranked slice of at most 200 observations per run, not a catalogue census.
+      Collection-day counts are catalogue levels rather than flows; missing collection days are absent
+      rather than zero. Repeated snapshots preserve later catalogue and ranking changes, while `item_date`
+      is a free-form source label and not event time.
 
 
       **Grain:** source, item_id, observed_at
 
 
-      **What changes here:** how item and title coverage and reported digitization vary across daily observations
-      of the changing bounded robotics search slice.
+      **What changes here:** how item and represented item-date-label coverage and reported digitization
+      change across daily observations of the bounded, changing Library of Congress robotics-search slice.
 
 
       **Window:** ranked and record tiles cover the past 30 days of `observed_at` (UTC); trend tiles state
@@ -69,30 +70,30 @@ tiles:
   y: 6
 - h: 10
   properties:
-    chartName: Distinct items by collection day
+    chartName: Distinct observed items by collection day
     chartSlug: fct-library-of-congress-item-observation-observed-items
     hideTitle: false
-    title: Distinct items by collection day
+    title: Distinct observed items by collection day
   type: saved_chart
   w: 18
   x: 0
   y: 7
 - h: 10
   properties:
-    chartName: Distinct titles by collection day
-    chartSlug: fct-library-of-congress-item-observation-observed-titles
+    chartName: Represented item-date labels by collection day
+    chartSlug: fct-library-of-congress-item-observation-date-label-breadth
     hideTitle: false
-    title: Distinct titles by collection day
+    title: Represented item-date labels by collection day
   type: saved_chart
   w: 18
   x: 18
   y: 7
 - h: 10
   properties:
-    chartName: Reported digitized status by collection day
-    chartSlug: fct-library-of-congress-item-observation-digitization-mix
+    chartName: Distinct-item trajectories by reported digitization status
+    chartSlug: fct-library-of-congress-item-observation-digitization-status
     hideTitle: false
-    title: Reported digitized status by collection day
+    title: Distinct-item trajectories by reported digitization status
   type: saved_chart
   w: 36
   x: 0
@@ -107,10 +108,10 @@ tiles:
   y: 27
 - h: 10
   properties:
-    chartName: Distinct items by reported digitized status
+    chartName: Distinct items by reported digitization status
     chartSlug: fct-library-of-congress-item-observation
     hideTitle: false
-    title: Distinct items by reported digitized status
+    title: Distinct items by reported digitization status
   type: saved_chart
   w: 18
   x: 0

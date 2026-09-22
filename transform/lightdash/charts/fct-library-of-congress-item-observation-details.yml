@@ -1,20 +1,21 @@
 chartConfig:
   config: {}
   type: table
-description: Physical observation fact for the bounded Library of Congress robotics books search. Each
-  row is one source, stable item identifier, and UTC collection timestamp (`observed_at`). The configured
-  query is a changing ranked slice of at most 200 observations per run, not a catalogue census. Repeated
-  snapshots preserve later catalogue and ranking changes; `item_date` is free-form source text and is
-  not event time.
+description: Physical observation fact for the bounded, changing Library of Congress robotics books search.
+  Each row is one source, stable item identifier, and UTC collection timestamp (`observed_at`). The configured
+  query returns a ranked slice of at most 200 observations per run, not a catalogue census. Collection-day
+  counts are catalogue levels rather than flows; missing collection days are absent rather than zero.
+  Repeated snapshots preserve later catalogue and ranking changes, while `item_date` is a free-form source
+  label and not event time.
 metricQuery:
   dimensions: &id001
   - fct_library_of_congress_item_observation_observed_at
+  - fct_library_of_congress_item_observation_source
   - fct_library_of_congress_item_observation_item_id
   - fct_library_of_congress_item_observation_title
   - fct_library_of_congress_item_observation_digitized
   - fct_library_of_congress_item_observation_item_date
   - fct_library_of_congress_item_observation_canonical_url
-  - fct_library_of_congress_item_observation_source_loaded_at
   exploreName: fct_library_of_congress_item_observation
   filters:
     dimensions:

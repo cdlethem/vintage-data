@@ -6,19 +6,20 @@ chartConfig:
           xRef:
             field: fct_library_of_congress_item_observation_digitized
           yRef:
-            field: fct_library_of_congress_item_observation_distinct_entities
+            field: fct_library_of_congress_item_observation_distinct_items
         type: bar
         yAxisIndex: 0
     layout:
       flipAxes: true
       xField: fct_library_of_congress_item_observation_digitized
       yField:
-      - fct_library_of_congress_item_observation_distinct_entities
+      - fct_library_of_congress_item_observation_distinct_items
   type: cartesian
-description: Distinct `item_id` values by the digitized status reported by the Library of Congress among
-  observations collected in the past 30 UTC days. Repeated snapshots count once within each status, but
-  an item whose status changes can occur in multiple groups; groups are not additive and do not represent
-  a catalogue census.
+description: Distinct `item_id` values by non-null digitization status reported by the Library of Congress
+  among observations collected in the past 30 UTC days. This is a catalogue level for the bounded, changing
+  robotics-search slice, not a flow or catalogue census. Repeated observations count once within a status
+  group, but items whose category changes can occur in both groups, so the groups are not additive across
+  snapshots.
 metricQuery:
   dimensions:
   - fct_library_of_congress_item_observation_digitized
@@ -38,17 +39,17 @@ metricQuery:
       id: b69d1da3-c569-54b2-90df-863fe38ca48c
   limit: 20
   metrics:
-  - fct_library_of_congress_item_observation_distinct_entities
+  - fct_library_of_congress_item_observation_distinct_items
   sorts:
   - descending: true
-    fieldId: fct_library_of_congress_item_observation_distinct_entities
+    fieldId: fct_library_of_congress_item_observation_distinct_items
   tableCalculations: []
-name: Distinct items by reported digitized status
+name: Distinct items by reported digitization status
 slug: fct-library-of-congress-item-observation
 spaceSlug: vintage-marts
 tableConfig:
   columnOrder:
   - fct_library_of_congress_item_observation_digitized
-  - fct_library_of_congress_item_observation_distinct_entities
+  - fct_library_of_congress_item_observation_distinct_items
 tableName: fct_library_of_congress_item_observation
 version: 1
