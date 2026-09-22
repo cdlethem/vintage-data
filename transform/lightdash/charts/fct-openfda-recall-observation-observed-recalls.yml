@@ -28,7 +28,7 @@ metricQuery:
   filters:
     dimensions:
       and:
-      - id: 9196188f-ab8b-5a2c-9f03-b46a76dba7c4
+      - id: 88dce6da-6d25-5775-ad59-6e0610c09cae
         operator: inThePast
         settings:
           completed: false
@@ -37,7 +37,7 @@ metricQuery:
           fieldId: fct_openfda_recall_observation_observed_at
         values:
         - 30
-      id: 459a3ee6-a595-5634-be28-fdc9f0fa680f
+      id: 4f156511-7e93-5d1e-b451-b421daf7b26e
   limit: 5000
   metrics:
   - fct_openfda_recall_observation_distinct_firms

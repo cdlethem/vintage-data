@@ -24,8 +24,8 @@ chartConfig:
   type: cartesian
 description: Distinct `recall_id` values by reported `state` and FDA `recall_initiation_date` during the
   past 180 days. Only the six states with the largest recall totals are shown; others are excluded rather
-  than aggregated, repeated fetches count once per state and day, and records with missing initiation dates
-  and dates without recalls are absent.
+  than aggregated, repeated fetches count once per state and day, and records with missing initiation
+  dates and dates without recalls are absent.
 metricQuery:
   dimensions:
   - fct_openfda_recall_observation_recall_initiation_date_day
@@ -34,7 +34,7 @@ metricQuery:
   filters:
     dimensions:
       and:
-      - id: e28f8fa8-b229-562a-80db-b22ee9194f04
+      - id: f4d28e9e-5d0b-51ae-a907-26cf82572cd9
         operator: inThePast
         settings:
           completed: false
@@ -43,7 +43,7 @@ metricQuery:
           fieldId: fct_openfda_recall_observation_recall_initiation_date
         values:
         - 180
-      id: f99fd4bb-a1ab-5ed4-bf84-4d7fbbf36dd7
+      id: 66c48377-1656-5c5a-bea9-1223505117e3
   limit: 5000
   metrics:
   - fct_openfda_recall_observation_distinct_recalls
