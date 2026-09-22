@@ -285,6 +285,17 @@ def trend_specs(node: dict) -> list[dict]:
             # catalogue mart can trend over event time without scanning and
             # de-duplicating every poll it has ever recorded.
             trend["snapshot"] = (spec["time"], int(snapshot))
+        constant_filters = trend.get("filters")
+        if constant_filters is not None:
+            if not isinstance(constant_filters, list) or not constant_filters:
+                fail(f"{slug}: filters must be a non-empty list of constant rules")
+            for rule in constant_filters:
+                values = rule.get("values") if isinstance(rule, dict) else None
+                if (not isinstance(rule, dict) or not rule.get("field")
+                        or not isinstance(values, list) or not values):
+                    fail(f"{slug}: each trend filter needs a field and non-empty values")
+                if rule["field"] not in columns_meta:
+                    fail(f"{slug}: trend filter field {rule['field']!r} is not a mart column")
         for key in ("title", "description"):
             if not str(trend.get(key, "")).strip():
                 fail(f"{slug}: {key} is required so the chart states its own reading")
