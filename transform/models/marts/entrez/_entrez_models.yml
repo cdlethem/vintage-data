@@ -1,0 +1,70 @@
+version: 2
+models:
+- name: fct_entrez_pubmed_observation
+  description: PubMed journal and book/chapter citation observations retrieved through NCBI Entrez, retaining the exact one-record EFetch XML and raw-load lineage. Repeated loaded copies of one PMID and fetch timestamp retain the latest copy.
+  config:
+    contract:
+      enforced: true
+    meta:
+      grain: source_name, pmid, observed_at
+  columns:
+  - name: pubmed_observation_key
+    description: Stable hash of source, PMID, and observation timestamp.
+    data_type: varchar
+  - name: source_name
+    description: Entrez source identifier supplied by the extractor.
+    data_type: varchar
+  - name: pmid
+    description: Stable numeric PubMed identifier.
+    data_type: varchar
+  - name: observed_at
+    description: UTC timestamp shared by records from one extractor run.
+    data_type: timestamp with time zone
+  - name: database_name
+    description: Validated Entrez database name; currently always pubmed.
+    data_type: varchar
+  - name: search_term
+    description: Query supplied to ESearch for discovery.
+    data_type: varchar
+  - name: title
+    description: Article or book/chapter title parsed from the PubMed XML response.
+    data_type: varchar
+  - name: abstract
+    description: Structured abstract sections parsed from the PubMed XML response.
+    data_type: varchar
+  - name: journal
+    description: Journal title or containing book title parsed from the PubMed XML response.
+    data_type: varchar
+  - name: publication_date
+    description: Publication date text reported by PubMed without inferred precision.
+    data_type: varchar
+  - name: doi
+    description: DOI reported in the PubMed article or book identifier list.
+    data_type: varchar
+  - name: authors
+    description: JSON array of author names parsed from PubMed XML.
+    data_type: json
+  - name: publication_types
+    description: JSON array of publication types reported by PubMed.
+    data_type: json
+  - name: raw_payload
+    description: Exact UTF-8 XML body returned by the one-record EFetch request.
+    data_type: varchar
+  - name: _batch_id
+    description: Load batch identifier for the retained raw record.
+    data_type: varchar
+  - name: _load_id
+    description: Load job identifier for the retained raw record.
+    data_type: varchar
+  - name: _source_file
+    description: Raw source file containing the retained observation.
+    data_type: varchar
+  - name: _file_row_num
+    description: One-based row position in the raw source file.
+    data_type: bigint
+  - name: source_loaded_at
+    description: UTC timestamp when the load layer inserted the retained observation.
+    data_type: timestamp with time zone
+  - name: _content_hash
+    description: Raw record content hash used for lineage and replay auditing.
+    data_type: varchar

@@ -1,0 +1,30 @@
+name: wikimedia_page_summaries
+script: fetch_wikimedia_page_summaries.py
+# Every admitted input is explicit: LANGUAGE must be a bounded lowercase Wikimedia
+# language code, PROJECT must be in the extractor's Wikimedia project allowlist, and
+# TITLE is NFC-normalized, trimmed, and has spaces/underscore runs normalized to `_`.
+# Titles are encoded as one path segment; no discovered link is ever requested.
+args: ["--page", "en", "wikipedia", "Albert_Einstein", "--page", "de", "wikipedia", "Albert_Einstein", "--page", "en", "wiktionary", "Einstein", "--timeout", "15", "--retries", "2", "--retry-budget", "90"]
+schedule: "37 9 * * 1"  # UTC; proposed weekly refresh while disabled
+# External acceptance is pending. Do not enable until the authorized live configured-title
+# smoke, warehouse load/model evidence, source_scheduling and analytics_engineer follow-ups,
+# provider checks, independent review, and activation checks required by the ticket exist.
+enabled: false
+retries: 1
+timeout_minutes: 5
+sink: local
+
+# Refresh and identity semantics: each run observes only the configured tuples. `id` is a
+# stable SHA-256 of normalized language/project/requested-title, so equal title text remains
+# distinct across languages and projects. Wikimedia title resolution is retained in `title`
+# and `is_redirect`, but never changes requested identity. Raw loads are insert-only; the
+# focused mart removes exact replay copies at id+fetched_at grain and preserves later fetches,
+# including unchanged observations and revised revisions. This is not a crawl or page census.
+# Text and media remain subject to their page/file-specific Wikimedia licences. Consumers must
+# follow the canonical page/file links for attribution and licence details; the source label and
+# canonical URLs are retained specifically for that purpose.
+cadence_note: "disabled proposed weekly refresh of three explicit Wikimedia page-summary identities"
+rate_limit: "at most 20 serial title requests per run; configured for 3, with 15s request timeout, 2 retries, 90s run-wide retry budget, and 1 MiB response cap"
+licence: "Wikimedia page text is generally CC BY-SA; media and individual projects/pages may use different terms"
+attribution: "Wikimedia contributors; retain canonical page and media URLs and follow page/file-specific attribution and licence requirements"
+attribution_required: true

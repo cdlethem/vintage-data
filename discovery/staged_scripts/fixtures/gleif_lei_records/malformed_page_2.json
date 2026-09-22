@@ -1,0 +1,23 @@
+{
+  "meta": {
+    "goldenCopy": {
+      "publishDate": "2026-09-17T10:00:00Z"
+    }
+  },
+  "links": {
+    "next": null
+  },
+  "data": [
+    {
+      "type": "lei-records",
+      "id": "CCCCCCCCCCCCCCCCCCCC",
+      "attributes": {
+        "lei": "NOT-THE-RESOURCE-ID",
+        "registration": {
+          "lastUpdateDate": "2026-09-17T01:00:00Z"
+        }
+      },
+      "relationships": {}
+    }
+  ]
+}

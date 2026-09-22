@@ -1,0 +1,7 @@
+version: 2
+
+models:
+  - name: base_who_gho_odata
+    description: >-
+      Thin governed view over bounded WHO Global Health Observatory OData observations.
+      Source values, dimension-distinct identity, and raw-load lineage are preserved.

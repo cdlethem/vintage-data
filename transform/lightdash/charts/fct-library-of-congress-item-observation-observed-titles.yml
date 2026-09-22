@@ -1,0 +1,56 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_library_of_congress_item_observation_observed_at_day
+          yRef:
+            field: fct_library_of_congress_item_observation_distinct_titles
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct titles
+    layout:
+      xField: fct_library_of_congress_item_observation_observed_at_day
+      yField:
+      - fct_library_of_congress_item_observation_distinct_titles
+  type: cartesian
+description: Distinct non-null `title` values present in each UTC `observed_at` collection day during
+  the past 30 days. Titles are source labels rather than stable identifiers; missing collection days are
+  absent rather than zero and repeated snapshots are not summed.
+metricQuery:
+  dimensions:
+  - fct_library_of_congress_item_observation_observed_at_day
+  exploreName: fct_library_of_congress_item_observation
+  filters:
+    dimensions:
+      and:
+      - id: 8b4788fa-1daf-558c-8738-9ddd71f5d693
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_library_of_congress_item_observation_observed_at
+        values:
+        - 30
+      id: e45a75bc-02ea-5186-8c3e-dc55f42f17d7
+  limit: 5000
+  metrics:
+  - fct_library_of_congress_item_observation_distinct_titles
+  sorts:
+  - descending: false
+    fieldId: fct_library_of_congress_item_observation_observed_at_day
+  tableCalculations: []
+name: Distinct titles by collection day
+slug: fct-library-of-congress-item-observation-observed-titles
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_library_of_congress_item_observation_observed_at_day
+  - fct_library_of_congress_item_observation_distinct_titles
+tableName: fct_library_of_congress_item_observation
+version: 1
