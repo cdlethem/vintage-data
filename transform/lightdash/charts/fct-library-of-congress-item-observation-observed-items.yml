@@ -38,13 +38,6 @@ metricQuery:
           fieldId: fct_library_of_congress_item_observation_observed_at
         values:
         - 90
-      - id: 68012e7d-985b-58d0-ae44-9133ad8e8472
-        operator: equals
-        target:
-          fieldId: fct_library_of_congress_item_observation_digitized
-        values:
-        - true
-        - false
       id: dd34ff0c-e0b3-5cb7-b62e-bf9dfcaafb58
   limit: 5000
   metrics:

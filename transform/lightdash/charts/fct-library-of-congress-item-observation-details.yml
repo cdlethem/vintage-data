@@ -29,13 +29,6 @@ metricQuery:
           fieldId: fct_library_of_congress_item_observation_observed_at
         values:
         - 30
-      - id: b8ba325d-a0fd-5adf-a955-d03d69f579ba
-        operator: equals
-        target:
-          fieldId: fct_library_of_congress_item_observation_digitized
-        values:
-        - true
-        - false
       id: b69d1da3-c569-54b2-90df-863fe38ca48c
   limit: 100
   metrics: []

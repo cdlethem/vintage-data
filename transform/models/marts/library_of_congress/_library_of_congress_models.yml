@@ -44,11 +44,6 @@ models:
             catalog metadata; attribution required: True. Source configuration:
             `extract/sources/library_of_congress.yml`. Rights for linked collection material vary by item;
             consult the item-specific rights and access statement before reuse.'
-          filters:
-          - field: digitized
-            values:
-            - true
-            - false
           analysis:
             headline: how item and represented item-date-label coverage and reported digitization change
               across daily observations of the bounded, changing Library of Congress robotics-search slice.
@@ -83,6 +78,11 @@ models:
               width: half
             - slug: digitization-status
               kind: breakdown
+              filters:
+              - field: digitized
+                values:
+                - true
+                - false
               metric: distinct_items
               breakdown: digitized
               top_n: 2
