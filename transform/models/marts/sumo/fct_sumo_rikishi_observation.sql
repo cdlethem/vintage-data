@@ -3,7 +3,7 @@
     incremental_strategy='merge',
     unique_key='rikishi_observation_key',
     on_schema_change='fail',
-    tags=['weekly']
+    tags=['daily']
 ) }}
 
 with filtered_source as (
