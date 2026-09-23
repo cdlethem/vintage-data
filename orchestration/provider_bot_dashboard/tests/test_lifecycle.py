@@ -328,6 +328,32 @@ class LifecycleTest(unittest.TestCase):
                         self.assertIsNone(row.terminal_at)
                         self.assertEqual("open", (row.provider_state or {}).get("state"))
 
+    def test_completion_terminalizes_under_airflow_session_config(self):
+        for provider in ("github", "gitlab"):
+            self._reset_db()
+            with self.subTest(provider=provider):
+                config, fake, patches = self._begin(provider)
+                with patches:
+                    with Session(self.engine, autoflush=False) as session:
+                        task = self._create_task(session)
+                        row = session.scalar(select(Execution).where(Execution.task_id == task.id))
+                        row.pr_number = 7
+                        row.trusted_head_sha = self.base_sha
+                        row.provider_state = {"state": "merged", "head_sha": self.base_sha, "draft": False}
+                        row.stage = "reviewed"
+                        row.dispatch_state = "running"
+                        session.flush()
+                        session.refresh(task)
+                        started = transition_task(session, str(task.id), version=task.version, actor_id="human", to_state="in_progress")
+                        comment = add_event_items(session, str(task.id), version=started["version"], actor_id="human", event_type="comment_added", items=["Human verification comment"])
+                        evidence = add_event_items(session, str(task.id), version=comment["version"], actor_id="human", event_type="evidence_added", items=[{"label": "merge", "url": "https://evidence.invalid/merge"}])
+                        transition_task(session, str(task.id), version=evidence["version"], actor_id="human", to_state="completed", reason="Human verified")
+                        session.commit()
+                        row = session.scalar(select(Execution).where(Execution.task_id == task.id))
+                        self.assertEqual("completed", session.get(Task, task.id).state)
+                        self.assertIsNotNone(row.terminal_at)
+                        self.assertEqual("merged", row.terminal_reason_code)
+
     def test_adverse_cases_are_bounded_and_idempotent(self):
         scenarios = ("forbidden_path", "oversized_diff", "changed_base_sha", "changed_pr_head", "no_change", "changes_requested", "provider_timeout", "duplicate")
         for scenario in scenarios:

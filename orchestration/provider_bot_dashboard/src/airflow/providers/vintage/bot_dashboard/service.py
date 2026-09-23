@@ -82,7 +82,11 @@ def _fingerprint(event_type: str, actor_kind: str, actor_id: str, from_state: st
 
 def _event(session: Session, task: Task, event_type: str, actor_kind: str, actor_id: str, *, from_state: str | None = None, to_state: str | None = None, payload: dict[str, Any] | None = None) -> Event:
     payload = _bounded_payload(payload or {})
-    sequence = session.scalar(select(func.coalesce(func.max(Event.sequence), 0)).where(Event.task_id == task.id)) + 1
+    # Airflow sessions disable autoflush. Include audit rows already staged in
+    # this transaction so multiple events cannot reuse the persisted maximum.
+    pending_sequence = max((row.sequence for row in session.new if isinstance(row, Event) and row.task_id == task.id), default=0)
+    persisted_sequence = session.scalar(select(func.coalesce(func.max(Event.sequence), 0)).where(Event.task_id == task.id))
+    sequence = max(pending_sequence, persisted_sequence) + 1
     row = Event(task_id=task.id, sequence=sequence, event_type=event_type, actor_kind=actor_kind, actor_id=str(actor_id), from_state=from_state, to_state=to_state, payload=payload, fingerprint=_fingerprint(event_type, actor_kind, str(actor_id), from_state, to_state, payload))
     session.add(row)
     return row
