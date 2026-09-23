@@ -23,7 +23,19 @@ metricQuery:
   dimensions:
   - fct_sumo_rikishi_observation_updated_at_month
   exploreName: fct_sumo_rikishi_observation
-  filters: {}
+  filters:
+    dimensions:
+      and:
+      - id: 8416d4f9-e29e-5751-b6b0-2522918b0301
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sumo_rikishi_observation_updated_at
+        values:
+        - 3650
+      id: 59afab16-df0d-5c13-b638-d45134a3c91b
   limit: 5000
   metrics:
   - fct_sumo_rikishi_observation_average_height_cm

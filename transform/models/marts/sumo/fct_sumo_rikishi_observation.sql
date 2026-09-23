@@ -48,7 +48,7 @@ keyed_rows as (
         cast(md5(to_json(struct_pack(
             source_system := source_system,
             rikishi_id := rikishi_id,
-            observed_at := observed_at
+            observed_at := epoch_us(observed_at)
         ))) as varchar) as rikishi_observation_key,
         *
     from typed_rows

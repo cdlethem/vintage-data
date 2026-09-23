@@ -287,7 +287,34 @@ def _assert_reconciled(rows: list[tuple[Any, ...]]) -> None:
         raise AssertionError("separate observation timestamps were collapsed")
 
 
+KEY_INSTANTS = (
+    "2026-01-15 00:00:00+00",
+    "2026-09-01 00:00:00+00",
+)
+KEY_TIME_ZONES = ("UTC", "America/Chicago", "America/Los_Angeles")
+
+
+def _assert_timezone_invariant_key() -> None:
+    """The merge key must be identical across session time zones and DST offsets."""
+    for instant in KEY_INSTANTS:
+        hashes = set()
+        for time_zone in KEY_TIME_ZONES:
+            with duckdb.connect() as connection:
+                connection.execute(f"set TimeZone='{time_zone}'")
+                value = connection.execute(
+                    "select md5(to_json(struct_pack("
+                    "source_system := 'sumo', rikishi_id := '42', "
+                    f"observed_at := epoch_us(cast('{instant}' as timestamp with time zone)))))"
+                ).fetchone()[0]
+            hashes.add(value)
+        if len(hashes) != 1:
+            raise AssertionError(
+                f"observation key for {instant} depends on session time zone: {sorted(hashes)}"
+            )
+
+
 def verify() -> int:
+    _assert_timezone_invariant_key()
     executable = shutil.which("dbt")
     if executable is None:
         print("Sumo incremental verification failed: dbt executable unavailable", file=sys.stderr)
@@ -327,7 +354,7 @@ def verify() -> int:
         if incremental_rows != full_refresh_rows:
             raise AssertionError("incremental replay result differs from combined-input full refresh")
 
-    print("Sumo incremental verified: initial + replay rows match combined-input full refresh")
+    print("Sumo incremental verified: key is session-time-zone invariant; initial + replay rows match combined-input full refresh")
     return 0
 
 

@@ -49,6 +49,7 @@ models:
               title: Wrestlers by source update month
               description: Distinct `rikishi_id` values by the UTC month of sumo-api.com `updated_at`. Null update timestamps and absent months are omitted, and this is source profile-update coverage rather than the number of extractor observations.
               width: half
+              window_days: 3650
             - slug: heya-breadth
               kind: total
               metric: distinct_heya
@@ -57,6 +58,7 @@ models:
               title: Heya represented by source update month
               description: Distinct non-null `heya` values among observations grouped by the UTC month of source `updated_at`. This measures represented stable breadth, not wrestler volume; null heya and months without source updates are absent.
               width: half
+              window_days: 3650
             - slug: average-height
               kind: total
               metric: average_height_cm
@@ -65,6 +67,7 @@ models:
               title: Mean reported height by source update month
               description: Mean non-null reported height in centimetres across retained observations, grouped by UTC source update month. Every observation has equal weight, so repeated snapshots can overweight wrestlers; this is non-additive and null heights are omitted.
               width: half
+              window_days: 3650
             - slug: average-weight
               kind: total
               metric: average_weight_kg
@@ -73,6 +76,7 @@ models:
               title: Mean reported weight by source update month
               description: Mean non-null reported weight in kilograms across retained observations, grouped by UTC source update month. Every observation has equal weight, so repeated snapshots can overweight wrestlers; this is non-additive and null weights are omitted.
               width: half
+              window_days: 3650
             - slug: rank-mix
               kind: composition
               metric: distinct_rikishi
@@ -83,6 +87,7 @@ models:
               title: Wrestler rank-division mix by source update month
               description: Distinct `rikishi_id` values by UTC source update month, stacked across the six recognized derived divisions. Null or unrecognized ranks are excluded, and a wrestler observed in multiple divisions can count in each, so segments are not a current-state census.
               width: full
+              window_days: 3650
   columns:
   - name: rikishi_observation_key
     description: Stable hash of source_system, rikishi_id, and the UTC observed_at timestamp defining the append-oriented snapshot observation grain.
@@ -392,11 +397,11 @@ unit_tests:
   - input: this
     format: dict
     rows:
-    - {rikishi_observation_key: c250f388c040b33c8ac0b1bbee8d28a7, source_system: sumo, rikishi_id: '42', observed_at: '2026-09-01 00:00:00+00', shikona_en: Stale name, shikona_jp: null, current_rank: Juryo 1 East, rank_division: Juryo, heya: Stale-beya, height_cm: 179.0, weight_kg: 149.0, debut: '2020.01', updated_at: '2026-08-29 00:00:00+00', source_row_id: stale-row, source_batch_id: stale-batch, source_file: 01-stale.jsonl, source_file_row_number: 1, source_date: '2026-09-01', extract_started_at: '2026-09-01 00:00:00+00', load_id: stale-load, source_loaded_at: '2026-09-01 00:05:00+00', content_hash: stale-hash}
+    - {rikishi_observation_key: c433e069bdf57f5f6845e979b7f8a34b, source_system: sumo, rikishi_id: '42', observed_at: '2026-09-01 00:00:00+00', shikona_en: Stale name, shikona_jp: null, current_rank: Juryo 1 East, rank_division: Juryo, heya: Stale-beya, height_cm: 179.0, weight_kg: 149.0, debut: '2020.01', updated_at: '2026-08-29 00:00:00+00', source_row_id: stale-row, source_batch_id: stale-batch, source_file: 01-stale.jsonl, source_file_row_number: 1, source_date: '2026-09-01', extract_started_at: '2026-09-01 00:00:00+00', load_id: stale-load, source_loaded_at: '2026-09-01 00:05:00+00', content_hash: stale-hash}
   expect:
     rows:
-    - {rikishi_observation_key: c250f388c040b33c8ac0b1bbee8d28a7, source_system: sumo, rikishi_id: '42', observed_at: '2026-09-01 00:00:00+00', shikona_en: Corrected name, shikona_jp: corrected-jp, current_rank: Maegashira 3 West, rank_division: Makuuchi, heya: Corrected-beya, height_cm: 181.0, weight_kg: 151.0, source_row_id: replay-row, source_batch_id: replay-batch, source_file: 02-replay.jsonl, source_file_row_number: 7, load_id: replay-load, source_loaded_at: '2026-09-01 00:15:00+00', content_hash: replay-hash}
-    - {rikishi_observation_key: 5aa4d8824b314af7a7716c43c317a758, source_system: sumo, rikishi_id: '42', observed_at: '2026-09-02 00:00:00+00', shikona_en: Next snapshot, rank_division: Makuuchi, source_row_id: next-snapshot, source_loaded_at: '2026-09-02 00:05:00+00', content_hash: next-hash}
+    - {rikishi_observation_key: c433e069bdf57f5f6845e979b7f8a34b, source_system: sumo, rikishi_id: '42', observed_at: '2026-09-01 00:00:00+00', shikona_en: Corrected name, shikona_jp: corrected-jp, current_rank: Maegashira 3 West, rank_division: Makuuchi, heya: Corrected-beya, height_cm: 181.0, weight_kg: 151.0, source_row_id: replay-row, source_batch_id: replay-batch, source_file: 02-replay.jsonl, source_file_row_number: 7, load_id: replay-load, source_loaded_at: '2026-09-01 00:15:00+00', content_hash: replay-hash}
+    - {rikishi_observation_key: 8e5454b3a282de9e1b88bcb1fcaa1f70, source_system: sumo, rikishi_id: '42', observed_at: '2026-09-02 00:00:00+00', shikona_en: Next snapshot, shikona_jp: null, current_rank: Maegashira 3 West, rank_division: Makuuchi, heya: Corrected-beya, height_cm: 181.0, weight_kg: 151.0, source_row_id: next-snapshot, source_batch_id: next-batch, source_file: 03-next.jsonl, source_file_row_number: 1, load_id: next-load, source_loaded_at: '2026-09-02 00:05:00+00', content_hash: next-hash}
 - name: reconciles_full_refresh_replay
   description: The same combined raw history proves a full refresh selects the same corrected attributes, lineage, historical snapshot, and one-row-per-grain result as the paired incremental replay case.
   model: fct_sumo_rikishi_observation
@@ -412,5 +417,5 @@ unit_tests:
     - {_row_id: next-snapshot, _source: sumo, _batch_id: next-batch, _source_file: 03-next.jsonl, _file_row_num: 1, _dt: '2026-09-02', _extract_started_at: '2026-09-02 00:00:00+00', _load_id: next-load, _loaded_at: '2026-09-02 00:05:00+00', _content_hash: next-hash, _payload: '{}', source: sumo_rikishi, id: '42', fetched_at: '2026-09-02 00:00:00+00', shikona_en: Next snapshot, shikona_jp: null, current_rank: Maegashira 3 West, heya: Corrected-beya, height_cm: 181.0, weight_kg: 151.0, debut: '2020.01', updated_at: '2026-09-01 00:12:00+00'}
   expect:
     rows:
-    - {rikishi_observation_key: c250f388c040b33c8ac0b1bbee8d28a7, source_system: sumo, rikishi_id: '42', observed_at: '2026-09-01 00:00:00+00', shikona_en: Corrected name, shikona_jp: corrected-jp, current_rank: Maegashira 3 West, rank_division: Makuuchi, heya: Corrected-beya, height_cm: 181.0, weight_kg: 151.0, source_row_id: replay-row, source_batch_id: replay-batch, source_file: 02-replay.jsonl, source_file_row_number: 7, load_id: replay-load, source_loaded_at: '2026-09-01 00:15:00+00', content_hash: replay-hash}
-    - {rikishi_observation_key: 5aa4d8824b314af7a7716c43c317a758, source_system: sumo, rikishi_id: '42', observed_at: '2026-09-02 00:00:00+00', shikona_en: Next snapshot, rank_division: Makuuchi, source_row_id: next-snapshot, source_loaded_at: '2026-09-02 00:05:00+00', content_hash: next-hash}
+    - {rikishi_observation_key: c433e069bdf57f5f6845e979b7f8a34b, source_system: sumo, rikishi_id: '42', observed_at: '2026-09-01 00:00:00+00', shikona_en: Corrected name, shikona_jp: corrected-jp, current_rank: Maegashira 3 West, rank_division: Makuuchi, heya: Corrected-beya, height_cm: 181.0, weight_kg: 151.0, source_row_id: replay-row, source_batch_id: replay-batch, source_file: 02-replay.jsonl, source_file_row_number: 7, load_id: replay-load, source_loaded_at: '2026-09-01 00:15:00+00', content_hash: replay-hash}
+    - {rikishi_observation_key: 8e5454b3a282de9e1b88bcb1fcaa1f70, source_system: sumo, rikishi_id: '42', observed_at: '2026-09-02 00:00:00+00', shikona_en: Next snapshot, shikona_jp: null, current_rank: Maegashira 3 West, rank_division: Makuuchi, heya: Corrected-beya, height_cm: 181.0, weight_kg: 151.0, source_row_id: next-snapshot, source_batch_id: next-batch, source_file: 03-next.jsonl, source_file_row_number: 1, load_id: next-load, source_loaded_at: '2026-09-02 00:05:00+00', content_hash: next-hash}

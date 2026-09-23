@@ -23,7 +23,19 @@ metricQuery:
   dimensions:
   - fct_sumo_rikishi_observation_updated_at_month
   exploreName: fct_sumo_rikishi_observation
-  filters: {}
+  filters:
+    dimensions:
+      and:
+      - id: 91e5392e-5e06-5c64-9dd2-05c2b3fccf54
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sumo_rikishi_observation_updated_at
+        values:
+        - 3650
+      id: c54aaf09-d6a3-5ddc-87dd-04ffad148a0d
   limit: 5000
   metrics:
   - fct_sumo_rikishi_observation_distinct_heya

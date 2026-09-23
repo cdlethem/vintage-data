@@ -23,7 +23,19 @@ metricQuery:
   dimensions:
   - fct_sumo_rikishi_observation_updated_at_month
   exploreName: fct_sumo_rikishi_observation
-  filters: {}
+  filters:
+    dimensions:
+      and:
+      - id: 25c59e05-2ee3-52dc-a6cd-be13ac4de058
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sumo_rikishi_observation_updated_at
+        values:
+        - 3650
+      id: e7387ab7-cffb-5c6b-875f-ea262634599b
   limit: 5000
   metrics:
   - fct_sumo_rikishi_observation_distinct_rikishi

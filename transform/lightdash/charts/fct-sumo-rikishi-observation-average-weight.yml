@@ -23,7 +23,19 @@ metricQuery:
   dimensions:
   - fct_sumo_rikishi_observation_updated_at_month
   exploreName: fct_sumo_rikishi_observation
-  filters: {}
+  filters:
+    dimensions:
+      and:
+      - id: e9e8a35a-29cc-5318-a613-e7034f32d2ab
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_sumo_rikishi_observation_updated_at
+        values:
+        - 3650
+      id: e801b224-6be0-577e-a8c2-bd5bb27cb090
   limit: 5000
   metrics:
   - fct_sumo_rikishi_observation_average_weight_kg
