@@ -82,7 +82,11 @@ def _fingerprint(event_type: str, actor_kind: str, actor_id: str, from_state: st
 
 def _event(session: Session, task: Task, event_type: str, actor_kind: str, actor_id: str, *, from_state: str | None = None, to_state: str | None = None, payload: dict[str, Any] | None = None) -> Event:
     payload = _bounded_payload(payload or {})
-    sequence = session.scalar(select(func.coalesce(func.max(Event.sequence), 0)).where(Event.task_id == task.id)) + 1
+    # Airflow sessions disable autoflush. Include audit rows already staged in
+    # this transaction so multiple events cannot reuse the persisted maximum.
+    pending_sequence = max((row.sequence for row in session.new if isinstance(row, Event) and row.task_id == task.id), default=0)
+    persisted_sequence = session.scalar(select(func.coalesce(func.max(Event.sequence), 0)).where(Event.task_id == task.id))
+    sequence = max(pending_sequence, persisted_sequence) + 1
     row = Event(task_id=task.id, sequence=sequence, event_type=event_type, actor_kind=actor_kind, actor_id=str(actor_id), from_state=from_state, to_state=to_state, payload=payload, fingerprint=_fingerprint(event_type, actor_kind, str(actor_id), from_state, to_state, payload))
     session.add(row)
     return row
@@ -463,6 +467,39 @@ def transition_task(session: Session, task_id: str, *, version: int, actor_id: s
         evidence = session.scalar(select(func.count()).select_from(Event).where(Event.task_id == task.id, Event.event_type == "evidence_added", Event.actor_kind == "user"))
         if not comments or not evidence: raise PreconditionFailed("completion requires a human note and evidence")
         task.completed_at = utcnow()
+        for execution in session.scalars(
+            select(Execution)
+            .where(
+                Execution.task_id == task.id,
+                Execution.terminal_at.is_(None),
+                Execution.pr_number.is_not(None),
+            )
+            .with_for_update()
+        ).all():
+            provider_state = execution.provider_state or {}
+            if (
+                execution.trusted_head_sha
+                and provider_state.get("state") == "merged"
+                and provider_state.get("head_sha") == execution.trusted_head_sha
+            ):
+                if not execution.merged_at:
+                    execution.merged_at = utcnow()
+                execution.stage = "terminal"
+                execution.dispatch_state = "terminal"
+                execution.terminal_reason_code = "merged"
+                execution.terminal_failure_class = "TerminalOutcome"
+                execution.terminal_detail = "provider change merged at the trusted publication head"
+                execution.terminal_at = utcnow()
+                _event(
+                    session,
+                    task,
+                    "execution_finalized",
+                    "system",
+                    "completion",
+                    from_state=previous,
+                    to_state="completed",
+                    payload={"code": "merged", "execution_id": execution.execution_id},
+                )
     if to_state == "dismissed": task.dismissed_at = utcnow()
     if to_state == "accepted": task.accepted_at = utcnow()
     task.state = to_state; task.version += 1; task.updated_at = utcnow()
