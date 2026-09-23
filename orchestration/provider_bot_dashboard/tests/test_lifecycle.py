@@ -277,6 +277,23 @@ class LifecycleTest(unittest.TestCase):
                         session.commit()
                         events = session.scalars(select(Event).where(Event.task_id == task.id).order_by(Event.sequence)).all()
                         self.assertEqual("completed", session.get(Task, task.id).state)
+                        row = session.scalar(select(Execution).where(Execution.task_id == task.id))
+                        self.assertIsNotNone(row.terminal_at)
+                        self.assertIsNotNone(row.merged_at)
+                        self.assertEqual("terminal", row.stage)
+                        self.assertEqual("terminal", row.dispatch_state)
+                        self.assertEqual("merged", row.terminal_reason_code)
+                        # Reconcile a legacy row that a pre-fix completion left live.
+                        row.terminal_at = None
+                        row.stage = "reviewed"
+                        row.dispatch_state = "running"
+                        row.terminal_reason_code = None
+                        row.synced_at = None
+                        self.assertEqual(1, maintenance.sync_provider(session)["changed"])
+                        row = session.scalar(select(Execution).where(Execution.task_id == task.id))
+                        self.assertIsNotNone(row.terminal_at)
+                        self.assertEqual("terminal", row.dispatch_state)
+                        self.assertEqual("merged", row.terminal_reason_code)
                         self.assertEqual(1, session.query(Execution).filter_by(task_id=task.id).count())
                         self.assertEqual(1, len([item for item in fake.comments if marker in item["body"]]))
                         self.assertEqual(sorted(item.sequence for item in events), [item.sequence for item in events])
@@ -284,6 +301,32 @@ class LifecycleTest(unittest.TestCase):
                         self.assertNotIn(SECRET, (self.artifacts / patch_sha[:2] / patch_sha).read_text(errors="ignore"))
                         self.assertEqual(self.base_sha, _git("rev-parse", "HEAD", cwd=self.shared))
                         self.assertEqual("base\n", (self.shared / "allowed.txt").read_text())
+
+    def test_completion_does_not_terminalize_unmerged_publication(self):
+        for provider in ("github", "gitlab"):
+            self._reset_db()
+            with self.subTest(provider=provider):
+                config, fake, patches = self._begin(provider)
+                with patches:
+                    with Session(self.engine) as session:
+                        task = self._create_task(session)
+                        row = session.scalar(select(Execution).where(Execution.task_id == task.id))
+                        row.pr_number = 7
+                        row.trusted_head_sha = self.base_sha
+                        row.provider_state = {"state": "open", "head_sha": self.base_sha, "draft": False}
+                        row.stage = "reviewed"
+                        row.dispatch_state = "running"
+                        session.flush()
+                        session.refresh(task)
+                        started = transition_task(session, str(task.id), version=task.version, actor_id="human", to_state="in_progress")
+                        comment = add_event_items(session, str(task.id), version=started["version"], actor_id="human", event_type="comment_added", items=["Human verification comment"])
+                        evidence = add_event_items(session, str(task.id), version=comment["version"], actor_id="human", event_type="evidence_added", items=[{"label": "merge", "url": "https://evidence.invalid/merge"}])
+                        transition_task(session, str(task.id), version=evidence["version"], actor_id="human", to_state="completed", reason="Human verified")
+                        session.commit()
+                        row = session.scalar(select(Execution).where(Execution.task_id == task.id))
+                        self.assertEqual("completed", session.get(Task, task.id).state)
+                        self.assertIsNone(row.terminal_at)
+                        self.assertEqual("open", (row.provider_state or {}).get("state"))
 
     def test_adverse_cases_are_bounded_and_idempotent(self):
         scenarios = ("forbidden_path", "oversized_diff", "changed_base_sha", "changed_pr_head", "no_change", "changes_requested", "provider_timeout", "duplicate")

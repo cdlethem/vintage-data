@@ -95,6 +95,39 @@ def sync_provider(session: Session, limit: int = 25) -> dict:
         if observation.get("head_sha") != row.trusted_head_sha:
             observation = {**observation, "state": "head_drift"}
             fingerprint = _fingerprint(observation)
+        state = observation.get("state")
+        if (
+            task is not None
+            and task.state == "completed"
+            and state == "merged"
+            and row.trusted_head_sha
+            and observation.get("head_sha") == row.trusted_head_sha
+        ):
+            # A completed task must not retain a live execution for its
+            # trusted merged publication; terminalize it so queue accounting
+            # reflects the terminal task state.
+            if not row.merged_at:
+                row.merged_at = utcnow()
+            row.stage = "terminal"
+            row.dispatch_state = "terminal"
+            row.terminal_reason_code = "merged"
+            row.terminal_failure_class = "TerminalOutcome"
+            row.terminal_detail = "provider change merged at the trusted publication head"
+            row.terminal_at = utcnow()
+            row.synced_at = utcnow()
+            changed += 1
+            _event(
+                session,
+                task,
+                "execution_finalized",
+                "system",
+                str(number),
+                from_state="completed",
+                to_state="completed",
+                payload={"code": "merged", "execution_id": row.execution_id},
+            )
+            session.flush()
+            continue
         row.synced_at = utcnow()
         if row.provider_fingerprint == fingerprint:
             continue
@@ -102,7 +135,6 @@ def sync_provider(session: Session, limit: int = 25) -> dict:
         row.provider_state = observation
         row.provider_fingerprint = fingerprint
         changed += 1
-        state = observation.get("state")
         if state == "invalid_identity":
             _record_terminal(
                 row,
