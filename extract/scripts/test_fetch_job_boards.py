@@ -2,10 +2,9 @@ import contextlib
 import importlib.util
 import io
 import json
-from pathlib import Path
 import unittest
+from pathlib import Path
 from unittest import mock
-
 
 SCRIPT = Path(__file__).with_name("fetch_job_boards.py")
 SPEC = importlib.util.spec_from_file_location("fetch_job_boards", SCRIPT)
@@ -86,6 +85,64 @@ class FetchJobBoardsSummaryTests(unittest.TestCase):
         self.assertTrue(all("tenant" in item and "records" in item and "retry_count" in item
                             and "final_status" in item and "error" in item for item in outcomes))
         self.assertTrue(all(item["event"] == "job_board_tenant_result" for item in outcomes))
+
+    def _outcomes(self, stderr_text):
+        return [json.loads(line) for line in stderr_text.splitlines()
+                if "job_board_tenant_result" in line]
+
+    def test_first_completion_success_binds_its_own_stats(self):
+        boards = [
+            MODULE.Board("workday", "tenant-0001|wd5|Careers", "Company OK", "US", "Software"),
+            MODULE.Board("workday", "tenant-0002|wd5|Careers", "Company Fail", "US", "Software"),
+        ]
+
+        def fetch_board(board, _limit):
+            if board.token.startswith("tenant-0002"):
+                raise OSError("synthetic tenant failure")
+            return [{"id": "job-ok"}]
+
+        stderr = io.StringIO()
+        with mock.patch.object(MODULE, "fetch_board", side_effect=fetch_board), \
+             contextlib.redirect_stderr(stderr):
+            rows = list(MODULE.fetch_catalog(boards, workers=1))
+
+        self.assertEqual(len(rows), 1)
+        outcomes = self._outcomes(stderr.getvalue())
+        self.assertEqual([item["outcome"] for item in outcomes], ["succeeded", "failed"])
+        succeeded, failed = outcomes
+        self.assertEqual(succeeded["retry_count"], 0)
+        self.assertIsNone(succeeded["final_status"])
+        self.assertIsNone(succeeded["error"])
+        self.assertEqual(failed["final_status"], None)
+        self.assertIn("synthetic tenant failure", failed["error"])
+
+    def test_success_after_failure_reports_own_observation_not_stale_stats(self):
+        boards = [
+            MODULE.Board("workday", "tenant-0001|wd5|Careers", "Company 429", "US", "Software"),
+            MODULE.Board("workday", "tenant-0002|wd5|Careers", "Company OK", "US", "Software"),
+        ]
+
+        class TransientHTTPError(OSError):
+            code = 429
+
+        def fetch_board(board, _limit):
+            if board.token.startswith("tenant-0001"):
+                raise TransientHTTPError("synthetic 429 failure")
+            return [{"id": "job-ok"}]
+
+        stderr = io.StringIO()
+        with mock.patch.object(MODULE, "fetch_board", side_effect=fetch_board), \
+             contextlib.redirect_stderr(stderr):
+            rows = list(MODULE.fetch_catalog(boards, workers=1))
+
+        self.assertEqual(len(rows), 1)
+        outcomes = self._outcomes(stderr.getvalue())
+        self.assertEqual([item["outcome"] for item in outcomes], ["failed", "succeeded"])
+        failed, succeeded = outcomes
+        self.assertEqual(failed["final_status"], 429)
+        self.assertEqual(succeeded["retry_count"], 0)
+        self.assertIsNone(succeeded["final_status"])
+        self.assertIsNone(succeeded["error"])
 
 
 if __name__ == "__main__":

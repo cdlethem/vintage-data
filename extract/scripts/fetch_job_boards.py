@@ -25,9 +25,10 @@ import json
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from job_boards_lib import Board, FETCHERS, fetch, is_permanent_miss
+from job_boards_lib import FETCHERS, Board, fetch, is_permanent_miss
 from job_boards_lib.catalog import load_catalog
 from job_boards_lib.common import CLIENT
+
 SUMMARY_PREFIX = "VINTAGE_RUN_SUMMARY\t"
 MAX_SUMMARY_BYTES = 65_536
 MAX_FAILURE_SAMPLES = 20
@@ -62,7 +63,8 @@ def fetch_board(board: Board, max_per_board: int = 10000) -> list[dict]:
     return list(fetch(board, max_per_board))
 
 
-def _fetch_board_with_stats(board: Board, max_per_board: int) -> list[dict]:
+def _fetch_board_with_stats(board: Board, max_per_board: int):
+    """Fetch one board atomically; a paging failure emits no partial board."""
     CLIENT.begin_observation()
     try:
         rows = fetch_board(board, max_per_board)
@@ -71,7 +73,10 @@ def _fetch_board_with_stats(board: Board, max_per_board: int) -> list[dict]:
         status = getattr(exc, "code", None)
         stats.update({"status": status, "error": f"{type(exc).__name__}: {exc}"[:500]})
         raise _TenantFailure(stats) from exc
-    return rows
+    stats = CLIENT.request_stats()
+    statuses = stats["statuses"]
+    stats.update({"status": statuses[-1] if statuses else None, "error": None})
+    return rows, stats
 
 
 class _TenantFailure(RuntimeError):
@@ -96,8 +101,9 @@ def fetch_catalog(boards: list[Board], workers: int = 12, max_per_board: int = 1
             board = futures[future]
             tenant = {"tenant": board.token, "provider": board.provider}
             rows: list[dict] | None = None
+            stats: dict = {"retries": 0, "status": None}
             try:
-                rows = future.result()
+                rows, stats = future.result()
             except _TenantFailure as exc:
                 failed += 1
                 stats = exc.stats
