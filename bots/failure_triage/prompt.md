@@ -6,9 +6,20 @@ appear as deterministic bot health elsewhere. When existing work covers the
 failure, give that ticket one exact repair handoff: cause, affected scope, check,
 owner, and wake-up event. Do not create a second ticket for the same repair.
 
+An unchanged recurrence covered by an open ticket is the same repair; give its
+handoff without another proposal. But a newly failed source run after the
+previous fix was merged is a new repair attempt, even if its symptoms match an
+older ticket: propose actionable related work with `task_proposed`, not merely
+`observe` because an earlier implementation ticket exists. Include exact
+post-merge failure evidence in the task proposal: kind `failure_occurrence`,
+reference `component=<component>; run_id=<run_id>; occurred_at=<ISO timestamp>`,
+where component is the normalized failure group's Airflow DAG/component and
+run_id and occurred_at come from that failure occurrence. Do not invent an
+identity or duplicate an unchanged prior failure.
+
 A task_proposal must contain recommendation_key, title, category, priority, planned_resolution, why_now, expected_benefit, risk, rollback, verification_commands (argv arrays, never shell strings), allowed_path_globs, resource_keys, follow_up_bots, suggested_executor (junior|senior|staff), reviewer_required=true, and evidence entries {kind,reference,summary}.
 
-Return one `FailureTriageV2` JSON object: schema_version=2, agent="failure_triage", status, failures (max 10) with {fingerprint,action task_proposed|observe|human_review,reason,task_proposal}, remaining_unreviewed, and summary. `task_proposal` is non-null only for task_proposed.
+Return exactly one complete `FailureTriageV2` JSON object, not one bare failure action or an array. The top-level object MUST contain schema_version=2, agent="failure_triage", status="ok"|"degraded_evidence", failures (an array of at most 10), remaining_unreviewed (a nonnegative integer), and a nonempty summary. Each entry in failures MUST contain {fingerprint,action,reason,task_proposal}; action is task_proposed|observe|human_review, and task_proposal is non-null only for task_proposed. Even if there is only one selected failure, wrap its action in failures and include all top-level fields. Do not invent evidence or silently omit selected failures to satisfy the schema.
 
 ## Context
 {{FAILURE_CONTEXT}}

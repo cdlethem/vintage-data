@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from types import SimpleNamespace
 import uuid
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
-from airflow.providers.vintage.bot_dashboard.models import Event, ValidationGate, metadata, utcnow
+from airflow.providers.vintage.bot_dashboard.models import Artifact, Event, Execution, Task, ValidationGate, metadata, utcnow
 from airflow.providers.vintage.bot_dashboard.service import PreconditionFailed, create_manual_task
 from airflow.providers.vintage.bot_dashboard import validation_lane
 
@@ -130,6 +131,64 @@ class ValidationLaneTest(unittest.TestCase):
         self.assertEqual("failed", row.status)
         self.assertEqual("validation_retry_exhausted", row.last_error)
         self.assertEqual(0, validation_lane.recover_expired(self.session, limit=10, autopilot_enabled=True))
+
+    def test_completed_implementation_can_record_later_live_validation(self):
+        row = self.gate()
+        row.stage = "completion"
+        task = self.session.get(Task, uuid.UUID(self.task["id"]))
+        task.state = "completed"
+        task.completed_at = utcnow()
+        manifest = {
+            "manifest_version": 1, "task_id": str(task.id), "execution_id": "e" * 64,
+            "revision": 1, "base_sha": "b" * 40, "changed_paths": ["extract/source.py"],
+            "patch_sha256": "d" * 64, "patch_bytes": 12, "checks": [],
+        }
+        self.session.add(Execution(
+            task_id=task.id, execution_id="e" * 64, sequence=1, revision=1,
+            idempotency_key="checked", target_run_id="checked", profile="senior",
+            terminal_at=utcnow(), terminal_reason_code="merged", merged_at=utcnow(),
+            trusted_head_sha=SUBJECT, base_sha="b" * 40,
+            source_artifact_sha256="c" * 64, patch_sha256="d" * 64,
+            provider="github", repository="org/repo", branch="bot/task",
+            target_branch="main", service_account_id="42", pr_number=17,
+            provider_state={"state": "merged", "head_sha": SUBJECT},
+            verification_manifest=manifest,
+        ))
+        for kind, sha in (("source", "c" * 64), ("patch", "d" * 64)):
+            self.session.add(Artifact(
+                kind=kind, sha256=sha, media_type="application/octet-stream",
+                byte_count=12, relative_path=f"test/{kind}", expires_at=utcnow() + timedelta(days=1),
+            ))
+        self.session.flush()
+        provider = Mock()
+        observed = {"provider": "github", "number": 17, "head_ref": "bot/task",
+                    "base_ref": "main", "author_id": "42", "head_sha": SUBJECT, "state": "open"}
+        provider.read_change.return_value = observed
+        config = SimpleNamespace(provider="github", project="org/repo")
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.load_repository_config", return_value=config), \
+                patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=provider), \
+                patch.object(validation_lane, "validate_admission"):
+            with self.assertRaisesRegex(PreconditionFailed, "trusted head changed"):
+                validation_lane._candidate_snapshot(self.session, row)
+            provider.read_change.return_value = {**observed, "state": "merged"}
+            claimed = self._claim()
+            self.assertEqual([str(row.id)], [item["id"] for item in claimed])
+            running = validation_lane.start(
+                self.session, gate_id=str(row.id), version=claimed[0]["version"],
+                lease_id=claimed[0]["lease_id"], lease_run_id=claimed[0]["lease_run_id"],
+                subject=SUBJECT, autopilot_enabled=True,
+            )
+            validation_lane.finish(
+                self.session, gate_id=str(row.id), version=running["version"],
+                lease_id=claimed[0]["lease_id"], lease_run_id=claimed[0]["lease_run_id"],
+                subject=SUBJECT, status="passed",
+                evidence={"observation": "Merged source emitted expected records"},
+                autopilot_enabled=True,
+            )
+        self.assertEqual("completed", task.state)
+        self.assertEqual("passed", row.status)
+        event = self.session.scalar(select(Event).where(Event.event_type == "validation_gate_recorded"))
+        self.assertEqual("passed", event.payload["status"])
 
 
 if __name__ == "__main__":

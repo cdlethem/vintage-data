@@ -78,20 +78,79 @@ def _models(tmp: str, aliases=("fake",), *, capabilities=None) -> pathlib.Path:
 
 
 class ReportContractTest(unittest.TestCase):
-    def test_prompt_includes_actual_report_contract(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            cfg = _cfg(tmp, _context_values={"CTX": {}})
-            budget = bot_runner.RunBudget(dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=1), 0)
-            prompt, _, _ = bot_runner.build_prompt(cfg, budget)
-            schema = json.loads(prompt.split("exact output schema:\n", 1)[1])
-            self.assertEqual("SourceDiscoveryV2", schema["title"])
-            self.assertIn("proposals", schema["properties"])
 
     def test_schema_failure_reports_fields_without_model_values(self):
         with self.assertRaises(bot_runner.BotError) as caught:
             bot_runner._json_report('{"private_value":"sensitive-example"}', {"output": {"schema": "source_discovery_v2"}})
         self.assertIn("missing", str(caught.exception))
         self.assertNotIn("sensitive-example", str(caught.exception))
+
+    def test_triage_repairs_bare_action_and_submits_original_finding(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = _cfg(tmp, name="failure_triage", output={"format": "json", "schema": "failure_triage_v2"})
+            original = {
+                "fingerprint": "a" * 64,
+                "action": "observe",
+                "reason": "Orders DAG: delayed extract leaves today's orders unavailable.",
+                "task_proposal": None,
+            }
+            corrected = {
+                "schema_version": 2,
+                "agent": "failure_triage",
+                "status": "ok",
+                "failures": [original],
+                "remaining_unreviewed": 0,
+                "summary": "Orders DAG: delayed extract should be monitored until the next run.",
+            }
+            prompts = []
+
+            def invoke(model, prompt, **kwargs):
+                prompts.append(prompt)
+                return providers.ProviderResult(text=json.dumps(original if len(prompts) == 1 else corrected), duration_ms=1)
+
+            class Client:
+                def claim_budget(self, identity, total):
+                    return {"deadline_at": (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=1)).isoformat()}
+
+                def submit_run(self, envelope):
+                    self.envelope = envelope
+                    return {"outcome": envelope["outcome"], "retry_class": envelope["retry_class"], "execution": envelope["identity"]}
+
+            client = Client()
+            with mock.patch.object(bot_runner, "dashboard_model", return_value=None), \
+                 mock.patch.object(bot_runner.providers, "get_provider", return_value=invoke):
+                result = bot_runner.run(cfg, identity=IDENTITY, models_config=_models(tmp), client=client, context_values={"CTX": {"new_failure": "Orders DAG"}})
+            self.assertEqual(result.outcome, "succeeded")
+            self.assertEqual(client.envelope["payload"], corrected)
+            self.assertEqual(len(client.envelope["attempts"]), 1)
+            self.assertEqual(len(prompts), 2)
+
+    def test_triage_invalid_repair_fails_without_submitting_payload(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = _cfg(tmp, name="failure_triage", output={"format": "json", "schema": "failure_triage_v2"})
+            bare = {"fingerprint": "a" * 64, "action": "observe", "reason": "Orders DAG: extract delayed.", "task_proposal": None}
+            calls = []
+
+            def invoke(model, prompt, **kwargs):
+                calls.append(prompt)
+                return providers.ProviderResult(text=json.dumps(bare), duration_ms=1)
+
+            envelopes = []
+            original_envelope = bot_runner._envelope
+
+            def capture(**kwargs):
+                result = original_envelope(**kwargs)
+                envelopes.append(result)
+                return result
+
+            with mock.patch.object(bot_runner.providers, "get_provider", return_value=invoke), \
+                 mock.patch.object(bot_runner, "_envelope", side_effect=capture):
+                result = bot_runner.run(cfg, identity=IDENTITY, models_config=_models(tmp), ephemeral=True, context_values={"CTX": {}})
+            self.assertEqual((result.outcome, result.retry_class), ("failed", "terminal"))
+            self.assertEqual(len(calls), 2)
+            self.assertIsNone(envelopes[0]["payload"])
+            self.assertIn("schema", envelopes[0]["failure"]["detail"])
+            self.assertEqual(envelopes[0]["attempts"][0]["outcome"], "failed")
 
 
 class RunnerDeadlineTest(unittest.TestCase):

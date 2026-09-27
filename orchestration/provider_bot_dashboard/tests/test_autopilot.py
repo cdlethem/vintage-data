@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from airflow.models.variable import Variable
 from airflow.providers.vintage.bot_dashboard import autopilot as ap
-from airflow.providers.vintage.bot_dashboard.models import Event, Execution, Policy, Revision, Task, metadata, utcnow
+from airflow.providers.vintage.bot_dashboard.models import Event, Execution, Policy, Revision, Task, ValidationGate, metadata, utcnow
 from airflow.providers.vintage.bot_dashboard.service import Conflict, PreconditionFailed, create_manual_task, patch_task
 
 
@@ -448,17 +448,20 @@ class AutopilotTest(unittest.TestCase):
         with self.assertRaises(Conflict): self.decide(claim, "accept")
         self.assertEqual("proposed", task.state)
 
-    def test_wait_parks_ticket_until_material_evidence_changes(self):
+    def test_preexisting_wait_does_not_park_ticket_after_wait_is_removed(self):
         task = self.task()
         self.enable()
+        detail = ap._snapshot(self.session, str(task.id))
+        ap.service._event(self.session, task, "executive_decision", "system", "executive", payload={
+            "action": "wait", "result": "applied", "result_version": task.version,
+            "result_context_sha256": ap._digest(detail),
+        })
+        self.session.commit()
         claim = ap.claim(self.session)
-        self.session.commit()
-        self.assertEqual("applied", self.decide(claim, "wait")["status"])
-        self.assertEqual("idle", ap.claim(self.session)["status"])
-        patch_task(self.session, str(task.id), version=task.version, actor_id="owner",
-                   changes={"planned_resolution": "Updated requirements with new evidence"})
-        self.session.commit()
-        self.assertEqual(str(task.id), ap.claim(self.session)["task"]["id"])
+        self.assertEqual(str(task.id), claim["task"]["id"])
+        self.assertNotIn("wait", claim["actions"])
+        with self.assertRaises(ValueError):
+            ap.Decision(lease_id=claim["lease_id"], action="wait", rationale="The source is not tested yet.")
 
     def test_autopilot_never_offers_human_blocking(self):
         task = self.task()
@@ -487,18 +490,20 @@ class AutopilotTest(unittest.TestCase):
         self.assertEqual(str(task.id), claim["task"]["id"])
         self.assertEqual(["repair_conflict"], claim["actions"])
 
-    def test_wait_is_audited_without_spamming_the_pull_request(self):
-        task = self.task("in_review")
-        self.execution(task)
+    def test_applied_configuration_does_not_invite_a_second_identical_edit(self):
+        from datetime import timedelta
+        task = self.task("accepted")
         self.enable()
         claim = ap.claim(self.session)
         self.session.commit()
-        with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider") as provider:
-            self.assertEqual("applied", self.decide(claim, "wait")["status"])
-        provider.assert_not_called()
-        audit = self.session.scalar(select(Event).where(Event.event_type == "executive_decision"))
-        self.assertEqual("wait", audit.payload["action"])
-        self.assertTrue(audit.payload["result_context_sha256"])
+        self.assertEqual("applied", self.decide(claim, "configure", changes=ap.PatchTask(
+            version=task.version, planned_resolution="Run the bounded source verification and report the result."))["status"])
+        now = ap.utcnow() + timedelta(minutes=2)
+        with patch.object(ap, "utcnow", return_value=now):
+            next_claim = ap.claim(self.session)
+        self.assertEqual(str(task.id), next_claim["task"]["id"])
+        self.assertNotIn("configure", next_claim["actions"])
+        self.assertIn("assign", next_claim["actions"])
 
     def execution(self, task, **changes):
         values = dict(execution_id="e" * 64, task_id=task.id, sequence=1, revision=1, idempotency_key="test-execution",
@@ -554,12 +559,26 @@ class AutopilotTest(unittest.TestCase):
         provider.merge_change.assert_called_once_with(17, "a" * 40)
         self.assertEqual("ready", task.state)
 
-    def test_completion_waits_for_observed_merge(self):
+    def test_completion_is_not_offered_before_observed_merge(self):
         task = self.task("ready"); self.execution(task)
-        self.enable(); claim = ap.claim(self.session); self.session.commit()
-        with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=self.provider()):
-            self.assertEqual("deferred", self.decide(claim, "complete")["status"])
-        self.assertEqual("ready", task.state)
+        self.enable(); claim = ap.claim(self.session)
+        self.assertIn("merge", claim["actions"])
+        self.assertNotIn("complete", claim["actions"])
+
+    def test_premerge_validation_remains_required_for_reviewed_change(self):
+        task = self.task("ready")
+        self.execution(task)
+        gate = ValidationGate(task_id=task.id, gate_key="source-response", stage="merge",
+            recipe="manual", owner="operator", required_capability="public-network-readonly",
+            subject="a" * 40, recheck_condition="Verify the current source response",
+            required=True)
+        self.session.add(gate); self.session.commit()
+        actions = ap._actions(ap._snapshot(self.session, str(task.id)))
+        self.assertNotIn("merge", actions)
+        self.assertNotIn("advance", actions)
+        self.assertNotIn("complete", actions)
+        gate.status = "passed"; self.session.commit()
+        self.assertIn("merge", ap._actions(ap._snapshot(self.session, str(task.id))))
 
     def test_verified_no_change_completion_keeps_note_and_evidence(self):
         task = self.task("ready")
@@ -571,6 +590,47 @@ class AutopilotTest(unittest.TestCase):
         for kind in ["comment_added", "evidence_added"]:
             row = self.session.scalar(select(Event).where(Event.event_type == kind))
             self.assertEqual(("system", "executive"), (row.actor_kind, row.actor_id))
+
+    def test_stale_no_change_needs_new_human_implementation_evidence(self):
+        task = self.task("ready")
+        self.execution(task, pr_number=None, pr_url=None,
+                       terminal_reason_code="no_change", terminal_at=utcnow(), stage="terminal")
+        patch_task(self.session, str(task.id), version=task.version, actor_id="owner",
+                   changes={"planned_resolution": "Repair the revision handoff under trusted runner policy"})
+        self.session.commit()
+        self.assertNotIn("complete", ap._actions(ap._snapshot(self.session, str(task.id))))
+        ap.service.add_event_items(self.session, str(task.id), version=task.version, actor_id="owner",
+            event_type="evidence_added", items=[{"label": "Trusted repair merged",
+                                                  "observation": "Parent-owned code was reviewed and merged"}])
+        self.session.commit()
+        self.enable(); claim = ap.claim(self.session); self.session.commit()
+        self.assertEqual(["complete"], claim["actions"])
+        self.assertEqual("applied", self.decide(claim, "complete")["status"])
+        self.assertEqual("completed", task.state)
+        evidence = self.session.scalars(select(Event).where(
+            Event.task_id == task.id, Event.event_type == "evidence_added").order_by(Event.sequence.desc())).first()
+        self.assertEqual("Human implementation evidence", evidence.payload["items"][0]["label"])
+
+    def test_reviewed_merge_completes_with_live_gate_still_pending(self):
+        task = self.task("ready")
+        self.execution(task, merged_at=utcnow(), provider_state={
+            "state": "merged", "head_sha": "a" * 40, "draft": False,
+        })
+        gate = ValidationGate(task_id=task.id, gate_key="live-source", stage="completion",
+            recipe="manual", owner="operator", required_capability="public-network-readonly",
+            subject="a" * 40, recheck_condition="Run merged extractor against its live source",
+            required=True)
+        self.session.add(gate); self.session.commit()
+        self.enable(); claim = ap.claim(self.session); self.session.commit()
+        self.assertEqual(["complete"], claim["actions"])
+        provider = self.provider(state="merged")
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=provider):
+            self.assertEqual("applied", self.decide(claim, "complete")["status"])
+        self.assertEqual("completed", task.state)
+        self.assertEqual("pending", gate.status)
+        evidence = self.session.scalar(select(Event).where(Event.task_id == task.id, Event.event_type == "evidence_added"))
+        self.assertEqual("unverified", evidence.payload["items"][0]["production_validation"])
+        self.assertEqual(["live-source"], evidence.payload["items"][0]["pending_gate_keys"])
 
     def test_model_failure_cools_down_and_leaves_ticket_untouched(self):
         task = self.task(); self.enable(); claim = ap.claim(self.session); self.session.commit()

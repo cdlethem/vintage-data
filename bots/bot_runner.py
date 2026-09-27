@@ -777,7 +777,44 @@ def run(
                         alias_model=model.get("model"),
                         book=usage_tools.load_price_book(models_cfg),
                     ) if raw_usage is not None else None
-                    payload = _json_report(result.text, cfg)
+                    try:
+                        payload = _json_report(result.text, cfg)
+                    except BotError as schema_error:
+                        if cfg["output"]["schema"] != "failure_triage_v2" or len(result.text.encode("utf-8")) > 262_144:
+                            raise
+                        remaining_model = model_deadline - time.monotonic()
+                        if remaining_model <= 0 or budget.remaining() <= 0:
+                            raise
+                        # Keep the selected failures and original findings available
+                        # to the same model; never manufacture an envelope locally.
+                        repair_prompt = (
+                            prompt
+                            + "\n\nYour previous response failed the required output schema ("
+                            + str(schema_error)
+                            + "). Correct the schema and return only one complete FailureTriageV2 JSON object. "
+                            "Preserve the original findings, fingerprints, and evidence; do not invent facts or "
+                            "drop a failure to make the schema pass. Previous response (JSON string):\n"
+                            + json.dumps(result.text, ensure_ascii=False)
+                        )
+                        with _inference_slot(models_cfg, model):
+                            repaired = provider(
+                                model,
+                                repair_prompt,
+                                timeout_s=min(remaining_model, budget.remaining()),
+                            )
+                        if (model.get("_gateway_telemetry") or {}).get("last_error") == "model_rate_limited":
+                            busy = providers.ProviderBusy("The selected model is rate limited")
+                            busy.code = "model_rate_limited"
+                            raise busy
+                        repair_usage = usage_tools.price(
+                            repaired.usage,
+                            model=model.get("model"),
+                            alias_model=model.get("model"),
+                            book=usage_tools.load_price_book(models_cfg),
+                        ) if repaired.usage is not None else None
+                        if repair_usage is not None:
+                            usage_for_attempt = usage_tools.merge([usage_for_attempt, repair_usage]) if usage_for_attempt else repair_usage
+                        payload = _json_report(repaired.text, cfg)
                     selected_model = model["alias"]
                 except (providers.ProviderFailure, BotError) as exc:
                     if (model.get("_gateway_telemetry") or {}).get("last_error") == "model_rate_limited":
@@ -785,7 +822,9 @@ def run(
                         exc.code = "model_rate_limited"
                     attempt_failure = exc
                     last_failure = exc
-                    usage_for_attempt = getattr(exc, "usage", None)
+                    failed_usage = getattr(exc, "usage", None)
+                    if failed_usage is not None:
+                        usage_for_attempt = usage_tools.merge([usage_for_attempt, failed_usage]) if usage_for_attempt else failed_usage
                 attempt_finished_at = datetime.now(timezone.utc)
                 attempts.append(
                     {

@@ -540,8 +540,15 @@ def failure_context(hours: int = 24, batch_size: int = 10) -> dict:
         group["occurrence_run_ids"] = sorted(group.get("occurrence_run_ids", []), key=str)
         group["sink_markers"] = sorted(group.get("sink_markers", []), key=str)
         group["occurrences"] = sorted(group.get("occurrences", []), key=lambda row: (str(row.get("run_id", "")), str(row.get("occurred_at", ""))))
-    selected = [groups[key] for key in sorted(groups)][: max(0, min(batch_size, 10))]
     context = _base("failure_triage")
+    keys = sorted(groups)
+    count = min(len(keys), max(0, min(batch_size, 10)))
+    # Fixed-prefix selection starves the remaining groups on every hourly run.
+    # A deterministic UTC-hour cursor covers all 100 bounded groups within ten
+    # ordinary runs without another mutable service-side cursor.
+    hour = int(datetime.fromisoformat(context["generated_at"]).timestamp() // 3600)
+    offset = (hour * count) % len(keys) if keys else 0
+    selected = [groups[keys[(offset + index) % len(keys)]] for index in range(count)]
     context.update(
         {
             "window_hours": hours,
