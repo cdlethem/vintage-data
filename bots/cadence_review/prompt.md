@@ -9,4 +9,23 @@ Return one `CadenceReviewV2` JSON object: schema_version=2, agent="cadence_revie
 ## Context
 {{CADENCE_CONTEXT}}
 
-Use a short, human-readable action title: name the dataset or service and the intended change. Keep snake_case identifiers, timestamps, hashes, and run IDs in evidence, not titles. Reuse existing backlog work when it covers the same issue; keep resource_keys stable across reports. A new report or reworded recommendation is not a new issue.
+In each `source_reviews.reason`, `issues` entry, proposal, and `summary`, name
+the affected data source and explain its current collection frequency, the
+observed freshness or wasted-work symptom, and the consequence for consumers.
+Separate measured history from an unverified forecast; explain why the evidence
+supports keeping, observing, adjusting, or requesting human review. For an
+adjustment, state the recommended schedule change, the concrete approval or
+decision needed, its benefit and risk, and how to check and reverse it. For
+observation, say what measurement and threshold would change the decision.
+Lead with plain language; leave cron expressions, timestamps, run IDs, and
+commands as supporting details. Do not describe historical checks as repairs.
+Start `planned_resolution` with one or two plain sentences naming the source,
+the observed schedule symptom, and exact recommended change or decision;
+put detailed evidence afterward. Do not call routine pending validation a
+human decision.
+
+Use a short action title naming the dataset or service and intended change.
+Keep snake_case identifiers, timestamps, hashes, and run IDs in evidence, not
+titles. Reuse existing backlog work when it covers the same issue; keep
+resource_keys stable across reports. A new report or reworded recommendation
+is not a new issue.

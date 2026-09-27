@@ -30,6 +30,13 @@ do not rewrite an installation used by running tasks. The installer and launcher
 reject writable/untrusted runtime files. Configure memory, process, CPU and duration
 limits in `runtime.json` as root before running the confinement probe.
 
+Changes to `bots/sandbox/worker.py` (including executor/reviewer writing
+instructions) do not update a running sandbox. The launcher uses a root-owned
+copy in its versioned `/opt/vintage-bot-runtime-vN` directory. Prepare and
+install a new version, run its confinement checks, then point
+`BOT_DASHBOARD_SANDBOX_LAUNCHER` at that version and reload the affected Airflow
+services after existing work drains. Do not edit or overwrite the live runtime.
+
 In `orchestration/config.env`, set the launcher path and Git host allowlist. Keep
 execution disabled until the probe below passes. Render using
 `orchestration/setup/render_config.sh`. Install the rendered

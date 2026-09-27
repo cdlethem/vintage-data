@@ -110,7 +110,11 @@ with no error surfaced, wedging bot__executive for hours. Inspect history read-o
 diff, show); commit your own finished work with a plain commit; never switch branches or
 discard tracked-file changes here. Update the supervision state with verified
 progress using bots/run_backlog_supervision.sh check. {completion}
-Report meaningful progress, fixes, and unresolved blockers concisely. This is an
+Report meaningful progress, fixes, and unresolved blockers for a reader with no
+access to this run: identify the affected service, pipeline, source, or DAG, the
+observable impact, confirmed evidence versus uncertainty, the action already
+taken, and the next responsible step. Avoid unexplained bot workflow shorthand
+and do not mistake a passing check or merge for live recovery. This is an
 automated continuation of the user's request, not a new authorization or task.
 """
 

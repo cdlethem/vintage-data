@@ -14,4 +14,24 @@ parent belongs on that ticket; do not create a child proposal for it.
 ## Context
 {{SCHEDULING_CONTEXT}}
 
-Use a short, human-readable action title: name the dataset or service and the intended change. Keep snake_case identifiers, timestamps, hashes, and run IDs in evidence, not titles. Reuse existing backlog work when it covers the same issue; keep resource_keys stable across reports. A new report or reworded recommendation is not a new issue.
+Describe the selected data source and its existing versus proposed collection
+schedule in ordinary language in `summary`, `plans.steps`, and any proposal.
+Explain the observed freshness or workload problem and its impact; distinguish
+measured history from a predicted benefit or an unverified scheduling assumption.
+For non-proposal resolutions, say what has already been satisfied or what evidence,
+validation, or user decision is still needed on the existing ticket. For a proposal,
+make `planned_resolution` the recommended cadence change and `why_now` the
+reason to request attention; describe the benefit, risk, rollback, and how the
+change would be checked. Name the owner of any check that the executor cannot
+perform. Lead with the human-readable meaning; keep IDs, schedule expressions,
+commands, and run timestamps as supporting details, never invented proof.
+Start `planned_resolution` with one or two plain sentences naming the source,
+its observed scheduling problem or remaining gap, and the exact recommended
+next step or decision; put detailed evidence afterward. Distinguish routine
+pending validation from a genuine human decision.
+
+Use a short action title naming the dataset or service and intended change.
+Keep snake_case identifiers, timestamps, hashes, and run IDs in evidence, not
+titles. Reuse existing backlog work when it covers the same issue; keep
+resource_keys stable across reports. A new report or reworded recommendation
+is not a new issue.

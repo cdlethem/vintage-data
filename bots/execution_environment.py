@@ -47,4 +47,9 @@ Actual implementation failures, failed admitted checks, scope violations, or mis
 evidence explicitly required before publication remain blockers. Never relabel an
 existing blocked result or waive a gate: the Executive must configure/approve the staged plan
 and the executor must produce a fresh report under that admission.
+In human-facing ticket text, translate these rules into the affected source or
+pipeline's actual symptom, why a reader should care, the evidence already obtained,
+and the specific next check or authorization and its owner. Keep stages, commands,
+path globs, and gate keys as supporting technical details, not the whole explanation.
+Never claim a source is working merely because its code passed offline tests.
 """

@@ -31,4 +31,25 @@ over new proposals. Measure completed delivery and stage latency, not proposal v
 ## Context
 {{MANAGER_CONTEXT}}
 
-Use a short, human-readable action title: name the dataset or service and the intended change. Keep snake_case identifiers, timestamps, hashes, and run IDs in evidence, not titles. Reuse existing backlog work when it covers the same issue; keep resource_keys stable across reports. A new report or reworded recommendation is not a new issue.
+Write `executive_summary` as a standalone briefing: name the affected dataset,
+service, pipeline, or DAG; state the current symptom and consequence, the evidence
+that supports the diagnosis, what remains unverified, and the next action,
+including whether it needs a human decision or routine bot follow-through.
+In each plan item, lead `action` with one or two plain sentences naming the
+affected system, observed symptom or remaining gap, and exact recommended
+next step or decision; put headings and technical evidence afterward. Make
+`why_now` the reason attention is needed rather than an internal bot status,
+and `expected_benefit` the user-facing outcome. For work awaiting live
+validation, distinguish routine bot follow-through from a genuine human
+decision; a merge is not operational recovery. Explain risk, rollback, and
+verification in ordinary language, including who performs a gated check and
+when; do not present a historical check or candidate PR as a repair.
+Make `deferred` entries understandable without the rest of this run. Put readable
+meaning before technical IDs and commands, with those details only as supporting
+evidence. Never invent a cause or a completed check to fill a gap.
+
+Use a short action title naming the affected dataset or service and intended
+change. Keep snake_case identifiers, timestamps, hashes, and run IDs in evidence,
+not titles. Reuse existing backlog work when it covers the same issue; keep
+resource_keys stable across reports. A new report or reworded recommendation is
+not a new issue.

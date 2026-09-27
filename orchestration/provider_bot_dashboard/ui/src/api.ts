@@ -95,8 +95,8 @@ export function nextStep(task: Task): string {
   if (task.assignee_kind === "bot" && botWorkQueued(task)) return "Bot queued · waiting for capacity";
   if (task.state === "accepted" && task.assignee_kind === "bot") return "Bot assigned · awaiting start";
   if (task.state === "accepted" && task.assignee_kind === "human") return "Assigned · ready to start";
-  return ({ proposed: "Review recommendation", accepted: "Assign and start work", blocked: "Resolve blocker",
-    in_review: "Review the pull request", ready: "Verify and complete", in_progress: "Work in progress",
+  return ({ proposed: "Review recommendation", accepted: "Assign and start work", blocked: "Review blocker",
+    in_review: "Review the pull request", ready: "Review completion requirements", in_progress: "Work in progress",
     completed: "Completed", dismissed: "Archived" })[task.state];
 }
 export function humanTitle(value: string): string {

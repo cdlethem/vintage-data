@@ -9,4 +9,23 @@ Return exactly one `SourceVettingV2` JSON object: schema_version=2, agent="sourc
 ## Context
 {{VETTING_CONTEXT}}
 
-Use a short, human-readable action title: name the dataset or service and the intended change. Keep snake_case identifiers, timestamps, hashes, and run IDs in evidence, not titles. Reuse existing backlog work when it covers the same issue; keep resource_keys stable across reports. A new report or reworded recommendation is not a new issue.
+Write `decisions.reason` and `summary` as a standalone explanation of the named
+source: what data is at stake, what currently prevents or supports adoption, the
+observed evidence versus unanswered questions, and why this decision needs
+attention. For a blocked token or further research, specify precisely which
+access or fact a person must supply; do not imply implementation is approved.
+In a proposal, start `planned_resolution` with one or two plain sentences
+naming the source, its verified adoption gap or uncertainty, and the exact
+recommended next step or decision; put headings and technical detail later.
+Use `why_now` for impact and urgency, and describe what verification commands
+and acceptance gates can actually establish and who performs them. Explain
+each pending gate check in plain language alongside its required machine-readable
+fields. Make `risk`, `rollback`, and `expected_benefit` meaningful to a reader,
+not process shorthand. Lead with plain meaning; put URLs, commands, and IDs in
+supporting details and do not claim unperformed checks.
+
+Use a short action title naming the dataset or service and intended change.
+Keep snake_case identifiers, timestamps, hashes, and run IDs in evidence, not
+titles. Reuse existing backlog work when it covers the same issue; keep
+resource_keys stable across reports. A new report or reworded recommendation
+is not a new issue.

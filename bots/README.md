@@ -230,10 +230,18 @@ corepack pnpm test
 corepack pnpm build
 ```
 
-The action queue defaults to **Needs attention**, which counts only recommendations
-and blockers awaiting a decision. Accepted tasks awaiting work start are not counted
-there; **All active** still includes accepted and ongoing work, and **History** retains
-completed/archived actions. Search and pagination operate on server-side results.
+The action queue defaults to **Needs attention**: proposed recommendations,
+blocked work, pull requests under review, and work marked ready for completion.
+These states do not all require a human decision. A ready code change may still
+need live-source evidence before anyone can call the pipeline repaired. Each
+ticket should identify the affected dataset, source, service, or DAG; the observed
+problem and impact; what is confirmed versus unknown; why it remains open; and
+the recommended next action and its owner. Keep run IDs, paths, and validation
+commands as supporting evidence rather than the opening explanation. The queue
+shows a longer preview; open the ticket for evidence and remaining requirements.
+**All active** also includes accepted and ongoing work, while **History** retains
+completed and archived actions. Search and pagination operate on server-side
+results.
 Bot health shows actual bot definitions, paused status, latest outcomes, and drill-down
 run evidence; infrastructure DAGs are excluded.
 Empty results and failed requests have distinct states.

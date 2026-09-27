@@ -151,7 +151,7 @@ class RunEnvelopeV1(StrictModel):
 class EvidenceReferenceV1(StrictModel):
     kind: str = Field(min_length=1, max_length=40)
     reference: str = Field(min_length=1, max_length=500)
-    summary: str = Field(min_length=1, max_length=2000)
+    summary: str = Field(min_length=1, max_length=2000, description="Plain-language observation and its source; say what it proves and what remains uncertain. Keep run IDs and file paths in reference.")
 
 
 class AcceptanceGateV1(StrictModel):
@@ -172,12 +172,12 @@ class AcceptanceGateV1(StrictModel):
 
 class TaskProposalV1(StrictModel):
     recommendation_key: str = Field(min_length=1, max_length=80, pattern=KEY_PATTERN)
-    title: str = Field(min_length=1, max_length=200)
+    title: str = Field(min_length=1, max_length=200, description="Name the affected source, dataset, service, or DAG and the concrete issue or intended change; avoid internal shorthand.")
     category: TaskCategory
     priority: int = Field(ge=1, le=100)
-    planned_resolution: str = Field(min_length=1, max_length=20_000)
-    why_now: str = Field(min_length=1, max_length=20_000)
-    expected_benefit: str = Field(min_length=1, max_length=20_000)
+    planned_resolution: str = Field(min_length=1, max_length=20_000, description="Reader-facing ticket: lead with the affected system, observed problem and impact, and recommended next step or exact decision needed. Explain cause only when evidenced; distinguish completed code from unverified live recovery. Put technical details after the plain-language summary.")
+    why_now: str = Field(min_length=1, max_length=20_000, description="Why this needs attention now, and from whom; do not substitute run-status jargon for the real problem.")
+    expected_benefit: str = Field(min_length=1, max_length=20_000, description="Concrete result a reader can recognize for the affected source or pipeline.")
     risk: str = Field(min_length=1, max_length=20_000)
     rollback: str = Field(min_length=1, max_length=20_000)
     verification_commands: list[list[str]] = Field(min_length=1, max_length=20)
@@ -432,12 +432,12 @@ class Resurface(StrictModel):
 
 class ManagerPlanItemV3(StrictModel):
     recommendation_key: str = Field(min_length=1, max_length=80, pattern=KEY_PATTERN)
-    title: str = Field(min_length=1, max_length=200)
+    title: str = Field(min_length=1, max_length=200, description="Name the affected source, dataset, service, or DAG and the concrete issue or intended change.")
     priority: int = Field(ge=1, le=7)
     category: TaskCategory
-    action: str = Field(min_length=1, max_length=20_000)
-    why_now: str = Field(min_length=1, max_length=20_000)
-    expected_benefit: str = Field(min_length=1, max_length=20_000)
+    action: str = Field(min_length=1, max_length=20_000, description="Standalone human-readable ticket: first identify the affected system, observed symptom and impact, then the recommended action or exact decision needed. Separate evidence from unknowns; don't use invented workflow jargon or mistake historical checks for a fix.")
+    why_now: str = Field(min_length=1, max_length=20_000, description="Why this is in the attention queue now, who can act, and what happens if it waits.")
+    expected_benefit: str = Field(min_length=1, max_length=20_000, description="Concrete user-facing improvement, not an internal bot milestone.")
     resources: str = Field(min_length=1, max_length=20_000)
     risk: str = Field(min_length=1, max_length=20_000)
     rollback: str = Field(min_length=1, max_length=20_000)
@@ -468,7 +468,7 @@ class ManagerV3(StrictModel):
     status: Literal["ok", "degraded_evidence"]
     report_date: date
     input_freshness: InputFreshnessV3
-    executive_summary: str = Field(min_length=1, max_length=20_000)
+    executive_summary: str = Field(min_length=1, max_length=20_000, description="Standalone plain-language account of affected systems, evidence, impact, uncertainty, and the next decision or action.")
     plan: list[ManagerPlanItemV3] = Field(max_length=7)
     deferred: list[Deferred] = Field(max_length=50)
     approvals_required: list[str] = Field(max_length=7)
