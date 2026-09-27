@@ -1,6 +1,7 @@
 """Exercise promotion and bounded recovery against local Git repositories only."""
 
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
+import fcntl
 from io import StringIO
 from pathlib import Path
 import subprocess
@@ -8,7 +9,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from sync import DeploymentError, Sync
+from sync import DeploymentError, Sync, main
 
 
 def git(where: Path, *args: str) -> str:
@@ -149,6 +150,18 @@ class DeploymentTest(unittest.TestCase):
             self.assertEqual(self.sync.deploy(), 0)
         self.assertIn("STATUS=no-op", output.getvalue())
         self.assertEqual(self.sync.rollback(None), 10)
+
+    def test_concurrent_timer_and_operator_cannot_promote_twice(self):
+        self.sync.state_dir.mkdir(parents=True)
+        with (self.sync.state_dir / "release.lock").open("w+b") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            with redirect_stderr(StringIO()) as errors:
+                self.assertEqual(main(["deploy"], root=self.root), 1)
+            self.assertIn("another release command is running", errors.getvalue())
+        self.assertEqual(git(self.root, "rev-parse", "HEAD"), self.old)
+        with redirect_stdout(StringIO()) as output:
+            self.assertEqual(main(["check"], root=self.root), 0)
+        self.assertIn("STATUS=ready", output.getvalue())
 
     def test_stage_uses_git_worktree_without_ignored_config_or_inherited_secrets(self):
         self.sync.check()  # Discover the published revision before staging it.

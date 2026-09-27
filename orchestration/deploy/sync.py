@@ -8,6 +8,7 @@ status; diagnostics go to stderr. Rollback is limited to the last recorded relea
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 from pathlib import Path
@@ -313,13 +314,20 @@ def main(argv: list[str] | None = None, *, root: Path | None = None) -> int:
         parser.error("SHA is only accepted for rollback")
     sync = Sync(root or args.root)
     try:
-        if args.command == "deploy":
-            return sync.deploy()
-        if args.command == "rollback":
-            return sync.rollback(args.sha)
-        previous, target = sync.check()
-        print(f"DEPLOYED_FROM={previous}\nDEPLOYED_TO={target}\nSTATUS={'no-op' if previous == target else 'ready'}")
-        return 0
+        sync.state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+        descriptor = os.open(sync.state_dir / "release.lock", os.O_CREAT | os.O_RDWR, 0o600)
+        with os.fdopen(descriptor, "rb") as release_lock:
+            try:
+                fcntl.flock(release_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as exc:
+                raise DeploymentError("another release command is running") from exc
+            if args.command == "deploy":
+                return sync.deploy()
+            if args.command == "rollback":
+                return sync.rollback(args.sha)
+            previous, target = sync.check()
+            print(f"DEPLOYED_FROM={previous}\nDEPLOYED_TO={target}\nSTATUS={'no-op' if previous == target else 'ready'}")
+            return 0
     except (DeploymentError, OSError) as exc:
         print(f"deployment: {exc}", file=sys.stderr)
         return 1
