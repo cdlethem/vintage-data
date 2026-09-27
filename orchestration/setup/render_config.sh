@@ -51,6 +51,17 @@ set +a
 : "${BOT_DASHBOARD_API_USERNAME:=bot-worker}"
 : "${BOT_DASHBOARD_WRITE_ENABLED:=False}"
 : "${BOT_DASHBOARD_ALLOW_SIMPLE_AUTH_WRITES:=False}"
+: "${BOT_DASHBOARD_EXECUTOR_ENABLED:=False}"
+: "${BOT_DASHBOARD_ALLOWED_GIT_HOSTS:=}"
+: "${BOT_DASHBOARD_SANDBOX_LAUNCHER:=}"
+: "${BOT_DASHBOARD_MODEL_ALLOWED_HOSTS:=}"
+: "${BOT_DASHBOARD_CONFINEMENT_ASSERTION:=}"
+: "${BOT_DASHBOARD_NETWORK_POLICY_ASSERTION:=}"
+: "${BOT_DASHBOARD_VALIDATION_CAPABILITIES:=[]}"
+case "$BOT_DASHBOARD_VALIDATION_CAPABILITIES" in
+    '[]'|'["public-network-readonly"]') ;;
+    *) echo "validation capabilities must name only the installed public-network recipe lane" >&2; exit 1 ;;
+esac
 case ",${AIRFLOW_ADMIN_USERS}," in
     *",${BOT_DASHBOARD_API_USERNAME}:"*) AIRFLOW_SIMPLE_AUTH_USERS="$AIRFLOW_ADMIN_USERS" ;;
     *) AIRFLOW_SIMPLE_AUTH_USERS="${AIRFLOW_ADMIN_USERS},${BOT_DASHBOARD_API_USERNAME}:op" ;;
@@ -79,6 +90,10 @@ TOKENS=(
     AIRFLOW_API_HOST AIRFLOW_API_PORT AIRFLOW_API_BASE_URL
     AIRFLOW_ADMIN_USERS AIRFLOW_SIMPLE_AUTH_USERS BOT_DASHBOARD_API_USERNAME
     BOT_DASHBOARD_WRITE_ENABLED BOT_DASHBOARD_ALLOW_SIMPLE_AUTH_WRITES
+    BOT_DASHBOARD_EXECUTOR_ENABLED BOT_DASHBOARD_ALLOWED_GIT_HOSTS
+    BOT_DASHBOARD_SANDBOX_LAUNCHER BOT_DASHBOARD_MODEL_ALLOWED_HOSTS
+    BOT_DASHBOARD_CONFINEMENT_ASSERTION BOT_DASHBOARD_NETWORK_POLICY_ASSERTION
+    BOT_DASHBOARD_VALIDATION_CAPABILITIES
     AIRFLOW_WORKER_CONCURRENCY CELERY_BROKER_URL BOTS_MODELS_CONFIG
     LIGHTDASH_ENABLED LIGHTDASH_STATE_ROOT LIGHTDASH_HOST LIGHTDASH_PORT
     LIGHTDASH_URL LIGHTDASH_PG_HOST LIGHTDASH_PG_PORT LIGHTDASH_SERVING_DB
@@ -92,7 +107,9 @@ for token in "${TOKENS[@]}"; do
         # '|' breaks the sed expressions below; '"' breaks the quoting that
         # lets airflow.env carry values containing spaces.
         *"|"*) echo "config value for $token may not contain '|': $value" >&2; exit 1 ;;
-        *'"'*) echo "config value for $token may not contain a double quote: $value" >&2; exit 1 ;;
+        *'"'*) if [[ "$token" != BOT_DASHBOARD_VALIDATION_CAPABILITIES ]]; then
+            echo "config value for $token may not contain a double quote: $value" >&2; exit 1
+        fi ;;
     esac
     SED_ARGS+=(-e "s|@${token}@|${value}|g")
 done

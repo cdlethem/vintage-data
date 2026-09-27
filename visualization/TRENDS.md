@@ -160,13 +160,22 @@ visualization/bin/viz check-analysis \
   transform/models/marts/<family>/_<family>_models.yml   # offline; the inner loop
 $EDITOR transform/models/marts/<family>/_<family>_models.yml
 transform/bin/dbt parse --target dev              # metrics and analysis reach the manifest
-visualization/bin/viz content                     # regenerate charts and dashboards
+visualization/bin/viz content                     # regenerate admitted charts and dashboards
+visualization/bin/viz content --check             # generated files match the specification
 visualization/bin/viz validate --json             # issues must be empty; gaps must shrink
 ```
 
-An operator then runs `viz deploy` and `viz query-check`, and reviews the
-dashboard in Lightdash. A trend that renders empty in the browser is not done,
-whatever validation says.
+These preparation commands are suitable for an admitted credential-free candidate
+when its family YAML and exact generated `transform/lightdash` chart/dashboard paths
+are in scope. A preview-capable operator then reviews the exact candidate in a
+non-production Lightdash identity before merge. After merge, the trusted scheduled
+family DAG automatically publishes its reviewed presentation metadata with its
+immutable manifest, streams its marts into serving, and runs `sync_lightdash` while preserving
+unrelated last-successful definitions. Content/query checks apply to the changed
+scope; another family's broken chart cannot gate this release. Offline validation,
+preview, and dbt success do not substitute for this family's build/batch/release evidence. Bots never
+run deploy/query-check or receive production credentials/Docker control. A trend that
+renders empty in the browser is not done, whatever validation says.
 
 `eda profile` runs one pass over the table. Above 200,000 rows it aggregates a
 head sample and says so in `sampled_rows` and `note`; a sampled span is a lower

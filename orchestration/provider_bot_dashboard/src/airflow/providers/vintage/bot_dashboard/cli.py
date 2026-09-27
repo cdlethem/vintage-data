@@ -9,6 +9,8 @@ from .legacy_import import import_legacy, inspect_run, purge
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="bot-dashboard")
     commands = parser.add_subparsers(dest="command", required=True)
+    from .git_setup import add_parser, provision
+    add_parser(commands)
 
     inspect_parser = commands.add_parser("inspect-run")
     inspect_parser.add_argument("--dag-id", required=True)
@@ -31,6 +33,14 @@ def main(argv: list[str] | None = None) -> int:
     reset_parser.add_argument("--apply", action="store_true", help="Apply the reviewed reset; default is a preview")
 
     args = parser.parse_args(argv)
+    if args.command == "provision-git":
+        import json
+        from .git_provider import GitProviderError
+        try:
+            print(json.dumps(provision(args), indent=2))
+        except (GitProviderError, OSError) as exc:
+            parser.exit(1, f"Git provisioning failed: {exc}\n")
+        return 0
     if args.command == "reset-queue":
         import json
         from airflow.utils.session import create_session

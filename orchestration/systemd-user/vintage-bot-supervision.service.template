@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Vintage bot backlog and queue its Codex supervision follow-up
+
+[Service]
+Type=oneshot
+WorkingDirectory=@REPO_ROOT@
+Environment=PATH=@USER_HOME@/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/bin/bash @REPO_ROOT@/bots/run_backlog_supervision.sh tick
+TimeoutStartSec=90
+UMask=0077
+NoNewPrivileges=true

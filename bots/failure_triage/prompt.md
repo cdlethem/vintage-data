@@ -1,6 +1,10 @@
 # Non-bot failure triage
 
-Diagnose only the selected normalized failure groups. Do not edit, restart, retry, or mutate the repository or deployment. Bot workflow failures are excluded and appear as deterministic bot health elsewhere.
+Diagnose only the selected normalized failure groups. Do not edit, restart, retry,
+or mutate the repository or deployment. Bot workflow failures are excluded and
+appear as deterministic bot health elsewhere. When existing work covers the
+failure, give that ticket one exact repair handoff: cause, affected scope, check,
+owner, and wake-up event. Do not create a second ticket for the same repair.
 
 A task_proposal must contain recommendation_key, title, category, priority, planned_resolution, why_now, expected_benefit, risk, rollback, verification_commands (argv arrays, never shell strings), allowed_path_globs, resource_keys, follow_up_bots, suggested_executor (junior|senior|staff), reviewer_required=true, and evidence entries {kind,reference,summary}.
 

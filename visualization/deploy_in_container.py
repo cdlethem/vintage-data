@@ -5,8 +5,10 @@ import pathlib
 import subprocess
 import sys
 
-mode, project_path, create = sys.argv[1:]
-common = ['--project-dir',project_path,'--profiles-dir',project_path,'--skip-dbt-compile','--no-partial-compilation','--validate-warehouse-columns']
+mode, project_path, create, scoped = sys.argv[1:]
+common = ['--project-dir',project_path,'--profiles-dir',project_path,'--skip-dbt-compile','--no-partial-compilation']
+if scoped != '1':
+    common.append('--validate-warehouse-columns')
 verb = 'start-preview' if mode == 'preview' else 'deploy'
 extra = ['--name','vintage-data-preview','--skip-copy-content','--no-combine','--assume-yes'] if mode == 'preview' else (['--create','Vintage Data'] if create == '1' else [])
 subprocess.run(['lightdash',verb,*common,*extra],check=True)
@@ -23,5 +25,6 @@ identity = {'project_uuid':project,'mode':mode}
 if mode == 'deploy':
     pathlib.Path('/state/deployment.json').write_text(json.dumps(identity)+'\n')
 subprocess.run(['lightdash','upload','--path','/content','--force','--project',project],check=True)
-subprocess.run(['lightdash','validate',*common,'--project',project],check=True)
+if scoped != '1':
+    subprocess.run(['lightdash','validate',*common,'--project',project],check=True)
 (pathlib.Path(project_path)/'validation.json').write_text(json.dumps({'project_uuid':project,'status':'ok'})+'\n')

@@ -73,6 +73,8 @@ if provider_dashboard.enabled():
     except Exception:
         log.exception("bot model configuration unavailable; omitting all live bot DAGs")
 if provider_dashboard.enabled() and models_cfg is not None:
+    from airflow.providers.vintage.bot_dashboard.concurrency import scheduler_limits, worker_pool
+    bot_limits = scheduler_limits()
     for path in bot_runner.discover(BOTS_ROOT):
         try:
             cfg = bot_runner.load_bot(path)
@@ -83,7 +85,7 @@ if provider_dashboard.enabled() and models_cfg is not None:
                 schedule=None if schedule == "manual" else schedule,
                 start_date=pendulum.datetime(2026, 9, 1, tz="UTC"),
                 catchup=False,
-                max_active_runs=1,
+                max_active_runs=bot_limits.get(cfg["name"], 1),
                 is_paused_upon_creation=not cfg.get("enabled", True),
                 tags=["bots", "bot-dashboard", f"bot:{cfg['name']}"],
                 default_args={
@@ -98,11 +100,7 @@ if provider_dashboard.enabled() and models_cfg is not None:
                     op_kwargs={"bot_dir": cfg["dir"]},
                     execution_timeout=timedelta(minutes=cfg["timeout_minutes"] + 2),
                     pool=(
-                        conf.get(
-                            "bot_dashboard",
-                            "executor_pool",
-                            fallback="bot_dashboard_executor",
-                        )
+                        worker_pool(cfg["name"])
                         if cfg["name"] in {"task_executor", "pr_reviewer"}
                         else "default_pool"
                     ),

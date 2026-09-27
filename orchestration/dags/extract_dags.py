@@ -8,6 +8,9 @@ A source that sets ``cadence: {auto: true}`` has its schedule taken from the
 cadence plan the load layer publishes (see orchestration/include/cadence_plan.py),
 falling back to the yml's own ``schedule`` whenever the plan is missing, stale
 or out of the bounds the yml declares.
+
+Sources listed in ``extract/retired_sources.yml`` never get a DAG, even if
+their yml is restored: retirement is lifted only by removing that entry.
 """
 import logging
 from datetime import timedelta
@@ -23,6 +26,7 @@ import extract_runner
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCES_DIR = REPO_ROOT / "extract" / "sources"
+RETIRED = set((yaml.safe_load((REPO_ROOT / "extract" / "retired_sources.yml").read_text()) or {}).get("sources") or {})
 REQUIRED_KEYS = ("name", "script", "schedule")
 
 # One plan read per parse, not one per source config.
@@ -33,6 +37,9 @@ for path in sorted(SOURCES_DIR.glob("*.yml")):
     try:
         cfg = yaml.safe_load(path.read_text())
         if cfg.get("dag_factory") not in (None, "extract"):
+            continue
+        if cfg.get("name") in RETIRED:
+            log.warning("source %s is retired (extract/retired_sources.yml); no DAG", cfg["name"])
             continue
         missing = [k for k in REQUIRED_KEYS if not cfg.get(k)]
         if missing:

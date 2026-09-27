@@ -1,7 +1,9 @@
 """Queue behavior: stable matching, scope preservation, and auditable resets."""
+import json
 import unittest
 import uuid
 from datetime import timedelta
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -118,6 +120,17 @@ class QueueTest(unittest.TestCase):
         self.assertEqual(1, result["created"])
         self.assertEqual(2, self.session.scalar(select(func.count()).select_from(Task)))
 
+    def test_accepted_bot_work_is_active_not_awaiting_a_human_decision(self):
+        self.propose()
+        task = self.session.scalar(select(Task))
+        task.state = "accepted"
+        task.assignee_kind = "bot"
+        task.assignee_profile = "junior"
+        self.session.commit()
+        summary = queue_summary(self.session)
+        self.assertEqual(0, summary["attention_count"])
+        self.assertEqual(1, summary["active_count"])
+
     def test_summary_is_not_limited_to_five_actions(self):
         for i in range(8):
             self.propose(str(i), f"Task {i}", resources=[f"source:{i}"])
@@ -129,3 +142,8 @@ class QueueTest(unittest.TestCase):
             apps = plugin._react_apps()
         self.assertEqual(2, len(apps))
         self.assertTrue(all(app["bundle_url"].startswith("/airflow/bot-dashboard/static/") for app in apps))
+
+    def test_packaged_activity_bundle_includes_model_settings(self):
+        root = Path(__file__).parents[1] / "src/airflow/providers/vintage/bot_dashboard/static"
+        manifest = json.loads((root / "asset-manifest.json").read_text("utf-8"))
+        self.assertIn(b"Models & connections", (root / manifest["app"]).read_bytes())

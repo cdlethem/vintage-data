@@ -229,14 +229,6 @@
   "type": "snapshot",
   "notes": "past-hour minute snapshot; stable recordid prevents fetched-at churn from being treated as novelty"
  },
- "openactive_feeds": {
-  "type": "feed",
-  "notes": "RPDE change feed; updated and deleted item states are both expected and cursors advance only after flushed output"
- },
- "sensor_community": {
-  "type": "status",
-  "notes": "global latest-reading snapshot; reading id/timestamp define novelty, never fetched_at"
- },
  "uk_parliament_procedural_activity": {
   "type": "feed",
   "notes": "dated BusinessItems are usually quiet outside parliamentary business and can be revised; zero novelty on weekends or recesses is normal"

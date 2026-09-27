@@ -64,6 +64,11 @@ def _resolve_host(host: str) -> None:
 def load_repository_config() -> RepositoryConfig:
     conn_id = conf.get("bot_dashboard", "git_conn_id", fallback="bot_dashboard_git")
     connection = Connection.get_connection_from_secrets(conn_id)
+    return repository_config_from_connection(connection)
+
+
+def repository_config_from_connection(connection: Connection) -> RepositoryConfig:
+    """Validate operator configuration before either persistence or use."""
     extra = connection.extra_dejson
     required = {"provider", "project", "api_base_url", "clone_url", "base_branch", "allowed_path_globs", "denied_path_globs", "max_changed_files", "max_diff_bytes", "service_account_id"}
     missing = sorted(required - extra.keys())
@@ -72,8 +77,11 @@ def load_repository_config() -> RepositoryConfig:
     if provider not in {"github", "gitlab"}: raise GitProviderError("unsupported Git provider")
     api_host, _ = _canonical_https(str(extra["api_base_url"]))
     clone_host, clone_path = _canonical_https(str(extra["clone_url"]))
-    if api_host != clone_host: raise GitProviderError("API and clone hosts must match")
+    if api_host != clone_host and not (
+        provider == "github" and api_host == "api.github.com" and clone_host == "github.com"
+    ): raise GitProviderError("API and clone hosts must match or use GitHub's public endpoints")
     _resolve_host(api_host)
+    if clone_host != api_host: _resolve_host(clone_host)
     project = str(extra["project"]).strip("/")
     expected_suffix = f"/{project}.git"
     if not clone_path.endswith(expected_suffix): raise GitProviderError("clone URL does not match configured project")
@@ -111,7 +119,9 @@ class GitProvider:
     def _headers(self) -> dict[str, str]: raise NotImplementedError
     def _request(self, method: str, path: str, *, payload: dict | None = None) -> Any:
         url = f"{self.config.api_base_url}/{path.lstrip('/')}"
-        host, _ = _canonical_https(url); _resolve_host(host)
+        # Adapter paths include bounded query parameters; credentials and endpoint
+        # identity are validated against the configured canonical base instead.
+        host, _ = _canonical_https(self.config.api_base_url); _resolve_host(host)
         timeout = httpx.Timeout(connect=5, read=15, write=15, pool=5)
         with httpx.Client(timeout=timeout, follow_redirects=False, trust_env=False, headers=self._headers()) as client:
             request = client.build_request(method, url, json=payload)
@@ -128,15 +138,26 @@ class GitProvider:
             finally: response.close()
     def create_change(self, branch: str, title: str, body: str) -> dict: raise NotImplementedError
     def read_change(self, number: int) -> dict: raise NotImplementedError
+    def read_base_identity(self) -> str: raise NotImplementedError
     def post_comment(self, number: int, body: str) -> None: raise NotImplementedError
     def upsert_comment(self, number: int, marker: str, body: str) -> None: raise NotImplementedError
     def find_change(self, branch: str) -> dict | None: raise NotImplementedError
+    def mark_ready(self, number: int, head_sha: str) -> None: raise NotImplementedError
+    def merge_change(self, number: int, head_sha: str) -> None: raise NotImplementedError
 
 
 class GitHubProvider(GitProvider):
     def _headers(self): return {"Authorization": f"Bearer {self.config.token}", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
     def create_change(self, branch, title, body): return self._request("POST", f"repos/{self.config.project}/pulls", payload={"head": branch, "base": self.config.base_branch, "title": title[:200], "body": body[:20_000], "draft": True})
     def read_change(self, number): return normalize_github(self._request("GET", f"repos/{self.config.project}/pulls/{number}"))
+    def read_base_identity(self):
+        value = self._request(
+            "GET", f"repos/{self.config.project}/commits/{quote(self.config.base_branch, safe='')}"
+        )
+        sha = value.get("sha")
+        if not isinstance(sha, str) or len(sha) not in {40, 64}:
+            raise GitProviderError("provider returned an invalid current base identity")
+        return sha
     def post_comment(self, number, body): self._request("POST", f"repos/{self.config.project}/issues/{number}/comments", payload={"body": body[:10_000]})
     def upsert_comment(self, number, marker, body):
         comments = self._request("GET", f"repos/{self.config.project}/issues/{number}/comments?per_page=100")
@@ -152,12 +173,43 @@ class GitHubProvider(GitProvider):
         values = self._request("GET", f"repos/{self.config.project}/pulls?state=all&head={quote(f'{owner}:{branch}', safe=':')}&per_page=10")
         return normalize_github(values[0]) if values else None
 
+    def mark_ready(self, number, head_sha):
+        value = self._request("GET", f"repos/{self.config.project}/pulls/{number}")
+        if value["head"]["sha"] != head_sha:
+            raise GitProviderError("PR head changed")
+        if not value.get("draft"):
+            return
+        # Enterprise GraphQL lives alongside /api/v3, public GitHub at /graphql.
+        from dataclasses import replace
+        base = self.config.api_base_url.removesuffix("/api/v3")
+        adapter = GitHubProvider(replace(self.config, api_base_url=base))
+        response = adapter._request("POST", "api/graphql" if base != self.config.api_base_url else "graphql", payload={
+            "query": "mutation($id:ID!){markPullRequestReadyForReview(input:{pullRequestId:$id}){pullRequest{isDraft}}}",
+            "variables": {"id": value["node_id"]},
+        })
+        if response.get("errors") or response.get("data", {}).get("markPullRequestReadyForReview", {}).get("pullRequest", {}).get("isDraft") is not False:
+            raise GitProviderError("Provider could not mark PR ready")
+
+    def merge_change(self, number, head_sha):
+        result = self._request("PUT", f"repos/{self.config.project}/pulls/{number}/merge", payload={"sha": head_sha, "merge_method": "squash"})
+        if result.get("merged") is not True:
+            raise GitProviderError("Provider did not merge the reviewed head")
+
 class GitLabProvider(GitProvider):
     def _headers(self): return {"PRIVATE-TOKEN": self.config.token}
     @property
     def project_path(self): return quote(self.config.project, safe="")
     def create_change(self, branch, title, body): return self._request("POST", f"projects/{self.project_path}/merge_requests", payload={"source_branch": branch, "target_branch": self.config.base_branch, "title": title[:200], "description": body[:20_000], "draft": True})
     def read_change(self, number): return normalize_gitlab(self._request("GET", f"projects/{self.project_path}/merge_requests/{number}"))
+    def read_base_identity(self):
+        value = self._request(
+            "GET",
+            f"projects/{self.project_path}/repository/branches/{quote(self.config.base_branch, safe='')}",
+        )
+        sha = value.get("commit", {}).get("id")
+        if not isinstance(sha, str) or len(sha) not in {40, 64}:
+            raise GitProviderError("provider returned an invalid current base identity")
+        return sha
     def post_comment(self, number, body): self._request("POST", f"projects/{self.project_path}/merge_requests/{number}/notes", payload={"body": body[:10_000]})
     def upsert_comment(self, number, marker, body):
         notes = self._request("GET", f"projects/{self.project_path}/merge_requests/{number}/notes?per_page=100")
@@ -172,14 +224,49 @@ class GitLabProvider(GitProvider):
         values = self._request("GET", f"projects/{self.project_path}/merge_requests?state=all&source_branch={quote(branch, safe='')}&per_page=10")
         return normalize_gitlab(values[0]) if values else None
 
+    def mark_ready(self, number, head_sha):
+        import re
+        path = f"projects/{self.project_path}/merge_requests/{number}"
+        value = self._request("GET", path)
+        if value["sha"] != head_sha:
+            raise GitProviderError("MR head changed")
+        title = re.sub(r"^(?:\[Draft\]|\(Draft\)|Draft:|WIP:)\s*", "", value["title"], flags=re.IGNORECASE)
+        self._request("PUT", path, payload={"title": title})
+
+    def merge_change(self, number, head_sha):
+        result = self._request("PUT", f"projects/{self.project_path}/merge_requests/{number}/merge", payload={"sha": head_sha, "squash": True})
+        if result.get("state") != "merged":
+            raise GitProviderError("Provider did not merge the reviewed head")
+
 def normalize_github(value: dict) -> dict:
-    return {"provider": "github", "number": value["number"], "url": value["html_url"], "state": "merged" if value.get("merged") else value.get("state"), "draft": bool(value.get("draft")), "head_sha": value["head"]["sha"], "head_ref": value["head"]["ref"], "base_ref": value["base"]["ref"], "author_id": str(value["user"]["id"])}
+    mergeable = value.get("mergeable")
+    mergeability = "mergeable" if mergeable is True else "conflicting" if (
+        mergeable is False or value.get("mergeable_state") == "dirty"
+    ) else "unknown"
+    return {
+        "provider": "github", "number": value["number"], "url": value["html_url"],
+        "state": "merged" if value.get("merged") else value.get("state"),
+        "draft": bool(value.get("draft")), "head_sha": value["head"]["sha"],
+        "head_ref": value["head"]["ref"], "base_ref": value["base"]["ref"],
+        "base_sha": value["base"].get("sha"), "mergeability": mergeability,
+        "author_id": str(value["user"]["id"]),
+    }
 
 
 def normalize_gitlab(value: dict) -> dict:
     # GitLab says opened/closed/locked/merged; the lifecycle speaks open/closed/merged.
     state = {"opened": "open", "locked": "open"}.get(value.get("state"), value.get("state"))
-    return {"provider": "gitlab", "number": value["iid"], "url": value["web_url"], "state": state, "draft": bool(value.get("draft") or str(value.get("title", "")).lower().startswith("draft:")), "head_sha": value["sha"], "head_ref": value["source_branch"], "base_ref": value["target_branch"], "author_id": str(value["author"]["id"])}
+    raw_mergeability = value.get("detailed_merge_status") or value.get("merge_status")
+    mergeability = "conflicting" if raw_mergeability in {"cannot_be_merged", "conflict", "conflicts"} else "mergeable" if raw_mergeability in {"mergeable", "can_be_merged"} else "unknown"
+    return {
+        "provider": "gitlab", "number": value["iid"], "url": value["web_url"],
+        "state": state,
+        "draft": bool(value.get("draft") or str(value.get("title", "")).lower().startswith("draft:")),
+        "head_sha": value["sha"], "head_ref": value["source_branch"],
+        "base_ref": value["target_branch"],
+        "base_sha": (value.get("diff_refs") or {}).get("base_sha"),
+        "mergeability": mergeability, "author_id": str(value["author"]["id"]),
+    }
 
 
 def get_provider(config: RepositoryConfig | None = None) -> GitProvider:

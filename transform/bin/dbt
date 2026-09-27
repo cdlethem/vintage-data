@@ -33,6 +33,15 @@ def _shared_checkout() -> pathlib.Path:
     return path.parent if path.name == ".git" else path
 
 
+def _option_value(arguments: list[str], option: str) -> str | None:
+    for index, argument in enumerate(arguments):
+        if argument == option and index + 1 < len(arguments):
+            return arguments[index + 1]
+        if argument.startswith(f"{option}="):
+            return argument.split("=", 1)[1]
+    return None
+
+
 def main() -> None:
     shared_root = _shared_checkout()
     sys.path.insert(0, str(shared_root / "orchestration" / "include"))
@@ -43,8 +52,10 @@ def main() -> None:
 
     deployment.load_env()
     deployment.load_env(shared_root / "orchestration" / "airflow.secrets.env")
+    arguments = sys.argv[1:]
+    project_dir = pathlib.Path(_option_value(arguments, "--project-dir") or PROJECT_DIR)
     os.environ.setdefault(
-        "DBT_DEV_WAREHOUSE", str(PROJECT_DIR / "target" / "dev.duckdb")
+        "DBT_DEV_WAREHOUSE", str(project_dir / "target" / "dev.duckdb")
     )
 
     executable = shared_root / "transform" / ".venv" / "bin" / "dbt"
@@ -53,24 +64,20 @@ def main() -> None:
             "transform dbt environment is missing; run "
             "orchestration/setup/07_transform.sh"
         )
-    arguments = sys.argv[1:]
     if arguments and arguments[0] in {"--help", "--version", "-h", "-V"}:
         argv = [str(executable), *arguments]
     else:
-        argv = [
-            str(executable),
-            *arguments,
-            "--project-dir",
-            str(PROJECT_DIR),
-            "--profiles-dir",
-            str(PROJECT_DIR),
-        ]
+        argv = [str(executable), *arguments]
+        if _option_value(arguments, "--project-dir") is None:
+            argv.extend(["--project-dir", str(PROJECT_DIR)])
+        if _option_value(arguments, "--profiles-dir") is None:
+            argv.extend(["--profiles-dir", str(project_dir)])
     deadline = time.monotonic() + 120
     delay = 0.5
     while True:
         result = subprocess.run(
             argv,
-            cwd=PROJECT_DIR,
+            cwd=project_dir,
             env=os.environ,
             capture_output=True,
             text=True,

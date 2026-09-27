@@ -9165,6 +9165,9 @@ sources:
     - name: legalstructure
       description: Raw `legalstructure` value supplied by `nz_charities`.
       data_type: VARCHAR
+    - name: twittername
+      description: Raw `twittername` value supplied by `nz_charities`.
+      data_type: VARCHAR
   - name: nz_visa_wait_times
     description: Insert-only raw records loaded for `nz_visa_wait_times`.
     columns: &id107
@@ -9644,81 +9647,6 @@ sources:
       data_type: BIGINT
     - name: changed_keys
       description: Raw `changed_keys` value supplied by `open_library`.
-      data_type: JSON
-  - name: openactive_feeds
-    description: Insert-only raw records loaded for `openactive_feeds`.
-    columns: &id114
-    - name: _row_id
-      description: Raw `_row_id` value supplied by `openactive_feeds`.
-      data_type: VARCHAR
-    - name: _source
-      description: Raw `_source` value supplied by `openactive_feeds`.
-      data_type: VARCHAR
-    - name: _batch_id
-      description: Identifier of the raw load batch that produced this row.
-      data_type: VARCHAR
-    - name: _source_file
-      description: Raw source file from which this row was loaded.
-      data_type: VARCHAR
-    - name: _file_row_num
-      description: One-based row position in the raw source file.
-      data_type: BIGINT
-    - name: _dt
-      description: Raw `_dt` value supplied by `openactive_feeds`.
-      data_type: DATE
-    - name: _extract_started_at
-      description: Raw `_extract_started_at` value supplied by `openactive_feeds`.
-      data_type: TIMESTAMP WITH TIME ZONE
-    - name: _load_id
-      description: Identifier of the load job that inserted this row.
-      data_type: VARCHAR
-    - name: _loaded_at
-      description: UTC timestamp at which the load layer inserted this row.
-      data_type: TIMESTAMP WITH TIME ZONE
-    - name: _content_hash
-      description: Stable hash of the raw record content used for lineage and deduplication.
-      data_type: VARCHAR
-    - name: _payload
-      description: Complete raw record payload retained for lineage and schema evolution.
-      data_type: JSON
-    - name: source
-      description: Raw `source` value supplied by `openactive_feeds`.
-      data_type: VARCHAR
-    - name: id
-      description: Raw `id` value supplied by `openactive_feeds`.
-      data_type: VARCHAR
-    - name: fetched_at
-      description: Raw `fetched_at` value supplied by `openactive_feeds`.
-      data_type: TIMESTAMP WITH TIME ZONE
-    - name: state
-      description: Raw `state` value supplied by `openactive_feeds`.
-      data_type: VARCHAR
-    - name: kind
-      description: Raw `kind` value supplied by `openactive_feeds`.
-      data_type: VARCHAR
-    - name: modified
-      description: Raw `modified` value supplied by `openactive_feeds`.
-      data_type: BIGINT
-    - name: item_id
-      description: Raw `item_id` value supplied by `openactive_feeds`.
-      data_type: VARCHAR
-    - name: provider
-      description: Raw `provider` value supplied by `openactive_feeds`.
-      data_type: VARCHAR
-    - name: feed_type
-      description: Raw `feed_type` value supplied by `openactive_feeds`.
-      data_type: VARCHAR
-    - name: feed_url
-      description: Raw `feed_url` value supplied by `openactive_feeds`.
-      data_type: VARCHAR
-    - name: page_url
-      description: Raw `page_url` value supplied by `openactive_feeds`.
-      data_type: VARCHAR
-    - name: next
-      description: Raw `next` value supplied by `openactive_feeds`.
-      data_type: VARCHAR
-    - name: data
-      description: Raw `data` value supplied by `openactive_feeds`.
       data_type: JSON
   - name: openfda
     description: Insert-only raw records loaded for `openfda`.
@@ -11376,93 +11304,6 @@ sources:
     - name: estimated_completion
       description: Raw `estimated_completion` value supplied by `seed_lab_queue`.
       data_type: VARCHAR
-  - name: sensor_community
-    description: Insert-only raw records loaded for `sensor_community`.
-    columns: &id135
-    - name: _row_id
-      description: Raw `_row_id` value supplied by `sensor_community`.
-      data_type: VARCHAR
-    - name: _source
-      description: Raw `_source` value supplied by `sensor_community`.
-      data_type: VARCHAR
-    - name: _batch_id
-      description: Identifier of the raw load batch that produced this row.
-      data_type: VARCHAR
-    - name: _source_file
-      description: Raw source file from which this row was loaded.
-      data_type: VARCHAR
-    - name: _file_row_num
-      description: One-based row position in the raw source file.
-      data_type: BIGINT
-    - name: _dt
-      description: Raw `_dt` value supplied by `sensor_community`.
-      data_type: DATE
-    - name: _extract_started_at
-      description: Raw `_extract_started_at` value supplied by `sensor_community`.
-      data_type: TIMESTAMP WITH TIME ZONE
-    - name: _load_id
-      description: Identifier of the load job that inserted this row.
-      data_type: VARCHAR
-    - name: _loaded_at
-      description: UTC timestamp at which the load layer inserted this row.
-      data_type: TIMESTAMP WITH TIME ZONE
-    - name: _content_hash
-      description: Stable hash of the raw record content used for lineage and deduplication.
-      data_type: VARCHAR
-    - name: _payload
-      description: Complete raw record payload retained for lineage and schema evolution.
-      data_type: JSON
-    - name: source
-      description: Raw `source` value supplied by `sensor_community`.
-      data_type: VARCHAR
-    - name: id
-      description: Raw `id` value supplied by `sensor_community`.
-      data_type: VARCHAR
-    - name: fetched_at
-      description: Raw `fetched_at` value supplied by `sensor_community`.
-      data_type: TIMESTAMP WITH TIME ZONE
-    - name: ts
-      description: Raw `ts` value supplied by `sensor_community`.
-      data_type: TIMESTAMP WITH TIME ZONE
-    - name: location_id
-      description: Raw `location_id` value supplied by `sensor_community`.
-      data_type: BIGINT
-    - name: sensor_id
-      description: Raw `sensor_id` value supplied by `sensor_community`.
-      data_type: BIGINT
-    - name: sensor_type
-      description: Raw `sensor_type` value supplied by `sensor_community`.
-      data_type: VARCHAR
-    - name: manufacturer
-      description: Raw `manufacturer` value supplied by `sensor_community`.
-      data_type: VARCHAR
-    - name: country
-      description: Raw `country` value supplied by `sensor_community`.
-      data_type: VARCHAR
-    - name: latitude
-      description: Raw `latitude` value supplied by `sensor_community`.
-      data_type: DOUBLE
-    - name: longitude
-      description: Raw `longitude` value supplied by `sensor_community`.
-      data_type: DOUBLE
-    - name: altitude
-      description: Raw `altitude` value supplied by `sensor_community`.
-      data_type: DOUBLE
-    - name: indoor
-      description: Raw `indoor` value supplied by `sensor_community`.
-      data_type: BOOLEAN
-    - name: exact_location
-      description: Raw `exact_location` value supplied by `sensor_community`.
-      data_type: BOOLEAN
-    - name: values
-      description: Raw `values` value supplied by `sensor_community`.
-      data_type: JSON
-    - name: quality_flags
-      description: Raw `quality_flags` value supplied by `sensor_community`.
-      data_type: JSON
-    - name: is_clean
-      description: Raw `is_clean` value supplied by `sensor_community`.
-      data_type: BOOLEAN
   - name: smithsonian_volcanism
     description: Insert-only raw records loaded for `smithsonian_volcanism`.
     columns: &id136
@@ -13842,6 +13683,135 @@ sources:
     - name: keywords
       description: Raw `keywords` value supplied by `zenodo`.
       data_type: JSON
+  - name: europe_pmc
+    description: Insert-only raw records loaded for `europe_pmc`.
+    columns: &europe_pmc_columns
+    - name: _row_id
+      description: Raw `_row_id` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: _source
+      description: Raw `_source` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: _batch_id
+      description: Identifier of the raw load batch that produced this row.
+      data_type: VARCHAR
+    - name: _source_file
+      description: Raw source file from which this row was loaded.
+      data_type: VARCHAR
+    - name: _file_row_num
+      description: One-based row position in the raw source file.
+      data_type: BIGINT
+    - name: _dt
+      description: Raw `_dt` value supplied by `europe_pmc`.
+      data_type: DATE
+    - name: _extract_started_at
+      description: Raw `_extract_started_at` value supplied by `europe_pmc`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _load_id
+      description: Identifier of the load job that inserted this row.
+      data_type: VARCHAR
+    - name: _loaded_at
+      description: UTC timestamp at which the load layer inserted this row.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: _content_hash
+      description: Stable hash of the raw record content used for lineage and deduplication.
+      data_type: VARCHAR
+    - name: _payload
+      description: Complete raw record payload retained for lineage and schema evolution.
+      data_type: JSON
+    - name: source
+      description: Raw `source` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: id
+      description: Raw `id` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: fetched_at
+      description: Raw `fetched_at` value supplied by `europe_pmc`.
+      data_type: TIMESTAMP WITH TIME ZONE
+    - name: abstract
+      description: Raw `abstract` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: annotations
+      description: Raw `annotations` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: author_string
+      description: Raw `author_string` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: authors
+      description: Raw `authors` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: cited_by_count
+      description: Raw `cited_by_count` value supplied by `europe_pmc`.
+      data_type: BIGINT
+    - name: doi
+      description: Raw `doi` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: first_index_date
+      description: Raw `first_index_date` value supplied by `europe_pmc`.
+      data_type: DATE
+    - name: first_publication_date
+      description: Raw `first_publication_date` value supplied by `europe_pmc`.
+      data_type: DATE
+    - name: full_text_links
+      description: Raw `full_text_links` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: grants
+      description: Raw `grants` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: has_pdf
+      description: Raw `has_pdf` value supplied by `europe_pmc`.
+      data_type: BOOLEAN
+    - name: in_epmc
+      description: Raw `in_epmc` value supplied by `europe_pmc`.
+      data_type: BOOLEAN
+    - name: in_pmc
+      description: Raw `in_pmc` value supplied by `europe_pmc`.
+      data_type: BOOLEAN
+    - name: is_open_access
+      description: Raw `is_open_access` value supplied by `europe_pmc`.
+      data_type: BOOLEAN
+    - name: journal
+      description: Raw `journal` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: keywords
+      description: Raw `keywords` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: language
+      description: Raw `language` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: mesh_headings
+      description: Raw `mesh_headings` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: pmcid
+      description: Raw `pmcid` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: pmid
+      description: Raw `pmid` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: publication_id
+      description: Raw `publication_id` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: publication_source
+      description: Raw `publication_source` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: publication_status
+      description: Raw `publication_status` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: publication_types
+      description: Raw `publication_types` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: publication_year
+      description: Raw `publication_year` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: retrieval
+      description: Raw `retrieval` value supplied by `europe_pmc`.
+      data_type: JSON
+    - name: source_url
+      description: Raw `source_url` value supplied by `europe_pmc`.
+      data_type: VARCHAR
+    - name: title
+      description: Raw `title` value supplied by `europe_pmc`.
+      data_type: VARCHAR
   - name: imf_datamapper
     description: Insert-only raw records loaded for `imf_datamapper`.
     columns: &imf_datamapper_columns
@@ -14356,10 +14326,6 @@ models:
   description: Thin governed view over the `open_library` raw source. Values and load lineage are preserved
     without semantic cleaning.
   columns: *id113
-- name: base_openactive_feeds
-  description: Thin governed view over the `openactive_feeds` raw source. Values and load lineage are
-    preserved without semantic cleaning.
-  columns: *id114
 - name: base_openfda
   description: Thin governed view over the `openfda` raw source. Values and load lineage are preserved
     without semantic cleaning.
@@ -14448,10 +14414,6 @@ models:
   description: Thin governed view over the `seed_lab_queue` raw source. Values and load lineage are preserved
     without semantic cleaning.
   columns: *id134
-- name: base_sensor_community
-  description: Thin governed view over the `sensor_community` raw source. Values and load lineage are
-    preserved without semantic cleaning.
-  columns: *id135
 - name: base_smithsonian_volcanism
   description: Thin governed view over the `smithsonian_volcanism` raw source. Values and load lineage
     are preserved without semantic cleaning.
@@ -14580,6 +14542,10 @@ models:
   description: Thin governed view over the `zenodo` raw source. Values and load lineage are preserved
     without semantic cleaning.
   columns: *id166
+- name: base_europe_pmc
+  description: Thin governed view over the `europe_pmc` raw source. Values and load lineage are preserved
+    without semantic cleaning.
+  columns: *europe_pmc_columns
 - name: base_imf_datamapper
   description: Thin governed view over the `imf_datamapper` raw source. Values and load lineage are preserved
     without semantic cleaning.

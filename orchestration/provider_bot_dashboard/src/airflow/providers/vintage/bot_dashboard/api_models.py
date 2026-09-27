@@ -1,12 +1,13 @@
 """Bounded public API request models."""
 from __future__ import annotations
 
+import json
 import re
 from typing import Any, Literal
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from .report_schemas import ExecutorAdmissionV2, ReviewerAdmissionV2, RunEnvelopeV1, UsageV1
+from .report_schemas import AcceptanceGateV1, ExecutorAdmissionV2, ReviewerAdmissionV2, RunEnvelopeV1, UsageV1
 
 CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
@@ -47,9 +48,14 @@ class PatchTask(StrictBody):
     resource_keys: list[str] | None = Field(default=None, max_length=50)
     follow_up_bots: list[str] | None = Field(default=None, max_length=10)
     reviewer_required: bool | None = None
+    acceptance_gates: list[AcceptanceGateV1] | None = Field(default=None, max_length=20)
 
     @model_validator(mode="after")
     def validate_execution_policy(self):
+        if self.acceptance_gates is not None:
+            keys = [gate.gate_key for gate in self.acceptance_gates]
+            if len(keys) != len(set(keys)):
+                raise ValueError("acceptance gate keys must be unique")
         if self.verification_commands is not None:
             for argv in self.verification_commands:
                 if (
@@ -120,6 +126,51 @@ class EvidenceBody(StrictBody):
 class SyncRequest(StrictBody):
     version: int = Field(ge=1)
     idempotency_key: str = Field(min_length=8, max_length=128, pattern=r"^[A-Za-z0-9._:-]+$")
+
+
+class ValidationGateCreate(StrictBody):
+    version: int = Field(ge=1)
+    gate_key: str = Field(min_length=1, max_length=100, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+    stage: Literal["publication", "merge", "activation", "completion"]
+    recipe: Literal["public_source_smoke", "disposable_schema_migration", "warehouse_check", "dag_inspection", "lightdash_preview", "manual"]
+    owner: str = Field(min_length=1, max_length=250)
+    required_capability: str = Field(min_length=1, max_length=250)
+    subject: str = Field(min_length=1, max_length=512)
+    dependencies: list[str] = Field(default_factory=list, max_length=20)
+    recheck_condition: str = Field(min_length=1, max_length=2000)
+    required: bool = True
+    recipe_args: dict[str, Any] = Field(default_factory=dict)
+
+
+class ValidationGateResult(StrictBody):
+    version: int = Field(ge=1)
+    status: Literal["passed", "failed"]
+    subject: str = Field(min_length=1, max_length=512)
+    evidence: Evidence
+
+
+class ValidationClaimRequest(StrictBody):
+    limit: int = Field(default=20, ge=1, le=100)
+    runner_id: str = Field(min_length=1, max_length=250, pattern=r"^[A-Za-z0-9._:-]+$")
+
+
+class ValidationStartRequest(StrictBody):
+    version: int = Field(ge=1)
+    lease_id: str = Field(min_length=32, max_length=64, pattern=r"^[a-f0-9]+$")
+    lease_run_id: str = Field(min_length=1, max_length=250)
+    subject: str = Field(pattern=r"^(?:[a-f0-9]{40}|[a-f0-9]{64})$")
+
+
+class ValidationFinishRequest(ValidationStartRequest):
+    status: Literal["passed", "failed"]
+    evidence: dict[str, Any]
+
+    @field_validator("evidence")
+    @classmethod
+    def bounded_evidence(cls, value):
+        if len(json.dumps(value, ensure_ascii=False).encode()) > 32_000:
+            raise ValueError("validation evidence exceeds 32000 bytes")
+        return value
 
 class PromotionPolicy(StrictBody):
     category: Literal["*", "reliability", "new_source", "cadence", "load", "storage", "architecture", "credential", "cost"]
@@ -310,8 +361,10 @@ class ManagerContextResponse(StrictBody):
     missing_agents: list[str]
     failed_agents: list[str]
     freshness_ok: bool
+    workload: dict[str, Any]
     bot_health: list[dict[str, Any]]
     backlog: list[dict[str, Any]]
+    context_summary: dict[str, Any] = Field(default_factory=dict)
 
 
 class ReconcileResponse(StrictBody):
@@ -377,10 +430,14 @@ class FollowUpTriggerConf(StrictBody):
     execution_id: str
 
 
+class PlanningTriggerConf(FollowUpTriggerConf):
+    planning_request_id: int = Field(strict=True, ge=1)
+
+
 class TriggerArguments(StrictBody):
     trigger_dag_id: str
     trigger_run_id: str
-    conf: TriggerConf | FollowUpTriggerConf
+    conf: TriggerConf | FollowUpTriggerConf | PlanningTriggerConf
     skip_when_already_exists: Literal[True]
     wait_for_completion: Literal[False]
 
@@ -396,6 +453,7 @@ class ProviderSyncResponse(StrictBody):
 
 
 class MaintenanceResponse(StrictBody):
+    failed_dispatches: int = 0
     expired_leases: int
     pruned_reports: int
     pruned_artifacts: int

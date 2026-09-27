@@ -131,6 +131,28 @@ class RunnerDeadlineTest(unittest.TestCase):
                 providers.openai_chat({"endpoint": "http://provider.invalid", "model": "m"}, "prompt", timeout_s=.05)
         self.assertNotIsInstance(caught.exception, providers.ProviderBusy)
 
+    def test_real_attempt_envelope_validates_for_success_failure_and_capacity(self):
+        from airflow.providers.vintage.bot_dashboard.report_schemas import validate_run_envelope
+        for failure in (None, providers.ProviderTerminal("test failure"), providers.ProviderBusy("capacity")):
+            with self.subTest(failure=type(failure).__name__), tempfile.TemporaryDirectory() as tmp:
+                cfg = _cfg(tmp)
+                payload = {"schema_version": 2, "agent": "source_discovery", "status": "ok", "summary": "No new proposals.", "proposals": []}
+                def invoke(*args, **kwargs):
+                    if failure:
+                        raise failure
+                    return providers.ProviderResult(text=json.dumps(payload), duration_ms=1)
+                original = bot_runner._envelope
+                envelopes = []
+                def checked(**kwargs):
+                    envelope = original(**kwargs)
+                    validate_run_envelope(envelope)
+                    envelopes.append(envelope)
+                    return envelope
+                with mock.patch.object(bot_runner.providers, "get_provider", return_value=invoke), mock.patch.object(bot_runner, "_envelope", side_effect=checked):
+                    bot_runner.run(cfg, identity=IDENTITY, models_config=_models(tmp), ephemeral=True, context_values={"CTX": {}})
+                self.assertEqual(len(envelopes), 1)
+                self.assertEqual(len(envelopes[0]["attempts"]), 1)
+
     def test_terminal_provider_failure_does_not_try_fallback(self):
         with tempfile.TemporaryDirectory() as tmp:
             cfg = _cfg(tmp)
@@ -234,8 +256,10 @@ class StrictDefinitionValidationTest(unittest.TestCase):
     def test_all_tracked_bots_and_models_validate_strictly(self):
         for path in bot_runner.discover():
             bot_runner.load_bot(path.parent)
-        bot_runner.load_models("bots/models.yml")
         bot_runner.load_models("bots/models.example.yml")
+        local_models = pathlib.Path("bots/models.yml")
+        if local_models.is_file():
+            bot_runner.load_models(local_models)
 
     def test_unknown_keys_output_schema_trigger_and_fallback_capability_are_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:

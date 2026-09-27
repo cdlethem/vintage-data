@@ -93,5 +93,6 @@ select
     "purposetogivegrantsanddonations",
     "overseasoperationsouthamerica",
     "kaupapamaoricharityfocusesonoutcomesformaori",
-    "legalstructure"
+    "legalstructure",
+    "twittername"
 from {{ source('raw', 'nz_charities') }}

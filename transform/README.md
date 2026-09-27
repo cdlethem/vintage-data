@@ -75,25 +75,44 @@ rejects it.
 
 ## Scheduled builds
 
-`jobs.yml` drives three Airflow DAGs:
+`jobs.yml` supplies schedules and limits for independent
+`transform__<family>__<cadence>` DAGs. Families follow
+`models/marts/<family>/`; a family has a DAG for each cadence used by its marts.
 
-| DAG | UTC schedule | selector |
+| Cadence | UTC schedule | family-scoped selector |
 |---|---|---|
-| `transform__twice_hourly` | `7,37 * * * *` | `+tag:twice_hourly` |
-| `transform__hourly` | `17 * * * *` | `+tag:hourly` |
-| `transform__daily` | `47 3 * * *` | `+tag:daily` |
+| `twice_hourly` | `7,37 * * * *` | selected family marts tagged `twice_hourly`, plus ancestors |
+| `hourly` | `17 * * * *` | selected family marts tagged `hourly`, plus ancestors |
+| `daily` | `47 3 * * *` | selected family marts tagged `daily`, plus ancestors |
 
-The leading `+` builds untagged base/staging ancestors. Every run performs dbt parse,
-manifest-policy validation, then build. A single flock at
-`$EXTRACT_DATA_ROOT/state/transform/dbt.lock` serializes all three cadences. The
-dbt wrapper retries only explicit DuckDB lock failures that occur before any model
-starts, for up to 120 seconds; it never retries query/model failures.
+Each run prepares a separate dbt project containing its dependency closure, parses
+and policy-validates that scope, then builds. Unrelated SQL/YAML, base-view test,
+or contract errors do not block healthy families. Violations inside a dependency
+still fail the consuming family. Shared project configuration/macros remain shared
+infrastructure; the strict whole-project validator remains available for review.
+Invalid family definitions must remain visible as failures, not silently disappear
+from scheduling.
 
-Manual equivalents:
+A single flock at `$EXTRACT_DATA_ROOT/state/transform/dbt.lock` serializes DuckDB
+writes. It is not a success dependency between DAGs: failure releases the lock and
+other families proceed. The wrapper retries only explicit DuckDB lock failures
+before any model starts, for up to 120 seconds, never query/model failures.
+
+When `LIGHTDASH_ENABLED=1`, a successful family build streams its accepted marts
+into the serving database under the same transform lock, records only catalog
+metadata for that batch, and then runs `sync_lightdash`. Only successfully built
+marts enter serving.
+Sync combines the accepted update with unrelated families' last successful
+definitions; a partial release must never replace the project with just one family
+or expose an unbuilt sibling. Content/query checks apply to the changed scope.
+Publication and deployment locks serialize shared serving writes; failures remain
+visible and retryable without rebuilding unrelated families.
+
+Developer commands (these operate on the full checkout; scheduled production uses
+the isolated family runner):
 
 ```bash
 transform/bin/dbt build --target dev --select +fct_bike_station_status_daily
-transform/bin/dbt build --target prod --select +tag:hourly
 transform/bin/dbt docs generate --target dev
 transform/bin/dbt docs serve --target dev
 ```
@@ -104,10 +123,15 @@ transform/bin/dbt docs serve --target dev
 workflow. It owns model grain, semantic metrics and Lightdash visualization coverage,
 and proposes one source family at a time. Missing visualizations remain work after
 modeling is complete. Active admitted tasks suppress duplicate proposals; completed
-reports do not hide unresolved coverage gaps. Implementation goes through the existing
-admission, confined executor and advisory reviewer workflow. Operators run previews
-and publish production content. See [Lightdash operations](../visualization/README.md)
-and [bot lifecycle](../bots/README.md).
+reports do not hide unresolved coverage gaps. The admitted candidate changes
+metadata/specification and its matching generated `transform/lightdash` chart and
+dashboard files, using only offline checks. Review retains a real candidate preview
+gate before merge. After the trusted head is merged, scheduled production automation
+must record the successful build, streamed publication, and Lightdash sync
+receipt before the family is considered delivered; dbt success alone is insufficient.
+Bots never run those production operations or receive their credentials/Docker access.
+See [Lightdash operations](../visualization/README.md) and
+[bot lifecycle](../bots/README.md).
 
 ```bash
 orchestration/.venv/bin/python bots/agent_context.py analytics

@@ -17,6 +17,8 @@ from airflow.providers.vintage.bot_dashboard import execution, maintenance, repo
 from airflow.providers.vintage.bot_dashboard.artifacts import put_artifact
 from airflow.providers.vintage.bot_dashboard.git_provider import GitHubProvider, GitLabProvider, RepositoryConfig
 from airflow.providers.vintage.bot_dashboard.models import Event, Execution, Task, metadata
+from airflow.models.variable import Variable
+from airflow.models.connection import Connection
 from airflow.providers.vintage.bot_dashboard.projection import persist_run_envelope
 from airflow.providers.vintage.bot_dashboard.report_schemas import TaskProposalV1
 from airflow.providers.vintage.bot_dashboard.service import (
@@ -111,6 +113,19 @@ class LifecycleTest(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.engine = create_engine(f"sqlite:///{self.root / 'dashboard.sqlite'}")
         metadata.create_all(self.engine)
+        if not self.engine.dialect.has_table(self.engine.connect(), "variable"):
+            Variable.__table__.create(self.engine)
+        if not self.engine.dialect.has_table(self.engine.connect(), "connection"):
+            Connection.__table__.create(self.engine)
+        with Session(self.engine) as seed:
+            seed.add(Connection(conn_id="bot_dashboard_model_gateway", conn_type="generic", password="test-key",
+                                extra=json.dumps({"name": "Gateway", "base_url": "https://model.example/v1"})))
+            seed.add(Variable(key="bot_dashboard_model_assignments",
+                              val=json.dumps([
+                                  {"role": "executor_junior", "provider_id": "gateway", "model": "small"},
+                                  {"role": "pr_reviewer", "provider_id": "gateway", "model": "small"},
+                              ])))
+            seed.commit()
         self.remote = self.root / "remote.git"
         self.shared = self.root / "shared"
         _git("init", "--bare", str(self.remote), cwd=self.root)
@@ -174,9 +189,19 @@ class LifecycleTest(unittest.TestCase):
             "manifest_version": 1, "task_id": str(execution_row.task_id), "execution_id": execution_row.execution_id,
             "revision": execution_row.revision, "base_sha": self.base_sha, "changed_paths": [changed_path],
             "patch_sha256": patch_sha, "patch_bytes": len(patch), "source_report_reference": "source_vetting/run",
-            "checks": [{"name": "fixture", "argv": ["python", "-c", "print('ok')"], "exit_code": 0}],
+            "checks": [{"name": "fixture", "argv": ["python", "-c", "print('ok')"], "exit_code": 0,
+                        "observed": "ok\n", "observation_sha256": hashlib.sha256(b"ok\n").hexdigest()}],
         }
         return patch, patch_sha, manifest
+
+    def _report_artifact(self, session: Session, execution_row: Execution) -> str:
+        content = b'{"fixture":"executor-report"}'
+        digest = hashlib.sha256(content).hexdigest()
+        put_artifact(
+            session, kind="executor_report", content=content,
+            expected_sha256=digest, owner_execution_id=execution_row.execution_id,
+        )
+        return digest
 
     def _begin(self, provider: str):
         config = self._config(provider)
@@ -237,7 +262,8 @@ class LifecycleTest(unittest.TestCase):
                         patch_bytes, patch_sha, manifest = self._patch_and_manifest(row)
                         put_artifact(session, kind="patch", content=patch_bytes, expected_sha256=patch_sha, owner_execution_id=row.execution_id)
                         fake.branch = f"bot-dashboard/{task.id}/{row.sequence}-r{row.revision}"
-                        published = repository_ops.publish_execution_change(session, row, task, task.revisions[-1], {"status": "ok", "patch_sha256": patch_sha, "changed_paths": ["allowed.txt"], "verification_manifest": manifest, "report_sha256": "a" * 64})
+                        report_sha = self._report_artifact(session, row)
+                        published = repository_ops.publish_execution_change(session, row, task, task.revisions[-1], {"status": "ok", "patch_sha256": patch_sha, "changed_paths": ["allowed.txt"], "verification_manifest": manifest, "report_sha256": report_sha})
                         self.assertEqual(7 if provider == "github" else 11, published["pr_number"])
                         replay = repository_ops.publish_execution_change(session, row, task, task.revisions[-1], {"status": "ok", "patch_sha256": patch_sha, "changed_paths": ["allowed.txt"], "verification_manifest": manifest, "base_sha": row.base_sha, "trusted_head_sha": row.trusted_head_sha})
                         self.assertEqual(published["pr_number"], replay["pr_number"])
@@ -251,7 +277,7 @@ class LifecycleTest(unittest.TestCase):
                         reviewer_run = dispatch[0]["conf"]
                         review_admission = execution.claim_run(session, dag_id="bot__pr_reviewer", run_id=row.target_run_id, conf_value=reviewer_run, kind="pr_reviewer", deadline_at=datetime.now(UTC) + timedelta(minutes=4))
                         self.assertEqual("pr_reviewer", review_admission["kind"])
-                        review_report = self._envelope("pr_reviewer", "bot__pr_reviewer", row.target_run_id, "pr_reviewer_v2", {"schema_version": 2, "agent": "pr_reviewer", "status": "ok", "task_id": str(task.id), "verdict": "approved", "summary": "looks good", "comments": [{"body": "Reviewed fixture", "path": "allowed.txt", "line": 1}], "verification": ["fixture passed"]})
+                        review_report = self._envelope("pr_reviewer", "bot__pr_reviewer", row.target_run_id, "pr_reviewer_v2", {"schema_version": 2, "agent": "pr_reviewer", "status": "ok", "task_id": str(task.id), "verdict": "approved", "summary": "looks good", "comments": [{"body": "Reviewed fixture", "path": "allowed.txt", "line": 1, "severity": "optional"}], "verification": ["fixture passed"]})
                         persist_run_envelope(session, review_report)
                         execution.finalize_run(session, dag_id="bot__pr_reviewer", run_id=row.target_run_id, kind="pr_reviewer", result={})
                         self.assertEqual(1, len(fake.comments))
@@ -353,7 +379,6 @@ class LifecycleTest(unittest.TestCase):
                         self.assertEqual("completed", session.get(Task, task.id).state)
                         self.assertIsNotNone(row.terminal_at)
                         self.assertEqual("merged", row.terminal_reason_code)
-
     def test_adverse_cases_are_bounded_and_idempotent(self):
         scenarios = ("forbidden_path", "oversized_diff", "changed_base_sha", "changed_pr_head", "no_change", "changes_requested", "provider_timeout", "duplicate")
         for scenario in scenarios:
@@ -397,7 +422,8 @@ class LifecycleTest(unittest.TestCase):
                             patch_bytes, patch_sha, manifest = self._patch_and_manifest(row)
                             put_artifact(session, kind="patch", content=patch_bytes, expected_sha256=patch_sha, owner_execution_id=row.execution_id)
                             fake.branch = f"bot-dashboard/{task.id}/{row.sequence}-r{row.revision}"
-                            repository_ops.publish_execution_change(session, row, task, task.revisions[-1], {"status": "ok", "patch_sha256": patch_sha, "changed_paths": ["allowed.txt"], "verification_manifest": manifest, "report_sha256": "a" * 64})
+                            report_sha = self._report_artifact(session, row)
+                            repository_ops.publish_execution_change(session, row, task, task.revisions[-1], {"status": "ok", "patch_sha256": patch_sha, "changed_paths": ["allowed.txt"], "verification_manifest": manifest, "report_sha256": report_sha})
                             if scenario == "changed_pr_head":
                                 fake.head_sha = "f" * 40
                                 maintenance.sync_provider(session)

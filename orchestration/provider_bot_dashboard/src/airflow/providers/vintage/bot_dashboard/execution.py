@@ -15,6 +15,21 @@ from .service import PreconditionFailed, _event
 
 PROFILE_ALIASES = {"junior": "@task", "senior": "@default", "staff": "@plan"}
 
+REVISION_REPAIR_DIRECTIVE = (
+    "Autopilot owns this revision repair. A prior candidate has been applied to the current base. "
+    "Inspect the worktree for .rej files, reconcile every rejected hunk into its adjacent target "
+    "file, and delete each .rej file. Preserve the candidate intent while incorporating current-base "
+    "changes and fix related failures within the admitted paths. There is no external or human "
+    "blocker to delegate: complete the repair in this run."
+)
+
+
+def _planned_resolution(action: str, seed: dict | None) -> str:
+    if not seed:
+        return action
+    prefix = REVISION_REPAIR_DIRECTIVE + "\n\nOriginal planned resolution:\n"
+    return prefix + action[:20_000 - len(prefix)]
+
 
 def executor_preconditions() -> list[str]:
     """Return stable fail-closed codes; a command existing is not confinement proof."""
@@ -108,6 +123,21 @@ def claim_run(
     )
     if revision is None:
         raise PreconditionFailed("admitted task revision is unavailable")
+    if kind == "executor" and row.pr_number is not None:
+        from .git_provider import get_provider, load_repository_config
+
+        config = load_repository_config()
+        if config.provider != row.provider or config.project != row.repository:
+            raise PreconditionFailed("published execution repository identity changed before resume")
+        observation = get_provider(config).read_change(row.pr_number)
+        expected = {
+            "provider": row.provider, "number": row.pr_number,
+            "head_ref": row.branch, "base_ref": row.target_branch,
+            "author_id": row.service_account_id, "head_sha": row.trusted_head_sha,
+            "state": "open",
+        }
+        if any(value is None or observation.get(key) != value for key, value in expected.items()):
+            raise PreconditionFailed("published execution identity, trusted head, or open state changed before resume")
     row.claimed_run_id = run_id
     row.dispatch_state = "running" if kind == "executor" else "reviewing"
     row.stage = "claimed"
@@ -123,11 +153,17 @@ def claim_run(
         _event(session, task, "execution_started", "executor", run_id, from_state=previous, to_state="in_progress", payload={"sequence": row.sequence, "revision": row.revision})
     source_artifact = None
     repository_policy = None
+    seed = None
     if kind == "executor":
         from .git_provider import load_repository_config
         from .repository_ops import create_source_artifact
+        from .revision_seed import get_seed
 
-        stored = create_source_artifact(session, row)
+        seed = get_seed(session, row)
+        repair_base_sha = seed.get("repair_base_sha") if seed else None
+        stored = create_source_artifact(
+            session, row, expected_base_sha=repair_base_sha,
+        )
         # The admission contract carries only the content-addressed reference.
         source_artifact = {"sha256": stored["sha256"], "byte_count": stored["byte_count"]}
         config = load_repository_config()
@@ -152,21 +188,25 @@ def claim_run(
         if revision.source_dag_id
         else None
     )
+    from .model_settings import model_for_role
+
+    selected_model = model_for_role(session, "pr_reviewer" if kind == "pr_reviewer" else f"executor_{row.profile}")
     admission = {
         "protocol_version": 2,
         "kind": kind,
         "task_id": str(task.id),
         "profile": row.profile,
         "model_role": PROFILE_ALIASES[row.profile],
+        "model": selected_model,
         "reviewer_required": row.reviewer_required,
         "sequence": row.sequence,
         "revision": row.revision,
         "execution_id": row.execution_id,
         "deadline_at": deadline_at.isoformat(),
         "task": {
-            "title": task.title,
+            "title": revision.title,
             "category": task.category,
-            "planned_resolution": task.planned_resolution,
+            "planned_resolution": _planned_resolution(revision.action, seed),
             "verification_commands": revision.verification_commands,
             "allowed_path_globs": revision.allowed_path_globs,
             "resource_keys": revision.resource_keys,
@@ -183,6 +223,36 @@ def claim_run(
         "source_report_reference": source_report_reference,
     }
     from .report_schemas import ExecutorAdmissionV2, ReviewerAdmissionV2
+
+    if kind == "executor":
+        if seed:
+            if seed.get("repair_base_sha"):
+                valid_seed = (
+                    row.base_sha == seed["repair_base_sha"]
+                    and row.repository == config.project
+                    and row.provider == config.provider
+                    and row.target_branch == config.base_branch
+                )
+            else:
+                valid_seed = (
+                    row.base_sha == seed["base_sha"]
+                    and row.source_artifact_sha256 == seed["source_artifact_sha256"]
+                    and row.repository == config.project
+                    and row.provider == config.provider
+                    and row.target_branch == config.base_branch
+                )
+            if not valid_seed:
+                raise PreconditionFailed("Revision seed source or repository identity changed")
+        admission["seed_patch_sha256"] = seed["patch_sha256"] if seed else None
+    else:
+        from .models import ValidationGate
+        admission["validation_evidence"] = [{
+            "gate_key": gate.gate_key, "stage": gate.stage, "subject": gate.subject,
+            "version": gate.version, "status": gate.status, "evidence": gate.evidence,
+        } for gate in session.scalars(select(ValidationGate).where(
+            ValidationGate.task_id == task.id, ValidationGate.subject == row.trusted_head_sha,
+            ValidationGate.status == "passed",
+        ).order_by(ValidationGate.gate_key).limit(20)).all()]
 
     contract = ExecutorAdmissionV2 if kind == "executor" else ReviewerAdmissionV2
     return contract.model_validate(admission).model_dump(mode="json")
@@ -212,7 +282,16 @@ def _record_terminal_metadata(
         row.terminal_detail = "run report unavailable"
         return
     row.terminal_failure_class = (report.failure_class or "TerminalOutcome")[:100]
-    row.terminal_detail = (report.failure_detail or "")[:8192]
+    detail = report.failure_detail or ""
+    if not detail and reason_code == "execution_blocked" and isinstance(report.body_json, dict):
+        # A completed worker can intentionally return a blocked result rather
+        # than raise an exception. Preserve its explanation on the execution.
+        from airflow._shared.secrets_masker import redact
+        summary = report.body_json.get("summary")
+        if isinstance(summary, str):
+            detail = str(redact(summary, "summary", max_depth=20))
+            row.terminal_failure_class = "ExecutionBlocked"
+    row.terminal_detail = detail[:8192]
 
 
 
@@ -279,11 +358,15 @@ def finalize_run(
         )
         publication = publish_review_comments(session, dag_id=dag_id, run_id=run_id)
         verdict = report.body_json.get("verdict")
+        failure_kind = report.body_json.get("failure_kind")
+        repair = report.body_json.get("repair")
         row.review_report_sha256 = report.sha256
         row.review_verdict = verdict
         row.provider_state = {
             **(row.provider_state or {}),
             "review_verdict": verdict,
+            "review_failure_kind": failure_kind,
+            "review_repair": repair,
         }
         target, code = previous, verdict or "review_failed"
         row.stage = "reviewed"

@@ -1,9 +1,9 @@
 # Lightdash
 
 Optional open-source Lightdash serves the dbt mart contracts and checked-in charts.
-DuckDB remains the transformation warehouse. A successful dbt build captures its
-completed marts under the transform lock; a separate retryable Airflow task copies
-that immutable batch into Postgres. Lightdash connects as a read-only Postgres user.
+DuckDB remains the transformation warehouse. A successful dbt build streams its
+completed marts straight into Postgres under the same transform lock, without
+writing an export file. Lightdash connects as a read-only Postgres user.
 Ordinary local DuckDB files are not a supported Lightdash warehouse connection.
 
 ## Reproducible deployment
@@ -32,7 +32,10 @@ visualization/bin/viz bootstrap --email admin@vintage-data.local
 
 Setup renders the existing deployment templates, creates/preserves secrets, builds
 the pinned CLI image, starts Postgres/MinIO/Lightdash, and installs
-`vintage-lightdash.service`. Set `SKIP_SYSTEMD=1` for a Compose-only installation.
+`vintage-lightdash.service`. It also restarts active Airflow workers so they pick
+up the current publication flag and serving credentials; changing an environment
+file alone does not update running workers. Set `SKIP_SYSTEMD=1` for a Compose-only
+installation, and refresh any externally managed workers yourself.
 Reruns preserve database state and credentials. Docker must already be installed
 and accessible to the configured service user. The default UI is
 `http://127.0.0.1:8083`; Postgres binds only to loopback port 5433. For a remote
@@ -54,44 +57,70 @@ Postgres volume: rotate roles deliberately or initialize a new state directory.
 
 ## Initial data and project publication
 
-Enablement adds publication to subsequent successful cadence builds. For the
-first deployment, run a full production build through the trusted runner so every
-mart has a serving relation. This uses the same lock, policies, and capture path as
-Airflow (and may take time on a populated warehouse):
+Enablement adds publication and Lightdash release to subsequent successful
+production family builds. Each `transform__<family>__<cadence>` DAG is independently
+retryable. Initial coverage requires successful builds for the desired families
+and cadences; bots and confined workspaces do not run production operations.
+
+For a fresh installation with no retained project identity, publish the first
+successful family build, then initialize the project explicitly:
 
 ```bash
-orchestration/.venv/bin/python - <<'PY'
-import sys
-sys.path.insert(0, 'orchestration/include')
-import deployment
-deployment.load_env()
-from transform_runner import run, publish_marts
-for cadence in ('twice_hourly', 'hourly', 'daily'):
-    publish_marts(run(cadence))
-PY
+visualization/bin/viz sync --batch <published-batch-id> --create
 ```
 
-The scheduled DAGs are the normal production entrypoint. A failed dbt build does
-not publish a partial batch.
-Then parse the current checkout and deploy metadata and reviewed content:
+Creation is allowed only when the serving ledger belongs to that initial batch.
+Later scheduled family syncs update the retained project. Existing installations
+must adopt a verified last-deployed local bundle as their initial aggregate.
+The serving ledger must match that baseline outside the current batch; newly
+published current-batch models may extend it. Missing or inconsistent baseline
+evidence is an error, never permission to replace the catalog with one family.
 
-```bash
-transform/bin/dbt parse --target dev
-visualization/bin/viz validate
-visualization/bin/viz content --check
-visualization/bin/viz compile
-visualization/bin/viz deploy --create
-visualization/bin/viz query-check
-visualization/bin/viz status
+The normal production entrypoint is the scheduled DAG:
+
+```text
+build_and_publish -> sync_lightdash
 ```
 
-The serving bundle changes adapter and relation/type metadata only; it never
-rewrites or executes the DuckDB model SQL on Postgres. It retains the original
-manifest for provenance and exposes only mart models. Deployment checks the real
-serving catalog, uploads charts/dashboards, and validates content. Missing tables
-or columns fail deployment. The created project UUID is retained in external
-state; later `deploy` updates that project. Metadata/content deployment is an
-explicit operator action after review, separate from routine data refresh.
+`build_and_publish` builds the family, then — still holding the transform lock —
+streams every accepted mart from DuckDB into freshly created Postgres tables and
+swaps them into the serving schema in one transaction. Runtime checks must not
+read or validate unrelated checkout content. Only the batch's catalog metadata
+(manifest, run results, reviewed presentation content, declared column types,
+exact row counts, sequence) is written to
+`$LIGHTDASH_STATE_ROOT/batches/<batch-id>`; no table data is retained on disk.
+A failed transfer is retried by rebuilding from raw data, not by replaying a
+saved export.
+
+After publication, `sync_lightdash` checks that the batch is current and combines
+its accepted models with unrelated models' last successful metadata. Lightdash
+deploy replaces the explore catalog, so deploying one family alone is forbidden:
+the aggregate must preserve unrelated explores, including older working releases
+of failed families. Unbuilt models cannot enter the aggregate. Mixed-cadence
+dashboard content must reflect only accepted, published model definitions.
+
+The deployment lock serializes aggregate changes. Validation and saved-chart query
+checks apply to the changed scope, not every other source's current health.
+Success records the accepted release; failures remain visible and retryable. A
+transfer failure retries the whole build; a sync failure retries only the
+metadata deployment. A failed source does not prevent another source publishing.
+Shared warehouse/service outages and real shared dependencies remain shared risks.
+
+Developer and confined-bot work is limited to preparing the reviewed candidate:
+parse/validate its semantic specification, run `viz content` to regenerate its
+admitted chart/dashboard files, and validate the generated diff offline. A
+preview-capable operator reviews the exact candidate before merge. Neither that
+preview nor offline dbt success is production delivery. After merge, the successful
+trusted family build/batch/release receipt is the metadata/content activation
+evidence; another family's failure is not a prerequisite for completing it.
+Direct deployment or Docker operation remains outside confined bot execution.
+
+The serving bundle changes adapter and relation/type metadata only; it never rewrites
+or executes the DuckDB model SQL on Postgres. It retains the original manifest for
+provenance and exposes only published mart models. Its trusted release checks the
+serving catalog and uploads/checks the changed content while retaining unrelated
+accepted definitions. Missing required tables or columns fail the affected release.
+The retained project UUID is updated rather than creating one project per source.
 
 ## Content and ownership
 
@@ -140,48 +169,65 @@ named chart. `viz export` downloads into an external scratch directory for
 review, never directly over tracked content.
 
 Two specialists share this contract. The analytics engineer owns mart grain,
-semantic metadata and contract issues. The data analyst (`bots/data_analyst`)
-owns the analysis layer: it profiles and queries the real serving data through
-`visualization/bin/eda`, decides what actually changes over time in a family,
-and proposes the `analysis` block and the metrics its trends need. Its
-deterministic context selects the next family with gaps, prefers families whose
-only deficit is missing analysis, suppresses active tasks by resource key, and
-reconsiders completed work if gaps remain. Both propose one coherent family at a
-time through the existing manager/admission/executor/reviewer lifecycle.
-`eda` is a capability, not a credential: it loads the reader password itself and
-admits one bounded read-only SELECT, so specialists and confined executors still
-receive no production credentials or Docker control. An operator runs
-`viz preview` against a configured project for review, checks its charts, and
-deploys after review. Preview identities are explicit, preventing uploads from
-falling back to the production project. A trend that renders empty in the
-browser is not done, whatever validation reports.
+semantic metadata and contract issues. The data analyst (`bots/data_analyst`) owns
+the analysis layer: it profiles and queries the real serving data through
+`visualization/bin/eda`, decides what actually changes over time in a family, and
+proposes the `analysis` block and the metrics its trends need. Its deterministic
+context selects the next family with gaps, prefers families whose only deficit is
+missing analysis, suppresses active tasks by resource key, and reconsiders completed
+work if gaps remain. Both propose one coherent family at a time through the existing
+manager/admission/executor/reviewer lifecycle.
+
+The admitted implementation changes the family specification and the exact generated
+chart/dashboard paths it affects. The executor may run the offline generation and
+validation loop, but never hand-edits generated YAML. `eda` is a capability, not a
+credential: it loads the reader password itself and admits one bounded read-only
+SELECT, so specialists and confined executors still receive no production credentials
+or Docker control. A preview-capable operator runs `viz preview` against a configured
+non-production identity for the merge-stage review; its evidence attaches to the
+candidate head. The trusted scheduled cadence, not an operator/bot sandbox, later
+deploys and query-checks the immutable post-merge batch. A trend that renders empty
+in the browser is not done, whatever static validation reports.
 
 ## Publication, recovery and monitoring
 
-Each batch contains manifest/run-results, declared column types, exact row counts,
-CSV checksums, capture time, and a monotonic sequence. CSV preserves quoted literal
-`\\N`, nulls, decimals, JSON text and microsecond timestamps. DuckDB JSON is
-served as text because it may contain values such as `NaN` that PostgreSQL JSON
-rejects; Lightdash dimensions cast these fields to display text. Capture uses one read-only
-DuckDB transaction. Publication checks checksums, copies into typed temporary
-Postgres tables, and updates all affected marts and `_publish.models` in one
-transaction under an advisory lock. Readers see committed versions. Deleted and
-empty-source rows are reflected; unaffected cadence tables stay in place. Older
-or repeated batches cannot overwrite newer data. A failed publication rolls back
-and can be retried without rebuilding dbt:
+Each batch directory holds manifest/run-results, a verified snapshot of reviewed
+generated content, declared column types, exact row counts, publication time and a
+monotonic sequence — kilobytes of catalog state, never table data. Values move as
+DuckDB's own text serialization through a `COPY ... FROM STDIN` stream, read in
+fixed row-id spans so memory stays bounded, preserving nulls, decimals, JSON text, microsecond timestamps and
+date/timestamp infinities. DuckDB JSON is served as text because it may contain
+values such as `NaN` that PostgreSQL JSON rejects; Lightdash dimensions cast these
+fields to display text. The transfer uses one read-only DuckDB transaction with UTC
+time and refuses invalid coverage/schema or unreviewed generated content.
+
+Publication streams into freshly created Postgres tables, compares the rows it sent
+against what Postgres received, then drops each previous table and renames its
+replacement into place — freeing the old files at commit rather than leaving a
+mart of dead rows — and updates all affected marts and `_publish.models`
+in one transaction under the serving advisory lock. The batch's metadata directory is
+renamed into place and fsynced before that commit, so the ledger never references
+absent metadata. Readers see committed versions. Deleted and empty-source rows are
+reflected; unaffected cadence tables stay in place. Older or repeated batches cannot
+overwrite newer data: a batch with any superseded model is refused whole, without
+reading the warehouse. `sync_lightdash` follows a successful publication only: it
+refuses a stale sequence, serializes deployments, uses the published manifest/content
+rather than the checkout, and atomically records a successful deploy/validation/query
+check receipt. The receipt makes an unchanged release a safe skip. A failure rolls
+back or leaves no success receipt, remains visible in the Airflow task/failure-triage
+path, and a sync can retry without rebuilding dbt:
 
 ```bash
-visualization/bin/viz publish --batch "$LIGHTDASH_STATE_ROOT/batches/<batch-id>"
 visualization/bin/viz status
 visualization/bin/compose logs --tail 100 lightdash
 ```
 
-`status` reports per-model row counts, capture/publication times and source snapshot
-age. Airflow exposes capture/build failures and separate publication failures to
-the existing failure-triage workflow. Compare snapshot age with each model's cadence;
-a fresh publication of an old snapshot is not fresh source data. Schema fingerprint
-changes fail closed: review an explicit serving schema migration, back up first,
-and then recapture; do not erase the ledger to bypass this check.
+`status` reports per-model row counts, publication times and source age. Airflow
+exposes build/publication and synchronization failures to the existing
+failure-triage workflow. Compare source age with each model's cadence; a fresh
+publication of old source data is not fresh data. Schema fingerprint changes fail
+closed: review an explicit serving schema migration, back up first, and then
+rebuild and republish; do not erase the ledger to bypass this check.
 
 Back up both Postgres databases (application metadata/users and serving data),
 external bundles/batches, MinIO state, and the secret file. For a consistent whole
@@ -190,26 +236,39 @@ state directory, then restart it. Database-native online backups are also possib
 retain the matching application image version and encryption secret for restoration.
 Do not downgrade an image against an already migrated application database; restore
 the pre-upgrade backup into a separate state directory. Restore previous reviewed
-content through `viz deploy`; data rollback requires an explicit new publication
-from a reviewed historical snapshot because stale-batch retries are intentionally
-ignored. Batches and dbt-run artifacts are retained, not automatically pruned;
-monitor disk use and archive/remove only batches no longer needed for retries or
-recovery. `compose down` preserves bind-mounted state.
+content by activating a reviewed historical immutable release through the trusted
+sync workflow. There is no data rollback snapshot: recovering older table contents
+means rebuilding those models from retained raw data and publishing again. Batch
+metadata and dbt-run artifacts are retained, not automatically pruned; they are
+small, so monitor disk use rather than scheduling deletions. Installations upgraded
+from the retired export path remove their leftover payloads once, under the
+transform, deployment and legacy capture locks:
+
+```bash
+visualization/bin/viz discard-export-data          # dry run: counts and bytes
+visualization/bin/viz discard-export-data --apply
+```
+
+It deletes only CSV payloads a valid legacy `batch.json` lists, plus interrupted
+`.capture-*` directories and `failed-batches` children; metadata, bundles and
+anything unexpected are left untouched and reported. `compose down` preserves
+bind-mounted state.
 
 ## Verification
 
 ```bash
-visualization/.venv/bin/python -m unittest visualization.test_project visualization.test_publisher
-orchestration/.venv/bin/python -m unittest bots.test_visualization_context orchestration.test_transform_runner
+visualization/.venv/bin/python -m unittest visualization.test_project visualization.test_publisher visualization.test_cli
+orchestration/.venv/bin/python -m unittest bots.test_visualization_context orchestration.test_transform_runner orchestration.test_transform_dags
 ```
 
 Postgres integration tests opt in with `VINTAGE_TEST_ENV_FILE` pointing at a
 **disposable** stack's environment file. `smoke.py --env-file ... --manifest ...`
 bootstraps that stack and publishes clearly marked synthetic contract fixtures for
 all marts; it only accepts `/tmp` state and a non-default test database port.
-Never use this fixture runner for production data. Tests cover real COPY round trips,
-nulls/Unicode/decimals/timestamps, deletes/empty tables, stale retries, corruption,
-schema rejection, coverage and bot task suppression. Run deployment/upload and
+Never use this fixture runner for production data. Tests cover real streamed COPY
+round trips, nulls/Unicode/decimals/timestamps/infinities, deletes/empty tables,
+stale and replayed batches, whole-batch rollback, schema rejection, retired-export
+removal, coverage and bot task suppression. Run deployment/upload and
 warehouse validation against the fixture stack when upgrading Lightdash.
 
 The JSON schemas in `schemas/` come from Lightdash tag `2.140.0`,

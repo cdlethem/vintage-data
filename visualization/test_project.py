@@ -156,7 +156,13 @@ class ContentTest(unittest.TestCase):
         manifest=model_fixture();original=copy.deepcopy(manifest)
         with tempfile.TemporaryDirectory() as directory:
             path=pathlib.Path(directory)
-            project.bundle(manifest,path,'another_database')
+            reviewed=path/'reviewed'
+            (reviewed/'charts').mkdir(parents=True)
+            (reviewed/'dashboards').mkdir()
+            (reviewed/'charts'/'fixture.yml').write_text('slug: fixture\n')
+            (reviewed/'dashboards'/'fixture.yml').write_text('slug: fixture\n')
+            info=project.bundle(manifest,path,'another_database',content=reviewed)
+            self.assertEqual(info['content_sha256'],project.content_digest(path/'content'))
             normalized=json.loads((path/'target/manifest.json').read_text())
             self.assertEqual(normalized['metadata']['adapter_type'],'postgres')
             self.assertEqual(set(normalized['nodes']),{'model.vintage_data.fct_demo'})

@@ -21,7 +21,9 @@ sudo install -m 0644 \
     generated/systemd/airflow-scheduler.service \
     generated/systemd/airflow-dag-processor.service \
     generated/systemd/airflow-worker@.service \
+    generated/systemd/vintage-data-sync.service \
+    generated/systemd/vintage-data-sync.timer \
     /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now "${UNITS[@]}"
-systemctl --no-pager --quiet is-active "${UNITS[@]}" && echo "all units active"
+sudo systemctl enable --now "${UNITS[@]}" vintage-data-sync.timer
+systemctl --no-pager --quiet is-active "${UNITS[@]}" vintage-data-sync.timer && echo "all units active"

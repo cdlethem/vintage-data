@@ -5,6 +5,7 @@ export type Task = {
   assignee_kind?: string | null; assignee_name?: string | null; assignee_profile?: string | null;
   reviewer_required?: boolean; blocked_from_state?: TaskState | null;
   planned_resolution: string; version: number; next_actor?: string; updated_at: string;
+  executions?: Record<string, unknown>[];
 };
 export type BotHealth = {
   bot: string; outcome: string; retry_class?: string | null; reason_code: string;
@@ -81,8 +82,19 @@ export function activityUrl(task?: string): string {
 }
 
 export type QueueSummary = { attention_count: number; active_count: number; counts: Record<string, number> };
-export const ATTENTION_STATES = ["proposed", "accepted", "blocked", "in_review", "ready"];
+export const ATTENTION_STATES = ["proposed", "blocked", "in_review", "ready"];
+export function botWorkQueued(task: Task): boolean {
+  return task.next_actor === "dispatcher" || !!task.executions?.some(execution => !execution.terminal_at && !execution.terminal_reason_code && ["pending", "leased"].includes(String(execution.dispatch_state)));
+}
+export function canRetryBotWork(task: Task): boolean {
+  const executions = task.executions || [];
+  const latest = executions.at(-1);
+  return task.state === "blocked" && ["accepted", "in_progress"].includes(task.blocked_from_state || "") && task.assignee_kind === "bot" && ["junior", "senior", "staff"].includes(task.assignee_profile || "") && !!latest?.terminal_at && latest.admission_kind === "executor" && !!latest.terminal_reason_code && latest.terminal_reason_code !== "no_change" && executions.every(execution => !!execution.terminal_at && !execution.pr_number && !execution.pr_url);
+}
 export function nextStep(task: Task): string {
+  if (task.assignee_kind === "bot" && botWorkQueued(task)) return "Bot queued · waiting for capacity";
+  if (task.state === "accepted" && task.assignee_kind === "bot") return "Bot assigned · awaiting start";
+  if (task.state === "accepted" && task.assignee_kind === "human") return "Assigned · ready to start";
   return ({ proposed: "Review recommendation", accepted: "Assign and start work", blocked: "Resolve blocker",
     in_review: "Review the pull request", ready: "Verify and complete", in_progress: "Work in progress",
     completed: "Completed", dismissed: "Archived" })[task.state];

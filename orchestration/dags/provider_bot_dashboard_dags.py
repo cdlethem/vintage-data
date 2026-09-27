@@ -25,8 +25,9 @@ def _enabled() -> bool:
 
 
 def _executor_available() -> bool:
-    """No admission can exist while the executor is fail-closed; skip, never fail."""
-    return conf.getboolean("bot_dashboard", "executor_enabled", fallback=False)
+    """Read authoritative readiness; SDK workers omit server-only configuration."""
+    readiness = provider_dashboard.DashboardClient.from_environment().execution_readiness()
+    return readiness.get("ready") is True
 
 
 def _claim() -> list[dict]:
@@ -48,6 +49,7 @@ if _enabled():
         start_date=pendulum.datetime(2026, 9, 1, tz="UTC"),
         catchup=False,
         max_active_runs=1,
+        dagrun_timeout=timedelta(minutes=10),
         tags=["bot-dashboard"],
         default_args={"retries": 2, "retry_delay": timedelta(minutes=1)},
     ) as bot_dashboard__dispatch:
@@ -64,6 +66,7 @@ if _enabled():
         start_date=pendulum.datetime(2026, 9, 1, tz="UTC"),
         catchup=False,
         max_active_runs=1,
+        dagrun_timeout=timedelta(minutes=10),
         tags=["bot-dashboard"],
         default_args={"retries": 2, "retry_delay": timedelta(minutes=1)},
     ) as bot_dashboard__maintenance:
@@ -75,3 +78,49 @@ if _enabled():
             follow_ups.output
         )
         maintenance >> follow_ups >> triggers
+
+    from airflow.providers.vintage.bot_dashboard.concurrency import scheduler_limits
+    executive_concurrency = scheduler_limits().get("executive", 1)
+
+    with DAG(
+        dag_id="bot__executive",
+        schedule="* * * * *",
+        start_date=pendulum.datetime(2026, 9, 1, tz="UTC"),
+        catchup=False,
+        max_active_runs=1,
+        dagrun_timeout=timedelta(minutes=6),
+        max_active_tasks=executive_concurrency,
+        is_paused_upon_creation=False,
+        tags=["bot-dashboard", "autopilot"],
+        default_args={"retries": 0},
+    ) as bot__executive:
+        def _executive(**context):
+            from executive_runner import run
+            return run(context)
+
+        PythonOperator.partial(task_id="run", python_callable=_executive,
+                       max_active_tis_per_dag=executive_concurrency,
+                       execution_timeout=timedelta(minutes=4), do_xcom_push=False).expand(
+                           op_kwargs=[{"decision_slot": slot} for slot in range(executive_concurrency)])
+
+    with DAG(
+        dag_id="bot_dashboard__validation",
+        schedule="* * * * *",
+        start_date=pendulum.datetime(2026, 9, 1, tz="UTC"),
+        catchup=False,
+        max_active_runs=1,
+        max_active_tasks=1,
+        dagrun_timeout=timedelta(minutes=6),
+        is_paused_upon_creation=False,
+        tags=["bot-dashboard", "validation"],
+        default_args={"retries": 0},
+    ) as bot_dashboard__validation:
+        def _validation(**context):
+            from validation_runner import run
+            return run(context)
+
+        PythonOperator(
+            task_id="run", python_callable=_validation,
+            queue=conf.get("bot_dashboard", "executor_queue", fallback="bot_dashboard_executor"),
+            execution_timeout=timedelta(minutes=5), do_xcom_push=False,
+        )

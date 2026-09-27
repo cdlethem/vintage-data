@@ -75,6 +75,43 @@ class Task(Base):
     events: Mapped[list["Event"]] = relationship(back_populates="task", order_by="Event.sequence")
 
 
+class ValidationGate(Base):
+    __tablename__ = "bot_dashboard_validation_gate"
+    __table_args__ = (
+        UniqueConstraint("task_id", "gate_key", name="uq_bd_validation_gate_task_key"),
+        CheckConstraint("stage in ('publication','merge','activation','completion')", name="stage"),
+        CheckConstraint("status in ('pending','leased','running','passed','failed')", name="status"),
+        CheckConstraint(
+            "recipe in ('public_source_smoke','disposable_schema_migration','warehouse_check','dag_inspection','lightdash_preview','manual')",
+            name="recipe",
+        ),
+        Index("ix_bot_dashboard_validation_gate_queue", "status", "stage", "updated_at"),
+        Index("ix_bot_dashboard_validation_gate_lease", "status", "lease_expires_at"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    task_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("bot_dashboard_task.id"), nullable=False, index=True)
+    gate_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    stage: Mapped[str] = mapped_column(String(24), nullable=False)
+    recipe: Mapped[str] = mapped_column(String(40), nullable=False)
+    owner: Mapped[str] = mapped_column(String(250), nullable=False)
+    required_capability: Mapped[str] = mapped_column(String(250), nullable=False)
+    subject: Mapped[str] = mapped_column(String(512), nullable=False)
+    dependencies: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="pending", nullable=False)
+    evidence: Mapped[dict[str, Any] | None] = mapped_column(NULLABLE_JSON)
+    recheck_condition: Mapped[str] = mapped_column(Text, nullable=False)
+    required: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    recipe_args: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    lease_id: Mapped[str | None] = mapped_column(String(64))
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    lease_run_id: Mapped[str | None] = mapped_column(String(250))
+    attempt: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
+
+
 class Revision(Base):
     __tablename__ = "bot_dashboard_revision"
     __table_args__ = (
@@ -82,6 +119,7 @@ class Revision(Base):
             "task_id", "revision_number", name="uq_bd_revision_task_number"
         ),
         UniqueConstraint(
+            "task_id",
             "source_dag_id",
             "source_run_id",
             "source_task_id",

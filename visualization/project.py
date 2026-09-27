@@ -4,13 +4,14 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 import pathlib
 import re
 
 import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-CONTENT = ROOT / "transform" / "lightdash"
+CONTENT = pathlib.Path(os.environ.get("LIGHTDASH_CONTENT_ROOT", ROOT / "transform" / "lightdash")).expanduser()
 
 # Grains Lightdash exposes as date-truncated dimension variants, coarsest last.
 # Ordering is the date-zoom control order and the trend-grain sort order.
@@ -42,6 +43,40 @@ def mart_nodes(manifest: dict) -> dict:
         and node.get("config", {}).get("enabled", True)
     }
 
+def family_mart_nodes(manifest: dict, family: str, cadence: str | None = None) -> dict:
+    """Serving marts owned by one source family and, when requested, one cadence."""
+    if not isinstance(family, str) or not re.fullmatch(r"[a-z0-9_]+", family):
+        raise ValueError("invalid vintage source family")
+    return {
+        uid: node for uid, node in mart_nodes(manifest).items()
+        if pathlib.PurePosixPath(node["original_file_path"]).parts[2] == family
+        and node["name"].startswith("fct_")
+        and (cadence is None or cadence in (node.get("config", {}).get("tags") or node.get("tags") or []))
+    }
+
+
+def vintage_scope(manifest: dict) -> dict:
+    """The runtime's explicit family/cadence selection contract."""
+    scope = manifest.get("metadata", {}).get("vintage_scope")
+    if not isinstance(scope, dict):
+        raise ValueError("manifest is missing metadata.vintage_scope")
+    family, cadence = scope.get("family"), scope.get("cadence")
+    if not isinstance(family, str) or not re.fullmatch(r"[a-z0-9_]+", family):
+        raise ValueError("manifest vintage_scope has an invalid family")
+    if not isinstance(cadence, str) or not cadence:
+        raise ValueError("manifest vintage_scope is missing cadence")
+    return {"family": family, "cadence": cadence}
+
+
+def manifest_for_marts(manifest: dict, mart_ids: set[str]) -> dict:
+    """Copy only accepted marts while retaining manifest provenance metadata."""
+    result = copy.deepcopy(manifest)
+    result["nodes"] = {
+        uid: result["nodes"][uid] for uid in sorted(mart_ids)
+        if uid in result["nodes"]
+    }
+    return result
+
 
 def node_from_yaml(model: dict, path: str = "models/marts/family/model.sql") -> dict:
     """Shape a dbt schema-YAML model like a manifest node, for offline checks."""
@@ -50,7 +85,6 @@ def node_from_yaml(model: dict, path: str = "models/marts/family/model.sql") -> 
     for column in model.get("columns") or []:
         node["columns"][column.get("name")] = column
     return node
-
 
 
 
@@ -419,9 +453,68 @@ def coverage(manifest: dict, content: pathlib.Path = CONTENT) -> dict:
             "chart_count": len(charts), "dashboard_count": len(dashboards), "errors": errors,
             "ok": bool(items) and not errors and all(not i["issues"] for i in items), "models": items}
 
+VOLATILE_METADATA_FIELDS = frozenset({
+    "generated_at", "invocation_id", "invocation_started_at", "run_started_at", "user_id",
+})
+VOLATILE_RESOURCE_FIELDS = frozenset({"created_at", "compiled_path", "build_path"})
 
-def bundle(manifest: dict, destination: pathlib.Path, database: str, schema: str = "transform_marts") -> dict:
+
+def serving_manifest_digest(manifest: dict) -> str:
+    """Fingerprint serving metadata without dbt's run-specific execution paths."""
+    def stable(value, path=()):
+        if isinstance(value, dict):
+            return {
+                key: stable(item, path + (key,))
+                for key, item in value.items()
+                if not (
+                    (path == ("metadata",) and key in VOLATILE_METADATA_FIELDS)
+                    or (len(path) == 2 and path[0] in {"nodes", "sources", "macros"}
+                        and key in VOLATILE_RESOURCE_FIELDS)
+                )
+            }
+        if isinstance(value, list):
+            return [stable(item, path) for item in value]
+        return value
+
+    return digest(stable(manifest))
+
+
+
+def content_digest(content: pathlib.Path = CONTENT) -> str:
+    """Fingerprint reviewed content by relative name and bytes."""
+    files = []
+    for kind in ("charts", "dashboards"):
+        for path in sorted((content / kind).glob("*.yml")):
+            if not path.is_file() or path.is_symlink():
+                raise ValueError(f"unsafe Lightdash content: {path}")
+            files.append({
+                "path": f"{kind}/{path.name}",
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            })
+    if not files:
+        raise ValueError("Lightdash content is empty")
+    return digest(files)
+
+
+def snapshot_content(content: pathlib.Path, destination: pathlib.Path) -> None:
+    target = destination / "content"
+    for kind in ("charts", "dashboards"):
+        output = target / kind
+        output.mkdir(parents=True, exist_ok=True)
+        for path in sorted((content / kind).glob("*.yml")):
+            output.joinpath(path.name).write_bytes(path.read_bytes())
+
+
+def bundle(
+    manifest: dict,
+    destination: pathlib.Path,
+    database: str,
+    schema: str = "transform_marts",
+    *,
+    content: pathlib.Path = CONTENT,
+) -> dict:
     identifier(database); identifier(schema)
+    content_sha256 = content_digest(content)
     result = copy.deepcopy(manifest)
     result["metadata"]["adapter_type"] = "postgres"
     marts = mart_nodes(result)
@@ -444,9 +537,17 @@ def bundle(manifest: dict, destination: pathlib.Path, database: str, schema: str
     profile = {"type": "postgres", "host": "{{ env_var('LIGHTDASH_PG_HOST', '127.0.0.1') }}",
                "port": "{{ env_var('LIGHTDASH_PG_PORT', '5433') | int }}", "user": "mart_reader",
                "password": "{{ env_var('LIGHTDASH_READER_PASSWORD') }}", "dbname": database, "schema": schema, "threads": 1, "sslmode": "disable"}
-    # Lightdash renders templates before parsing YAML: preserve literal single
-    # quotes inside env_var expressions by using JSON-compatible double quotes.
     (destination / "profiles.yml").write_text(json.dumps({"vintage_serving": {"target": "serving", "outputs": {"serving": profile}}}, indent=2))
-    info = {"schema_version": 1, "source_manifest_sha256": digest(manifest), "mart_count": len(marts), "database": database, "schema": schema}
+    snapshot_content(content, destination)
+    release_sha256 = digest({"manifest": serving_manifest_digest(manifest), "content": content_sha256})
+    info = {
+        "schema_version": 1,
+        "source_manifest_sha256": digest(manifest),
+        "content_sha256": content_sha256,
+        "release_sha256": release_sha256,
+        "mart_count": len(marts),
+        "database": database,
+        "schema": schema,
+    }
     (destination / "bundle.json").write_text(json.dumps(info, indent=2) + "\n")
     return info

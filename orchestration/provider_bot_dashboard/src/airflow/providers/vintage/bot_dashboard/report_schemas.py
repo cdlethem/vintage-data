@@ -154,6 +154,22 @@ class EvidenceReferenceV1(StrictModel):
     summary: str = Field(min_length=1, max_length=2000)
 
 
+class AcceptanceGateV1(StrictModel):
+    gate_key: str = Field(min_length=1, max_length=100, pattern=KEY_PATTERN)
+    stage: Literal["publication", "merge", "activation", "completion"]
+    recipe: Literal[
+        "public_source_smoke", "disposable_schema_migration", "warehouse_check",
+        "dag_inspection", "lightdash_preview", "manual",
+    ]
+    owner: str = Field(min_length=1, max_length=250)
+    required_capability: str = Field(min_length=1, max_length=250)
+    subject: str = Field(min_length=1, max_length=512)
+    dependencies: list[str] = Field(default_factory=list, max_length=20)
+    recheck_condition: str = Field(min_length=1, max_length=2000)
+    required: bool = True
+    recipe_args: dict[str, Any] = Field(default_factory=dict)
+
+
 class TaskProposalV1(StrictModel):
     recommendation_key: str = Field(min_length=1, max_length=80, pattern=KEY_PATTERN)
     title: str = Field(min_length=1, max_length=200)
@@ -173,6 +189,7 @@ class TaskProposalV1(StrictModel):
     suggested_executor: Literal["junior", "senior", "staff"]
     reviewer_required: Literal[True]
     evidence: list[EvidenceReferenceV1] = Field(min_length=1, max_length=30)
+    acceptance_gates: list[AcceptanceGateV1] = Field(default_factory=list, max_length=20)
 
     @model_validator(mode="after")
     def safe_commands(self) -> "TaskProposalV1":
@@ -183,6 +200,8 @@ class TaskProposalV1(StrictModel):
             raise ValueError("allowed_path_globs must be unique")
         if len(set(self.resource_keys)) != len(self.resource_keys):
             raise ValueError("resource_keys must be unique")
+        if len({gate.gate_key for gate in self.acceptance_gates}) != len(self.acceptance_gates):
+            raise ValueError("acceptance gate keys must be unique")
         return self
 
 
@@ -238,8 +257,22 @@ class SourceSchedulingV2(StrictModel):
     schema_version: Literal[2]
     agent: Literal["source_scheduling"]
     status: Literal["ok", "degraded_evidence"]
-    plans: list[ImplementationPlanV2] = Field(min_length=1, max_length=1)
+    plans: list[ImplementationPlanV2] = Field(max_length=1)
+    resolution: Literal[
+        "proposal", "already_satisfied", "attach_evidence", "revise_existing",
+        "request_validation", "blocked"
+    ] | None = None
     summary: str = Field(min_length=1, max_length=20_000)
+
+    @model_validator(mode="after")
+    def empty_plan_requires_evidence_blocker(self):
+        if self.resolution == "proposal" and not self.plans:
+            raise ValueError("proposal resolution requires a plan")
+        if self.resolution not in {None, "proposal"} and self.plans:
+            raise ValueError("non-proposal resolution cannot create a plan")
+        if self.resolution is None and not self.plans and self.status != "degraded_evidence":
+            raise ValueError("An observation-only scheduling report requires degraded_evidence")
+        return self
 
 
 class CadenceSourceReviewV2(StrictModel):
@@ -292,8 +325,22 @@ class AnalyticsEngineerV2(StrictModel):
     status: Literal["ok", "degraded_evidence"]
     datasets: list[str] = Field(max_length=20)
     decisions: list[str] = Field(max_length=50)
-    plans: list[AnalyticsPlanV2] = Field(min_length=1, max_length=1)
+    plans: list[AnalyticsPlanV2] = Field(max_length=1)
+    resolution: Literal[
+        "proposal", "already_satisfied", "attach_evidence", "revise_existing",
+        "request_validation", "blocked"
+    ] | None = None
     summary: str = Field(min_length=1, max_length=20_000)
+
+    @model_validator(mode="after")
+    def observation_requires_degraded_evidence(self):
+        if self.resolution == "proposal" and not self.plans:
+            raise ValueError("proposal resolution requires a plan")
+        if self.resolution not in {None, "proposal"} and self.plans:
+            raise ValueError("non-proposal resolution cannot create a plan")
+        if self.resolution is None and not self.plans and self.status != "degraded_evidence":
+            raise ValueError("An observation-only analytics report requires degraded_evidence")
+        return self
 
 
 class DimensionProfileV1(StrictModel):
@@ -354,10 +401,28 @@ class DataAnalystV1(StrictModel):
     agent: Literal["data_analyst"]
     status: Literal["ok", "degraded_evidence"]
     family: str = Field(min_length=1, max_length=100)
-    queries: list[str] = Field(min_length=1, max_length=40, description="exploratory SQL actually executed")
-    analyses: list[MartAnalysisV1] = Field(min_length=1, max_length=6)
-    plans: list[AnalyticsPlanV2] = Field(min_length=1, max_length=1)
+    queries: list[str] = Field(max_length=40, description="exploratory SQL actually executed; empty when evidence is unavailable")
+    analyses: list[MartAnalysisV1] = Field(max_length=6)
+    plans: list[AnalyticsPlanV2] = Field(max_length=1)
+    resolution: Literal[
+        "proposal", "already_satisfied", "attach_evidence", "revise_existing",
+        "request_validation", "blocked"
+    ] | None = None
     summary: str = Field(min_length=1, max_length=20_000)
+
+    @model_validator(mode="after")
+    def proposals_require_measured_analysis(self):
+        if self.resolution == "proposal" and not self.plans:
+            raise ValueError("proposal resolution requires a plan")
+        if self.resolution not in {None, "proposal"} and self.plans:
+            raise ValueError("non-proposal resolution cannot create a plan")
+        if self.status == "ok" and not self.plans and self.resolution is None:
+            raise ValueError("An observation-only analyst report requires degraded_evidence")
+        if self.plans and (not self.queries or not self.analyses):
+            raise ValueError("An analyst proposal requires executed queries and measured analyses")
+        if self.analyses and not self.queries:
+            raise ValueError("Measured analyses require executed queries")
+        return self
 
 
 class Resurface(StrictModel):
@@ -370,6 +435,9 @@ class ManagerPlanItemV3(StrictModel):
     title: str = Field(min_length=1, max_length=200)
     priority: int = Field(ge=1, le=7)
     category: TaskCategory
+    action: str = Field(min_length=1, max_length=20_000)
+    why_now: str = Field(min_length=1, max_length=20_000)
+    expected_benefit: str = Field(min_length=1, max_length=20_000)
     resources: str = Field(min_length=1, max_length=20_000)
     risk: str = Field(min_length=1, max_length=20_000)
     rollback: str = Field(min_length=1, max_length=20_000)
@@ -451,9 +519,15 @@ class ExecutorTaskV2(StrictModel):
     title: str = Field(min_length=1, max_length=200)
     category: TaskCategory
     planned_resolution: str = Field(min_length=1, max_length=20_000)
-    verification_commands: list[list[str]] = Field(min_length=1, max_length=20)
-    allowed_path_globs: list[str] = Field(min_length=1, max_length=50)
+    verification_commands: list[list[str]] = Field(max_length=20)
+    allowed_path_globs: list[str] = Field(max_length=50)
     resource_keys: list[str] = Field(max_length=50)
+
+
+class ExecutionModelV1(StrictModel):
+    provider_id: str = Field(min_length=1, max_length=40)
+    model: str = Field(min_length=1, max_length=200)
+    base_url: str = Field(min_length=1, max_length=2000)
 
 
 class ExecutorAdmissionV2(StrictModel):
@@ -462,6 +536,7 @@ class ExecutorAdmissionV2(StrictModel):
     task_id: str = Field(min_length=36, max_length=36)
     profile: Literal["junior", "senior", "staff"]
     model_role: Literal["@task", "@default", "@plan"]
+    model: ExecutionModelV1 | None = None
     reviewer_required: bool
     sequence: int = Field(ge=1)
     revision: int = Field(ge=1)
@@ -470,14 +545,32 @@ class ExecutorAdmissionV2(StrictModel):
     task: ExecutorTaskV2
     source_artifact: ArtifactReferenceV1
     base_sha: str = Field(pattern=r"^[a-f0-9]{40,64}$")
-    patch_sha256: None = None
-    trusted_head_sha: None = None
-    pr_number: None = None
-    pr_url: None = None
-    verification_manifest: None = None
-    executor_report_sha256: None = None
+    seed_patch_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    patch_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    trusted_head_sha: str | None = Field(default=None, pattern=r"^[a-f0-9]{40,64}$")
+    pr_number: int | None = Field(default=None, ge=1)
+    pr_url: str | None = Field(default=None, min_length=1, max_length=2000)
+    verification_manifest: dict[str, Any] | None = None
+    executor_report_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     repository_policy: RepositoryPolicyV1
     source_report_reference: str | None = Field(default=None, max_length=1000)
+
+
+    @model_validator(mode="after")
+    def complete_publication_for_resume(self):
+        publication = (self.trusted_head_sha, self.pr_number, self.pr_url)
+        if any(value is not None for value in publication) and any(value is None for value in publication):
+            raise ValueError("published executor resume requires complete publication identity")
+        fields = (self.patch_sha256, self.verification_manifest, self.executor_report_sha256)
+        if any(value is not None for value in (*fields, *publication)):
+            if any(value is None for value in fields):
+                raise ValueError("published executor resume requires complete publication evidence")
+            manifest = VerificationManifestV1.model_validate(self.verification_manifest)
+            if (manifest.task_id, manifest.execution_id, manifest.revision,
+                manifest.base_sha, manifest.patch_sha256) != (
+                    self.task_id, self.execution_id, self.revision, self.base_sha, self.patch_sha256):
+                raise ValueError("published executor manifest identity does not match admission")
+        return self
 
 
 class ReviewerAdmissionV2(StrictModel):
@@ -486,6 +579,7 @@ class ReviewerAdmissionV2(StrictModel):
     task_id: str = Field(min_length=36, max_length=36)
     profile: Literal["junior", "senior", "staff"]
     model_role: Literal["@task", "@default", "@plan"]
+    model: ExecutionModelV1 | None = None
     reviewer_required: Literal[True]
     sequence: int = Field(ge=1)
     revision: int = Field(ge=1)
@@ -502,6 +596,7 @@ class ReviewerAdmissionV2(StrictModel):
     executor_report_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     repository_policy: None = None
     source_report_reference: str | None = Field(default=None, max_length=1000)
+    validation_evidence: list[dict[str, Any]] = Field(default_factory=list, max_length=20)
 
 
 class TaskExecutorV2(StrictModel):
@@ -512,6 +607,7 @@ class TaskExecutorV2(StrictModel):
     summary: str = Field(max_length=20_000)
     changed_paths: list[str] = Field(max_length=200)
     verification: list[VerificationCheckV1] = Field(max_length=20)
+    verification_attempts: list[list[VerificationCheckV1]] = Field(default_factory=list, max_length=2)
     blockers: list[str] = Field(max_length=50)
 
 
@@ -550,6 +646,33 @@ class ReviewComment(StrictModel):
     body: str = Field(min_length=1, max_length=10_000)
     path: str | None = Field(default=None, max_length=1024)
     line: int | None = Field(default=None, ge=1)
+    severity: Literal["blocking", "optional"] = "blocking"
+
+
+class ReviewRepairRequest(StrictModel):
+    """A reviewer's bounded, advisory repair handoff.
+
+    The service still validates these paths against the accepted revision and
+    decides whether the repair is eligible for automatic admission.
+    """
+
+    instructions: str = Field(min_length=1, max_length=5000)
+    paths: list[str] = Field(min_length=1, max_length=3)
+    check_expectations: list[str] = Field(min_length=1, max_length=10)
+
+    @model_validator(mode="after")
+    def bounded_repository_paths(self):
+        if len(set(self.paths)) != len(self.paths):
+            raise ValueError("repair paths must be unique")
+        if any(
+            path.startswith(("/", "../"))
+            or "\\" in path
+            or ".." in path.split("/")
+            or len(path) > 1024
+            for path in self.paths
+        ):
+            raise ValueError("repair paths must be bounded repository-relative paths")
+        return self
 
 
 class PrReviewerV2(StrictModel):
@@ -561,9 +684,40 @@ class PrReviewerV2(StrictModel):
     summary: str = Field(max_length=20_000)
     comments: list[ReviewComment] = Field(max_length=50)
     verification: list[str] = Field(max_length=50)
+    failure_kind: Literal[
+        "transport_failed", "format_failed", "evidence_unavailable"
+    ] | None = None
+    repair: ReviewRepairRequest | None = None
+
+    @model_validator(mode="after")
+    def coherent_outcome(self):
+        if self.verdict == "unable_to_review":
+            # Adopt protocol-v2 results produced by the immediately preceding
+            # runtime. It had only one unable verdict and no typed failure key;
+            # unable was never a code approval or changes-requested verdict.
+            if self.failure_kind is None:
+                self.failure_kind = "evidence_unavailable"
+            if self.status != "blocked" or self.repair is not None:
+                raise ValueError("unable review requires a typed execution/evidence failure")
+        elif self.failure_kind is not None:
+            raise ValueError("a code verdict cannot carry a review execution failure")
+        if self.repair is not None and self.verdict != "changes_requested":
+            raise ValueError("only changes_requested may request a repair")
+        if self.verdict == "approved" and any(item.severity == "blocking" for item in self.comments):
+            raise ValueError("approved review cannot contain blocking comments")
+        return self
 
 
 ReviewerResultV2.model_rebuild()
+
+
+class ExecutiveV1(StrictModel):
+    schema_version: Literal[1]
+    agent: Literal["executive"]
+    task_id: str = Field(max_length=36)
+    action: str = Field(max_length=30)
+    rationale: str = Field(min_length=10, max_length=8000)
+    result: Literal["applied", "deferred", "already_applied"]
 
 
 SCHEMAS: dict[str, type[StrictModel]] = {
@@ -575,6 +729,7 @@ SCHEMAS: dict[str, type[StrictModel]] = {
     "analytics_engineer_v2": AnalyticsEngineerV2,
     "data_analyst_v1": DataAnalystV1,
     "manager_v3": ManagerV3,
+    "executive_v1": ExecutiveV1,
     "task_executor_v2": TaskExecutorV2,
     "pr_reviewer_v2": PrReviewerV2,
 }

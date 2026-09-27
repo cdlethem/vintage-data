@@ -13,7 +13,8 @@ analytics_engineer --------------------------------------------> dashboard queue
 data_analyst --------------------------------------------------> dashboard queue
 seven freshness-qualified specialist reports -----------------> manager
 human accept/assign/start -> task_executor -> draft PR -> pr_reviewer
-provider observer -> ready/merged evidence -> human completion
+provider observer -> preview/review + merged-head evidence -> trusted cadence sync
+-> human completion
 ```
 
 The dashboard database is authoritative for run reports, recommendations, tasks,
@@ -107,6 +108,20 @@ the worktree. One stable-marker comment is upserted. Maintenance is the only pro
 observer; drift or closed-unmerged changes block for human attention. `ready` requires
 the trusted head plus the required approving verdict and provider state. `completed`
 still requires human evidence/comment and transition.
+
+For dbt/Lightdash work, the executor's admitted scope must include both the semantic
+or analysis specification and its exact generated chart/dashboard outputs. It may
+generate and validate those files only with admitted credential-free offline commands.
+Its successful report proves a candidate, not merge or production delivery. A
+merge-stage `lightdash_preview` gate records review of the exact candidate; an
+activation-stage `manual` gate records the affected
+`transform__<family>__<cadence>` build, streamed publication, and
+`sync_lightdash` receipt after merge. Unrelated family failures are separate work;
+runtime validation and delivery are dependency-scoped, and healthy partial releases
+retain unrelated last-good definitions.
+Use the supported `lightdash_preview` and `manual` recipes rather than inventing a
+production-sync gate. PR review/merge evidence and release evidence are never
+interchangeable.
 
 ## Models and concurrency
 
@@ -215,10 +230,12 @@ corepack pnpm test
 corepack pnpm build
 ```
 
-The action queue defaults to **Needs attention**; **All active** includes ongoing
-work and **History** retains completed/archived actions. Search and pagination operate
-on server-side results. Bot health shows actual bot definitions, paused status,
-latest outcomes, and drill-down run evidence; infrastructure DAGs are excluded.
+The action queue defaults to **Needs attention**, which counts only recommendations
+and blockers awaiting a decision. Accepted tasks awaiting work start are not counted
+there; **All active** still includes accepted and ongoing work, and **History** retains
+completed/archived actions. Search and pagination operate on server-side results.
+Bot health shows actual bot definitions, paused status, latest outcomes, and drill-down
+run evidence; infrastructure DAGs are excluded.
 Empty results and failed requests have distinct states.
 
 Set `BOT_DASHBOARD_WRITE_ENABLED=True` in ignored `orchestration/config.env` to
@@ -289,19 +306,26 @@ new admission path.
 
 ## Visualization ownership
 
-Two specialists share the analytics contract. The analytics engineer owns dbt
-mart grain, Lightdash metrics and chart coverage; its context follows source
-ancestry through staging, distinguishes modeling from visualization gaps, and
-deduplicates against active provider tasks. The data analyst owns the analysis
-layer that makes each dashboard a view of change over time: it profiles and
-queries the real serving marts through `visualization/bin/eda`, then proposes
-the `config.meta.vintage.visualization.analysis` block and the metrics its
-trends need, against the standard in
-[visualization/TRENDS.md](../visualization/TRENDS.md). Its context selects the
-next family whose dashboard still has analysis gaps and prefers families whose
-only deficit is missing analysis. One family is proposed per pass by each.
-`eda` is a capability, not a credential: it holds the read-only reader password
-itself and admits one bounded SELECT, so no specialist receives a warehouse
-password. Production credentials and Docker access remain with operators, who
-run previews and deploy reviewed content using
+Two specialists share the analytics contract. The analytics engineer owns dbt mart
+grain, Lightdash metrics and chart coverage; its context follows source ancestry
+through staging, distinguishes modeling from visualization gaps, and deduplicates
+against active provider tasks. The data analyst owns the analysis layer that makes
+each dashboard a view of change over time: it profiles and queries the real serving
+marts through `visualization/bin/eda`, then proposes the
+`config.meta.vintage.visualization.analysis` block and the metrics its trends need,
+against the standard in [visualization/TRENDS.md](../visualization/TRENDS.md). Its
+context selects the next family whose dashboard still has analysis gaps and prefers
+families whose only deficit is missing analysis. One family is proposed per pass by
+each.
+
+Each admitted implementation includes the selected family specification and the exact
+generated `transform/lightdash` chart/dashboard files it changes. It may prepare,
+generate, and validate them offline; generated files are never hand-authored. `eda` is
+a capability, not a credential: it holds the read-only reader password itself and
+admits one bounded SELECT, so no specialist receives a warehouse password. A
+preview-capable operator supplies the real merge-stage preview against a non-production
+identity. After the candidate is merged, the trusted scheduled production workflow
+automatically builds, publishes reviewed immutable content, streams marts into serving, and syncs
+Lightdash with deploy/validation/query-check evidence. Bots never receive production
+credentials or Docker access and never run that production workflow. See
 [the visualization workflow](../visualization/README.md).

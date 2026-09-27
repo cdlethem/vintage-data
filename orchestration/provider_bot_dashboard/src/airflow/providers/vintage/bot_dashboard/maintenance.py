@@ -9,7 +9,7 @@ import httpx
 
 from airflow.configuration import conf
 from airflow.sdk.observability import stats
-from sqlalchemy import and_, delete, or_, select
+from sqlalchemy import and_, case, delete, or_, select
 from sqlalchemy.orm import Session
 
 from .execution import expire_leases
@@ -129,10 +129,18 @@ def sync_provider(session: Session, limit: int = 25) -> dict:
             session.flush()
             continue
         row.synced_at = utcnow()
-        if row.provider_fingerprint == fingerprint:
+        provider_changed = row.provider_fingerprint != fingerprint
+        readiness_changed = (task is not None and task.state == "in_review"
+                             and observation.get("state") == "open" and not observation.get("draft")
+                             and (not row.reviewer_required or row.review_verdict == "approved"))
+        if not provider_changed and not readiness_changed:
             continue
         old = row.provider_state or {}
-        row.provider_state = observation
+        # Provider observations do not own independent-review diagnostics.
+        row.provider_state = {
+            **{key: old[key] for key in ("review_verdict", "review_failure_kind", "review_repair") if key in old},
+            **observation,
+        }
         row.provider_fingerprint = fingerprint
         changed += 1
         if state == "invalid_identity":
@@ -237,6 +245,72 @@ def prune_reports(session: Session) -> int:
     return result.rowcount or 0
 
 
+def recover_failed_dispatches(session: Session, limit: int = 100) -> int:
+    """Surface exhausted Airflow failures, including failures after execution claim."""
+    from airflow.models.dagrun import DagRun
+    from airflow.models.taskinstance import TaskInstance
+
+    expected_dag = case(
+        (Execution.admission_kind == "pr_reviewer", "bot__pr_reviewer"),
+        else_="bot__task_executor",
+    )
+    candidates = session.scalars(
+        select(Execution.id)
+        .join(DagRun, and_(DagRun.dag_id == expected_dag, DagRun.run_id == Execution.target_run_id))
+        .where(
+            Execution.terminal_at.is_(None),
+            Execution.dispatch_state.in_(["pending", "leased", "running", "reviewing"]), DagRun.state == "failed",
+        )
+        .order_by(Execution.id).limit(max(0, min(limit, 100)))
+    ).all()
+    recovered = 0
+    terminal_task_states = ["success", "failed", "skipped", "upstream_failed", "removed"]
+    for identity in candidates:
+        row = session.scalar(select(Execution).where(Execution.id == identity).with_for_update())
+        if row is None or row.terminal_at is not None or row.dispatch_state not in {"pending", "leased", "running", "reviewing"}:
+            continue
+        dag_id = "bot__pr_reviewer" if row.admission_kind == "pr_reviewer" else "bot__task_executor"
+        # A cleared or retrying run is live again. Lock and reread the DAG run so
+        # maintenance cannot classify a stale terminal observation as a failure.
+        run_state = session.scalar(select(DagRun.state).where(DagRun.dag_id == dag_id, DagRun.run_id == row.target_run_id).with_for_update())
+        if run_state != "failed":
+            continue
+        live_task = session.scalar(select(TaskInstance.task_id).where(
+            TaskInstance.dag_id == dag_id, TaskInstance.run_id == row.target_run_id,
+            or_(TaskInstance.state.is_(None), TaskInstance.state.not_in(terminal_task_states)),
+        ).limit(1))
+        reported = session.scalar(select(RunReport.id).where(RunReport.dag_id == dag_id, RunReport.run_id == row.target_run_id, RunReport.outcome == "succeeded").limit(1))
+        if live_task is not None or reported is not None:
+            continue
+        task = session.scalar(select(Task).where(Task.id == row.task_id).with_for_update())
+        failure_report = session.scalar(select(RunReport).where(RunReport.dag_id == dag_id, RunReport.run_id == row.target_run_id)
+                                        .order_by(RunReport.try_number.desc()).limit(1))
+        code = failure_report.reason_code if failure_report else "report_missing"
+        detail = failure_report.failure_detail if failure_report and failure_report.failure_detail else (
+            (f"Airflow run {dag_id}/{row.target_run_id} exhausted retries ({code}). " if failure_report else f"Airflow run {dag_id}/{row.target_run_id} failed without a final execution report being saved. ") +
+            "Inspect that run's task logs, fix the launch or control-plane error, then unblock the task and start a new execution."
+        )
+        if code == "model_rate_limited":
+            detail = "The selected model remained rate limited after bounded retries. Change the affected bot’s model in Models & connections, then retry this task. Existing PR and review evidence are preserved."
+        _record_terminal(row, code, detail)
+        row.terminal_failure_class = (failure_report.failure_class if failure_report else None) or ("ModelRateLimited" if code == "model_rate_limited" else "DispatchFailure")
+        row.stage = "terminal"
+        row.dispatch_state = "terminal"
+        row.lease_expires_at = None
+        if task is not None and task.state not in {"completed", "dismissed"}:
+            previous = task.state
+            if previous != "blocked":
+                task.blocked_from_state = previous
+            task.state = "blocked"
+            task.version += 1
+            task.updated_at = utcnow()
+            _event(session, task, "execution_dispatch_failed", "system", row.target_run_id,
+                   from_state=previous, to_state="blocked", payload={"code": code, "dag_id": dag_id, "run_id": row.target_run_id, "sequence": row.sequence, "detail": detail})
+        recovered += 1
+    session.flush()
+    return recovered
+
+
 def prune_artifacts(session: Session) -> int:
     protected_owners = select(Execution.execution_id).where(
         or_(
@@ -264,6 +338,8 @@ def prune_artifacts(session: Session) -> int:
 
 
 def run_maintenance(session: Session, *, limit: int = 100) -> dict:
+    from . import planning
+    dispatch_failures = recover_failed_dispatches(session, limit=limit)
     leases = expire_leases(session)
     reports = prune_reports(session)
     artifacts = prune_artifacts(session)
@@ -274,6 +350,7 @@ def run_maintenance(session: Session, *, limit: int = 100) -> dict:
         except GitProviderError:
             sync["errors"] += 1
     stats.incr("bot_dashboard.maintenance.expired_leases", leases)
+    stats.incr("bot_dashboard.maintenance.failed_dispatches", dispatch_failures)
     stats.incr("bot_dashboard.maintenance.pruned_reports", reports)
     stats.incr("bot_dashboard.maintenance.pruned_artifacts", artifacts)
     stats.incr("bot_dashboard.provider.checked", sync["checked"])
@@ -290,9 +367,10 @@ def run_maintenance(session: Session, *, limit: int = 100) -> dict:
         sync["errors"],
     )
     return {
+        "failed_dispatches": dispatch_failures,
         "expired_leases": leases,
         "pruned_reports": reports,
         "pruned_artifacts": artifacts,
         "provider": sync,
-        "follow_up_bots": sync["follow_up_bots"],
+        "follow_up_bots": sync["follow_up_bots"] + planning.pending(session, limit),
     }

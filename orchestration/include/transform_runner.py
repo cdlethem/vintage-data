@@ -1,15 +1,16 @@
-"""Run one tag-selected dbt build under the shared transform lock."""
-
+"""Run one family/cadence dbt build under the shared transform lock."""
 from __future__ import annotations
 
+import contextlib
 import fcntl
 import json
 import logging
 import os
 import pathlib
+import signal
 import subprocess
+import tempfile
 import time
-import uuid
 from collections import Counter
 from contextlib import contextmanager
 from typing import Iterator
@@ -18,14 +19,35 @@ import yaml
 
 import deployment
 
-deployment.load_env()
-
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 TRANSFORM_ROOT = REPO_ROOT / "transform"
 JOBS_PATH = TRANSFORM_ROOT / "jobs.yml"
 EXPECTED_JOBS = {"twice_hourly", "hourly", "daily"}
+FAMILY_HELPER = TRANSFORM_ROOT / "scripts" / "family_project.py"
+TRANSFORM_PYTHON = TRANSFORM_ROOT / ".venv" / "bin" / "python"
 
 log = logging.getLogger(__name__)
+
+
+def load_runtime_environment() -> None:
+    """Load deployment values when a worker runs, not when Airflow imports us."""
+    deployment.load_env()
+    deployment.load_env(REPO_ROOT / "orchestration" / "airflow.secrets.env")
+
+
+def discover_families() -> list[dict]:
+    """Statically enumerate each mart family's cadences in the transform venv."""
+    result = subprocess.run(
+        [str(TRANSFORM_PYTHON), str(FAMILY_HELPER), "discover"],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    families = json.loads(result.stdout)
+    if not isinstance(families, list):
+        raise ValueError("family discovery did not return a list")
+    return families
 
 
 def read_job_entries(path: pathlib.Path = JOBS_PATH) -> list[dict]:
@@ -108,7 +130,12 @@ def _default_lock_path() -> pathlib.Path:
 
 
 @contextmanager
-def exclusive_lock(path: pathlib.Path, wait_seconds: float) -> Iterator[None]:
+def exclusive_lock(path: pathlib.Path, wait_seconds: float) -> Iterator[int]:
+    """Hold the shared transform lock, yielding its descriptor.
+
+    The descriptor is handed to the publication worker so an uncatchable parent
+    exit cannot release the warehouse while that child is still reading it.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a+") as handle:
         deadline = time.monotonic() + wait_seconds
@@ -124,7 +151,7 @@ def exclusive_lock(path: pathlib.Path, wait_seconds: float) -> Iterator[None]:
                     )
                 time.sleep(min(1.0, remaining))
         try:
-            yield
+            yield handle.fileno()
         finally:
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
@@ -134,51 +161,196 @@ def _run_command(command: list[str]) -> None:
     subprocess.run(command, cwd=REPO_ROOT, check=True)
 
 
+def _terminate_group(process: subprocess.Popen) -> None:
+    """Stop the publication worker and its children, never anything else."""
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except (ProcessLookupError, PermissionError):
+        pass
+    try:
+        process.wait(timeout=30)
+    except subprocess.TimeoutExpired:
+        with contextlib.suppress(ProcessLookupError, PermissionError):
+            os.killpg(process.pid, signal.SIGKILL)
+        process.wait()
+    finally:
+        for pipe in (process.stdout, process.stderr):
+            if pipe is not None:
+                pipe.close()
+
+
+def _run_worker(
+    command: list[str], *, environment: dict[str, str] | None = None, lock_fd: int | None = None
+) -> subprocess.CompletedProcess:
+    if lock_fd is None:
+        try:
+            return subprocess.run(
+                command,
+                cwd=REPO_ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+                env=environment,
+            )
+        except subprocess.CalledProcessError as exc:
+            if exc.stdout:
+                log.error("trusted visualization worker stdout:\n%s", exc.stdout)
+            if exc.stderr:
+                log.error("trusted visualization worker stderr:\n%s", exc.stderr)
+            raise
+    os.set_inheritable(lock_fd, True)
+    process = subprocess.Popen(
+        command,
+        cwd=REPO_ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=environment,
+        pass_fds=(lock_fd,),
+        start_new_session=True,
+    )
+    try:
+        stdout, stderr = process.communicate()
+    except BaseException:
+        # A cancelled or timed-out task must not leave an orphan holding the
+        # inherited lock; the original failure still propagates.
+        _terminate_group(process)
+        raise
+    if process.returncode != 0:
+        if stdout:
+            log.error("trusted visualization worker stdout:\n%s", stdout)
+        if stderr:
+            log.error("trusted visualization worker stderr:\n%s", stderr)
+        raise subprocess.CalledProcessError(process.returncode, command, stdout, stderr)
+    return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+
+
+def _create_isolated_project(
+    family: str, cadence: str, destination: pathlib.Path
+) -> dict:
+    result = subprocess.run(
+        [
+            str(TRANSFORM_PYTHON),
+            str(FAMILY_HELPER),
+            "create",
+            "--family",
+            family,
+            "--cadence",
+            cadence,
+            "--destination",
+            str(destination),
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    project = json.loads(result.stdout)
+    if not isinstance(project, dict) or project.get("project_dir") != str(destination):
+        raise ValueError("isolated family project helper returned an invalid project")
+    return project
+
+
+def _write_vintage_scope(
+    manifest_path: pathlib.Path, family: str, cadence: str
+) -> None:
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    metadata = manifest.get("metadata")
+    if not isinstance(metadata, dict):
+        raise ValueError(f"dbt manifest has no metadata object: {manifest_path}")
+    metadata["vintage_scope"] = {"family": family, "cadence": cadence}
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+
+def _temporary_run_root(enabled: bool) -> tempfile.TemporaryDirectory[str]:
+    parent = None
+    if enabled:
+        parent = pathlib.Path(os.environ["LIGHTDASH_STATE_ROOT"]) / "dbt-runs"
+        parent.mkdir(parents=True, exist_ok=True)
+    return tempfile.TemporaryDirectory(prefix="family-", dir=parent)
+
+
 def run(
     job: str,
     *,
+    family: str,
     jobs_path: pathlib.Path = JOBS_PATH,
     lock_path: pathlib.Path | None = None,
 ) -> dict:
+    load_runtime_environment()
     jobs = load_jobs(jobs_path)
     if job not in jobs:
         raise ValueError(f"unknown transform job {job!r}; choose from {sorted(jobs)}")
     cfg = jobs[job]
-    dbt = str(TRANSFORM_ROOT / "bin" / "dbt")
-    manifest = str(TRANSFORM_ROOT / "target" / "manifest.json")
     enabled = os.environ.get("LIGHTDASH_ENABLED") == "1"
-    target_args = []
-    if enabled:
-        # A developer parse must never overwrite the manifest being published.
-        target = pathlib.Path(os.environ["LIGHTDASH_STATE_ROOT"]) / "dbt-runs" / str(uuid.uuid4())
-        target.mkdir(parents=True, exist_ok=False)
-        manifest = str(target / "manifest.json")
-        target_args = ["--target-path", str(target)]
-    commands = [
-        [dbt, "parse", "--target", "prod", *target_args],
-        [str(TRANSFORM_ROOT / "bin" / "validate_project"), manifest],
-        [dbt, "build", "--target", "prod", *target_args, "--select", f"+tag:{job}"],
-    ]
-    with exclusive_lock(lock_path or _default_lock_path(), cfg["lock_wait_seconds"]):
-        for command in commands:
-            _run_command(command)
-        publication = None
-        if enabled:
-            result = subprocess.run(
-                [str(REPO_ROOT / "visualization/.venv/bin/python"), str(REPO_ROOT / "visualization/worker.py"), "capture", manifest],
-                cwd=REPO_ROOT, check=True, capture_output=True, text=True,
-            )
-            publication = json.loads(result.stdout)
-    return {"job": job, "status": "ok", "commands": commands, "publication": publication}
+    dbt = str(TRANSFORM_ROOT / "bin" / "dbt")
+
+    with _temporary_run_root(enabled) as root:
+        run_root = pathlib.Path(root)
+        project_dir = run_root / "project"
+        project = _create_isolated_project(family, job, project_dir)
+        target = run_root / "target"
+        manifest = target / "manifest.json"
+        target_args = ["--project-dir", str(project_dir), "--target-path", str(target)]
+        commands = [
+            [dbt, "parse", "--target", "prod", *target_args],
+            [str(TRANSFORM_ROOT / "bin" / "validate_project"), str(manifest)],
+            [
+                dbt,
+                "build",
+                "--target",
+                "prod",
+                *target_args,
+                "--select",
+                f"+tag:{job}",
+            ],
+        ]
+        with exclusive_lock(lock_path or _default_lock_path(), cfg["lock_wait_seconds"]) as lock_fd:
+            for command in commands:
+                _run_command(command)
+            _write_vintage_scope(manifest, family, job)
+            publication = None
+            if enabled:
+                environment = os.environ.copy()
+                environment["LIGHTDASH_CONTENT_ROOT"] = str(project_dir)
+                # The transfer streams out of the warehouse this build just
+                # wrote, so it runs inside the same lock the build held.
+                result = _run_worker(
+                    [
+                        str(REPO_ROOT / "visualization/.venv/bin/python"),
+                        str(REPO_ROOT / "visualization/worker.py"),
+                        "publish",
+                        str(manifest),
+                    ],
+                    environment=environment,
+                    lock_fd=lock_fd,
+                )
+                publication = json.loads(result.stdout)
+    return {
+        "family": family,
+        "job": job,
+        "status": "ok",
+        "commands": commands,
+        "project": project,
+        "publication": publication,
+    }
 
 
-def publish_marts(build_result: dict) -> dict:
-    """Retry publication without rebuilding models or holding the DuckDB lock."""
-    batch = build_result.get("publication")
-    if not batch:
+
+def sync_lightdash(build_result: dict) -> dict:
+    """Deploy the published family's serving metadata and reviewed content."""
+    publication = build_result.get("publication")
+    if not publication:
         return {"status": "disabled"}
-    result = subprocess.run(
-        [str(REPO_ROOT / "visualization/.venv/bin/python"), str(REPO_ROOT / "visualization/worker.py"), "publish", batch["batch_id"]],
-        cwd=REPO_ROOT, check=True, capture_output=True, text=True,
-    )
+    if publication.get("stale"):
+        raise ValueError(
+            "refusing Lightdash deployment from a stale publication batch: "
+            + ", ".join(publication["stale"])
+        )
+    result = _run_worker([
+        str(REPO_ROOT / "visualization/.venv/bin/python"),
+        str(REPO_ROOT / "visualization/worker.py"),
+        "sync",
+        publication["batch_id"],
+    ])
     return json.loads(result.stdout)

@@ -23,7 +23,7 @@ from urllib.parse import urlparse
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PYTHON = REPO_ROOT / "orchestration" / ".venv" / "bin" / "python"
+PYTHON = sys.executable
 PASSWORD = "integration-only-service-password"
 
 
@@ -46,6 +46,21 @@ class _ControlPlane(BaseHTTPRequestHandler):
     def _body(self):
         length = int(self.headers.get("Content-Length", "0"))
         return json.loads(self.rfile.read(length) or b"{}")
+
+    def do_GET(self):  # noqa: N802 - stdlib protocol hook
+        path = urlparse(self.path).path
+        if self.headers.get("Authorization") != "Bearer test-token":
+            self._json(401, {"detail": "bearer required"})
+            return
+        with self.server.state["lock"]:
+            self.server.state["routes"].append(path)
+            if path.endswith("/workload"):
+                self._json(200, {"allowed": True})
+                return
+            if path.endswith("/model-settings"):
+                self._json(200, {"assignments": [], "providers": []})
+                return
+        self._json(404, {"detail": "unknown test route"})
 
     def do_POST(self):  # noqa: N802 - stdlib protocol hook
         path = urlparse(self.path).path

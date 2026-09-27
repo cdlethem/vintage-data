@@ -1,0 +1,43 @@
+# Retired sources: authoritative, checked-in exclusion list.
+#
+# A retired source is excluded from extraction, loading, raw-source
+# synchronization, dbt models, Lightdash content, bot discovery/modelling and
+# validation smoke tests. Its code and models live under `archive:`; the data
+# already collected is kept.
+#
+# AUTOMATED AGENTS (bots, scripts, coding assistants) MUST NOT re-enable,
+# re-model, re-propose, re-schedule, smoke-test or backfill a source listed
+# here, under this name or any alias of the same upstream. Only a human may
+# resume one, by following archive/retired_sources/README.md. Guards that read
+# this file: orchestration/dags/extract_dags.py, load/config/load.yml
+# (explicit overrides), transform/scripts/sync_raw_sources.py,
+# transform/scripts/validate_project.py and bots/agent_context.py.
+sources:
+  sensor_community:
+    retired_on: 2026-09-22
+    upstream: https://data.sensor.community (global latest-reading snapshot, polled every 5 minutes)
+    reason: >-
+      Too large for the near-free cloud warehouse target. It was the largest
+      source: ~4.2 GiB/day of raw NDJSON, a 163 GiB raw table and a
+      176-million-row mart, together growing ~13 GiB/day in BigQuery logical bytes, and
+      its dashboards timed out (>120 s) against the Postgres serving copy.
+      Keeping it would alone exceed the BigQuery storage free tier many times
+      over and dominate query cost.
+    archive: archive/retired_sources/sensor_community
+    preserved_data:
+      - $EXTRACT_DATA_ROOT/raw/source=sensor_community (NDJSON + manifests, 2026-09-03..2026-09-22, ~81 GiB)
+      - DuckDB raw.sensor_community and transform_marts.fct_sensor_community_measurement (left in place, no longer built)
+  openactive_feeds:
+    retired_on: 2026-09-22
+    upstream: https://status.openactive.io (RPDE change feeds, polled hourly)
+    reason: >-
+      Too large for the near-free cloud warehouse target. The feeds republish
+      their whole catalogue on every poll: ~3.7 GiB/day of raw NDJSON, a
+      160 GiB raw table and a 63-million-row mart, together growing ~11 GiB/day in
+      BigQuery logical bytes. Keeping it would alone exceed the BigQuery storage
+      free tier many times over and dominate query cost.
+    archive: archive/retired_sources/openactive_feeds
+    preserved_data:
+      - $EXTRACT_DATA_ROOT/raw/source=openactive_feeds (NDJSON + manifests, 2026-09-04..2026-09-22, ~78 GiB)
+      - $EXTRACT_DATA_ROOT/state/openactive_rpde.json (feed cursors; resuming from it skips everything published meanwhile)
+      - DuckDB raw.openactive_feeds and transform_marts.fct_openactive_feed (left in place, no longer built)

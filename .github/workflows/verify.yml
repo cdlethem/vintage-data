@@ -1,0 +1,71 @@
+name: Verify
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Bot, provider, DAG, and extract tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AIRFLOW_HOME: /tmp/vintage-airflow-ci
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            orchestration/provider_bot_dashboard/pyproject.toml
+            load/requirements.txt
+            transform/requirements.txt
+      - name: Install test dependencies and editable Airflow provider
+        run: |
+          python -m pip install -r load/requirements.txt -r transform/requirements.txt pytest
+          python -m pip install -e orchestration/provider_bot_dashboard
+      - name: Run bot, provider, DAG, and extract suites
+        run: python -m pytest -q bots orchestration extract
+
+  ui:
+    name: UI tests, typecheck, build, and tracked assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: orchestration/provider_bot_dashboard/ui
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.18.0"
+      - name: Install pinned pnpm dependencies
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+      - name: Run frontend tests and typecheck
+        run: |
+          corepack pnpm test
+          corepack pnpm exec tsc --noEmit
+      - name: Build both tracked bundles and manifest
+        run: corepack pnpm build
+      - name: Reject stale or untracked generated assets
+        working-directory: .
+        run: |
+          assets=orchestration/provider_bot_dashboard/src/airflow/providers/vintage/bot_dashboard/static
+          if test -n "$(git status --porcelain --untracked-files=all -- "$assets")"; then
+            echo "Generated UI bundles or asset-manifest.json differ from tracked assets. Rebuild and commit all generated assets."
+            git status --short --untracked-files=all -- "$assets"
+            exit 1
+          fi

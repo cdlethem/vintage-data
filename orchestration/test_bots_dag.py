@@ -184,6 +184,7 @@ class GateAndDagFactoryTest(unittest.TestCase):
             mock.patch.object(bots_dag.provider_dashboard, "enabled", return_value=True),
             mock.patch.object(bots_dag.bot_runner, "load_models", return_value={}),
             mock.patch.object(bots_dag.bot_runner, "discover", return_value=paths),
+            mock.patch("airflow.providers.vintage.bot_dashboard.concurrency.scheduler_limits", return_value={"task_executor": 14, "pr_reviewer": 2}),
             mock.patch.object(bots_dag.bot_runner, "load_bot", side_effect=fake_load),
             mock.patch.object(bots_dag.bot_runner, "resolve_bot_models", return_value=[]),
         ):
@@ -198,7 +199,8 @@ class GateAndDagFactoryTest(unittest.TestCase):
                 timedelta(minutes=cfg["timeout_minutes"] + 2),
             )
             if name in {"task_executor", "pr_reviewer"}:
-                self.assertEqual(task.pool, "bot_dashboard_executor")
+                self.assertEqual(task.pool, "bot_dashboard_executor__" + name)
+                self.assertEqual(dag.max_active_runs, {"task_executor": 14, "pr_reviewer": 2}[name])
                 self.assertEqual(task.queue, "bot_dashboard_executor")
             else:
                 self.assertEqual(task.pool, "default_pool")

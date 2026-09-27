@@ -1,6 +1,7 @@
 import { Box, Button, HStack, Spinner, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { QueueSummary, activityUrl, request } from "./api";
+import { Glyph } from "./ui-kit";
 
 export default function Plugin() {
   const [data, setData] = useState<QueueSummary | null>(null);
@@ -14,14 +15,14 @@ export default function Plugin() {
     const timer = setInterval(refresh, 60000);
     return () => { controller.abort(); clearInterval(timer); };
   }, []);
-  return <HStack role="region" aria-label="Bot action queue" justify="space-between" gap="4" paddingX="4" paddingY="3" borderWidth="1px" borderColor="border" borderRadius="lg" bg="bg.panel" flexWrap="wrap">
+  return <HStack role="region" aria-label="Bot action queue" justify="space-between" gap="4" paddingX="4" paddingY="3" borderWidth="1px" borderColor="border" borderRadius="xl" bg="bg.panel" flexWrap="wrap">
     <HStack gap="3">
-      <Box width="2" height="2" borderRadius="full" bg={error ? "orange.solid" : data?.attention_count ? "blue.solid" : "green.solid"} />
+      <Box aria-hidden="true" width="2" height="2" borderRadius="full" bg={!data && !error ? "bg.emphasized" : error ? "orange.solid" : data?.attention_count ? "blue.solid" : "green.solid"} />
       <Text fontWeight="semibold" fontSize="sm">Bot actions</Text>
       {error ? <Text role="status" fontSize="sm" color="fg.muted">Unable to check the queue</Text>
         : data ? <Text fontSize="sm" color="fg.muted">{data.attention_count ? `${data.attention_count} ${data.attention_count === 1 ? "action needs" : "actions need"} your attention` : "No actions need your attention"}</Text>
         : <Spinner size="xs" aria-label="Loading bot actions" />}
     </HStack>
-    <Button asChild variant="ghost" size="sm" colorPalette="blue"><a href={activityUrl()}>View bot activity →</a></Button>
+    <Button asChild variant="ghost" size="sm" colorPalette="blue"><a href={activityUrl()}>View bot activity <Glyph name="arrow" size={14} /></a></Button>
   </HStack>;
 }

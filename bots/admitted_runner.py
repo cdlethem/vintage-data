@@ -7,6 +7,8 @@ import hashlib
 import json
 import os
 import pathlib
+import re
+import selectors
 import stat
 import subprocess
 import tarfile
@@ -23,16 +25,177 @@ except ImportError:
 _MAX_RESULT = 1_048_576
 
 
+_MAX_SANDBOX_STDERR = 4_096
+_STDERR_TRUNCATED = b"[launcher stderr truncated]\n"
+
+
+def _run_sandbox(argv: list[str], *, timeout: float, env: dict[str, str]) -> subprocess.CompletedProcess:
+    """Run the launcher while retaining only a bounded tail of stderr."""
+    process = subprocess.Popen(
+        argv,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        env=env,
+    )
+    assert process.stderr is not None
+    stderr = bytearray()
+    truncated = False
+    deadline = time.monotonic() + timeout
+    selector = selectors.DefaultSelector()
+    selector.register(process.stderr, selectors.EVENT_READ)
+    try:
+        while selector.get_map():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(argv, timeout)
+            for key, _ in selector.select(remaining):
+                chunk = os.read(key.fileobj.fileno(), 65_536)
+                if not chunk:
+                    selector.unregister(key.fileobj)
+                    continue
+                limit = _MAX_SANDBOX_STDERR - len(_STDERR_TRUNCATED)
+                if len(chunk) >= limit:
+                    stderr[:] = chunk[-limit:]
+                    truncated = True
+                else:
+                    excess = len(stderr) + len(chunk) - limit
+                    if excess > 0:
+                        del stderr[:excess]
+                        truncated = True
+                    stderr.extend(chunk)
+        process.wait(timeout=max(0.001, deadline - time.monotonic()))
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+        raise
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait()
+        selector.close()
+        process.stderr.close()
+    return subprocess.CompletedProcess(
+        argv, process.returncode,
+        stderr=(_STDERR_TRUNCATED if truncated else b"") + bytes(stderr),
+    )
+
+
+def _sandbox_stderr_diagnostic(stderr: bytes) -> str:
+    """Redact bounded launcher stderr before it enters a durable error envelope."""
+    detail = stderr.decode("utf-8", errors="replace").strip()
+    marker = _STDERR_TRUNCATED.decode().strip()
+    if detail.startswith(marker):
+        detail = detail[len(marker):].lstrip()
+    if not detail:
+        return ""
+    if detail.lstrip().startswith("{") or (
+        "admission" in detail.casefold() and ("{" in detail or "[" in detail)
+    ):
+        return "launcher stderr omitted because it contained admission data"
+    try:
+        from airflow._shared.secrets_masker import redact
+        detail = str(redact(detail, "sandbox_stderr", max_depth=20))
+    except Exception:  # noqa: BLE001 - never persist unredacted launch output
+        return "launcher stderr omitted because redaction was unavailable"
+    detail = re.sub(
+        r"(?i)\b(authorization|api[_ -]?key|access[_ -]?token|password|secret|credential)"
+        r"\b\s*(?:[:=]\s*|\s+)(?:bearer\s+)?[^\s,;]+",
+        r"\1=***",
+        detail,
+    )
+    try:
+        from .bot_runner import _failure_detail
+    except ImportError:
+        from bot_runner import _failure_detail
+    return _failure_detail(RuntimeError(detail))
+
+
+def _sandbox_exit_error(error_type, returncode: int, stderr: bytes) -> Exception:
+    error = error_type(f"sandbox_exit_{returncode}", "terminal")
+    if diagnostic := _sandbox_stderr_diagnostic(stderr):
+        error.args = (f"{error}: launcher stderr: {diagnostic}",)
+    return error
+
+def _sandbox_attempt(model_role: str, started_at: datetime, duration_ms: int) -> dict:
+    usage = usage_tools.normalize({}, format="openai")
+    return {
+        "ordinal": 1, "alias": model_role, "provider": "confined_launcher",
+        "started_at": started_at.isoformat(), "finished_at": datetime.now(timezone.utc).isoformat(),
+        "duration_ms": duration_ms, "outcome": "succeeded", "fallback_used": False,
+        "reason_code": "sandbox_succeeded", "usage": usage,
+        **{key: usage[key] for key in ("input_tokens", "output_tokens", "total_tokens")},
+    }
+
+
+def _admitted_gateway(admission, client, root, deadline_at, error_type):
+    from model_gateway import model_gateway
+    model = admission.get("model")
+    if not model:
+        raise error_type("admitted_model_missing", "terminal")
+    settings = client.model_settings()
+    provider = next((p for p in settings.get("providers", []) if p["id"] == model["provider_id"]), None)
+    if provider is None or provider["base_url"] != model["base_url"]:
+        raise error_type("admitted_provider_changed", "terminal")
+    return model_gateway(provider, model["model"], deadline_at=deadline_at, socket_path=root / "model.sock")
+
+
+def _resume_published(admission, client, cfg, runner, dashboard_module,
+                      identity, started_at, deadline_at, context_digest):
+    """Deliver verified durable evidence without repeating sandbox work."""
+    from airflow.providers.vintage.bot_dashboard.report_schemas import TaskExecutorV2, VerificationManifestV1
+    error = dashboard_module.ControlPlaneError
+    report = client.get_artifact(admission["executor_report_sha256"])
+    patch = client.get_artifact(admission["patch_sha256"])
+    if (hashlib.sha256(report).hexdigest() != admission["executor_report_sha256"]
+            or hashlib.sha256(patch).hexdigest() != admission["patch_sha256"]):
+        raise error("digest_invalid", "terminal")
+    manifest = admission["verification_manifest"]
+    if any(manifest.get(key) != admission[key] for key in ("task_id", "execution_id", "revision", "base_sha", "patch_sha256")):
+        raise error("manifest_invalid", "terminal")
+    manifest = VerificationManifestV1.model_validate(manifest).model_dump(mode="json")
+    payload = TaskExecutorV2.model_validate(json.loads(report)).model_dump(mode="json")
+    if (payload["task_id"] != admission["task_id"] or payload["status"] not in {"ok", "no_change"}
+            or sorted(payload["changed_paths"]) != sorted(manifest["changed_paths"])
+            or len(patch) != manifest["patch_bytes"]):
+        raise error("manifest_invalid", "terminal")
+    _validate_paths(admission, payload["changed_paths"], len(patch), error)
+    if _validated_checks(admission, payload, error) != manifest["checks"]:
+        raise error("manifest_invalid", "terminal")
+    if admission.get("pr_number"):
+        publication = {key: admission[key] for key in ("pr_number", "pr_url", "trusted_head_sha")}
+        publication["status"] = "published"
+        reason = "published_report_recovered"
+    else:
+        publication = client.publish_execution(identity["dag_id"], identity["run_id"], {
+            "status": payload["status"], "patch_sha256": admission["patch_sha256"],
+            "changed_paths": payload["changed_paths"], "verification_manifest": manifest,
+            "report_sha256": admission["executor_report_sha256"],
+        })
+        reason = "pending_publication_resumed"
+    envelope = runner._envelope(cfg=cfg, identity=identity, started_at=started_at, deadline_at=deadline_at,
+        outcome="succeeded", retry_class="none", reason_code=reason, failure=None,
+        selected_model=admission["model_role"], attempts=[], context_digest=context_digest, payload=payload)
+    projection = client.submit_run(envelope)
+    client.finalize_execution(identity["dag_id"], identity["run_id"], "executor", {
+        "projection": projection, "publication": publication,
+        "result_artifact_sha256": admission["executor_report_sha256"],
+    })
+    return runner.RunResult(projection, "succeeded", "none", reason)
+
+
 def _extract_source(content: bytes, root: pathlib.Path, error_type) -> pathlib.Path:
     archive_path = root / "source.tar"
     archive_path.write_bytes(content)
     archive_path.chmod(0o600)
     workdir = root / "workdir"
     workdir.mkdir(mode=0o700)
-    with tarfile.open(archive_path, mode="r:") as archive:
-        members = archive.getmembers()
-        total = 0
-        for member in members:
+    # The parent may gzip large sources; read headers one at a time so an
+    # oversized declared size is rejected without decompressing its body.
+    mode = "r:gz" if content[:2] == b"\x1f\x8b" else "r:"
+    total, count = 0, 0
+    with tarfile.open(archive_path, mode=mode) as archive:
+        while (member := archive.next()) is not None:
+            count += 1
             path = pathlib.PurePosixPath(member.name)
             if (
                 path.is_absolute()
@@ -43,8 +206,9 @@ def _extract_source(content: bytes, root: pathlib.Path, error_type) -> pathlib.P
             ):
                 raise error_type("source_archive_unsafe", "terminal")
             total += max(member.size, 0)
-        if len(members) > 20_000 or total > 512 * 1024 * 1024:
-            raise error_type("source_archive_outside_bounds", "terminal")
+            if count > 20_000 or total > 512 * 1024 * 1024:
+                raise error_type("source_archive_outside_bounds", "terminal")
+    with tarfile.open(archive_path, mode=mode) as archive:
         archive.extractall(workdir, filter="data")
     return workdir
 
@@ -167,17 +331,23 @@ def _validate_paths(admission: dict, paths: list[str], diff_size: int, error_typ
             raise error_type("changed_path_invalid", "terminal")
         seen.add(folded)
         if not any(fnmatch.fnmatchcase(path, rule) for rule in task_allowed):
-            raise error_type("task_path_policy_rejected", "terminal")
+            exc = error_type("task_path_policy_rejected", "terminal")
+            exc.rejected_path = path
+            raise exc
         if not any(
             fnmatch.fnmatchcase(path, rule)
             for rule in policy["allowed_path_globs"]
         ):
-            raise error_type("repository_path_policy_rejected", "terminal")
+            exc = error_type("repository_path_policy_rejected", "terminal")
+            exc.rejected_path = path
+            raise exc
         if any(
             fnmatch.fnmatchcase(path, rule)
             for rule in policy["denied_path_globs"]
         ):
-            raise error_type("repository_path_denied", "terminal")
+            exc = error_type("repository_path_denied", "terminal")
+            exc.rejected_path = path
+            raise exc
 
 
 def _validated_checks(admission: dict, payload: dict, error_type) -> list[dict]:
@@ -196,6 +366,138 @@ def _validated_checks(admission: dict, payload: dict, error_type) -> list[dict]:
     ):
         raise error_type("verification_failed", "terminal")
     return checks
+
+def _write_review_context(root: pathlib.Path, admission: dict, patch: bytes, report: bytes, error_type) -> pathlib.Path:
+    """Give the reviewer sandbox the trusted, parent-verified patch and executor report.
+
+    The admission carries only digests; the parent fetches and validates the actual
+    evidence bytes once here so the sandboxed model never has to trust its own input.
+    """
+    if len(patch) > 700_000 or len(report) > 700_000:
+        raise error_type("outside_bounds", "terminal")
+    if hashlib.sha256(patch).hexdigest() != admission["patch_sha256"]:
+        raise error_type("digest_invalid", "terminal")
+    if hashlib.sha256(report).hexdigest() != admission["executor_report_sha256"]:
+        raise error_type("digest_invalid", "terminal")
+    try:
+        report_object = json.loads(report)
+    except json.JSONDecodeError:
+        raise error_type("report_invalid", "terminal") from None
+    if not isinstance(report_object, dict) or report_object.get("task_id") != admission["task_id"]:
+        raise error_type("report_invalid", "terminal")
+    context = {"patch_text": patch.decode(), "executor_report": report_object}
+    path = root / "review-context.json"
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o400)
+    with os.fdopen(descriptor, "w") as handle:
+        handle.write(json.dumps(context, sort_keys=True, separators=(",", ":")))
+    return path
+
+
+def _write_seed_rejects(admission: dict, seed: bytes, workdir: pathlib.Path, error_type) -> None:
+    """Materialize a trusted textual patch as adjacent rejects when Git cannot.
+
+    Git emits no ``.rej`` for some valid file-level conflicts (notably an upstream
+    deletion).  Keep each verified file section adjacent to its only permitted
+    target so the confined executor can resolve it, while rejecting malformed,
+    binary, renamed, or policy-escaping inputs.
+    """
+    sections: list[tuple[str, bytes]] = []
+    current: list[bytes] = []
+    for line in seed.splitlines(keepends=True):
+        if line.startswith(b"diff --git "):
+            if current:
+                sections.append(_seed_reject_section(current, error_type))
+            current = [line]
+        elif current:
+            current.append(line)
+    if current:
+        sections.append(_seed_reject_section(current, error_type))
+    if not sections:
+        raise error_type("revision_seed_patch_invalid", "terminal")
+    paths = [path for path, _ in sections]
+    _validate_paths(admission, paths, len(seed), error_type)
+    for path, section in sections:
+        parent = workdir / pathlib.PurePosixPath(path).parent
+        parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        reject = workdir / f"{path}.rej"
+        try:
+            descriptor = os.open(
+                reject,
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+                0o400,
+            )
+        except OSError as exc:
+            raise error_type("revision_seed_reject_write_failed", "terminal") from exc
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(section)
+
+
+def _seed_reject_section(lines: list[bytes], error_type) -> tuple[str, bytes]:
+    header = lines[0].rstrip(b"\n").split(b" ")
+    if len(header) != 4 or header[:2] != [b"diff", b"--git"]:
+        raise error_type("revision_seed_patch_invalid", "terminal")
+    old, new = header[2:]
+    if not old.startswith(b"a/") or not new.startswith(b"b/") or old[2:] != new[2:]:
+        raise error_type("revision_seed_patch_invalid", "terminal")
+    try:
+        path = new[2:].decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise error_type("revision_seed_patch_invalid", "terminal") from exc
+    section = b"".join(lines)
+    old_marker = b"--- a/" + new[2:] + b"\n"
+    new_marker = b"+++ b/" + new[2:] + b"\n"
+    valid_markers = (
+        (old_marker in lines and new_marker in lines)
+        or (b"--- /dev/null\n" in lines and new_marker in lines)
+        or (old_marker in lines and b"+++ /dev/null\n" in lines)
+    )
+    if (b"GIT binary patch" in section or b"Binary files " in section
+            or not valid_markers
+            or not any(line.startswith(b"@@ -") and b" +" in line for line in lines)):
+        raise error_type("revision_seed_patch_invalid", "terminal")
+    return path, section
+
+def _apply_revision_seed(admission: dict, client, workdir: pathlib.Path, metadata: pathlib.Path, error_type) -> None:
+    """Restore a prior patch onto the admitted base, leaving real conflicts for repair.
+
+    ``--reject`` applies every unambiguous hunk and writes only conflicted hunks as
+    adjacent ``.rej`` files.  Those files remain inside the credential-free executor
+    worktree; the model must resolve and remove them before the parent accepts the
+    resulting scoped diff.  A malformed seed is never mistaken for a conflict.
+    """
+    seed_digest = admission.get("seed_patch_sha256")
+    if not seed_digest:
+        return
+    seed = client.get_artifact(seed_digest)
+    if hashlib.sha256(seed).hexdigest() != seed_digest:
+        raise error_type("revision_seed_digest_invalid", "terminal")
+    process = subprocess.run(
+        [
+            "git", f"--git-dir={metadata}", f"--work-tree={workdir}",
+            "apply", "--binary", "--reject", "--whitespace=nowarn", "-",
+        ],
+        cwd=workdir,
+        input=seed,
+        capture_output=True,
+        timeout=120,
+        check=False,
+        env={
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            "LANG": "C.UTF-8",
+            "GIT_AUTHOR_NAME": "bot-dashboard baseline",
+            "GIT_AUTHOR_EMAIL": "baseline@localhost",
+            "GIT_COMMITTER_NAME": "bot-dashboard baseline",
+            "GIT_COMMITTER_EMAIL": "baseline@localhost",
+            "GIT_AUTHOR_DATE": "2000-01-01T00:00:00Z",
+            "GIT_COMMITTER_DATE": "2000-01-01T00:00:00Z",
+        },
+    )
+    if process.returncode == 0:
+        return
+    if any(path.is_file() for path in workdir.rglob("*.rej")):
+        return
+    _write_seed_rejects(admission, seed, workdir, error_type)
+
 
 
 def run(context: dict, cfg: dict, runner, dashboard_module):
@@ -243,6 +545,9 @@ def run(context: dict, cfg: dict, runner, dashboard_module):
         "byte_count": len(canonical_admission),
         "build_ms": int((datetime.now(timezone.utc) - started_at).total_seconds() * 1000),
     }
+    if kind == "executor" and admission.get("verification_manifest"):
+        return _resume_published(admission, client, cfg, runner, dashboard_module,
+                                 identity, started_at, deadline_at, context_digest)
     attempts: list[dict] = []
     payload = None
     failure = None
@@ -256,11 +561,15 @@ def run(context: dict, cfg: dict, runner, dashboard_module):
             source = client.get_artifact(admission["source_artifact"]["sha256"])
             workdir = _extract_source(source, root, dashboard_module.ControlPlaneError)
             metadata = _initialize_baseline(root, workdir)
+            if kind == "executor":
+                _apply_revision_seed(admission, client, workdir, metadata, dashboard_module.ControlPlaneError)
             if kind == "pr_reviewer":
                 patch = client.get_artifact(admission["patch_sha256"])
                 if hashlib.sha256(patch).hexdigest() != admission["patch_sha256"]:
                     raise dashboard_module.ControlPlaneError("patch_digest_invalid", "terminal")
                 _git(workdir, metadata, "apply", "--binary", "-", binary=True, input_data=patch)
+                report = client.get_artifact(admission["executor_report_sha256"])
+                _write_review_context(root, admission, patch, report, dashboard_module.ControlPlaneError)
             before = _snapshot_tree(workdir, dashboard_module.ControlPlaneError)
             admission_path = root / "admission.json"
             admission_path.write_bytes(canonical_admission)
@@ -269,52 +578,39 @@ def run(context: dict, cfg: dict, runner, dashboard_module):
             launcher = pathlib.Path(os.environ["BOT_DASHBOARD_SANDBOX_LAUNCHER"])
             attempt_started_at = datetime.now(timezone.utc)
             attempt_started = time.monotonic()
-            process = subprocess.run(
-                [
-                    str(launcher),
-                    "--protocol",
-                    "v2",
-                    "--workdir",
-                    str(workdir),
-                    "--admission",
-                    str(admission_path),
-                    "--result",
-                    str(result_path),
-                ],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=budget.timeout(cfg["model_budget_minutes"] * 60),
-                check=False,
-                env={
-                    key: value
-                    for key, value in os.environ.items()
-                    if key in {"PATH", "LANG", "LC_ALL", "TZ"}
-                },
-            )
+            with _admitted_gateway(admission, client, root, deadline_at, dashboard_module.ControlPlaneError) as gateway:
+                process = _run_sandbox(
+                    [
+                        str(launcher),
+                        "--protocol",
+                        "v2",
+                        "--workdir",
+                        str(workdir),
+                        "--admission",
+                        str(admission_path),
+                        "--result",
+                        str(result_path),
+                    ],
+                    timeout=budget.timeout(cfg["model_budget_minutes"] * 60),
+                    env={
+                        key: value
+                        for key, value in os.environ.items()
+                        if key in {"PATH", "LANG", "LC_ALL", "TZ"}
+                    },
+                )
+                if gateway.telemetry.get("last_error") == "model_rate_limited":
+                    from model_gateway import ModelRateLimited
+                    raise ModelRateLimited()
             duration_ms = int((time.monotonic() - attempt_started) * 1000)
             if process.returncode:
-                raise dashboard_module.ControlPlaneError(
-                    f"sandbox_exit_{process.returncode}", "terminal"
+                raise _sandbox_exit_error(
+                    dashboard_module.ControlPlaneError, process.returncode, process.stderr
                 )
             raw_result = _read_result(result_path, dashboard_module.ControlPlaneError)
             result_type = ExecutorResultV2 if kind == "executor" else ReviewerResultV2
             result = result_type.model_validate(raw_result).model_dump(mode="json")
             payload = result["report"]
-            attempts.append(
-                {
-                    "ordinal": 1,
-                    "alias": admission["model_role"],
-                    "provider": "confined_launcher",
-                    "started_at": attempt_started_at.isoformat(),
-                    "finished_at": datetime.now(timezone.utc).isoformat(),
-                    "duration_ms": duration_ms,
-                    "usage": usage_tools.normalize({}, format="openai"),
-                    "reason_code": "sandbox_succeeded",
-                    "input_tokens": 0,
-                    "output_tokens": 0,
-                    "total_tokens": 0,
-                }
-            )
+            attempts.append(_sandbox_attempt(admission["model_role"], attempt_started_at, duration_ms))
             after = _snapshot_tree(workdir, dashboard_module.ControlPlaneError)
             if kind == "pr_reviewer":
                 if before != after:
@@ -345,6 +641,10 @@ def run(context: dict, cfg: dict, runner, dashboard_module):
                     ).splitlines()
                     if line
                 ]
+                if any(path.endswith(".rej") for path in paths):
+                    raise dashboard_module.ControlPlaneError(
+                        "unresolved_revision_seed_conflict", "terminal"
+                    )
                 _validate_paths(
                     admission,
                     paths,

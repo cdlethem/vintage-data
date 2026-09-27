@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from airflow.providers.vintage.bot_dashboard.execution import executor_preconditions, publish_execution_change
 from airflow.providers.vintage.bot_dashboard.models import Execution, Policy, Revision, metadata
 from airflow.providers.vintage.bot_dashboard.service import (
-    PreconditionFailed,
     assign_task,
     create_manual_task,
     start_task,
@@ -30,14 +29,8 @@ class AdmissionTest(unittest.TestCase):
     def tearDown(self):
         self.engine.dispose()
 
-    def test_start_rejects_unverified_bot_admission_then_is_idempotent(self):
+    def test_start_is_idempotent_without_verification_or_path_policy(self):
         with Session(self.engine) as session:
-            with self.assertRaises(PreconditionFailed):
-                start_task(session, self.task["id"], version=2, actor_id="u1", idempotency_key="client-key-1")
-            revision = session.scalar(select(Revision).where(Revision.task_id == uuid.UUID(self.task["id"])))
-            revision.verification_commands = [["python", "-m", "compileall"]]
-            revision.allowed_path_globs = ["src/**"]
-            revision.suggested_executor = "junior"
             first = start_task(session, self.task["id"], version=2, actor_id="u1", idempotency_key="client-key-1")
             replay = start_task(session, self.task["id"], version=3, actor_id="u1", idempotency_key="client-key-1")
             session.commit()

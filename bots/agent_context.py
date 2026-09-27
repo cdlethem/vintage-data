@@ -24,6 +24,7 @@ deployment.load_env(REPO_ROOT / "orchestration" / "airflow.secrets.env", overrid
 import provider_dashboard
 
 SOURCE_ROOT = REPO_ROOT / "extract" / "sources"
+RETIRED_SOURCES = REPO_ROOT / "extract" / "retired_sources.yml"
 SCRIPT_ROOT = REPO_ROOT / "extract" / "scripts"
 TRANSFORM_ROOT = REPO_ROOT / "transform"
 MAX_CONTEXT_ITEMS = 100
@@ -133,6 +134,18 @@ def _source_configs() -> list[dict]:
     return sorted(rows, key=lambda row: (row["name"], row["config"]))
 
 
+def _retired_sources() -> dict[str, str]:
+    """Sources a human switched off; never propose, schedule or model them."""
+    try:
+        value = yaml.safe_load(RETIRED_SOURCES.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError) as exc:
+        raise ContextError("retired_sources_unreadable") from exc
+    sources = value.get("sources") if isinstance(value, dict) else None
+    if not isinstance(sources, dict):
+        raise ContextError("retired_sources_invalid")
+    return {str(name): " ".join(str((entry or {}).get("reason", "")).split()) for name, entry in sources.items()}
+
+
 def _latest_by_key(payload_rows: list[dict], collection: str, key: str) -> dict[str, dict]:
     values: dict[str, dict] = {}
     for report in reversed(payload_rows):
@@ -182,7 +195,8 @@ def discovery_context() -> dict:
     vetting_rows = _payload_rows("source_vetting")
     proposals = _latest_by_key(discovery_rows, "proposals", "slug")
     decisions = _latest_by_key(vetting_rows, "decisions", "slug")
-    accepted = {row["name"] for row in configs}
+    retired = _retired_sources()
+    accepted = {row["name"] for row in configs} | set(retired)
     unresolved = sorted(slug for slug in proposals if slug not in decisions and slug not in accepted)
     queries, domain_counts = _normalized_queries(discovery_rows)
     summaries = []
@@ -202,6 +216,11 @@ def discovery_context() -> dict:
     context.update(
         {
             "existing_source_count": len(configs),
+            "retired_sources": [
+                {"name": name, "reason": _bounded_text(reason, 300),
+                 "rule": "permanently excluded; never propose this upstream again under any slug"}
+                for name, reason in sorted(retired.items())
+            ],
             "existing_sources": [
                 {"name": row["name"], "script": row["script"]} for row in configs
             ],
@@ -237,7 +256,7 @@ def vetting_context() -> dict:
     vetting_rows = _payload_rows("source_vetting")
     proposals = _latest_by_key(discovery_rows, "proposals", "slug")
     decisions = _latest_by_key(vetting_rows, "decisions", "slug")
-    accepted = {row["name"] for row in configs}
+    accepted = {row["name"] for row in configs} | set(_retired_sources())
     candidates = []
     for slug, proposal in proposals.items():
         if slug in decisions or slug in accepted:
@@ -271,7 +290,7 @@ def _proposal_path(proposal: dict) -> tuple[str, str]:
 
 def scheduling_context() -> dict:
     configs = _source_configs()
-    configured = {row["name"] for row in configs}
+    configured = {row["name"] for row in configs} | set(_retired_sources())
     rows = _payload_rows("source_vetting")
     candidates_by_slug: dict[str, dict] = {}
     for report in rows:
@@ -595,7 +614,9 @@ def analytics_context(*, sync_result: dict | None = None, manifest: dict | None 
         for name in sync_result.get(kind, []):
             drift.setdefault(name, []).append(kind)
     candidates = []
-    inventory = {row["name"]: row for row in sync_result["sources"] if isinstance(row, dict) and row.get("name")}
+    retired = set(_retired_sources())
+    inventory = {row["name"]: row for row in sync_result["sources"]
+                 if isinstance(row, dict) and row.get("name") and row["name"] not in retired}
     for name, row in sorted(inventory.items()):
         issues = drift.get(name, []) + list(row.get("issues") or [])
         if name in modeled and not issues:

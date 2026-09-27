@@ -50,6 +50,11 @@ scheduling backlogs, and operational status; do not preserve snapshots here.
   Poll no faster than every five minutes and stagger offsets. Use existing
   factory conventions (`dag_factory` for grouped providers), not source-specific
   branches in `extract_dags.py`. `enabled` sets initial pause state only.
+- Sources in `extract/retired_sources.yml` (currently `sensor_community` and
+  `openactive_feeds`, retired for cloud cost) are off permanently. Never re-enable,
+  restore from `archive/retired_sources/`, re-propose (under any slug), model,
+  smoke-test or backfill them, and do not weaken the guards that enforce this.
+  Only a human may resume one, via `archive/retired_sources/README.md`.
 - Verify the configured invocation and DAG imports. Stream/sample large outputs;
   reproduce failures without hiding them behind retries or arbitrary record caps.
 - Stateful fetchers support `--state-file` and `--no-state`. Use temporary state
@@ -85,12 +90,23 @@ scheduling backlogs, and operational status; do not preserve snapshots here.
   `transform/bin/validate_project transform/target/manifest.json`, and a targeted
   dev build including ancestors (`--select +<model>`). Data tests belong on
   physical models only; bound large checks to recent/new data.
-- Keep model SQL in DuckDB dialect. Lightdash uses generated Postgres serving
-  metadata and immutable snapshots; retry publication from its existing batch.
-  Serving schema changes need explicit migration. Use the visualization docs for
-  content validation and query checks; follow `TRENDS.md` for analysis changes.
+- Keep model SQL in DuckDB dialect. Each `transform__<family>__<cadence>` DAG parses
+  and validates only its selected dependency closure, then builds, streams its
+  accepted marts into Postgres inside the same lock, and runs `sync_lightdash`. Never make a
+  family's runtime success depend on a whole-project policy/content check. Keep the
+  strict whole-project validator for repository-wide review. A broken dependency
+  blocks its consumers, not unrelated families; shared macros/configuration and
+  the DuckDB write lock remain shared infrastructure.
+- Lightdash serves published Postgres tables, never checkout DuckDB or Git.
+  A partial release must preserve unrelated families' last successful definitions
+  and must not expose unbuilt models. Publication and sync remain serialized,
+  idempotent and retryable; a failed transfer rebuilds from raw data rather than
+  replaying a retained export. Serving schema changes need
+  explicit migration. Follow the visualization docs and `TRENDS.md` for content
+  validation and query checks.
 - For the bot runtime, provider dashboard state is authoritative. Preserve task
   admission, credential-free confined execution, trusted artifact/PR publication,
-  and advisory review boundaries. Bots do not receive production Lightdash
-  credentials or Docker access. These runtime roles do not restrict ordinary
-  user-authorized development in this checkout.
+  advisory review, merge evidence, and the post-merge trusted-cadence sync evidence
+  as separate boundaries. Bots do not receive production Lightdash credentials or
+  Docker access. These runtime roles do not restrict ordinary user-authorized
+  development in this checkout.

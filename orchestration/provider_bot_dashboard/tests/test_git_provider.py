@@ -20,6 +20,8 @@ class FakeGitHub(GitHubProvider):
 
     def _request(self, method, path, *, payload=None):
         self.calls.append((method, path, payload))
+        if method == "GET" and "commits/" in path:
+            return {"sha": "f" * 40}
         if method == "GET" and "comments" in path:
             return [{"id": 7, "body": self.comments[0]}] if self.comments else []
         if method == "POST" and "comments" in path:
@@ -50,6 +52,17 @@ class GitProviderTest(unittest.TestCase):
         gitlab = normalize_gitlab({"iid": 8, "web_url": "https://gitlab.example/m/8", "state": "merged", "draft": False, "title": "Done", "sha": "b" * 40, "source_branch": "bot-task/id", "target_branch": "main", "author": {"id": 10}})
         self.assertEqual("merged", gitlab["state"])
         self.assertEqual("10", gitlab["author_id"])
+    def test_dirty_change_and_current_base_are_normalized(self):
+        provider = FakeGitHub(self.config)
+        change = normalize_github({
+            "number": 7, "html_url": "https://github.example/p/7", "merged": False,
+            "state": "open", "draft": False, "mergeable": False,
+            "mergeable_state": "dirty", "head": {"sha": "a" * 40, "ref": "candidate"},
+            "base": {"ref": "main", "sha": "b" * 40}, "user": {"id": 9},
+        })
+        self.assertEqual("conflicting", change["mergeability"])
+        self.assertEqual("b" * 40, change["base_sha"])
+        self.assertEqual("f" * 40, provider.read_base_identity())
 
     def test_review_comment_upsert_uses_one_deterministic_marker(self):
         provider = FakeGitHub(self.config)

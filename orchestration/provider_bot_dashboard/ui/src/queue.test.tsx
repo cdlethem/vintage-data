@@ -39,7 +39,9 @@ describe("action browsing", () => {
     });
     vi.stubGlobal("fetch", fetchMock); mount(<App />);
     expect(await screen.findByText("Showing 25 of 26 actions")).toBeInTheDocument();
-    expect(fetchMock.mock.calls.some(([url])=>new URL(url,"http://localhost").searchParams.get("state") === "proposed,accepted,blocked,in_review,ready")).toBe(true);
+    expect(fetchMock.mock.calls.some(([url])=>new URL(url,"http://localhost").searchParams.get("state") === "proposed,blocked,in_review,ready")).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "All active" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => new URL(url, "http://localhost").searchParams.get("state") === "proposed,accepted,in_progress,in_review,ready,blocked")).toBe(true));
     fireEvent.click(screen.getByRole("button",{name:"Load more"}));
     expect(await screen.findByText("Showing 26 of 26 actions")).toBeInTheDocument();
     expect(screen.queryByRole("button",{name:"Load more"})).not.toBeInTheDocument();
