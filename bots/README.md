@@ -114,6 +114,14 @@ note; it does **not** assert production recovery or mark a pending validation ga
 Publication and merge-stage requirements still block promotion or merge. Activation and
 completion-stage checks can record their actual outcomes after implementation completion.
 
+For the current CelesTrak candidates, manually dispatch **CelesTrak live
+reconciliation** from protected `main`. Its credential-free GitHub runner reads
+only the two fixed official public endpoints and compares the pinned reviewed
+parser head with the official CSV and table. A failed or timed-out run does not
+pass either ticket's merge gate; record the run URL and matching candidate
+heads as evidence only after the comparison actually succeeds. Do not create a
+new specialist ticket merely to retry an unavailable network route.
+
 For dbt/Lightdash work, the executor's admitted scope must include both the semantic
 or analysis specification and its exact generated chart/dashboard outputs. It may
 generate and validate those files only with admitted credential-free offline commands.
@@ -270,6 +278,10 @@ passed. Specialist planning requests are bounded by the execution and trusted
 head, so a wording-only revision cannot restart a successful handoff. The
 latest executive decision replaces its prior PR status comment for that ticket;
 the ticket retains each decision in its audit history.
+
+An accepted ticket assigned to a human is left for that owner; Autopilot cannot
+reassign it or spend repeated decisions rewording the same request. A bot
+assignment is offered only when an accepted ticket lacks a valid bot assignee.
 
 Bot health shows actual bot definitions, paused status, latest outcomes, and drill-down
 run evidence; infrastructure DAGs are excluded.
