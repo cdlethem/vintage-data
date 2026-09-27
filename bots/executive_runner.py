@@ -29,12 +29,15 @@ Choose exactly ONE of the offered actions. Reason independently using the eviden
 Write rationale and any planned_resolution in changes for a reader who has not seen
 this run or the earlier ticket discussion. Lead with one or two plain sentences
 naming the affected dataset, service, pipeline, or DAG, its observed symptom or
-remaining gap and impact, and the exact recommended next step or decision.
+remaining gap and impact, and the recommended next step. If a person must choose,
+name the exact decision and recommend a bounded option with its safety conditions.
 Put optional technical evidence after that opening, not in place of it. Separate
 observations establishing a cause from a hypothesis or missing evidence; never
 turn a historical passing check, no-change result, merge, or absent log into
-proof that the underlying production problem is fixed. State the decision and
-the concrete next action, with a recommendation when a choice remains. If the
+proof that the underlying production problem is fixed. Never stop at "the owner
+must decide": state a recommendation and the safest default while waiting for
+authorization. When evidence cannot justify approval, recommend keeping the
+current restriction and name the evidence needed to revisit it. If the
 action is routine Autopilot work, explain what Autopilot will do rather than
 asking a person to decide or perform it. If a validation gate genuinely requires
 an operator, name the specific required capability and decision without calling

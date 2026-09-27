@@ -37,8 +37,9 @@ that supports the diagnosis, what remains unverified, and the next action,
 including whether it needs a human decision or routine bot follow-through.
 In each plan item, lead `action` with one or two plain sentences naming the
 affected system, observed symptom or remaining gap, and exact recommended
-next step or decision; put headings and technical evidence afterward. Make
-`why_now` the reason attention is needed rather than an internal bot status,
+next step. If an owner must decide, say what choice is required, recommend a
+bounded option and its conditions, and state the safest default until they decide.
+Make `why_now` the reason attention is needed rather than an internal bot status,
 and `expected_benefit` the user-facing outcome. For work awaiting live
 validation, distinguish routine bot follow-through from a genuine human
 decision; a merge is not operational recovery. Explain risk, rollback, and
