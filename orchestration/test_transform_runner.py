@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import fcntl
 import os
 import pathlib
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest import mock
 
@@ -14,6 +16,17 @@ INCLUDE = pathlib.Path(__file__).resolve().parent / "include"
 sys.path.insert(0, str(INCLUDE))
 
 import transform_runner
+
+
+def lock_is_held(path: pathlib.Path) -> bool:
+    """A separate open file description proves whether the flock is taken."""
+    with path.open("a+") as probe:
+        try:
+            fcntl.flock(probe.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        fcntl.flock(probe.fileno(), fcntl.LOCK_UN)
+        return False
 
 
 class TransformConfigTest(unittest.TestCase):
@@ -50,34 +63,75 @@ class TransformRunnerTest(unittest.TestCase):
         env = mock.patch.dict(os.environ, {"LIGHTDASH_ENABLED": "0"})
         env.start()
         self.addCleanup(env.stop)
+        self.create_project = mock.patch.object(
+            transform_runner,
+            "_create_isolated_project",
+            return_value={"project_dir": "fixture", "selected_models": ["fct_demo"]},
+        )
+        self.create_project.start()
+        self.addCleanup(self.create_project.stop)
+        self.write_scope = mock.patch.object(transform_runner, "_write_vintage_scope")
+        self.write_scope.start()
+        self.addCleanup(self.write_scope.stop)
+        runtime_environment = mock.patch.object(transform_runner, "load_runtime_environment")
+        runtime_environment.start()
+        self.addCleanup(runtime_environment.stop)
 
-    def test_enabled_publication_captures_isolated_build(self):
-        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
-            os.environ, {"LIGHTDASH_ENABLED": "1", "LIGHTDASH_STATE_ROOT": tmp}
-        ), mock.patch.object(transform_runner, "_run_command") as command, mock.patch.object(
-            transform_runner.subprocess, "run"
-        ) as capture:
-            capture.return_value.stdout = '{"batch_id": "fixture"}'
-            result = transform_runner.run("daily", lock_path=pathlib.Path(tmp) / "dbt.lock")
-            commands = [call.args[0] for call in command.call_args_list]
-            target = commands[0][commands[0].index("--target-path") + 1]
-            self.assertTrue(pathlib.Path(target).is_relative_to(tmp))
-            self.assertEqual(commands[1][-1], str(pathlib.Path(target) / "manifest.json"))
-            self.assertEqual(commands[2][commands[2].index("--target-path") + 1], target)
-            self.assertEqual(capture.call_args.args[0][-2:], ["capture", commands[1][-1]])
-            self.assertEqual(result["publication"], {"batch_id": "fixture"})
 
-    def test_publisher_retry_does_not_rebuild(self):
-        with mock.patch.object(transform_runner.subprocess, "run") as run:
-            run.return_value.stdout = '{"published": ["fct_demo"]}'
-            result = transform_runner.publish_marts({"publication": {"batch_id": "a" * 64}})
-            self.assertEqual(result["published"], ["fct_demo"])
-            self.assertEqual(run.call_args.args[0][-2:], ["publish", "a" * 64])
+    def test_runtime_requires_a_family(self):
+        with self.assertRaises(TypeError):
+            transform_runner.run("hourly")
 
-    def test_disabled_publication_does_not_invoke_subprocess(self):
-        with mock.patch.object(transform_runner.subprocess, "run") as run:
-            self.assertEqual(transform_runner.publish_marts({"publication": None}), {"status": "disabled"})
-            run.assert_not_called()
+
+    def test_publication_streams_inside_the_held_transform_lock(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lock = pathlib.Path(tmp) / "dbt.lock"
+            observed = {}
+
+            def worker(command, *, environment=None, lock_fd=None):
+                observed["command"] = command
+                observed["lock_fd"] = lock_fd
+                observed["held"] = lock_is_held(lock)
+                return subprocess.CompletedProcess(command, 0, '{"batch_id": "%s", "published": ["fct_demo"]}' % ("a" * 64), "")
+
+            with mock.patch.dict(os.environ, {"LIGHTDASH_ENABLED": "1", "LIGHTDASH_STATE_ROOT": tmp}), \
+                    mock.patch.object(transform_runner, "_run_command"), \
+                    mock.patch.object(transform_runner, "_run_worker", side_effect=worker):
+                result = transform_runner.run("hourly", family="demo", lock_path=lock)
+            self.assertEqual(observed["command"][-2], "publish")
+            self.assertTrue(observed["command"][-1].endswith("target/manifest.json"))
+            self.assertIsInstance(observed["lock_fd"], int)
+            self.assertTrue(observed["held"])
+            self.assertEqual(result["publication"]["published"], ["fct_demo"])
+            self.assertFalse(lock_is_held(lock))
+
+    def test_cancelled_publication_reaps_its_process_group_and_releases_nothing_early(self):
+        script = (
+            "import os,sys,pathlib,time;"
+            "pathlib.Path(sys.argv[1]).write_text(f'{os.getpid()} {os.fstat(int(sys.argv[2])).st_ino}');"
+            "time.sleep(120)"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            lock = pathlib.Path(tmp) / "dbt.lock"
+            marker = pathlib.Path(tmp) / "child.txt"
+
+            def interrupt(*args, **kwargs):
+                while not (marker.exists() and marker.read_text()):
+                    time.sleep(0.01)
+                raise KeyboardInterrupt
+
+            with transform_runner.exclusive_lock(lock, 1) as lock_fd:
+                with mock.patch.object(subprocess.Popen, "communicate", side_effect=interrupt):
+                    with self.assertRaises(KeyboardInterrupt):
+                        transform_runner._run_worker(
+                            [sys.executable, "-c", script, str(marker), str(lock_fd)], lock_fd=lock_fd)
+                pid, inode = marker.read_text().split()
+                # The child really held the transform lock's own description.
+                self.assertEqual(int(inode), lock.stat().st_ino)
+                self.assertTrue(lock_is_held(lock))
+                with self.assertRaises(ProcessLookupError):
+                    os.kill(int(pid), 0)
+            self.assertFalse(lock_is_held(lock))
 
     def test_each_job_builds_its_ancestor_tag_selector(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -86,12 +140,34 @@ class TransformRunnerTest(unittest.TestCase):
                 with self.subTest(name=name), mock.patch.object(
                     transform_runner, "_run_command"
                 ) as run_command:
-                    result = transform_runner.run(name, lock_path=lock)
+                    result = transform_runner.run(
+                        name, family="demo", lock_path=lock
+                    )
                     commands = [call.args[0] for call in run_command.call_args_list]
-                    self.assertEqual(commands[0][-3:], ["parse", "--target", "prod"])
+                    self.assertEqual(commands[0][:3], [str(transform_runner.TRANSFORM_ROOT / "bin" / "dbt"), "parse", "--target"])
                     self.assertEqual(commands[1][0].split("/")[-1], "validate_project")
                     self.assertEqual(commands[2][-2:], ["--select", f"+tag:{name}"])
                     self.assertEqual(result["status"], "ok")
+
+    def test_sync_uses_the_published_batch_without_rebuilding(self):
+        with mock.patch.object(transform_runner.subprocess, "run") as run:
+            run.return_value.stdout = '{"status": "unchanged"}'
+            result = transform_runner.sync_lightdash(
+                {"publication": {"batch_id": "a" * 64, "published": ["fct_demo"], "stale": []}})
+            self.assertEqual(result, {"status": "unchanged"})
+            self.assertEqual(run.call_args.args[0][-2:], ["sync", "a" * 64])
+
+    def test_sync_rejects_a_stale_publication(self):
+        with mock.patch.object(transform_runner.subprocess, "run") as run:
+            with self.assertRaisesRegex(ValueError, "stale"):
+                transform_runner.sync_lightdash(
+                    {"publication": {"batch_id": "a" * 64, "published": [], "stale": ["fct_demo"]}})
+            run.assert_not_called()
+
+    def test_disabled_sync_does_not_invoke_subprocess(self):
+        with mock.patch.object(transform_runner.subprocess, "run") as run:
+            self.assertEqual(transform_runner.sync_lightdash({"publication": None}), {"status": "disabled"})
+            run.assert_not_called()
 
     def test_lock_timeout_raises(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -109,7 +185,7 @@ class TransformRunnerTest(unittest.TestCase):
         ):
             with self.assertRaises(subprocess.CalledProcessError):
                 transform_runner.run(
-                    "hourly", lock_path=pathlib.Path(tmp) / "dbt.lock"
+                    "hourly", family="demo", lock_path=pathlib.Path(tmp) / "dbt.lock"
                 )
 
 

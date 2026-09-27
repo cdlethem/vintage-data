@@ -5,7 +5,7 @@ import uuid
 from unittest.mock import patch
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
-from airflow.providers.vintage.bot_dashboard.models import Event, Execution, Revision, Task, metadata, utcnow
+from airflow.providers.vintage.bot_dashboard.models import Event, Execution, Revision, Task, RunReport, ValidationGate, metadata, utcnow
 from airflow.providers.vintage.bot_dashboard.service import Conflict, PreconditionFailed, assign_task, create_manual_task, start_task
 
 class ExecutionRetryTest(unittest.TestCase):
@@ -174,6 +174,41 @@ class ExecutionRetryTest(unittest.TestCase):
             self.assertEqual(('blocked','in_review'),(event.from_state,event.to_state))
             self.assertEqual('legacy_untyped',event.payload['previous_failure_kind'])
 
+    def test_review_reconsideration_requires_new_exact_head_evidence(self):
+        from airflow.providers.vintage.bot_dashboard.model_recovery import new_review_evidence, retry_review_result
+        with Session(self.engine) as session:
+            task, row = self.fixture(session)
+            task.state = "in_review"; row.admission_kind = "pr_reviewer"; row.terminal_at = None
+            row.stage = "reviewed"; row.review_verdict = "changes_requested"
+            row.trusted_head_sha = "a" * 40; row.review_report_sha256 = "b" * 64
+            now = utcnow()
+            report = RunReport(
+                dag_id="bot__pr_reviewer", run_id=row.target_run_id, task_id="run",
+                bot_name="pr_reviewer", status="ok", outcome="succeeded", retry_class="none",
+                reason_code="completed", started_at=now, finished_at=now, deadline_at=now,
+                duration_ms=1, context_sha256="c" * 64, context_byte_count=1, context_build_ms=1,
+                sha256=row.review_report_sha256, byte_count=1, created_at=now,
+                expires_at=now + timedelta(days=365),
+            )
+            gate = ValidationGate(task_id=task.id, gate_key="live-smoke", stage="merge",
+                recipe="manual", owner="operator", required_capability="public-network",
+                subject=row.trusted_head_sha, status="passed", evidence={"observation": "Parsed live records"},
+                recheck_condition="head changes", updated_at=now - timedelta(seconds=1))
+            session.add_all([report, gate]); session.flush()
+            self.assertEqual([], new_review_evidence(session, row))
+            gate.updated_at = now + timedelta(seconds=1); gate.subject = "d" * 40
+            self.assertEqual([], new_review_evidence(session, row))
+            gate.subject = row.trusted_head_sha
+            with patch("airflow.providers.vintage.bot_dashboard.model_recovery._require_same_open_review_head"), patch(
+                    "airflow.providers.vintage.bot_dashboard.model_recovery.model_for_role"):
+                result = retry_review_result(session, str(task.id), version=task.version,
+                    actor_id="executive", idempotency_key="new-live-evidence")
+            self.assertEqual("queued", result["status"])
+            self.assertIsNone(row.review_verdict)
+            event = session.scalar(select(Event).where(Event.event_type == "review_result_retry_requested"))
+            self.assertEqual(report.sha256, event.payload["previous_review_report_sha256"])
+            self.assertEqual("live-smoke", event.payload["new_validation_evidence"][0]["gate_key"])
+
     def test_revision_dispatch_switches_reviewer_back_to_executor(self):
         with Session(self.engine) as session:
             task,row=self.fixture(session)
@@ -187,8 +222,8 @@ class ExecutionRetryTest(unittest.TestCase):
             self.assertTrue(row.target_run_id.startswith('task__'))
             self.assertEqual('pending',row.dispatch_state)
 
-    def test_prerequisite_publication_active_scope_and_capacity_guards_remain(self):
-        for case in ['no_execution','pr','reviewer','active','no_change','scope','capacity']:
+    def test_prerequisite_publication_active_and_capacity_guards_remain(self):
+        for case in ['no_execution','pr','reviewer','active','no_change','capacity']:
             with self.subTest(case=case),Session(self.engine) as session:
                 task,prior=self.fixture(session)
                 if case=='no_execution':session.delete(prior)
@@ -196,7 +231,6 @@ class ExecutionRetryTest(unittest.TestCase):
                 elif case=='reviewer':prior.admission_kind='pr_reviewer'
                 elif case=='active':prior.terminal_at=None
                 elif case=='no_change':prior.terminal_reason_code='no_change'
-                elif case=='scope':session.scalar(select(Revision).where(Revision.task_id==task.id)).allowed_path_globs=[]
                 session.flush()
                 with self.assertRaises((PreconditionFailed,Conflict)):
                     start_task(session,str(task.id),version=task.version,actor_id='user',idempotency_key='rejected',max_queued=0 if case=='capacity' else 20)

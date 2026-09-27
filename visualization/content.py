@@ -21,9 +21,8 @@ import pathlib
 import uuid
 
 import yaml
-
 from visualization.project import (CONTENT, ROOT, GRAIN_INTERVALS, TREND_KINDS, dimension_id,
-                                   mart_nodes, metadata, time_field_id, trend_specs)
+                                   manifest_for_marts, mart_nodes, metadata, time_field_id, trend_specs)
 
 GRID = 36
 HALF = GRID // 2
@@ -74,6 +73,9 @@ def trend_chart(node: dict, slug: str, spec: dict, extra_filters: list[dict]) ->
     kind = spec["kind"]
     metric = f"{name}_{spec['metric']}"
     breakdown = dimension_id(node, spec["breakdown"]) if spec.get("breakdown") else None
+    # A trend may carry its own constant filters, replacing the shared ones,
+    # so one trajectory can keep a predicate the other charts must not have.
+    trend_filters = spec.get("filters", extra_filters)
     x = time_field_id(node, spec["time"], spec["grain"], spec.get("time_dimension"))
     dimensions = [x] + ([breakdown] if breakdown else [])
     sorts = [{"fieldId": x, "descending": False}]
@@ -93,7 +95,7 @@ def trend_chart(node: dict, slug: str, spec: dict, extra_filters: list[dict]) ->
     chart = {"name": spec["title"], "description": spec["description"], "tableName": name,
              "slug": slug, "spaceSlug": "vintage-marts", "version": 1,
              "metricQuery": {"exploreName": name, "dimensions": dimensions, "metrics": [metric],
-                             "filters": window_filter(node, slug, spec["time"], spec["window_days"], extra_filters,
+                             "filters": window_filter(node, slug, spec["time"], spec["window_days"], trend_filters,
                                                       snapshot=spec.get("snapshot")),
                              "sorts": sorts, "limit": spec["limit"], "tableCalculations": []},
              "chartConfig": {"type": "cartesian", "config": config},
@@ -207,6 +209,30 @@ def render(manifest: dict) -> dict[str, dict]:
     return outputs
 
 
+def render_marts(manifest: dict, mart_ids: set[str]) -> dict[str, dict]:
+    """Render precisely the accepted mart subset, never sibling checkout content."""
+    return render(manifest_for_marts(manifest, mart_ids))
+
+
+def reviewed_changes(destination: pathlib.Path, expected: dict[str, dict]) -> list[str]:
+    """Compare only owned generated files; unrelated reviewed files are irrelevant."""
+    changes = []
+    for relative, value in expected.items():
+        path = destination / relative
+        rendered = yaml.safe_dump(value, sort_keys=True, allow_unicode=True, width=100)
+        if not path.exists() or path.read_text() != rendered:
+            changes.append(relative)
+    return changes
+
+
+def write_rendered(expected: dict[str, dict], destination: pathlib.Path) -> None:
+    """Materialize deterministic accepted content into an immutable batch staging area."""
+    for relative, value in expected.items():
+        path = destination / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(yaml.safe_dump(value, sort_keys=True, allow_unicode=True, width=100))
+
+
 def write_content(manifest: dict, *, check=False, destination: pathlib.Path = CONTENT) -> list[str]:
     changed = []
     expected = render(manifest)
@@ -230,16 +256,23 @@ def write_content(manifest: dict, *, check=False, destination: pathlib.Path = CO
     return changed
 
 
-def validate_schemas(content: pathlib.Path = CONTENT) -> list[str]:
+def validate_schemas(content: pathlib.Path = CONTENT, *, files: set[str] | None = None) -> list[str]:
+    """Validate all content, or an explicit owned chart/dashboard file subset."""
     import jsonschema
     errors = []
     for kind in ("chart", "dashboard"):
         schema = json.loads((ROOT / "visualization" / "schemas" / f"{kind}-as-code-1.0.json").read_text())
         validator = jsonschema.Draft7Validator(schema)
         for path in sorted((content / f"{kind}s").glob("*.yml")):
+            relative = f"{kind}s/{path.name}"
+            if files is not None and relative not in files:
+                continue
             for error in validator.iter_errors(yaml.safe_load(path.read_text())):
                 errors.append(f"{path.name}: {list(error.path)}: {error.message}")
     return errors
 
 
-__all__ = ["GRAIN_INTERVALS", "TREND_KINDS", "render", "stable_id", "validate_schemas", "write_content"]
+__all__ = [
+    "GRAIN_INTERVALS", "TREND_KINDS", "render", "render_marts", "reviewed_changes",
+    "stable_id", "validate_schemas", "write_content", "write_rendered",
+]

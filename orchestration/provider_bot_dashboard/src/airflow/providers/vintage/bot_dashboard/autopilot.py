@@ -323,6 +323,8 @@ def _actions(detail):
                    for e in detail["executions"])
     if failures >= 3:
         actions = [action for action in actions if action not in {"start", "revise", "repair", "repair_conflict"}]
+        if not actions:
+            actions = ["configure"]  # Exhaustion requires a corrected plan, not an invisible dead end.
     if detail.get("assignee_kind") != "bot" or detail.get("assignee_profile") not in {"junior", "senior", "staff"}:
         actions = [action for action in actions if action not in {"start", "revise", "repair", "repair_conflict"}]
     elif state == "accepted" and "start" in actions:
@@ -446,7 +448,7 @@ def claim(session: Session, identity: dict | None = None) -> dict:
         & latest_pr_number.is_(None)
     )
     failed_conflict_repair = retryable_failed & (
-        latest_terminal_reason == "unresolved_revision_seed_conflict"
+        latest_terminal_reason.in_(("unresolved_revision_seed_conflict", "revision_seed_apply_failed"))
     )
     phase = case((failed_conflict_repair, 0),
                  (retryable_failed, 1),

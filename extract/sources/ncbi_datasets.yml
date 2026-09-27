@@ -1,0 +1,26 @@
+name: ncbi_datasets
+script: fetch_ncbi_datasets.py
+# Literal, versioned assembly accessions only. This bounded invocation retrieves one
+# JSON metadata report per accession; it never enumerates the catalog or downloads a
+# sequence package.
+args:
+  - GCF_000001405.40
+  - --timeout
+  - "30"
+schedule: "43 14 * * 3"  # UTC; metadata changes infrequently
+enabled: false
+retries: 1
+timeout_minutes: 5
+sink: local
+
+cadence:
+  auto: false
+
+# Keep disabled until the required external live validation has been recorded for the
+# merged implementation. NCBI_API_KEY is optional and is supplied only as an HTTP
+# header; no credential belongs in this file or in emitted records.
+cadence_note: "weekly bounded refresh of one explicitly configured reference assembly"
+rate_limit: "one serial request per accession, paced at 0.25 seconds (below 5 requests/second)"
+licence: "NCBI data usage policies and GenBank/RefSeq record-specific rights apply"
+attribution: "NCBI Datasets, National Library of Medicine"
+attribution_required: true

@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -11,6 +12,7 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bots import admitted_runner, bot_runner, usage
 from airflow.providers.vintage.bot_dashboard.report_schemas import validate_run_envelope
+from bots.provider_dashboard import ControlPlaneError
 
 
 class AdmittedEnvelopeTests(unittest.TestCase):
@@ -107,5 +109,31 @@ class AdmittedEnvelopeTests(unittest.TestCase):
         self.assertEqual((attempt['input_tokens'], attempt['output_tokens'], attempt['total_tokens']), (123,45,168))
 
 
+
+
+class SandboxLaunchDiagnosticsTests(unittest.TestCase):
+    def test_nonzero_launcher_stderr_tail_is_bounded_and_redacted(self):
+        secret = "gateway-credential-never-persist"
+        child = (
+            "import sys; "
+            f"sys.stderr.write('x' * {admitted_runner._MAX_SANDBOX_STDERR * 2}); "
+            f"sys.stderr.write('\\nRuntimeError: confined process exited 1; authorization: Bearer {secret}\\n'); "
+            "raise SystemExit(1)"
+        )
+        process = admitted_runner._run_sandbox(
+            [sys.executable, "-c", child],
+            timeout=5,
+            env={"PATH": os.environ.get("PATH", "/usr/bin:/bin")},
+        )
+        error = admitted_runner._sandbox_exit_error(
+            ControlPlaneError, process.returncode, process.stderr
+        )
+
+        self.assertEqual(1, process.returncode)
+        self.assertLessEqual(len(process.stderr), admitted_runner._MAX_SANDBOX_STDERR)
+        self.assertTrue(process.stderr.startswith(admitted_runner._STDERR_TRUNCATED))
+        self.assertEqual("sandbox_exit_1", error.code)
+        self.assertIn("RuntimeError: confined process exited 1", str(error))
+        self.assertNotIn(secret, str(error))
 if __name__ == '__main__':
     unittest.main()

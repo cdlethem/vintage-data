@@ -1,0 +1,57 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: fct_library_of_congress_item_observation_observed_at_day
+          yRef:
+            field: fct_library_of_congress_item_observation_distinct_items
+        type: line
+        yAxisIndex: 0
+      xAxis:
+      - name: Observed at (Day)
+      yAxis:
+      - name: Distinct items
+    layout:
+      xField: fct_library_of_congress_item_observation_observed_at_day
+      yField:
+      - fct_library_of_congress_item_observation_distinct_items
+  type: cartesian
+description: Distinct `item_id` values present on each UTC `observed_at` collection day in the past 90
+  days. This is a catalogue level for the bounded, changing robotics-search slice, not a flow of new Library
+  of Congress items or a catalogue census. Missing collection days are absent rather than zero, and repeated
+  observations within a day count once.
+metricQuery:
+  dimensions:
+  - fct_library_of_congress_item_observation_observed_at_day
+  exploreName: fct_library_of_congress_item_observation
+  filters:
+    dimensions:
+      and:
+      - id: 84b156df-9feb-54c9-9b14-7a0d55ef9632
+        operator: inThePast
+        settings:
+          completed: false
+          unitOfTime: days
+        target:
+          fieldId: fct_library_of_congress_item_observation_observed_at
+        values:
+        - 90
+      id: dd34ff0c-e0b3-5cb7-b62e-bf9dfcaafb58
+  limit: 5000
+  metrics:
+  - fct_library_of_congress_item_observation_distinct_items
+  sorts:
+  - descending: false
+    fieldId: fct_library_of_congress_item_observation_observed_at_day
+  tableCalculations: []
+name: Distinct observed items by collection day
+slug: fct-library-of-congress-item-observation-observed-items
+spaceSlug: vintage-marts
+tableConfig:
+  columnOrder:
+  - fct_library_of_congress_item_observation_observed_at_day
+  - fct_library_of_congress_item_observation_distinct_items
+tableName: fct_library_of_congress_item_observation
+version: 1

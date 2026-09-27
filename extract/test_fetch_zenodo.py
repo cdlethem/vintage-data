@@ -58,7 +58,14 @@ class FetchZenodoTests(unittest.TestCase):
             },
         }
 
-    def test_timeout_exhaustion_reports_bounded_terminal_context(self):
+    def test_constants_are_configured_correctly(self):
+        """Verify the new configuration constants are set."""
+        self.assertEqual(fetch_zenodo.REQUEST_TIMEOUT_SECONDS, 60)
+        self.assertEqual(fetch_zenodo.MAX_ATTEMPTS, 5)
+        self.assertEqual(fetch_zenodo.RETRY_DELAYS_SECONDS, (2, 5, 10))
+
+    def test_timeout_exhaustion_after_five_attempts(self):
+        """Verify MAX_ATTEMPTS=5 exhaustion has capped delays 2,5,10,10."""
         stderr = io.StringIO()
         secret = "secret-query-value"
         response_body = "secret-response-body"
@@ -69,19 +76,28 @@ class FetchZenodoTests(unittest.TestCase):
                     with self.assertRaisesRegex(TimeoutError, "read timed out"):
                         list(fetch_zenodo.fetch_recent(query=secret))
 
-        self.assertEqual(urlopen.call_count, 3)
-        self.assertEqual(sleep.call_args_list, [unittest.mock.call(1), unittest.mock.call(2)])
+        # MAX_ATTEMPTS=5 means 5 urlopen calls
+        self.assertEqual(urlopen.call_count, 5)
+        # 4 sleeps: after attempts 1,2,3,4 (no sleep after attempt 5)
+        # Delays are capped at the final configured retry delay.
+        self.assertEqual(sleep.call_args_list, [
+            unittest.mock.call(2),
+            unittest.mock.call(5),
+            unittest.mock.call(10),
+            unittest.mock.call(10),
+        ])
         request = urlopen.call_args.args[0]
         self.assertIn("q=secret-query-value", request.full_url)
-        self.assertEqual(urlopen.call_args.kwargs["timeout"], 30)
+        # Verify timeout_seconds=60 in diagnostic
+        self.assertEqual(urlopen.call_args.kwargs["timeout"], 60)
         diagnostic = json.loads(stderr.getvalue())
         self.assertEqual(diagnostic, {
-            "attempt_count": 3,
+            "attempt_count": 5,
             "event": "zenodo_request_failed",
             "request": {
                 "endpoint": "https://zenodo.org/api/records",
                 "query_present": True,
-                "timeout_seconds": 30,
+                "timeout_seconds": 60,
             },
             "terminal_error": {"class": "TimeoutError"},
         })
@@ -89,16 +105,19 @@ class FetchZenodoTests(unittest.TestCase):
         self.assertNotIn(response_body, stderr.getvalue())
 
     def test_read_timeout_recovers_on_second_attempt(self):
+        """Verify timeout recovery with new delay of 2 seconds."""
         with patch.object(fetch_zenodo.urllib.request, "urlopen", side_effect=[TimeoutError("connection timed out"), JsonResponse(self.document())]) as urlopen:
             with patch.object(fetch_zenodo.time, "sleep") as sleep:
                 records = list(fetch_zenodo.fetch_recent())
 
         self.assertEqual(records[0]["id"], 123)
         self.assertEqual(urlopen.call_count, 2)
-        self.assertEqual(sleep.call_args_list, [unittest.mock.call(1)])
-        self.assertEqual(urlopen.call_args.kwargs["timeout"], 30)
+        # First delay is RETRY_DELAYS_SECONDS[0] = 2
+        self.assertEqual(sleep.call_args_list, [unittest.mock.call(2)])
+        self.assertEqual(urlopen.call_args.kwargs["timeout"], 60)
 
     def test_wrapped_connection_timeout_recovers_on_second_attempt(self):
+        """Verify URLError-wrapped timeout recovery with new delay of 2 seconds."""
         wrapped_timeout = urllib.error.URLError(TimeoutError("read timed out"))
 
         with patch.object(fetch_zenodo.urllib.request, "urlopen", side_effect=[wrapped_timeout, JsonResponse(self.document())]) as urlopen:
@@ -107,9 +126,35 @@ class FetchZenodoTests(unittest.TestCase):
 
         self.assertEqual(records[0]["id"], 123)
         self.assertEqual(urlopen.call_count, 2)
-        self.assertEqual(sleep.call_args_list, [unittest.mock.call(1)])
+        # First delay is RETRY_DELAYS_SECONDS[0] = 2
+        self.assertEqual(sleep.call_args_list, [unittest.mock.call(2)])
+
+    def test_timeout_sequence_uses_correct_backoff_delays(self):
+        """Verify backoff is capped at 10 seconds rather than cycling."""
+        stderr = io.StringIO()
+
+        with patch.object(fetch_zenodo.urllib.request, "urlopen", side_effect=TimeoutError("timeout")) as urlopen:
+            with patch.object(fetch_zenodo.time, "sleep") as sleep:
+                with contextlib.redirect_stderr(stderr):
+                    with self.assertRaises(TimeoutError):
+                        list(fetch_zenodo.fetch_recent())
+
+        # Verify the exact delay sequence
+        self.assertEqual(sleep.call_args_list, [
+            unittest.mock.call(2),   # After attempt 1, RETRY_DELAYS_SECONDS[0]
+            unittest.mock.call(5),   # After attempt 2, RETRY_DELAYS_SECONDS[1]
+            unittest.mock.call(10),  # After attempt 3, RETRY_DELAYS_SECONDS[2]
+            unittest.mock.call(10),  # After attempt 4, capped at RETRY_DELAYS_SECONDS[-1]
+        ])
+        self.assertNotEqual(sleep.call_args_list, [
+            unittest.mock.call(2),
+            unittest.mock.call(5),
+            unittest.mock.call(10),
+            unittest.mock.call(2),
+        ])
 
     def test_non_timeout_connection_error_is_not_retried(self):
+        """Verify non-timeout errors don't trigger retry and timeout_seconds=60 is logged."""
         stderr = io.StringIO()
         error = urllib.error.URLError(ConnectionRefusedError("secret connection detail"))
 
@@ -122,6 +167,7 @@ class FetchZenodoTests(unittest.TestCase):
         urlopen.assert_called_once()
         sleep.assert_not_called()
         self.assertEqual(json.loads(stderr.getvalue())["attempt_count"], 1)
+        self.assertEqual(json.loads(stderr.getvalue())["request"]["timeout_seconds"], 60)
         self.assertEqual(json.loads(stderr.getvalue())["terminal_error"], {
             "class": "URLError",
             "reason_class": "ConnectionRefusedError",
@@ -129,6 +175,7 @@ class FetchZenodoTests(unittest.TestCase):
         self.assertNotIn("secret connection detail", stderr.getvalue())
 
     def test_parse_failure_is_not_retried(self):
+        """Verify JSON parse failures don't retry and timeout_seconds=60 is logged."""
         stderr = io.StringIO()
 
         with patch.object(fetch_zenodo.urllib.request, "urlopen", return_value=TextResponse("not json")) as urlopen:
@@ -141,9 +188,11 @@ class FetchZenodoTests(unittest.TestCase):
         sleep.assert_not_called()
         diagnostic = json.loads(stderr.getvalue())
         self.assertEqual(diagnostic["attempt_count"], 1)
+        self.assertEqual(diagnostic["request"]["timeout_seconds"], 60)
         self.assertEqual(diagnostic["terminal_error"], {"class": "JSONDecodeError"})
 
     def test_schema_failure_is_not_retried(self):
+        """Verify schema validation failures don't retry and timeout_seconds=60 is logged."""
         stderr = io.StringIO()
 
         with patch.object(fetch_zenodo.urllib.request, "urlopen", return_value=JsonResponse({"hits": {}})) as urlopen:
@@ -156,10 +205,11 @@ class FetchZenodoTests(unittest.TestCase):
         sleep.assert_not_called()
         diagnostic = json.loads(stderr.getvalue())
         self.assertEqual(diagnostic["attempt_count"], 1)
+        self.assertEqual(diagnostic["request"]["timeout_seconds"], 60)
         self.assertEqual(diagnostic["terminal_error"], {"class": "ValueError"})
 
-
     def test_http_error_with_timeout_reason_is_not_retried(self):
+        """Verify HTTPError with TimeoutError reason doesn't retry and timeout_seconds=60 is logged."""
         stderr = io.StringIO()
         stdout = io.StringIO()
         error = urllib.error.HTTPError(
@@ -186,7 +236,7 @@ class FetchZenodoTests(unittest.TestCase):
             "request": {
                 "endpoint": "https://zenodo.org/api/records",
                 "query_present": False,
-                "timeout_seconds": 30,
+                "timeout_seconds": 60,
             },
             "terminal_error": {
                 "class": "HTTPError",
@@ -196,7 +246,8 @@ class FetchZenodoTests(unittest.TestCase):
         self.assertNotIn("token=secret", stderr.getvalue())
         self.assertNotIn("secret timeout detail", stderr.getvalue())
 
-    def test_success_emits_expected_ndjson_record(self):
+    def test_success_emits_expected_ndjson_record_with_new_timeout(self):
+        """Verify successful response and timeout_seconds=60 in request."""
         stdout = io.StringIO()
 
         with patch.object(fetch_zenodo.urllib.request, "urlopen", return_value=JsonResponse(self.document())) as urlopen:
@@ -208,7 +259,8 @@ class FetchZenodoTests(unittest.TestCase):
         self.assertEqual(request.full_url, "https://zenodo.org/api/records?sort=newest&size=1")
         self.assertEqual(request.get_header("User-agent"), fetch_zenodo.USER_AGENT)
         self.assertEqual(request.get_header("Accept"), "application/json")
-        self.assertEqual(urlopen.call_args.kwargs["timeout"], 30)
+        # Verify new timeout_seconds=60
+        self.assertEqual(urlopen.call_args.kwargs["timeout"], 60)
         record = json.loads(stdout.getvalue())
         self.assertEqual(record["source"], "zenodo")
         self.assertEqual(record["id"], 123)

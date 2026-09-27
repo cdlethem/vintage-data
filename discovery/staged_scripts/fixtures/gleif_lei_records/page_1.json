@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "goldenCopy": {
+      "publishDate": "2026-09-17T10:00:00Z"
+    }
+  },
+  "links": {
+    "self": "https://api.gleif.org/api/v1/lei-records?page[number]=1",
+    "next": "https://api.gleif.org/api/v1/lei-records?page[number]=2&page[size]=2"
+  },
+  "data": [
+    {
+      "type": "lei-records",
+      "id": "AAAAAAAAAAAAAAAAAAAA",
+      "attributes": {
+        "lei": "AAAAAAAAAAAAAAAAAAAA",
+        "entity": {
+          "legalName": {
+            "name": "Alpha AG",
+            "language": "en"
+          }
+        },
+        "registration": {
+          "lastUpdateDate": "2026-09-17T00:00:00Z",
+          "status": "ISSUED"
+        }
+      },
+      "relationships": {
+        "direct-parent": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/AAAAAAAAAAAAAAAAAAAA/direct-parent-relationship"
+          }
+        },
+        "ultimate-parent": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/AAAAAAAAAAAAAAAAAAAA/ultimate-parent-relationship"
+          }
+        }
+      }
+    },
+    {
+      "type": "lei-records",
+      "id": "BBBBBBBBBBBBBBBBBBBB",
+      "attributes": {
+        "lei": "BBBBBBBBBBBBBBBBBBBB",
+        "entity": {
+          "legalName": {
+            "name": "Beta BV",
+            "language": "en"
+          }
+        },
+        "registration": {
+          "lastUpdateDate": "2026-09-17T01:00:00+00:00",
+          "status": "ISSUED"
+        }
+      },
+      "relationships": {
+        "direct-parent": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/BBBBBBBBBBBBBBBBBBBB/direct-parent-relationship"
+          }
+        }
+      }
+    }
+  ]
+}

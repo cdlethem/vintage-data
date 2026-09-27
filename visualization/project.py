@@ -4,13 +4,14 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 import pathlib
 import re
 
 import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-CONTENT = ROOT / "transform" / "lightdash"
+CONTENT = pathlib.Path(os.environ.get("LIGHTDASH_CONTENT_ROOT", ROOT / "transform" / "lightdash")).expanduser()
 
 # Grains Lightdash exposes as date-truncated dimension variants, coarsest last.
 # Ordering is the date-zoom control order and the trend-grain sort order.
@@ -42,6 +43,40 @@ def mart_nodes(manifest: dict) -> dict:
         and node.get("config", {}).get("enabled", True)
     }
 
+def family_mart_nodes(manifest: dict, family: str, cadence: str | None = None) -> dict:
+    """Serving marts owned by one source family and, when requested, one cadence."""
+    if not isinstance(family, str) or not re.fullmatch(r"[a-z0-9_]+", family):
+        raise ValueError("invalid vintage source family")
+    return {
+        uid: node for uid, node in mart_nodes(manifest).items()
+        if pathlib.PurePosixPath(node["original_file_path"]).parts[2] == family
+        and node["name"].startswith("fct_")
+        and (cadence is None or cadence in (node.get("config", {}).get("tags") or node.get("tags") or []))
+    }
+
+
+def vintage_scope(manifest: dict) -> dict:
+    """The runtime's explicit family/cadence selection contract."""
+    scope = manifest.get("metadata", {}).get("vintage_scope")
+    if not isinstance(scope, dict):
+        raise ValueError("manifest is missing metadata.vintage_scope")
+    family, cadence = scope.get("family"), scope.get("cadence")
+    if not isinstance(family, str) or not re.fullmatch(r"[a-z0-9_]+", family):
+        raise ValueError("manifest vintage_scope has an invalid family")
+    if not isinstance(cadence, str) or not cadence:
+        raise ValueError("manifest vintage_scope is missing cadence")
+    return {"family": family, "cadence": cadence}
+
+
+def manifest_for_marts(manifest: dict, mart_ids: set[str]) -> dict:
+    """Copy only accepted marts while retaining manifest provenance metadata."""
+    result = copy.deepcopy(manifest)
+    result["nodes"] = {
+        uid: result["nodes"][uid] for uid in sorted(mart_ids)
+        if uid in result["nodes"]
+    }
+    return result
+
 
 def node_from_yaml(model: dict, path: str = "models/marts/family/model.sql") -> dict:
     """Shape a dbt schema-YAML model like a manifest node, for offline checks."""
@@ -51,33 +86,6 @@ def node_from_yaml(model: dict, path: str = "models/marts/family/model.sql") -> 
         node["columns"][column.get("name")] = column
     return node
 
-
-def presentation_field_ids(node: dict, trends: list[dict]) -> set[str]:
-    """Exactly the field ids the generated content will reference.
-
-    Postgres truncates an over-long identifier and Lightdash refuses the query,
-    but only fields a chart actually selects reach SQL. Latent interval
-    variants of hidden lineage columns are irrelevant, so length is checked
-    here rather than across every name Lightdash could derive.
-    """
-    spec = (metadata(node).get("vintage", {}).get("visualization") or {})
-    if not spec:
-        return set()
-    name, columns_meta = node["name"], node.get("columns", {})
-    fields = {f"{name}_{spec['metric']}"} if spec.get("metric") else set()
-    for column in [spec.get("dimension"), spec.get("time"), *(spec.get("detail_fields") or []),
-                   *(entry.get("field") for entry in spec.get("filters") or []),
-                   *((spec.get("analysis") or {}).get("controls") or [])]:
-        if column in columns_meta:
-            fields.add(dimension_id(node, column))
-    for trend in trends:
-        fields.add(f"{name}_{trend['metric']}")
-        fields.add(time_field_id(node, trend["time"], trend["grain"], trend.get("time_dimension")))
-        if trend["time"] in columns_meta:
-            fields.add(dimension_id(node, trend["time"]))
-        if trend.get("breakdown") in columns_meta:
-            fields.add(dimension_id(node, trend["breakdown"]))
-    return fields
 
 
 def check_family(path: pathlib.Path) -> dict:
@@ -102,9 +110,6 @@ def check_family(path: pathlib.Path) -> dict:
         for key in metric_collisions(node):
             entry["errors"].append(f"metric {key!r} collides with a dimension of the same name;"
                                    " Lightdash keeps the dimension and drops the metric")
-        for field in sorted(presentation_field_ids(node, trends if not entry["errors"] else [])):
-            if len(field.encode()) > 63:
-                entry["errors"].append(f"{field}: field id exceeds Postgres's 63-byte identifier limit")
         results.append(entry)
     return {"path": str(path), "models": results,
             "ok": bool(results) and not any(item["errors"] or item["gaps"] for item in results)}
@@ -158,14 +163,13 @@ def columns(node: dict) -> list[dict]:
 
 
 def interval_dimensions(col: dict) -> dict[str, list[str]]:
-    """Short-key additional dimensions the column offers, with their grains.
+    """Additional dimensions keyed independently from the base dimension.
 
-    Lightdash applies a semantic dimension alias to the base field only: the
-    interval variants it derives from a column keep the physical column name,
-    so a long column on a long mart produces a field id past PostgreSQL's
-    63-byte identifier limit and the query is refused outright. An
-    `additional_dimensions` entry is named from its own key, which is the only
-    supported way to shorten an interval field id without renaming the model.
+    Lightdash applies a semantic dimension alias to the base field only; its
+    interval variants continue to use the physical column name. An
+    `additional_dimensions` entry is named from its own key, which is the
+    supported way to give interval fields a distinct key without renaming the
+    model or physical column.
     """
     offered = {}
     for key, extra in (metadata(col).get("additional_dimensions") or {}).items():
@@ -281,12 +285,7 @@ def trend_specs(node: dict) -> list[dict]:
             fail(f"{slug}: {source or time!r} does not declare time_intervals entry {grain}")
         if dimension.get("type") == "date" and "HOUR" in declared + [grain]:
             fail(f"{slug}: date column {time!r} cannot be grained by HOUR")
-        field = f"{name}_{source or time}_{grain.lower()}"
-        if len(field.encode()) > 63:
-            fail(f"{slug}: field id {field!r} exceeds Postgres's 63-byte identifier limit;"
-                 f" declare a short additional_dimensions key on {time!r} and set time_dimension")
-        trend["intervals"] = [value for value in GRAIN_INTERVALS if value in declared
-                              and len(f"{name}_{source or time}_{value.lower()}".encode()) <= 63]
+        trend["intervals"] = [value for value in GRAIN_INTERVALS if value in declared]
         breakdown = trend.get("breakdown")
         if kind == "total" and breakdown:
             fail(f"{slug}: kind 'total' does not take a breakdown")
@@ -320,6 +319,17 @@ def trend_specs(node: dict) -> list[dict]:
             # catalogue mart can trend over event time without scanning and
             # de-duplicating every poll it has ever recorded.
             trend["snapshot"] = (spec["time"], int(snapshot))
+        constant_filters = trend.get("filters")
+        if constant_filters is not None:
+            if not isinstance(constant_filters, list) or not constant_filters:
+                fail(f"{slug}: filters must be a non-empty list of constant rules")
+            for rule in constant_filters:
+                values = rule.get("values") if isinstance(rule, dict) else None
+                if (not isinstance(rule, dict) or not rule.get("field")
+                        or not isinstance(values, list) or not values):
+                    fail(f"{slug}: each trend filter needs a field and non-empty values")
+                if rule["field"] not in columns_meta:
+                    fail(f"{slug}: trend filter field {rule['field']!r} is not a mart column")
         for key in ("title", "description"):
             if not str(trend.get(key, "")).strip():
                 fail(f"{slug}: {key} is required so the chart states its own reading")
@@ -413,10 +423,6 @@ def coverage(manifest: dict, content: pathlib.Path = CONTENT) -> dict:
             if slug not in memberships:
                 issues.append(f"{slug}: declared trend is not on a dashboard")
         valid = field_ids(node)
-        # A field id longer than a Postgres identifier only breaks a query that
-        # selects it, and Lightdash derives interval variants for every
-        # declared date dimension including hidden lineage columns. Check the
-        # fields content actually references rather than every latent name.
         for slug, chart in linked.items():
             query = chart.get("metricQuery", {})
             refs = query.get("dimensions", []) + query.get("metrics", [])
@@ -436,8 +442,6 @@ def coverage(manifest: dict, content: pathlib.Path = CONTENT) -> dict:
             for field in refs:
                 if field not in valid:
                     issues.append(f"{slug}: unknown field {field}")
-                elif len(field.encode()) > 63:
-                    issues.append(f"{slug}: field id exceeds Postgres's 63-byte identifier limit: {field}")
         items.append({"unique_id": uid, "name": node["name"], "family": pathlib.PurePosixPath(node["original_file_path"]).parts[2],
                       "sources": sorted(source_ancestors(manifest, uid)), "issues": issues, "gaps": gaps,
                       "trend_count": len(trends),
@@ -449,9 +453,68 @@ def coverage(manifest: dict, content: pathlib.Path = CONTENT) -> dict:
             "chart_count": len(charts), "dashboard_count": len(dashboards), "errors": errors,
             "ok": bool(items) and not errors and all(not i["issues"] for i in items), "models": items}
 
+VOLATILE_METADATA_FIELDS = frozenset({
+    "generated_at", "invocation_id", "invocation_started_at", "run_started_at", "user_id",
+})
+VOLATILE_RESOURCE_FIELDS = frozenset({"created_at", "compiled_path", "build_path"})
 
-def bundle(manifest: dict, destination: pathlib.Path, database: str, schema: str = "transform_marts") -> dict:
+
+def serving_manifest_digest(manifest: dict) -> str:
+    """Fingerprint serving metadata without dbt's run-specific execution paths."""
+    def stable(value, path=()):
+        if isinstance(value, dict):
+            return {
+                key: stable(item, path + (key,))
+                for key, item in value.items()
+                if not (
+                    (path == ("metadata",) and key in VOLATILE_METADATA_FIELDS)
+                    or (len(path) == 2 and path[0] in {"nodes", "sources", "macros"}
+                        and key in VOLATILE_RESOURCE_FIELDS)
+                )
+            }
+        if isinstance(value, list):
+            return [stable(item, path) for item in value]
+        return value
+
+    return digest(stable(manifest))
+
+
+
+def content_digest(content: pathlib.Path = CONTENT) -> str:
+    """Fingerprint reviewed content by relative name and bytes."""
+    files = []
+    for kind in ("charts", "dashboards"):
+        for path in sorted((content / kind).glob("*.yml")):
+            if not path.is_file() or path.is_symlink():
+                raise ValueError(f"unsafe Lightdash content: {path}")
+            files.append({
+                "path": f"{kind}/{path.name}",
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            })
+    if not files:
+        raise ValueError("Lightdash content is empty")
+    return digest(files)
+
+
+def snapshot_content(content: pathlib.Path, destination: pathlib.Path) -> None:
+    target = destination / "content"
+    for kind in ("charts", "dashboards"):
+        output = target / kind
+        output.mkdir(parents=True, exist_ok=True)
+        for path in sorted((content / kind).glob("*.yml")):
+            output.joinpath(path.name).write_bytes(path.read_bytes())
+
+
+def bundle(
+    manifest: dict,
+    destination: pathlib.Path,
+    database: str,
+    schema: str = "transform_marts",
+    *,
+    content: pathlib.Path = CONTENT,
+) -> dict:
     identifier(database); identifier(schema)
+    content_sha256 = content_digest(content)
     result = copy.deepcopy(manifest)
     result["metadata"]["adapter_type"] = "postgres"
     marts = mart_nodes(result)
@@ -474,9 +537,17 @@ def bundle(manifest: dict, destination: pathlib.Path, database: str, schema: str
     profile = {"type": "postgres", "host": "{{ env_var('LIGHTDASH_PG_HOST', '127.0.0.1') }}",
                "port": "{{ env_var('LIGHTDASH_PG_PORT', '5433') | int }}", "user": "mart_reader",
                "password": "{{ env_var('LIGHTDASH_READER_PASSWORD') }}", "dbname": database, "schema": schema, "threads": 1, "sslmode": "disable"}
-    # Lightdash renders templates before parsing YAML: preserve literal single
-    # quotes inside env_var expressions by using JSON-compatible double quotes.
     (destination / "profiles.yml").write_text(json.dumps({"vintage_serving": {"target": "serving", "outputs": {"serving": profile}}}, indent=2))
-    info = {"schema_version": 1, "source_manifest_sha256": digest(manifest), "mart_count": len(marts), "database": database, "schema": schema}
+    snapshot_content(content, destination)
+    release_sha256 = digest({"manifest": serving_manifest_digest(manifest), "content": content_sha256})
+    info = {
+        "schema_version": 1,
+        "source_manifest_sha256": digest(manifest),
+        "content_sha256": content_sha256,
+        "release_sha256": release_sha256,
+        "mart_count": len(marts),
+        "database": database,
+        "schema": schema,
+    }
     (destination / "bundle.json").write_text(json.dumps(info, indent=2) + "\n")
     return info

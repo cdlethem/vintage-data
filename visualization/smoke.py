@@ -16,6 +16,7 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from visualization.api import Client,bootstrap
 from visualization import project,publisher
+from transform.scripts.validate_project import CADENCE_TAGS
 
 
 def main():
@@ -55,9 +56,19 @@ def main():
                 expressions.append(value)
             con.execute(f'INSERT INTO transform_marts.{project.identifier(name)} VALUES ({", ".join(expressions)})')
             results['results'].append({'unique_id':model_id,'status':'success'})
-    batch=publisher.capture(manifest,results,warehouse,root)
-    outcome=publisher.publish(pathlib.Path(batch['path']))
-    print('Published synthetic integration fixture:',len(outcome['published']),'marts')
+    scopes=set()
+    for node in project.mart_nodes(manifest).values():
+        tags=set(node.get('config',{}).get('tags') or node.get('tags') or [])
+        cadences=tags & CADENCE_TAGS
+        if len(cadences)!=1:
+            raise ValueError(f"{node['name']}: fixture mart needs one cadence tag")
+        scopes.add((pathlib.PurePosixPath(node['original_file_path']).parts[2],next(iter(cadences))))
+    published=0
+    for family,cadence in sorted(scopes):
+        scoped={**manifest,'metadata':{**manifest['metadata'],'vintage_scope':{'family':family,'cadence':cadence}}}
+        outcome=publisher.publish(scoped,results,warehouse,root)
+        published+=len(outcome['published'])
+    print('Published synthetic integration fixture:',published,'marts')
     project.bundle(manifest,root/'bundles/current','vintage_serving')
     print('Bootstrap and bundle ready; credentials retained only in the test env file.')
 

@@ -148,3 +148,29 @@ class RevisionSeedTest(unittest.TestCase):
             _git(current, metadata, "add", "-A")
             repaired = _git(current, metadata, "diff", "--cached", "--binary", "HEAD", binary=True)
             self.assertIn(b"+value = 'repaired'", repaired)
+
+    def test_deleted_upstream_seed_file_becomes_scoped_reject_evidence(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            old = root / "old"; old.mkdir()
+            (old / "obsolete.txt").write_text("candidate\n")
+            old_metadata = _initialize_baseline(root, old)
+            (old / "obsolete.txt").unlink()
+            _git(old, old_metadata, "add", "-A")
+            seed = _git(old, old_metadata, "diff", "--cached", "--binary", "HEAD", binary=True)
+
+            current = root / "current"; current.mkdir()
+            metadata = _initialize_baseline(root, current)
+            client = Mock(); client.get_artifact.return_value = seed
+            admission = {
+                "seed_patch_sha256": hashlib.sha256(seed).hexdigest(),
+                "task": {"allowed_path_globs": ["*.txt"]},
+                "repository_policy": {
+                    "allowed_path_globs": ["*.txt"], "denied_path_globs": [],
+                    "max_changed_files": 5, "max_diff_bytes": 10_000,
+                },
+            }
+            _apply_revision_seed(admission, client, current, metadata, lambda code, _: ValueError(code))
+            reject = current / "obsolete.txt.rej"
+            self.assertTrue(reject.is_file())
+            self.assertIn(b"deleted file mode", reject.read_bytes())

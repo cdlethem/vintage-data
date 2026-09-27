@@ -14,7 +14,9 @@ class FollowUpTest(unittest.TestCase):
         task = SimpleNamespace(id=task_id, title="GitLab metadata", state="ready", planned_resolution="Retain live acceptance before completion.")
         execution = SimpleNamespace(sequence=2, execution_id="a"*64, merged_at=utcnow(),
             provider_state={"state": "merged", "head_sha": "b"*40}, trusted_head_sha="b"*40,
-            pr_number=41, review_verdict="approved")
+            pr_number=41, pr_url="https://example.test/pr/41", review_verdict="approved",
+            stage="reviewed", admission_kind="pr_reviewer", terminal_at=None,
+            terminal_reason_code=None, base_sha="c" * 40)
         revision = SimpleNamespace(follow_up_bots=[bot], resource_keys=["source:gitlab"],
             allowed_path_globs=["extract/sources/gitlab.yml"], verification_commands=[["python", "test.py"]], evidence=[])
         run = SimpleNamespace(conf={"task_id": str(task_id), "execution_id": execution.execution_id})

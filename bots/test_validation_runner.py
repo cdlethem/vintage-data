@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import tempfile
 import unittest
 from contextlib import contextmanager
@@ -122,6 +123,29 @@ class ValidationRunnerTest(unittest.TestCase):
         self.assertEqual("failed", client.finished[0]["status"])
         self.assertEqual([], executor.calls)
         self.assertIn("capability", client.finished[0]["evidence"]["reason_code"])
+
+    def test_required_summary_retains_failure_accounting_without_raw_samples(self):
+        payload = {
+            "health": "degraded", "completeness": "partial",
+            "requests": {"attempted": 2, "succeeded": 1, "failed": 1},
+            "partitions": {"attempted": 2, "succeeded": 1, "failed": 1,
+                           "failures": [{"error": "bounded source error"}]},
+            "metrics": {"retained_records": 3, "failure_samples": ["bounded source error"]},
+        }
+        evidence = runner._run_summary_evidence(
+            ("VINTAGE_RUN_SUMMARY\t" + json.dumps(payload) + "\n").encode()
+        )
+        self.assertEqual(1, evidence["requests"]["failed"])
+        self.assertEqual(1, evidence["partition_failure_samples"])
+        self.assertEqual(3, evidence["metrics"]["retained_records"])
+        self.assertEqual(1, evidence["metric_sample_counts"]["failure_samples"])
+        self.assertNotIn("bounded source error", json.dumps(evidence))
+
+    def test_required_summary_rejects_missing_duplicate_and_failed_runs(self):
+        line = b'VINTAGE_RUN_SUMMARY\t{"health":"healthy"}\n'
+        for stderr in (b"", line + line, b'VINTAGE_RUN_SUMMARY\t{"health":"failed"}\n'):
+            with self.subTest(stderr=stderr), self.assertRaises(runner.ValidationRunnerError):
+                runner._run_summary_evidence(stderr)
 
 
 if __name__ == "__main__":

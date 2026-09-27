@@ -582,11 +582,11 @@
       "title": "NTSB accident database"
     },
     {
-      "covered_by": "fetch_sensor_community.py",
-      "note": "already reached by fetch_sensor_community.py",
+      "covered_by": "archive/retired_sources/sensor_community/extract/scripts/fetch_sensor_community.py",
+      "note": "retired 2026-09-22 for cloud cost; permanently excluded, see extract/retired_sources.yml",
       "sector": "Citizen sensor networks",
       "slug": "sensor_community",
-      "status": "prescripted",
+      "status": "retired",
       "title": "Sensor.community"
     },
     {

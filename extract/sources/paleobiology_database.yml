@@ -1,0 +1,27 @@
+name: paleobiology_database
+script: fetch_paleobiology_database.py
+# A daily run covers the preceding 24 hours plus an extractor-enforced 48-hour
+# overlap. The upper modification bound is fixed at run start.
+args: ["--lookback-hours", "24", "--page-size", "500", "--max-records", "10000", "--timeout", "60"]
+schedule: "23 7 * * *"  # UTC
+enabled: false
+retries: 1
+timeout_minutes: 20
+sink: local
+
+# Fixed daily cadence: PBDB occurrence edits do not justify adaptive scheduling.
+cadence:
+  auto: false
+
+# Keep source_scheduling coordination open. Do not enable until independent review,
+# current-head/provider checks, a recorded live endpoint smoke, production Airflow DAG
+# parse/inspection, and an authorized manifest/warehouse-ledger validation all pass.
+source_scheduling: pending_authorized_activation
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily public occurrence modification poll; 24-hour lookback plus fixed 48-hour overlap covers late indexing and boundary edits while stable occurrence IDs support replay deduplication"
+rate_limit: "anonymous public JSON endpoint; sequential offset paging at 500 records, hard stop at 10000 records per run"
+access: "public, anonymous, keyless"
+licence: "CC BY 4.0; individual referenced data may carry additional attribution expectations"
+attribution: "Paleobiology Database, https://paleobiodb.org/"
+attribution_required: true

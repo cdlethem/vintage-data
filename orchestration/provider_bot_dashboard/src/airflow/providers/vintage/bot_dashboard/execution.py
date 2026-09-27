@@ -244,6 +244,15 @@ def claim_run(
             if not valid_seed:
                 raise PreconditionFailed("Revision seed source or repository identity changed")
         admission["seed_patch_sha256"] = seed["patch_sha256"] if seed else None
+    else:
+        from .models import ValidationGate
+        admission["validation_evidence"] = [{
+            "gate_key": gate.gate_key, "stage": gate.stage, "subject": gate.subject,
+            "version": gate.version, "status": gate.status, "evidence": gate.evidence,
+        } for gate in session.scalars(select(ValidationGate).where(
+            ValidationGate.task_id == task.id, ValidationGate.subject == row.trusted_head_sha,
+            ValidationGate.status == "passed",
+        ).order_by(ValidationGate.gate_key).limit(20)).all()]
 
     contract = ExecutorAdmissionV2 if kind == "executor" else ReviewerAdmissionV2
     return contract.model_validate(admission).model_dump(mode="json")

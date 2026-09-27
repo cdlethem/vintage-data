@@ -103,6 +103,11 @@ Note one Airflow nuance: `enabled: false` in a yml only pauses a DAG **on first
 creation**. Flipping it later does not re-pause an already-created DAG — pause it in
 the UI or with `airflow dags pause`.
 
+Retiring a source is different from disabling it. Sources listed in
+`extract/retired_sources.yml` get no DAG, are never loaded or modelled, and are not
+proposed by the bots; their code lives under `archive/retired_sources/` and their
+collected data is kept. See `archive/retired_sources/README.md` before touching one.
+
 ## Scheduling philosophy
 
 Schedules are hand-set from each source's observed cadence and documented rate limits
@@ -152,15 +157,18 @@ about the service being down, not about data.
 
 Every `raw.<source>` has one generated `base_<source>` view. Dataset-specific
 staging views are optional; governed outputs are contracted `fct_*` tables or
-incremental models with exactly one cadence tag. `transform/jobs.yml` creates
-`transform__twice_hourly`, `transform__hourly`, and `transform__daily`; each
-selection includes untagged ancestors.
+incremental models with exactly one cadence tag. `transform/jobs.yml` supplies the
+cadences for independent `transform__<family>__<cadence>` DAGs. Each builds only its
+selected family models and their dependencies, with separate retries and outcomes.
 
 Development writes to a disposable DuckDB file and attaches the live warehouse
 read-only. Production writes `transform_base`, `transform_staging`, and
 `transform_marts` schemas into `$EXTRACT_WAREHOUSE`. A shared transform lock
-serializes the three dbt cadences; the dbt wrapper also retries an explicit
-warehouse-lock failure only when it occurs before model execution.
+serializes warehouse writes, not source success/failure. Each family parses and
+validates an isolated dependency-scoped dbt project; unrelated model or policy
+errors do not block it. Shared macros/configuration and actual shared dependencies
+remain shared failure boundaries. The dbt wrapper retries warehouse-lock failures
+only before model execution.
 
 ```bash
 transform/bin/sync_raw_sources --check
@@ -342,11 +350,13 @@ requirements, which this license does not override.
 
 ## Lightdash
 
-The optional [open-source Lightdash installation](visualization/README.md) serves all
-163 dbt marts with semantic metadata, 326 checked-in charts and 162 family dashboards.
-Successful cadence builds capture immutable DuckDB snapshots; a separate retryable
-task publishes them atomically to a read-only Postgres serving layer. Runtime images
-and dependencies are pinned, configuration uses the existing renderer, and secrets
+The optional [open-source Lightdash installation](visualization/README.md) serves
+governed dbt marts with semantic metadata and reviewed charts/dashboards.
+Successful family builds stream their accepted marts straight into Postgres under
+the transform lock, then a retryable task synchronizes Lightdash. Partial releases retain
+the last successful definitions of unrelated families rather than requiring every
+source to pass together. Runtime images and dependencies are pinned, configuration
+uses the existing renderer, and secrets
 and state stay outside versioned project files. Set `LIGHTDASH_ENABLED=1` and follow
 the linked setup and first-publication instructions. Analytics engineering owns both
 modeling and visualization planning through the existing bot review workflow.

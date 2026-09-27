@@ -120,6 +120,17 @@ class QueueTest(unittest.TestCase):
         self.assertEqual(1, result["created"])
         self.assertEqual(2, self.session.scalar(select(func.count()).select_from(Task)))
 
+    def test_accepted_bot_work_is_active_not_awaiting_a_human_decision(self):
+        self.propose()
+        task = self.session.scalar(select(Task))
+        task.state = "accepted"
+        task.assignee_kind = "bot"
+        task.assignee_profile = "junior"
+        self.session.commit()
+        summary = queue_summary(self.session)
+        self.assertEqual(0, summary["attention_count"])
+        self.assertEqual(1, summary["active_count"])
+
     def test_summary_is_not_limited_to_five_actions(self):
         for i in range(8):
             self.propose(str(i), f"Task {i}", resources=[f"source:{i}"])

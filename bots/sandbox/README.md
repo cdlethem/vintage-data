@@ -22,8 +22,9 @@ sudo python3 bots/sandbox/install.py install --source /tmp/vintage-runtime-build
 /opt/vintage-bot-runtime-v1/launcher.py --check
 ```
 
-The staging step installs the repository's pinned Python requirements and pytest
-into a relocatable venv. Preserve the resolved package inventory and the OMP binary
+The staging step installs the repository's pinned Python requirements, pytest,
+and Airflow/Pendulum/YAML dependencies needed to instantiate extraction DAGs
+offline. Preserve the resolved package inventory and the OMP binary
 version/digest with your release. Deploy into a new versioned directory for upgrades;
 do not rewrite an installation used by running tasks. The installer and launcher
 reject writable/untrusted runtime files. Configure memory, process, CPU and duration
@@ -95,12 +96,22 @@ path list using host-side clean Git metadata; the parent rechecks the actual pat
 path intersection, size limits, verification digest and result schema before upload.
 The reviewer sees a read-only patched tree and cannot change it.
 
-Keep confined checks offline: use deterministic HTTP fixtures, development parse,
+Keep executor checks offline: use deterministic HTTP fixtures, development parse,
 and content checks. Do not admit production Airflow or warehouse commands. The
-runtime includes `python3`, `pytest`, `dbt`, and visualization dependencies; direct
-`dbt ... --project-dir transform --profiles-dir transform --target dev` works without
-shared-checkout wrappers or credentials. Warehouse-backed builds and live source
-smokes are operator review evidence.
+runtime includes `python3`, `pytest`, `dbt`, Airflow's DAG factory dependencies,
+and visualization dependencies; direct `dbt ... --project-dir transform
+--profiles-dir transform --target dev` works without shared-checkout wrappers
+or credentials.
+
+Live public-source checks use the separate `bot_dashboard__validation` lane.
+Its fixed catalog runs exact candidate extractors in a read-only namespace with
+public-only egress and no provider, Git, Airflow, or warehouse credentials.
+Enable the installed public capability in `orchestration/config.env` with
+`BOT_DASHBOARD_VALIDATION_CAPABILITIES='["public-network-readonly"]'`, then render
+and reload the API, DAG processor, and confined worker. Gates retain exact-head
+evidence, bounded attempts, and independent review. Warehouse-backed builds,
+Lightdash previews, migrations, and production activation are not authorized by
+enabling this public capability.
 
 Failed model tests expose status codes without upstream response bodies or keys.
 Unpublished terminal failures can use **Retry bot work** after their prerequisite is

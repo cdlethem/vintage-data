@@ -29,6 +29,8 @@ def _configured_json(name: str) -> object:
 def available_capabilities() -> set[str]:
     """Capabilities actually installed for server-side admission, never worker input."""
     value = _configured_json("validation_capabilities")
+    if value == {}:
+        return set()
     if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
         raise ValidationRecipeError("configured validation capabilities are invalid")
     allowed = set(RECIPE_CAPABILITIES.values())
@@ -89,8 +91,6 @@ DEFAULT_RECIPE_CATALOG = {
                            "source_url": "https://openlibrary.org/recentchanges/add-book.json?limit=20", "expected_status": 200},
     "smoke-workday": {"recipe": "public_source_smoke", "capability": "public-network-readonly",
                       "source_url": "https://2020companies.wd1.myworkdayjobs.com/wday/cxs/2020companies/external_careers/jobs", "expected_status": 200},
-    "smoke-sensor-community": {"recipe": "public_source_smoke", "capability": "public-network-readonly",
-                               "source_url": "https://data.sensor.community/airrohr/v1/filter/country=DE", "expected_status": 200},
 }
 AUTOMATED_RECIPES = frozenset(RECIPE_CAPABILITIES)
 

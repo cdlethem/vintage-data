@@ -7,10 +7,12 @@ import sys
 import tempfile
 import unittest
 
+import yaml
 import duckdb
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
+from scripts.family_project import FamilyProjectError, create, discover
 from scripts.sync_raw_sources import Column, RawSource, audit, inspect_warehouse, write_all
 from scripts.validate_project import validate_manifest
 
@@ -161,6 +163,78 @@ class RawSourceSyncTest(unittest.TestCase):
                 inspect_warehouse(database)
 
 
+class FamilyProjectTest(unittest.TestCase):
+    def _fixture(self, root: pathlib.Path) -> None:
+        (root / "models/base").mkdir(parents=True)
+        (root / "models/marts/healthy").mkdir(parents=True)
+        (root / "models/marts/broken").mkdir(parents=True)
+        (root / "dbt_project.yml").write_text(
+            "name: vintage_data\nversion: '1.0'\nconfig-version: 2\nprofile: vintage_data\nmodel-paths: [models]\n"
+        )
+        (root / "profiles.yml").write_text(
+            "vintage_data:\n  target: dev\n  outputs: {dev: {type: duckdb, path: ':memory:'}}\n"
+        )
+        (root / "models/base/_raw_sources.yml").write_text(
+            "version: 2\nsources:\n"
+            "  - name: raw\n    schema: raw\n    tables:\n"
+            "      - name: alias_template\n"
+            "        columns: &shared_columns\n"
+            "          - {name: id, data_type: varchar}\n"
+            "      - name: demo\n        columns: *shared_columns\n"
+            "      - name: unrelated\n"
+            "        columns: [{name: id, data_type: varchar}]\n"
+        )
+        (root / "models/base/base_demo.sql").write_text(
+            "select id from {{ source('raw', 'demo') }}\n"
+        )
+        (root / "models/marts/healthy/fct_good.sql").write_text(
+            "{{ config(materialized='table', tags=['hourly'], contract={'enforced': true}) }} "
+            "select * from {{ ref('base_demo') }}\n"
+        )
+        (root / "models/marts/healthy/fct_future.sql").write_text(
+            "{{ config(tags=['daily']) }} select * from {{ ref('base_demo') }}\n"
+        )
+        (root / "models/marts/healthy/_models.yml").write_text(
+            "version: 2\nmodels:\n"
+            "- name: fct_good\n  description: good\n  columns: [{name: id, description: id, data_type: varchar}]\n"
+            "- name: fct_future\n  description: future\n  columns: [{name: id, description: id, data_type: varchar}]\n"
+        )
+        (root / "models/marts/broken/fct_bad.sql").write_text("{{ ref(\n")
+        (root / "models/marts/broken/_models.yml").write_text("models: [\n")
+
+    def test_selected_family_ignores_unrelated_sql_yaml_and_policy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp) / "project"
+            destination = pathlib.Path(tmp) / "isolated"
+            self._fixture(root)
+            result = create(root, "healthy", "hourly", destination)
+            self.assertEqual(result["selected_models"], ["fct_good"])
+            self.assertEqual(result["dependency_models"], ["base_demo"])
+            self.assertEqual(result["raw_sources"], ["demo"])
+            self.assertTrue((destination / "models/marts/healthy/fct_good.sql").exists())
+            self.assertFalse((destination / "models/marts/healthy/fct_future.sql").exists())
+            self.assertFalse((destination / "models/marts/broken").exists())
+            self.assertIn("fct_good", (destination / "models/marts/healthy/_models.yml").read_text())
+            self.assertNotIn("fct_future", (destination / "models/marts/healthy/_models.yml").read_text())
+            raw_schema = (destination / "models/base/_raw_sources.yml").read_text()
+            raw_document = yaml.safe_load(raw_schema)
+            tables = raw_document["sources"][0]["tables"]
+            self.assertEqual([table["name"] for table in tables], ["demo"])
+            self.assertEqual(tables[0]["columns"], [{"name": "id", "data_type": "varchar"}])
+            self.assertNotIn("name: unrelated", raw_schema)
+
+    def test_broken_family_is_discoverable_and_fails_in_its_own_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp) / "project"
+            self._fixture(root)
+            families = {entry["family"]: entry for entry in discover(root)}
+            self.assertEqual(families["healthy"]["cadences"], ["daily", "hourly"])
+            self.assertEqual(families["broken"]["cadences"], ["twice_hourly", "hourly", "daily"])
+            self.assertIn("error", families["broken"])
+            with self.assertRaises(FamilyProjectError):
+                create(root, "broken", "hourly", pathlib.Path(tmp) / "broken")
+
+
 class ManifestPolicyTest(unittest.TestCase):
     def test_valid_graph_passes(self):
         self.assertEqual(validate_manifest(_valid_manifest()), [])
@@ -198,6 +272,14 @@ class ManifestPolicyTest(unittest.TestCase):
         }
         errors = validate_manifest(manifest)
         self.assertTrue(any("data tests may target only" in error for error in errors))
+
+    def test_retired_source_cannot_be_declared_or_modelled(self):
+        # A family whose raw table, base view and mart are all otherwise valid is
+        # still rejected once its source is retired.
+        errors = validate_manifest(_valid_manifest(), retired={"demo"})
+        self.assertTrue(any("raw source 'demo' is retired" in error for error in errors))
+        self.assertTrue(any(error.startswith("base_demo: belongs to a source retired") for error in errors))
+        self.assertEqual(validate_manifest(_valid_manifest(), retired={"other"}), [])
 
 
 if __name__ == "__main__":

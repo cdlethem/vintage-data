@@ -1,0 +1,11 @@
+{
+  "meta": {
+    "goldenCopy": {
+      "publishDate": "2026-09-17T10:00:00Z"
+    }
+  },
+  "links": {
+    "next": "https://example.invalid/api/v1/lei-records?page[number]=2"
+  },
+  "data": []
+}

@@ -5,9 +5,20 @@ import time
 from visualization.api import Client
 
 
-def verify(url: str, token: str, project: str) -> dict:
+def verify(
+    url: str,
+    token: str,
+    project: str,
+    *,
+    chart_slugs: set[str] | None = None,
+) -> dict:
     client = Client(url, token)
     charts = client.request('GET', f'/api/v1/projects/{project}/charts')
+    if chart_slugs is not None:
+        charts = [chart for chart in charts if chart.get("slug") in chart_slugs]
+        missing = sorted(chart_slugs - {chart.get("slug") for chart in charts})
+    else:
+        missing = []
 
     def check(chart):
         api = Client(url, token)
@@ -28,4 +39,9 @@ def verify(url: str, token: str, project: str) -> dict:
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
         failures = [item for item in pool.map(check, charts) if item]
-    return {'queried': len(charts), 'failures': failures, 'ok': bool(charts) and not failures}
+    return {
+        'queried': len(charts),
+        'failures': failures,
+        'missing': missing,
+        'ok': bool(charts) and not missing and not failures,
+    }

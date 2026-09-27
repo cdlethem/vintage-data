@@ -30,12 +30,17 @@ from job_boards_lib.catalog import load_catalog
 from job_boards_lib.common import CLIENT
 
 
+# The runner rejects summaries above 64 KiB of JSON payload. Keep the same
+# limit here; failure details are optional, but aggregate counts are not.
+SUMMARY_MAX_BYTES = 64 * 1024
+
+
 def fetch_board(board: Board, max_per_board: int = 10000) -> list[dict]:
     """Fetch one board atomically; a paging failure emits no partial board."""
     return list(fetch(board, max_per_board))
 
 
-def _fetch_board_with_stats(board: Board, max_per_board: int) -> tuple[list[dict], dict]:
+def _fetch_board_with_stats(board: Board, max_per_board: int) -> list[dict]:
     CLIENT.begin_observation()
     try:
         rows = fetch_board(board, max_per_board)
@@ -44,9 +49,7 @@ def _fetch_board_with_stats(board: Board, max_per_board: int) -> tuple[list[dict
         status = getattr(exc, "code", None)
         stats.update({"status": status, "error": f"{type(exc).__name__}: {exc}"[:500]})
         raise _TenantFailure(stats) from exc
-    stats = CLIENT.request_stats()
-    stats.update({"status": stats["statuses"][-1] if stats["statuses"] else 200, "error": None})
-    return rows, stats
+    return rows
 
 
 class _TenantFailure(RuntimeError):
@@ -63,7 +66,7 @@ def fetch_catalog(boards: list[Board], workers: int = 12, max_per_board: int = 1
     successful run partial; only an all/near-all provider failure is hard.
     """
     succeeded = failed = records = 0
-    tenant_results: list[dict] = []
+    failures: list[dict] = []
     workers = min(workers, 4) if boards and all(b.provider == "workday" for b in boards) else workers
     with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
         futures = {pool.submit(_fetch_board_with_stats, board, max_per_board): board for board in boards}
@@ -71,7 +74,7 @@ def fetch_catalog(boards: list[Board], workers: int = 12, max_per_board: int = 1
             board = futures[future]
             tenant = {"tenant": board.token, "provider": board.provider}
             try:
-                rows, stats = future.result()
+                rows = future.result()
             except _TenantFailure as exc:
                 failed += 1
                 stats = exc.stats
@@ -81,13 +84,11 @@ def fetch_catalog(boards: list[Board], workers: int = 12, max_per_board: int = 1
                 kind = "retired" if cause is not None and is_permanent_miss(cause) else "error"
                 print(f"job_boards: skipping {board.provider}/{board.token}: {kind}: {stats['error']}",
                       file=sys.stderr)
+                failures.append(tenant)
             else:
                 succeeded += 1
                 records += len(rows)
-                tenant.update({"outcome": "succeeded", "records": len(rows), "retry_count": stats["retries"],
-                               "final_status": stats["status"], "error": None})
                 yield from rows
-            tenant_results.append(tenant)
 
     total = succeeded + failed
     broad_failure = total == 0 or failed == total or (failed >= 3 and failed / total >= 0.8)
@@ -96,9 +97,22 @@ def fetch_catalog(boards: list[Board], workers: int = 12, max_per_board: int = 1
         "completeness": "failed" if broad_failure else ("partial" if failed else "complete"),
         "records": records,
         "partitions": {"attempted": total, "succeeded": succeeded, "failed": failed,
-                       "failures": [t for t in tenant_results if t["outcome"] == "failed"][:100]},
-        "metrics": {"tenant_results": sorted(tenant_results, key=lambda t: t["tenant"])},
+                       "failures": []},
+        "metrics": {"tenants_attempted": total, "tenants_succeeded": succeeded,
+                    "tenants_failed": failed, "tenant_records_total": records},
     }
+    failures_out = payload["partitions"]["failures"]
+    # Measure with the exact JSON encoding used on stderr (including escaping).
+    # Long or non-ASCII tokens/errors can exceed the cap even with only 100
+    # entries. Retain the lexicographically earliest details that fit.
+    budget = SUMMARY_MAX_BYTES - len(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
+    for failure in sorted(failures, key=lambda t: t["tenant"])[:100]:
+        size = len(json.dumps(failure, separators=(",", ":")).encode("utf-8"))
+        size += bool(failures_out)  # comma between entries
+        if size > budget:
+            continue
+        failures_out.append(failure)
+        budget -= size
     print("VINTAGE_RUN_SUMMARY\t" + json.dumps(payload, separators=(",", ":")), file=sys.stderr)
     if broad_failure:
         raise RuntimeError(f"provider-wide failure: {failed}/{total} tenants failed")

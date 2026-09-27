@@ -256,8 +256,10 @@ class StrictDefinitionValidationTest(unittest.TestCase):
     def test_all_tracked_bots_and_models_validate_strictly(self):
         for path in bot_runner.discover():
             bot_runner.load_bot(path.parent)
-        bot_runner.load_models("bots/models.yml")
         bot_runner.load_models("bots/models.example.yml")
+        local_models = pathlib.Path("bots/models.yml")
+        if local_models.is_file():
+            bot_runner.load_models(local_models)
 
     def test_unknown_keys_output_schema_trigger_and_fallback_capability_are_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:

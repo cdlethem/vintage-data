@@ -61,6 +61,30 @@ it("posts a comment with the current version and adds it to the readable activit
   expect(options?.headers).toMatchObject({ "X-Bot-Dashboard-CSRF": "test-token" });
 });
 
+it("does not warn after a successfully saved status change", async () => {
+  let current = { ...task };
+  const fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
+    if (input.endsWith("/tasks/navigation-task/transition")) {
+      const body = JSON.parse(String(init?.body));
+      current = { ...current, state: body.state, version: current.version + 1 };
+      return response(current);
+    }
+    if (input.endsWith("/tasks/navigation-task")) return response(current);
+    return fixture(input);
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  history.replaceState(null, "", "/?task=navigation-task");
+  mount(); await screen.findByRole("dialog", { name: "Task: A clear task" });
+  fireEvent.click(screen.getByText("Other status changes"));
+  fireEvent.change(screen.getByLabelText("Target state"), { target: { value: "blocked" } });
+  fireEvent.change(screen.getByLabelText("Transition reason"), { target: { value: "Waiting for dependencies." } });
+  fireEvent.click(screen.getByRole("button", { name: "Apply human task transition" }));
+  expect(await screen.findByText("Task updated.")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Bots" }));
+  expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  expect(await screen.findByRole("region", { name: "Bot evidence" })).toBeVisible();
+});
+
 it("protects an edited task when leaving and preserves the draft when editing continues", async () => {
   vi.stubGlobal("fetch", vi.fn(async (input: string) => input.endsWith("/tasks/navigation-task") ? response(task) : fixture(input)));
   history.replaceState(null, "", "/?task=navigation-task");

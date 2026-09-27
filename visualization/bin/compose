@@ -1,9 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 VIS_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Systemd normally supplies these files.  A trusted caller may deliberately
+# provide an isolated stack (for a smoke run or recovery); retain every
+# inherited value so sourcing defaults cannot redirect it to production.
+declare -A inherited
+while IFS= read -r name; do
+    inherited["$name"]="${!name}"
+done < <(compgen -e)
+
 set -a
-source "$VIS_ROOT/../orchestration/airflow.env"
-source "$VIS_ROOT/../orchestration/airflow.secrets.env"
+source "${VINTAGE_DATA_ENV_FILE:-$VIS_ROOT/../orchestration/airflow.env}"
+source "${VINTAGE_DATA_SECRETS_ENV_FILE:-$VIS_ROOT/../orchestration/airflow.secrets.env}"
 source "$VIS_ROOT/images.env"
 set +a
+
+for name in "${!inherited[@]}"; do
+    export "$name=${inherited[$name]}"
+done
+
 exec docker compose --project-directory "$VIS_ROOT" -f "$VIS_ROOT/compose.yml" "$@"

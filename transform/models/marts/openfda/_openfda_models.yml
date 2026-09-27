@@ -41,9 +41,9 @@ models:
             — licence: openFDA — public domain; attribution required: False. Source configuration:
             `extract/sources/openfda.yml`.'
           analysis:
-            headline: how distinct food-enforcement recalls vary across sparse FDA report dates,
-              classifications, and countries while daily polling captures later revisions.
-            event_time: report_date
+            headline: how distinct food-enforcement recalls, initiating firms, and leading states vary across
+              sparse FDA initiation and report dates while daily polling captures later revisions.
+            event_time: recall_initiation_date
             grain: DAY
             controls:
             - firm
@@ -99,6 +99,42 @@ models:
               description: Distinct `recall_id` values by reported country and FDA report date in the 30-day
                 event window. Only the ten countries with the largest recall totals are shown; others are
                 excluded rather than aggregated, and repeated observations are counted once per group.
+              width: full
+            - slug: initiated-recalls
+              kind: total
+              metric: distinct_recalls
+              time: recall_initiation_date
+              grain: DAY
+              window_days: 180
+              title: Recalls by FDA initiation date
+              description: Distinct `recall_id` values by FDA `recall_initiation_date` during the past 180
+                days. Repeated fetch observations count once per day; records with a missing initiation date
+                are excluded, and dates without initiated recalls are absent rather than zero.
+              width: half
+            - slug: initiating-firm-breadth
+              kind: total
+              metric: distinct_firms
+              time: recall_initiation_date
+              grain: DAY
+              window_days: 180
+              title: Initiating firm breadth by FDA initiation date
+              description: Distinct non-null `firm` values associated with recalls on each FDA
+                `recall_initiation_date` during the past 180 days. Repeated fetch observations count a firm
+                once per day; records with a missing initiation date and dates without recalls are absent.
+              width: half
+            - slug: leading-states
+              kind: breakdown
+              metric: distinct_recalls
+              breakdown: state
+              top_n: 6
+              time: recall_initiation_date
+              grain: DAY
+              window_days: 180
+              title: Leading states by FDA initiation date
+              description: Distinct `recall_id` values by reported `state` and FDA `recall_initiation_date`
+                during the past 180 days. Only the six states with the largest recall totals are shown;
+                others are excluded rather than aggregated, repeated fetches count once per state and day,
+                and records with missing initiation dates and dates without recalls are absent.
               width: full
   columns:
   - name: openfda_recall_observation_key

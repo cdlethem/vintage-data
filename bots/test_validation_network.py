@@ -5,7 +5,7 @@ import stat
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import validation_network as network
 
@@ -37,19 +37,59 @@ class PublicEgressResolutionTest(unittest.TestCase):
         with self.assertRaises(network.PublicEgressError):
             network._http_target("GET", "https://example.com/")
 
+    def test_only_catalogue_hosts_are_allowed_for_public_egress(self):
+        allowed_hosts = network._normalize_allowed_hosts({"Known.Example"})
+        self.assertEqual(frozenset({"known.example"}), allowed_hosts)
+        network._require_allowed_host("known.example", allowed_hosts)
+        with self.assertRaisesRegex(network.PublicEgressError, "not allowed"):
+            network._require_allowed_host("other.example", allowed_hosts)
+        with self.assertRaises(network.PublicEgressError):
+            network._normalize_allowed_hosts(set())
+
+    def test_tunnel_treats_reset_or_broken_pipe_as_peer_closure(self):
+        left = Mock()
+        right = Mock()
+        with patch.object(network.select, "select", return_value=([left], [], [])):
+            left.recv.side_effect = ConnectionResetError()
+            network._copy_bidirectional(left, right, deadline=network.time.monotonic() + 1)
+        right.sendall.assert_not_called()
+
+        left.recv.side_effect = None
+        left.recv.return_value = b"payload"
+        right.sendall.side_effect = BrokenPipeError()
+        with patch.object(network.select, "select", return_value=([left], [], [])):
+            network._copy_bidirectional(left, right, deadline=network.time.monotonic() + 1)
+
 
 class PublicEgressLifecycleTest(unittest.TestCase):
-    def test_context_creates_private_socket_and_static_relay_contract(self):
+    def test_proxy_socket_is_private_and_removed_after_use(self):
         with tempfile.TemporaryDirectory() as directory:
             candidate = Path(directory) / "candidate"
             candidate.mkdir()
-            with network.public_egress(candidate, 60) as relay:
+            with network.public_egress(candidate, 60, allowed_hosts={"example.com"}) as relay:
                 self.assertTrue(relay.socket_path.is_socket())
                 self.assertEqual(0o600, stat.S_IMODE(relay.socket_path.stat().st_mode))
-                self.assertEqual("http://127.0.0.1:18081", relay.proxy_url)
-                self.assertEqual(("/usr/bin/python3", "/opt/validation-relay.py", "relay", "--socket", "/public-egress.sock", "--"), relay.argv_prefix)
-                self.assertEqual(Path(network.__file__).resolve(), relay.relay_path)
             self.assertFalse(relay.socket_path.exists())
+
+    def test_proxy_closes_connections_when_active_connection_limit_is_reached(self):
+        with tempfile.TemporaryDirectory() as directory:
+            socket_path = str(Path(directory) / "proxy.sock")
+            server = network._UnixProxy(socket_path, network._ProxyHandler)
+            held_slots = []
+            client = peer = None
+            try:
+                for _ in range(network.MAX_PROXY_CONNECTIONS):
+                    self.assertTrue(server._connection_slots.acquire(blocking=False))
+                    held_slots.append(None)
+                client, peer = socket.socketpair()
+                server.process_request(client, "")
+                self.assertEqual(-1, client.fileno())
+            finally:
+                if peer is not None:
+                    peer.close()
+                for _ in held_slots:
+                    server._connection_slots.release()
+                server.server_close()
 
 
 if __name__ == "__main__":

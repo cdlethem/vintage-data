@@ -8,6 +8,7 @@ unpacked into a private read-only tree.
 from __future__ import annotations
 
 import gzip
+import importlib.util
 import selectors
 import hashlib
 import io
@@ -21,9 +22,13 @@ import subprocess
 import tarfile
 import tempfile
 import time
+import uuid
 from contextlib import contextmanager
+from functools import cache
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from typing import Any, Iterator, Protocol
+from urllib.parse import urlsplit
 
 from airflow.providers.vintage.bot_dashboard.validation_recipes import (
     RecipeRequest,
@@ -56,19 +61,20 @@ class CommandSpec:
     network_profile: str | None = None
     source_url: str | None = None
     expected_status: int | None = None
+    summary_required: bool = False
 
     @classmethod
     def parse(cls, command_id: str, value: object) -> "CommandSpec":
         if not _TOKEN.fullmatch(command_id) or not isinstance(value, dict):
             raise ValidationRunnerError("validation command catalog is invalid")
-        expected = {"recipe", "capability", "argv", "timeout_seconds", "credential_env", "network_profile", "source_url", "expected_status"}
+        expected = {"recipe", "capability", "argv", "timeout_seconds", "credential_env", "network_profile", "source_url", "expected_status", "summary_required"}
         if set(value) - expected or {"recipe", "capability", "argv", "timeout_seconds"} - set(value):
             raise ValidationRunnerError("validation command catalog has unknown fields")
         recipe, capability, argv, timeout = value["recipe"], value["capability"], value["argv"], value["timeout_seconds"]
         if not isinstance(recipe, str) or not isinstance(capability, str) or not _TOKEN.fullmatch(recipe) or not _TOKEN.fullmatch(capability):
             raise ValidationRunnerError("validation command catalog has invalid identifiers")
-        if (not isinstance(argv, list) or not 1 <= len(argv) <= 32 or any(
-                not isinstance(part, str) or not part or len(part) > 1024 or "\x00" in part for part in argv)):
+        if (not isinstance(argv, list) or not 1 <= len(argv) <= 128 or any(
+                not isinstance(part, str) or len(part) > 16384 or "\x00" in part for part in argv)):
             raise ValidationRunnerError("validation command catalog has invalid argv")
         # The operator chooses an immutable executable, not a candidate-relative wrapper.
         executable = Path(argv[0])
@@ -91,7 +97,10 @@ class CommandSpec:
                 raise ValidationRunnerError("public validation catalog assertions are invalid")
         elif source_url is not None or expected_status is not None:
             raise ValidationRunnerError("non-public validation command has public assertions")
-        return cls(command_id, recipe, capability, tuple(argv), timeout, tuple(names), profile, source_url, expected_status)
+        summary_required = value.get("summary_required", False)
+        if type(summary_required) is not bool or (summary_required and recipe != "public_source_smoke"):
+            raise ValidationRunnerError("validation summary requirement is invalid")
+        return cls(command_id, recipe, capability, tuple(argv), timeout, tuple(names), profile, source_url, expected_status, summary_required)
 
 
 class CommandCatalog:
@@ -122,6 +131,7 @@ class CommandResult:
     output: bytes
     timed_out: bool
     duration_ms: int
+    stderr: bytes = b""
 
 
 class RestrictedExecutor(Protocol):
@@ -176,12 +186,7 @@ class SandboxExecutor:
             return CommandResult(process.returncode, data, False, int((time.monotonic() - started) * 1000))
 
 class CatalogBwrapExecutor:
-    """Execute a catalogued, no-network bwrap command with bounded captured output.
-
-    The catalog is trusted application code, not a file from the candidate
-    tree.  This executor deliberately rejects live-egress entries: a normal
-    network namespace cannot safely select public HTTPS destinations.
-    """
+    """Execute fixed bwrap commands within bounded systemd user cgroups."""
     def __init__(self, capabilities: set[str]):
         self._capabilities = frozenset(capabilities)
 
@@ -214,11 +219,13 @@ class CatalogBwrapExecutor:
         except ImportError as exc:
             raise ValidationRunnerError("restricted public egress proxy is unavailable") from exc
         try:
-            with public_egress(candidate_root, command.timeout_seconds) as relay:
+            with public_egress(candidate_root, command.timeout_seconds,
+                               allowed_hosts={urlsplit(command.source_url).hostname}) as relay:
                 socket = relay.socket_path.lstat()
                 relay_file = relay.relay_path.lstat()
                 if (not stat.S_ISSOCK(socket.st_mode) or socket.st_uid != os.getuid() or socket.st_mode & 0o077
-                        or not stat.S_ISREG(relay_file.st_mode) or relay_file.st_uid != 0 or relay_file.st_mode & 0o022):
+                        or not stat.S_ISREG(relay_file.st_mode) or relay_file.st_uid not in {0, os.getuid()}
+                        or relay_file.st_mode & 0o022):
                     raise ValidationRunnerError("public egress relay is unsafe")
                 split = argv.index("--")
                 argv = (*argv[:split], "--ro-bind", str(relay.socket_path), "/public-egress.sock",
@@ -232,16 +239,26 @@ class CatalogBwrapExecutor:
     @staticmethod
     def _run(argv: tuple[str, ...], candidate_root: Path, environment: dict[str, str], timeout_seconds: int) -> CommandResult:
         started = time.monotonic()
+        argv = (
+            "/usr/bin/systemd-run", "--user", "--quiet", "--wait", "--pipe", "--collect",
+            "--unit=vintage-validation-" + uuid.uuid4().hex,
+            "-p", "MemoryMax=512M", "-p", "TasksMax=32", "-p", "CPUQuota=100%",
+            "-p", f"RuntimeMaxSec={timeout_seconds}", "--", *argv,
+        )
         try:
             process = subprocess.Popen(argv, cwd=candidate_root, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                       stderr=subprocess.STDOUT, start_new_session=True,
-                                       env={"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8", "PYTHONDONTWRITEBYTECODE": "1", **environment})
+                                       stderr=subprocess.PIPE, start_new_session=True,
+                                       env={"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8",
+                                            "XDG_RUNTIME_DIR": os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"),
+                                            "PYTHONDONTWRITEBYTECODE": "1", **environment})
         except OSError as exc:
             raise ValidationRunnerError("validation sandbox could not start") from exc
         output = bytearray()
+        errors = bytearray()
         timed_out = False
         selector = selectors.DefaultSelector()
-        selector.register(process.stdout, selectors.EVENT_READ)
+        selector.register(process.stdout, selectors.EVENT_READ, (output, _MAX_OUTPUT))
+        selector.register(process.stderr, selectors.EVENT_READ, (errors, 131_072))
         try:
             while selector.get_map():
                 remaining = timeout_seconds - (time.monotonic() - started)
@@ -249,12 +266,13 @@ class CatalogBwrapExecutor:
                     timed_out = True
                     break
                 for key, _ in selector.select(min(remaining, 0.25)):
-                    chunk = os.read(key.fileobj.fileno(), min(65_536, _MAX_OUTPUT + 1 - len(output)))
+                    buffer, bound = key.data
+                    chunk = os.read(key.fileobj.fileno(), min(65_536, bound + 1 - len(buffer)))
                     if not chunk:
                         selector.unregister(key.fileobj)
                         continue
-                    output.extend(chunk)
-                    if len(output) > _MAX_OUTPUT:
+                    buffer.extend(chunk)
+                    if len(buffer) > bound:
                         raise ValidationRunnerError("validation command output exceeds its bound")
             if not timed_out:
                 try:
@@ -262,7 +280,7 @@ class CatalogBwrapExecutor:
                 except subprocess.TimeoutExpired:
                     timed_out = True
             return CommandResult(-1 if timed_out else process.returncode, bytes(output), timed_out,
-                                 int((time.monotonic() - started) * 1000))
+                                 int((time.monotonic() - started) * 1000), bytes(errors))
         finally:
             try:
                 os.killpg(process.pid, signal.SIGKILL)
@@ -271,6 +289,7 @@ class CatalogBwrapExecutor:
             process.wait()
             selector.close()
             process.stdout.close()
+            process.stderr.close()
 
 
 class CredentialBroker(Protocol):
@@ -394,8 +413,12 @@ def _assert_recipe(request: RecipeRequest, records: list[dict[str, Any]]) -> dic
         if (not all(isinstance(value, str) and value and len(value) <= 512 for value in identifiers)
                 or len(set(identifiers)) != len(identifiers)):
             raise ValidationRunnerError("public source extractor identifiers are invalid")
-        return {"record_count": len(records), "source_url": request.assertions["source_url"],
-                "expected_status": request.assertions["expected_status"]}
+        return {
+            "record_count": len(records), "source_url": request.assertions["source_url"],
+            "sample_records": [{"type": record["type"],
+                               "id_sha256": hashlib.sha256(record["id"].encode()).hexdigest()}
+                              for record in records[:3]],
+        }
     if request.recipe == "warehouse_check":
         record = _record(records, "warehouse")
         if record.get("relation") != request.assertions["expected_relation"]:
@@ -420,6 +443,45 @@ def _assert_recipe(request: RecipeRequest, records: list[dict[str, Any]]) -> dic
     return {"project_uuid": record["project_uuid"], "explore": record["explore"], "field_count": len(record["fields"])}
 
 
+@cache
+def _summary_contract():
+    path = Path(__file__).resolve().parents[1] / "orchestration" / "include" / "run_metadata.py"
+    spec = importlib.util.spec_from_file_location("validation_run_metadata", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _run_summary_evidence(stderr: bytes) -> dict[str, Any]:
+    contract = _summary_contract()
+    try:
+        payload, _ = contract.extract_summary_line(stderr.decode("utf-8"))
+        if payload is None:
+            raise ValidationRunnerError("mandatory source summary is missing")
+        summary = contract.validate_summary(json.loads(payload))
+    except (ValueError, UnicodeError) as exc:
+        raise ValidationRunnerError("mandatory source summary is invalid") from exc
+    if summary.get("health") == "failed" or summary.get("completeness") == "failed":
+        raise ValidationRunnerError("mandatory summary reports a failed source run")
+    partitions = summary.get("partitions", {})
+    metrics = summary.get("metrics", {})
+    return {
+        "validator": "orchestration/include/run_metadata.py",
+        "summary_count": 1,
+        "byte_count": len((contract.SUMMARY_PREFIX + payload).encode("utf-8")),
+        "sha256": hashlib.sha256(payload.encode("utf-8")).hexdigest(),
+        "health": summary.get("health"),
+        "completeness": summary.get("completeness"),
+        "requests": summary.get("requests", {}),
+        "partitions": {key: value for key, value in partitions.items() if key != "failures"},
+        "partition_failure_samples": len(partitions.get("failures", [])),
+        "metrics": {key: value for key, value in metrics.items()
+                    if len(key) <= 100 and type(value) in (bool, int, float)},
+        "metric_sample_counts": {key: len(value) for key, value in metrics.items()
+                                 if len(key) <= 100 and isinstance(value, list)},
+    }
+
+
 class ValidationRunner:
     def __init__(self, *, catalog: CommandCatalog, candidates: CandidateTrees, executor: RestrictedExecutor,
                  credentials: CredentialBroker):
@@ -434,6 +496,7 @@ class ValidationRunner:
 
     def execute(self, gate: dict[str, Any]) -> tuple[str, dict[str, Any]]:
         started = time.monotonic()
+        started_at = datetime.now(timezone.utc).isoformat()
         request = parse_recipe(recipe=gate.get("recipe"), recipe_args=gate.get("recipe_args"),
                                required_capability=gate.get("required_capability"), subject=gate.get("subject"))
         if request.required_capability not in self.capabilities:
@@ -446,8 +509,11 @@ class ValidationRunner:
         if result.timed_out:
             raise ValidationRunnerError("validation command timed out")
         if result.exit_code != 0:
-            raise ValidationRunnerError(f"validation command exited {result.exit_code}")
+            detail = result.stderr.decode("utf-8", errors="replace")[-2000:]
+            raise ValidationRunnerError(f"validation command exited {result.exit_code}: {detail}")
         assertions = _assert_recipe(request, _ndjson(result.output))
+        if command.summary_required:
+            assertions["run_summary"] = _run_summary_evidence(result.stderr)
         duration_ms = int((time.monotonic() - started) * 1000)
         evidence = {
             "label": f"{request.recipe} validation",
@@ -455,6 +521,14 @@ class ValidationRunner:
             "subject": request.subject,
             "recipe": request.recipe,
             "command_id": command.command_id,
+            "workflow": "bots/validation_runner.py",
+            "validation_run_id": uuid.uuid4().hex,
+            "started_at": started_at,
+            "catalog_argv": [arg if len(arg) <= 256 else
+                             {"sha256": hashlib.sha256(arg.encode()).hexdigest()}
+                             for arg in command.argv],
+            "exit_status": result.exit_code,
+            "invocation_sha256": hashlib.sha256(json.dumps(command.argv).encode()).hexdigest(),
             "duration_ms": duration_ms,
             "output_sha256": output_sha256,
             "sha256": hashlib.sha256(json.dumps(assertions, sort_keys=True).encode()).hexdigest(),
@@ -479,12 +553,16 @@ class ValidationRunner:
             try:
                 status, evidence = self.execute(gate)
             except (ValidationRecipeError, ValidationRunnerError) as exc:
+                from airflow._shared.secrets_masker import redact
+                from bot_runner import _failure_detail
+                diagnostic = str(redact(str(exc), "validation_error", max_depth=20))
                 status = "failed"
                 evidence = {
                     "label": "Validation runner failure",
                     "observation": f"exact subject {gate.get('subject', '')}; {type(exc).__name__}",
                     "subject": gate.get("subject"), "recipe": gate.get("recipe"),
-                    "reason_code": str(exc)[:200],
+                    "reason_code": _failure_detail(RuntimeError(diagnostic))[:200],
+                    "diagnostic_tail": _failure_detail(RuntimeError(diagnostic[-2000:])),
                     "sha256": hashlib.sha256(str(exc).encode()).hexdigest(),
                 }
             finished = client.finish_validation_gate(
@@ -499,8 +577,8 @@ class ValidationRunner:
 def runner_from_environment(*, catalog: dict[str, Any], credentials: dict[str, dict[str, str]], client: Any) -> ValidationRunner:
     """Build the real worker from deployment-owned code and capabilities."""
     launcher = os.environ.get("BOT_VALIDATION_SANDBOX_LAUNCHER", "")
-    capability_text = os.environ.get("BOT_VALIDATION_CAPABILITIES", "")
-    capabilities = {item for item in capability_text.split(",") if _TOKEN.fullmatch(item)}
+    from airflow.providers.vintage.bot_dashboard.validation_recipes import available_capabilities
+    capabilities = available_capabilities()
     if not capabilities:
         raise ValidationRunnerError("validation runner deployment is incomplete")
     executor: RestrictedExecutor
@@ -516,8 +594,12 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
     """Airflow task entrypoint for the configured validation lane."""
     from provider_dashboard import DashboardClient
     from validation_catalog import COMMANDS
+    from airflow.providers.vintage.bot_dashboard.validation_recipes import available_capabilities
+    if not available_capabilities():
+        return {"status": "disabled", "items": []}
 
     client = DashboardClient.from_environment()
+    client.recover_validation_gates()
     ti = context["ti"]
     identity = f"{ti.dag_id}\x00{context['dag_run'].run_id}\x00{ti.task_id}".encode()
     runner_id = "validation." + hashlib.sha256(identity).hexdigest()

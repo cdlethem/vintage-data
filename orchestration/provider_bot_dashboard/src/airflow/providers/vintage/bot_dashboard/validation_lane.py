@@ -10,14 +10,14 @@ import secrets
 from datetime import timedelta
 from typing import Any, Callable
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from .models import Artifact, Execution, Task, ValidationGate, utcnow
 from .service import Conflict, PreconditionFailed, _event
 from .validation_recipes import ValidationRecipeError, validate_admission
 
-LEASE_SECONDS = 180
+LEASE_SECONDS = 360
 MAX_CLAIM = 100
 AUTOMATIC_OWNER = "validation-service"
 
@@ -29,8 +29,9 @@ def _gate_dict(row: ValidationGate, *, candidate: dict[str, str] | None = None) 
         "version": row.version, "recipe": row.recipe, "recipe_args": row.recipe_args,
         "required_capability": row.required_capability, "subject": row.subject,
         "dependencies": list(row.dependencies), "lease_id": row.lease_id,
-        "lease_run_id": row.lease_run_id, "lease_expires_at": row.lease_expires_at.isoformat(),
-        "attempt": row.attempt,
+        "lease_run_id": row.lease_run_id,
+        "lease_expires_at": row.lease_expires_at.isoformat() if row.lease_expires_at else None,
+        "attempt": row.attempt, "status": row.status, "evidence": row.evidence,
     }
     if candidate is not None:
         value["candidate"] = candidate
@@ -101,13 +102,12 @@ def _candidate_snapshot(session: Session, row: ValidationGate) -> dict[str, str]
     """
     execution = session.scalar(select(Execution).where(
         Execution.task_id == row.task_id,
-        Execution.trusted_head_sha == row.subject,
-        Execution.source_artifact_sha256.is_not(None),
-        Execution.patch_sha256.is_not(None),
     ).order_by(Execution.sequence.desc(), Execution.revision.desc()).limit(1).with_for_update())
-    if execution is None or not all((execution.provider, execution.repository, execution.branch,
+    if (execution is None or execution.terminal_at is not None or execution.trusted_head_sha != row.subject
+            or not all((execution.source_artifact_sha256, execution.patch_sha256,
+                        execution.provider, execution.repository, execution.branch,
                                      execution.target_branch, execution.service_account_id, execution.pr_number,
-                                     execution.base_sha, execution.verification_manifest)):
+                        execution.base_sha, execution.verification_manifest))):
         raise PreconditionFailed("validation candidate checkpoint is unavailable")
     source = session.get(Artifact, execution.source_artifact_sha256)
     patch = session.get(Artifact, execution.patch_sha256)
@@ -138,6 +138,24 @@ def _candidate_snapshot(session: Session, row: ValidationGate) -> dict[str, str]
         "patch_sha256": manifest.patch_sha256,
     }
 
+def _fail_admission(session: Session, row: ValidationGate, error: Exception) -> None:
+    """Make an expected unexecutable gate visibly failed without stopping its peers."""
+    row.status = "failed"
+    row.lease_id = None
+    row.lease_run_id = None
+    row.lease_expires_at = None
+    row.last_error = f"validation_admission_{type(error).__name__}"[:200]
+    row.evidence = {
+        "label": "Validation admission failed",
+        "observation": f"exact subject {row.subject}; gate was not executed",
+        "reason_code": row.last_error,
+    }
+    row.version += 1
+    row.updated_at = utcnow()
+    task = session.scalar(select(Task).where(Task.id == row.task_id).with_for_update())
+    if task is not None and task.state not in {"completed", "dismissed"}:
+        _record(task, row, "validation_gate_admission_failed", {"reason_code": row.last_error}, session)
+
 def claim_pending(
     session: Session, *, limit: int, runner_id: str, autopilot_enabled: bool,
 ):
@@ -146,21 +164,30 @@ def claim_pending(
         return []
     if not isinstance(runner_id, str) or not runner_id or len(runner_id) > 250:
         raise PreconditionFailed("validation runner identity is invalid")
+    requested = min(max(limit, 1), MAX_CLAIM)
     now = utcnow()
     rows = session.scalars(select(ValidationGate).where(
         ValidationGate.status == "pending",
         ValidationGate.owner == AUTOMATIC_OWNER,
-    ).order_by(ValidationGate.created_at, ValidationGate.id).limit(min(max(limit, 1), MAX_CLAIM)).with_for_update(skip_locked=True)).all()
+        ValidationGate.subject.not_in(("candidate_head", "pending_candidate")),
+    ).order_by(ValidationGate.created_at, ValidationGate.id).limit(MAX_CLAIM).with_for_update(skip_locked=True)).all()
     claimed = []
+    from .git_provider import GitProviderError
     for row in rows:
+        if len(claimed) >= requested:
+            break
         # A stale pending lease belongs to a recovery path, never a second runner.
         if row.lease_expires_at is not None and row.lease_expires_at > now:
             continue
-        _task(session, row)
-        _admission(row)
-        if not _dependencies_passed(session, row):
+        try:
+            _task(session, row)
+            _admission(row)
+            if not _dependencies_passed(session, row):
+                continue
+            candidate = _candidate_snapshot(session, row)
+        except (PreconditionFailed, GitProviderError) as exc:
+            _fail_admission(session, row, exc)
             continue
-        candidate = _candidate_snapshot(session, row)
         row.status = "leased"
         row.lease_id = secrets.token_hex(32)
         row.attempt += 1
@@ -243,26 +270,40 @@ def finish(
 
 
 def recover_expired(session: Session, *, limit: int, autopilot_enabled: bool) -> int:
-    """Return expired leases to pending; never manufacture a result or retry blindly."""
+    """Recover abandoned work and bounded runner failures without erasing evidence."""
     if not autopilot_enabled:
         return 0
     now = utcnow()
     rows = session.scalars(select(ValidationGate).where(
-        ValidationGate.status.in_(("leased", "running")),
-        ValidationGate.lease_expires_at < now,
-    ).order_by(ValidationGate.lease_expires_at, ValidationGate.id).limit(min(max(limit, 1), MAX_CLAIM)).with_for_update(skip_locked=True)).all()
+        ValidationGate.owner == AUTOMATIC_OWNER,
+        or_(
+            and_(ValidationGate.status.in_(("leased", "running")), ValidationGate.lease_expires_at < now),
+            and_(ValidationGate.status == "failed", ValidationGate.attempt.between(1, 2),
+                 ValidationGate.updated_at < now - timedelta(minutes=15)),
+        ),
+    ).order_by(ValidationGate.updated_at, ValidationGate.id)
+        .limit(min(max(limit, 1), MAX_CLAIM)).with_for_update(skip_locked=True)).all()
     recovered = 0
     for row in rows:
-        task = _task(session, row)
-        prior_run = row.lease_run_id
-        row.status = "pending"
+        prior_status, prior_evidence, prior_run = row.status, row.evidence, row.lease_run_id
+        if prior_status == "failed" and (prior_evidence or {}).get("label") != "Validation runner failure":
+            continue
+        task = session.scalar(select(Task).where(Task.id == row.task_id).with_for_update())
+        retry = task is not None and task.state not in {"completed", "dismissed"} and row.attempt < 3
+        row.status = "pending" if retry else "failed"
         row.lease_id = None
         row.lease_run_id = None
         row.lease_expires_at = None
-        row.last_error = "validation_lease_expired"
+        row.last_error = "validation_retry_scheduled" if retry else "validation_retry_exhausted"
+        row.evidence = None if retry else {
+            "label": "Validation lease failed", "reason_code": row.last_error,
+            "subject": row.subject, "attempt": row.attempt,
+        }
         row.version += 1
         row.updated_at = now
-        _record(task, row, "validation_gate_lease_recovered", {"lease_run_id": prior_run}, session)
+        if task is not None:
+            _record(task, row, "validation_gate_retry_scheduled" if retry else "validation_gate_retry_exhausted",
+                    {"lease_run_id": prior_run, "previous_status": prior_status, "previous_evidence": prior_evidence}, session)
         recovered += 1
     session.flush()
     return recovered

@@ -20,7 +20,7 @@ def prepare(output: Path, omp: Path):
     (output/'runtime.json').write_text(json.dumps({'confinement':'rootless-userns-cgroup-v1','network':'deny-all-except-model-gateway-v1','memory_max':'4G','tasks_max':128,'cpu_quota':'200%','max_seconds':2400},indent=2)+'\n')
     subprocess.run(['uv','venv','--relocatable','--python','/usr/bin/python3',str(output/'venv')],check=True)
     repo=SOURCE.parents[1]
-    subprocess.run(['uv','pip','install','--python',str(output/'venv/bin/python'),'-r',str(repo/'transform/requirements.txt'),'-r',str(repo/'visualization/requirements.txt'),'pytest==8.4.2'],check=True)
+    subprocess.run(['uv','pip','install','--python',str(output/'venv/bin/python'),'-r',str(repo/'transform/requirements.txt'),'-r',str(repo/'visualization/requirements.txt'),'pytest==8.4.2','apache-airflow-core==3.3.1','apache-airflow-providers-standard==1.17.0','pendulum==3.2.0','PyYAML==6.0.3'],check=True)
     print(f'Prepared {output}; install it as root with this script install --source {output}')
 
 def install(source: Path,destination: Path):

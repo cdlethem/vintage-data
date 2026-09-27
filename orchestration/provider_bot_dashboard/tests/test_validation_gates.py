@@ -34,8 +34,8 @@ class ValidationGateTest(unittest.TestCase):
         gate = create_validation_gate(
             self.session, self.task["id"], version=self.task["version"], actor_id="owner",
             value={
-                "gate_key": "live-smoke", "stage": "merge", "recipe": "public_source_smoke",
-                "owner": "validation-service", "required_capability": "bounded-network",
+                "gate_key": "live-smoke", "stage": "merge", "recipe": "manual",
+                "owner": "operator", "required_capability": "bounded-network",
                 "subject": "a" * 40, "dependencies": [],
                 "recheck_condition": "candidate head changes", "required": True,
             },

@@ -110,7 +110,7 @@ if _enabled():
         catchup=False,
         max_active_runs=1,
         max_active_tasks=1,
-        dagrun_timeout=timedelta(minutes=5),
+        dagrun_timeout=timedelta(minutes=6),
         is_paused_upon_creation=False,
         tags=["bot-dashboard", "validation"],
         default_args={"retries": 0},
@@ -121,5 +121,6 @@ if _enabled():
 
         PythonOperator(
             task_id="run", python_callable=_validation,
-            execution_timeout=timedelta(minutes=4), do_xcom_push=False,
+            queue=conf.get("bot_dashboard", "executor_queue", fallback="bot_dashboard_executor"),
+            execution_timeout=timedelta(minutes=5), do_xcom_push=False,
         )

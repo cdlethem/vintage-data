@@ -1,0 +1,16 @@
+name: pokeapi_pokemon_data
+script: fetch_pokeapi.py
+args: ["pokemon", "100", "--max-pages", "20"]
+schedule: "23 11 * * *"  # UTC; daily bounded catalog snapshot
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily snapshot of the bounded Pokémon catalog"
+rate_limit: "keyless PokéAPI; serial catalog pagination with at least one second between requests, capped at 20 pages"
+licence: "PokéAPI data is provided under its upstream project and data-source terms"
+attribution: "PokéAPI, https://pokeapi.co/"
+attribution_required: true
+coverage_note: "Catalog pages only; detail endpoints are retained as canonical identities and are never fetched. A bounded run reports truncation on stderr when another page remains."

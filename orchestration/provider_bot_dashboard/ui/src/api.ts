@@ -82,7 +82,7 @@ export function activityUrl(task?: string): string {
 }
 
 export type QueueSummary = { attention_count: number; active_count: number; counts: Record<string, number> };
-export const ATTENTION_STATES = ["proposed", "accepted", "blocked", "in_review", "ready"];
+export const ATTENTION_STATES = ["proposed", "blocked", "in_review", "ready"];
 export function botWorkQueued(task: Task): boolean {
   return task.next_actor === "dispatcher" || !!task.executions?.some(execution => !execution.terminal_at && !execution.terminal_reason_code && ["pending", "leased"].includes(String(execution.dispatch_state)));
 }

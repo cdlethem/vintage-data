@@ -519,8 +519,8 @@ class ExecutorTaskV2(StrictModel):
     title: str = Field(min_length=1, max_length=200)
     category: TaskCategory
     planned_resolution: str = Field(min_length=1, max_length=20_000)
-    verification_commands: list[list[str]] = Field(min_length=1, max_length=20)
-    allowed_path_globs: list[str] = Field(min_length=1, max_length=50)
+    verification_commands: list[list[str]] = Field(max_length=20)
+    allowed_path_globs: list[str] = Field(max_length=50)
     resource_keys: list[str] = Field(max_length=50)
 
 
@@ -596,6 +596,7 @@ class ReviewerAdmissionV2(StrictModel):
     executor_report_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     repository_policy: None = None
     source_report_reference: str | None = Field(default=None, max_length=1000)
+    validation_evidence: list[dict[str, Any]] = Field(default_factory=list, max_length=20)
 
 
 class TaskExecutorV2(StrictModel):

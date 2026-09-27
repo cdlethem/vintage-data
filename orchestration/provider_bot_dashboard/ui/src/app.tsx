@@ -49,7 +49,7 @@ function ActivityApp() {
   const [opening, setOpening] = useState(false);
   const [failedTask, setFailedTask] = useState("");
   const previousQuery = useRef("");
-  const states = state || (scope === "attention" ? ATTENTION_STATES.join(",") : scope === "active" ? [...ATTENTION_STATES, "in_progress"].join(",") : "completed,dismissed");
+  const states = state || (scope === "attention" ? ATTENTION_STATES.join(",") : scope === "active" ? STATES.filter(item => !["completed", "dismissed"].includes(item)).join(",") : "completed,dismissed");
   const query = `/tasks?state=${encodeURIComponent(states)}&search=${encodeURIComponent(search)}`;
   const reload = () => setRefreshKey((value) => value + 1);
   const open = async (id: string) => {
@@ -305,17 +305,27 @@ function TaskDetail({ task, caps, close, mutate, refresh, onDirtyChange, onModel
   }, [task]);
   const queued = botWorkQueued(task);
   const unsavedScope = plan !== persisted.plan || verification !== persisted.verification || globs !== persisted.globs || resources !== persisted.resources || followUps !== persisted.followUps || reviewerRequired !== persisted.reviewerRequired;
+  const persistentDraftsDirty = unsavedScope || assignee !== persisted.assignee || !!activityComment;
+  const persistentDraftsDirtyRef = useRef(persistentDraftsDirty);
+  persistentDraftsDirtyRef.current = persistentDraftsDirty;
+  const otherDraftsDirty = persistentDraftsDirty || !!comment || !!evidence;
+  const otherDraftsDirtyRef = useRef(otherDraftsDirty);
+  otherDraftsDirtyRef.current = otherDraftsDirty;
   const validVerification = (() => { try { const commands = JSON.parse(verification); return Array.isArray(commands) && commands.every(argv => Array.isArray(argv) && argv.length > 0 && argv.every(arg => typeof arg === "string" && arg.length > 0)); } catch { return false; } })();
-  useUnsavedChanges(unsavedScope || assignee !== persisted.assignee || !!activityComment || !!comment || !!evidence || !!reason, onDirtyChange);
+  useUnsavedChanges(otherDraftsDirty || !!reason, onDirtyChange);
   const [policyError, setPolicyError] = useState("");
   const [saving, setSaving] = useState(false);
-  const apply = async (path: string, body: unknown, method?: string, success = "Task updated.") => {
+  const apply = async (path: string, body: unknown, method?: string, success = "Task updated.", onSaved?: () => void) => {
     if (saving) return;
     setFeedbackLocation(success === "Comment added." ? "activity" : method === "PATCH" ? (success === "Resolution plan saved." ? "plan" : "policy") : "actions");
     setSaving(true); setPolicyError(""); setNotice("");
-    try { await mutate(path, body, method); await refresh(); setNotice(success); return true; }
+    try { await mutate(path, body, method); onSaved?.(); await refresh(); setNotice(success); return true; }
     catch (reason) { setPolicyError((reason as Error).message); return false; }
     finally { setSaving(false); }
+  };
+  const clearReasonDraft = () => {
+    setReason("");
+    onDirtyChange?.(otherDraftsDirtyRef.current);
   };
   const feedback = (location: typeof feedbackLocation) => feedbackLocation === location ? <>
     {notice && <Text role="status" color="green.fg">{notice}</Text>}
@@ -405,9 +415,9 @@ function TaskDetail({ task, caps, close, mutate, refresh, onDirtyChange, onModel
           <Metadata>{queued ? "Assignment is locked while this execution is queued." : task.assignee_kind ? `Saved assignment: ${task.assignee_kind === "bot" ? `${label(task.assignee_profile || "")} bot` : task.assignee_name || "you"}. Assignment does not start execution.` : "Save an assignment to enable starting work."}</Metadata>
           {task.assignee_kind === "bot" && !caps.executor_enabled && <Text color="orange.fg">Bot execution is disabled for this installation. Assignment is saved, but work cannot start yet.</Text>}
           </HStack>}
-          <Box as="details"><Box as="summary" cursor="pointer" paddingY="2">Other status changes</Box><Stack gap="3"><Box><label htmlFor="target-status">Move to</label><NativeSelect.Root><NativeSelect.Field id="target-status" aria-label="Target state" value={target} onChange={(event) => setTarget(event.target.value as TaskState)}>{[task.state, ...(transitions[task.state] || [])].map((value) => <option key={value} value={value}>{label(value)}</option>)}</NativeSelect.Field></NativeSelect.Root></Box><Box><label htmlFor="transition-reason">Reason {reasonRequired ? "(required)" : "(optional)"}</label><Input id="transition-reason" aria-label="Transition reason" placeholder="Why is the status changing?" value={reason} onChange={(event) => setReason(event.target.value)} maxLength={20000} /></Box><Button alignSelf="start" size="sm" disabled={saving || (reasonRequired && !reason.trim()) || target === task.state || (unsavedScope && ["accepted", "in_progress"].includes(target))} aria-label="Apply human task transition" onClick={() => apply(`/tasks/${task.id}/transition`, { version: task.version, state: target, reason: reason.trim() || null })}>Update status</Button></Stack></Box>
+          <Box as="details"><Box as="summary" cursor="pointer" paddingY="2">Other status changes</Box><Stack gap="3"><Box><label htmlFor="target-status">Move to</label><NativeSelect.Root><NativeSelect.Field id="target-status" aria-label="Target state" value={target} onChange={(event) => setTarget(event.target.value as TaskState)}>{[task.state, ...(transitions[task.state] || [])].map((value) => <option key={value} value={value}>{label(value)}</option>)}</NativeSelect.Field></NativeSelect.Root></Box><Box><label htmlFor="transition-reason">Reason {reasonRequired ? "(required)" : "(optional)"}</label><Input id="transition-reason" aria-label="Transition reason" placeholder="Why is the status changing?" value={reason} onChange={(event) => setReason(event.target.value)} maxLength={20000} /></Box><Button alignSelf="start" size="sm" disabled={saving || (reasonRequired && !reason.trim()) || target === task.state || (unsavedScope && ["accepted", "in_progress"].includes(target))} aria-label="Apply human task transition" onClick={() => apply(`/tasks/${task.id}/transition`, { version: task.version, state: target, reason: reason.trim() || null }, undefined, "Task updated.", clearReasonDraft)}>Update status</Button></Stack></Box>
           {task.state === "ready" && <Stack direction={{ base: "column", md: "row" }} align="start"><Textarea aria-label="Human completion comment" placeholder="Completion comment" value={comment} onChange={(event) => setComment(event.target.value)} /><Textarea aria-label="Human verification evidence" placeholder="Evidence URL or reference" value={evidence} onChange={(event) => setEvidence(event.target.value)} /></Stack>}
-          {task.state === "ready" && <Button alignSelf="start" aria-label="Complete task after human merge" disabled={saving || !comment || !evidence} onClick={async () => { setFeedbackLocation("actions"); setNotice(""); setPolicyError(""); setSaving(true); try { await mutate(`/tasks/${task.id}/comments`, { version: task.version, comments: [comment] }); await mutate(`/tasks/${task.id}/evidence`, { version: task.version + 1, evidence: [{ label: "Human verification", url: evidence }] }); await mutate(`/tasks/${task.id}/transition`, { version: task.version + 2, state: "completed", reason: reason || "Human verified merge" }); await refresh(); } catch (reason) { setPolicyError((reason as Error).message); } finally { setSaving(false); } }}>Complete after human merge</Button>}
+          {task.state === "ready" && <Button alignSelf="start" aria-label="Complete task after human merge" disabled={saving || !comment || !evidence} onClick={async () => { setFeedbackLocation("actions"); setNotice(""); setPolicyError(""); setSaving(true); try { await mutate(`/tasks/${task.id}/comments`, { version: task.version, comments: [comment] }); setComment(""); await mutate(`/tasks/${task.id}/evidence`, { version: task.version + 1, evidence: [{ label: "Human verification", url: evidence }] }); setEvidence(""); await mutate(`/tasks/${task.id}/transition`, { version: task.version + 2, state: "completed", reason: reason || "Human verified merge" }); setReason(""); onDirtyChange?.(persistentDraftsDirtyRef.current); await refresh(); } catch (reason) { setPolicyError((reason as Error).message); } finally { setSaving(false); } }}>Complete after human merge</Button>}
           {task.state === "in_progress" && task.executions.some((value) => /no.?change/i.test(String(value.stage || value.terminal_reason_code || ""))) && <Text role="status" aria-label="No change execution state" color="green.fg">Execution made no repository change.</Text>}
         </Stack>
       </Box>}

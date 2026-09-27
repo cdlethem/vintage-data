@@ -11,6 +11,14 @@ from typing import Any
 CADENCE_TAGS = {"twice_hourly", "hourly", "daily"}
 CADENCE_ORDER = {"twice_hourly": 0, "hourly": 1, "daily": 2}
 PHYSICAL_MATERIALIZATIONS = {"table", "incremental"}
+RETIRED_SOURCES = pathlib.Path(__file__).resolve().parents[2] / "extract" / "retired_sources.yml"
+
+
+def retired_sources(path: pathlib.Path = RETIRED_SOURCES) -> set[str]:
+    import yaml
+
+    value = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return set(value.get("sources") or {})
 
 
 def _models(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -51,10 +59,24 @@ def _cadence(node: dict[str, Any]) -> set[str]:
     return tags & CADENCE_TAGS
 
 
-def validate_manifest(manifest: dict[str, Any]) -> list[str]:
+def validate_manifest(manifest: dict[str, Any], retired: set[str] | None = None) -> list[str]:
     errors: list[str] = []
     models = _models(manifest)
     sources = _raw_sources(manifest)
+    retired = retired_sources() if retired is None else retired
+
+    # Retired sources keep their raw data but must never be declared or modelled
+    # again; only a human may lift a retirement (archive/retired_sources/README.md).
+    for source in sources.values():
+        if source["name"] in retired:
+            errors.append(f"raw source {source['name']!r} is retired in extract/retired_sources.yml; "
+                          "do not declare or model it")
+    for model in models.values():
+        parts = pathlib.PurePosixPath(str(model.get("original_file_path", ""))).parts
+        if (len(parts) > 2 and parts[:2] == ("models", "marts") and parts[2] in retired) or any(
+            model.get("name") == f"base_{name}" for name in retired
+        ):
+            errors.append(f"{model.get('name')}: belongs to a source retired in extract/retired_sources.yml")
 
     for source_uid, source in sorted(sources.items()):
         source_name = str(source["name"])

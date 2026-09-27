@@ -113,10 +113,12 @@ defaults:
   exclude_keys: []           # keys to leave in _payload only
 
 # Per-source overrides, keyed by sink source name. Absent = pure defaults.
-sources: {}
+sources:
+  # Retired (extract/retired_sources.yml): files already under raw/ are kept
+  # but never loaded again. Remove only on a human-approved resume.
+  sensor_community:
+    enabled: false
+  openactive_feeds:
+    enabled: false
   # imdb_ratings:
   #   sample_lines: 2000       # very wide records, worth a deeper sample
-  # openactive_feeds:
-  #   schema_detection: payload_only   # shape varies per publisher
-  # noisy_source:
-  #   enabled: false

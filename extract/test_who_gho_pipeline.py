@@ -15,7 +15,10 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "extract" / "scripts" / "fetch_who_gho_odata.py"
 RAW_DECLARATIONS = REPO_ROOT / "transform" / "models" / "base" / "_raw_sources.yml"
-MODEL_SCHEMA = REPO_ROOT / "transform" / "models" / "base" / "base_who_gho_odata.yml"
+BASE_MODEL_SCHEMA = REPO_ROOT / "transform" / "models" / "base" / "base_who_gho_odata.yml"
+STAGING_MODEL = REPO_ROOT / "transform" / "models" / "staging" / "stg_who_gho_odata.sql"
+STAGING_MODEL_SCHEMA = REPO_ROOT / "transform" / "models" / "staging" / "stg_who_gho_odata.yml"
+DBT_PROJECT = REPO_ROOT / "transform" / "dbt_project.yml"
 TRANSFORM = REPO_ROOT / "transform"
 SPEC = importlib.util.spec_from_file_location("fetch_who_gho_odata_pipeline", SCRIPT)
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -310,7 +313,7 @@ class WhoGhoPipelineTests(unittest.TestCase):
             def run_dbt(command):
                 bounded_process(
                     common
-                    + [command, *paths, "--select", "base_who_gho_odata"],
+                    + [command, *paths, "--select", "+stg_who_gho_odata"],
                     cwd=root,
                     env=dbt_env,
                     label=f"dbt WHO model {command}",
@@ -331,7 +334,7 @@ class WhoGhoPipelineTests(unittest.TestCase):
                             time_dimension_value, time_dimension_begin, time_dimension_end,
                             dimensions::varchar, source_url, _row_id, _batch_id,
                             _source_file, _load_id, _loaded_at, _payload::varchar
-                        from transform_base.base_who_gho_odata
+                        from transform_staging.stg_who_gho_odata
                         order by period
                         """
                     ).fetchall()
@@ -422,12 +425,34 @@ class WhoGhoPipelineTests(unittest.TestCase):
                 "source_url",
             }.issubset(column_names)
         )
-        schema = yaml.safe_load(MODEL_SCHEMA.read_text(encoding="utf-8"))
-        self.assertEqual([model["name"] for model in schema["models"]], ["base_who_gho_odata"])
-        columns = {column["name"]: column for column in schema["models"][0]["columns"]}
+        base_schema = yaml.safe_load(BASE_MODEL_SCHEMA.read_text(encoding="utf-8"))
+        self.assertEqual(
+            [model["name"] for model in base_schema["models"]], ["base_who_gho_odata"]
+        )
+        self.assertNotIn("columns", base_schema["models"][0])
+        project = yaml.safe_load(DBT_PROJECT.read_text(encoding="utf-8"))
+        self.assertEqual(
+            project["models"]["vintage_data"]["base"]["+materialized"], "view"
+        )
+
+        staging_schema = yaml.safe_load(STAGING_MODEL_SCHEMA.read_text(encoding="utf-8"))
+        self.assertEqual(
+            [model["name"] for model in staging_schema["models"]],
+            ["stg_who_gho_odata"],
+        )
+        columns = {
+            column["name"]: column for column in staging_schema["models"][0]["columns"]
+        }
+        self.assertEqual(
+            sum(len(column.get("data_tests", ())) for column in columns.values()), 23
+        )
         self.assertIn("unique", columns["_row_id"]["data_tests"])
         self.assertIn("not_null", columns["id"]["data_tests"])
         self.assertIn("not_null", columns["source_url"]["data_tests"])
+
+        staging_sql = STAGING_MODEL.read_text(encoding="utf-8")
+        self.assertIn("materialized='table'", staging_sql)
+        self.assertIn("tags=['twice_hourly', 'hourly']", staging_sql)
 
 
 if __name__ == "__main__":

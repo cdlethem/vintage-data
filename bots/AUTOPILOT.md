@@ -7,10 +7,12 @@ to toggle it. Turning it off revokes outstanding decision leases. An action
 already being committed finishes, and previously admitted work keeps running.
 
 Recommendations still become tickets. The executive separately accepts work,
-assigns a profile, prepares scope/checks, starts execution, handles review
-feedback, promotes reviewed PRs, merges, and records completion evidence. It
-uses the existing task services, executor isolation, repository restrictions,
-independent review policy, and provider merge checks. Humans retain all controls.
+assigns a profile, refines scope/checks when needed, starts execution, handles
+review feedback, promotes reviewed PRs, merges, and records completion evidence.
+Empty task-level verification commands and path globs do not block admission;
+repository restrictions still confine changes. The executive uses the existing
+task services, executor isolation, independent review policy, and provider merge
+checks. Humans retain all controls.
 
 `bot__executive` checks the queue every minute with a configurable batch of mapped
 decision workers (Bot activity → Bots → Concurrency). Each worker makes at most one
@@ -29,10 +31,11 @@ automatic retry. Other tickets remain eligible while a ticket waits.
 Map the `executive` role in **Models & connections** to any model on a connected
 provider; no model allowlist is enforced and there is no fallback to a different
 model or CLI. Enabling Autopilot requires that mapping, and losing it pauses claims
-without revoking the toggle. For the OMP bridge, version 18.2.4 supports Astra
-discovery and its required Codex client version; older gateway/broker versions may
-omit newer models from the catalog. Refresh the connected
-provider's catalog after upgrading. The executive obtains credentials only in
+without revoking the toggle. On this managed workstation, the OMP gateway and broker
+run version 18.3.2; `omp models find gpt-5.6-sol` and `omp models find gpt-6-luna`
+confirm both models are in its catalog. The host-managed OMP installation and systemd
+pin are outside this repository. Refresh the connected provider's catalog after
+changing its OMP catalog. The executive obtains credentials only in
 the trusted worker; its model receives bounded evidence and no executable tools.
 
 Every decision records its action, rationale, model, context digest, result,

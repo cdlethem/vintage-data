@@ -26,6 +26,7 @@ from urllib.parse import urlsplit
 MAX_HEADER_BYTES = 16 * 1024
 MAX_TUNNEL_BYTES = 32 * 1024 * 1024
 MAX_CONNECTION_SECONDS = 300
+MAX_PROXY_CONNECTIONS = 8
 RELAY_LISTEN_HOST = "127.0.0.1"
 RELAY_LISTEN_PORT = 18081
 _SOCKET_NAME = "public-egress.sock"
@@ -159,10 +160,28 @@ def _http_target(method: str, target: str) -> tuple[str, int, str]:
     return parsed.hostname.lower(), 80, path
 
 
+def _normalize_allowed_hosts(allowed_hosts: set[str] | frozenset[str]) -> frozenset[str]:
+    if not isinstance(allowed_hosts, (set, frozenset)) or not allowed_hosts:
+        raise PublicEgressError("egress allowed hosts are unavailable")
+    normalized = frozenset(host.lower() for host in allowed_hosts
+                           if isinstance(host, str) and _HOST.fullmatch(host))
+    if len(normalized) != len(allowed_hosts):
+        raise PublicEgressError("egress allowed host is invalid")
+    return normalized
+
+
+def _require_allowed_host(host: str, allowed_hosts: frozenset[str]) -> None:
+    if host not in allowed_hosts:
+        raise PublicEgressError("egress hostname is not allowed")
+
+
 def _copy_bidirectional(left: socket.socket, right: socket.socket, deadline: float, initial: bytes = b"") -> None:
     total = 0
     if initial:
-        right.sendall(initial)
+        try:
+            right.sendall(initial)
+        except (BrokenPipeError, ConnectionResetError):
+            return
         total += len(initial)
     sockets = [left, right]
     while True:
@@ -173,13 +192,19 @@ def _copy_bidirectional(left: socket.socket, right: socket.socket, deadline: flo
         if not ready:
             continue
         for source in ready:
-            data = source.recv(min(65536, MAX_TUNNEL_BYTES + 1 - total))
+            try:
+                data = source.recv(min(65536, MAX_TUNNEL_BYTES + 1 - total))
+            except ConnectionResetError:
+                return
             if not data:
                 return
             total += len(data)
             if total > MAX_TUNNEL_BYTES:
                 raise PublicEgressError("egress connection exceeds byte bound")
-            (right if source is left else left).sendall(data)
+            try:
+                (right if source is left else left).sendall(data)
+            except (BrokenPipeError, ConnectionResetError):
+                return
 
 
 def _forward_http(client: socket.socket, upstream: socket.socket, method: str, target: str, headers: list[str], deadline: float) -> None:
@@ -193,6 +218,7 @@ def _forward_http(client: socket.socket, upstream: socket.socket, method: str, t
 
 class _ProxyHandler(socketserver.BaseRequestHandler):
     timeout_seconds = MAX_CONNECTION_SECONDS
+    allowed_hosts = frozenset()
 
     def handle(self) -> None:
         self.request.settimeout(self.timeout_seconds)
@@ -202,6 +228,7 @@ class _ProxyHandler(socketserver.BaseRequestHandler):
             method, target, _version, headers = _request_line(head)
             if method == "CONNECT":
                 host, port = _connect_target(target)
+                _require_allowed_host(host, self.allowed_hosts)
                 with _connect_public(host, port, deadline) as upstream:
                     self.request.sendall(b"HTTP/1.1 200 Connection Established\r\nConnection: close\r\n\r\n")
                     _copy_bidirectional(self.request, upstream, deadline, remainder)
@@ -209,6 +236,7 @@ class _ProxyHandler(socketserver.BaseRequestHandler):
                 if remainder:
                     raise PublicEgressError("egress HTTP request body is not allowed")
                 host, port, _path = _http_target(method, target)
+                _require_allowed_host(host, self.allowed_hosts)
                 with _connect_public(host, port, deadline) as upstream:
                     _forward_http(self.request, upstream, method, target, headers, deadline)
         except (OSError, PublicEgressError):
@@ -222,23 +250,52 @@ class _UnixProxy(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
     daemon_threads = True
     block_on_close = False
 
+    def __init__(self, *args, **kwargs):
+        self._connection_slots = threading.BoundedSemaphore(MAX_PROXY_CONNECTIONS)
+        super().__init__(*args, **kwargs)
+
+    def process_request(self, request, client_address):
+        if not self._connection_slots.acquire(blocking=False):
+            request.close()
+            return
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            self._connection_slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._connection_slots.release()
 
 @contextmanager
-def public_egress(candidate_root: Path, timeout_seconds: int) -> Iterator[PublicEgressRelay]:
+def public_egress(candidate_root: Path, timeout_seconds: int, *,
+                  allowed_hosts: set[str] | frozenset[str]) -> Iterator[PublicEgressRelay]:
     """Run a private parent-side proxy for one candidate validation.
 
     ``candidate_root`` is accepted so callers bind proxy lifetime to the exact
     candidate materialization; no candidate path is ever opened by this service.
+    ``allowed_hosts`` comes from the trusted fixed catalog source URL.
     """
     if not isinstance(candidate_root, Path) or not candidate_root.is_dir():
         raise PublicEgressError("candidate root is unavailable")
     if not isinstance(timeout_seconds, int) or not 1 <= timeout_seconds <= 300:
         raise PublicEgressError("egress timeout is outside bounds")
+    permitted_hosts = _normalize_allowed_hosts(allowed_hosts)
     with tempfile.TemporaryDirectory(prefix="validation-public-egress-") as directory:
         root = Path(directory)
         root.chmod(0o700)
         socket_path = root / _SOCKET_NAME
-        handler = type("BoundedProxyHandler", (_ProxyHandler,), {"timeout_seconds": timeout_seconds})
+        relay_path = root / "relay.py"
+        relay_path.write_bytes(Path(__file__).read_bytes())
+        relay_path.chmod(0o400)
+        handler = type(
+            "BoundedProxyHandler",
+            (_ProxyHandler,),
+            {"timeout_seconds": timeout_seconds, "allowed_hosts": permitted_hosts},
+        )
         server = _UnixProxy(str(socket_path), handler)
         socket_path.chmod(0o600)
         thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.1}, daemon=True)
@@ -246,7 +303,7 @@ def public_egress(candidate_root: Path, timeout_seconds: int) -> Iterator[Public
         try:
             yield PublicEgressRelay(
                 socket_path=socket_path,
-                relay_path=Path(__file__).resolve(),
+                relay_path=relay_path,
                 proxy_url=f"http://{RELAY_LISTEN_HOST}:{RELAY_LISTEN_PORT}",
                 argv_prefix=(
                     "/usr/bin/python3", "/opt/validation-relay.py", "relay",

@@ -1,5 +1,13 @@
 # Periodic backlog supervision
 
+**Stopped at the user's request on 2026-09-21.** The supervision state now has
+`enabled=false`; `vintage-bot-supervision.timer` is disabled and inactive.
+Do not resume checks or concurrency experiments from the historical instructions
+below. Autopilot and already-admitted work were left running. The replacement
+workflow is specified in [WORKFLOW_OVERHAUL_PLAN.md](WORKFLOW_OVERHAUL_PLAN.md).
+Its provider and prompt changes are implemented in the repository; this historical
+supervision loop remains retired.
+
 The user requested periodic investigation and repairs until the backlog is empty.
 The user clarified that supervision is an un-sticker, not a replacement worker:
 interventions must restore the agents' normal workflow and prevent recurrence.
@@ -1202,3 +1210,3508 @@ for both stranded in_progress tickets. Added factual operational handoff comment
 without changing their decisions. API/database/scheduler/DAG processor are healthy;
 dispatch and maintenance succeed. Executive failures remain provider rate limits.
 Final observed backlog remains 37 with zero active executions; this is not empty.
+
+09:04 UTC follow-up verification (queued 08:50 check): all repairs from the prior
+turn remain deployed. The first post-restart 09:03 executive run reached normal
+model calls and saved model_rate_limited reports; no API/claim failure occurred.
+Last successful decision remains 06:35. Dispatch and maintenance succeeded at
+09:03, saved/applied limits match 14/2/4 v4, and API/database/scheduler/DAG processor,
+worker/gateway/broker and timer are healthy. No import errors or active/retrying
+worker tasks exist. The direct provider sweep completed: all 26 heads match,
+with no closed-unmerged mismatch. Specialist results remain as previously recorded,
+including cadence's recovered capacity report and Wikimedia's unable_to_review.
+No new arrivals or completions changed the 37-open backlog. No further operational
+repair/restart or repeated model smoke was warranted during this provider limit.
+Preserve model settings, approval/evidence gates, Autopilot and intake hold. The
+experiment remains draining; zero active executions is not a clean baseline.
+
+09:11 UTC supervision: 37 tickets remain open, no active/queued executor or
+reviewer tasks, and no new arrivals/completions/dismissals in the preceding hour.
+Executive polls and report delivery work, but the unchanged selected Sonnet
+connection remains rate limited; last decision is 06:35. Failure triage's 09:07
+run also stored a valid capacity_unavailable/provider_capacity report. No new
+non-capacity failure or report-delivery error appeared. Dispatch/maintenance,
+API/database/scheduler/DAG processor, worker/gateway/broker and timer are healthy;
+no import errors. All 26 directly checked PR heads still match trusted evidence.
+Existing review and external-evidence blockers remain; do not repeat retries or
+change model assignments to clear them. No repair/restart was warranted. Saved
+and applied concurrency remain 14/2/4 v4, intake remains held, and the experiment
+remains draining. Updated supervision state; periodic checks stay enabled.
+
+09:23 UTC supervision: the 09:20 live audit still finds 37 open tickets and no
+active or queued executor/reviewer tasks. No arrivals, completions or dismissals
+occurred in the preceding hour. Executive failures continue to save
+model_rate_limited reports; dispatch and maintenance succeeded through 09:20.
+Data analyst's 09:13 run saved capacity_unavailable/provider_capacity, confirming
+specialist report delivery remains functional. The direct PR sweep returned all
+26 heads matching trusted evidence, with no closed-unmerged mismatch. API,
+metadatabase, scheduler, DAG processor, worker, gateway, broker and supervision
+timer are healthy; there are zero import errors. No new operational failure
+warrants a repair or retry. Existing review and live-evidence blockers remain.
+Saved/applied limits remain 14 executors, 2 reviewers and 4 executive decisions
+(version 4); the concurrency experiment remains draining, with intake held.
+Refresh supervision state using the check command and keep periodic checks on.
+
+09:31 UTC supervision: 37 open, zero active/queued/retrying bot tasks, no new
+hourly arrivals/completions/dismissals. Executive reports still show provider
+rate limits; no new specialist result or operational failure. Dispatch and
+maintenance succeeded through 09:30; API/database/scheduler/DAG processor,
+worker/gateway/broker/timer are healthy, with zero import errors. All 26 PR heads
+match trusted evidence. No repair/retry is warranted. Preserve gates and model
+settings; applied/saved concurrency remains 14/2/4 v4 in the draining phase.
+
+09:41 UTC supervision: verified unchanged 37-open backlog, no active/queued/
+retrying workers, and no arrivals/completions/dismissals in the last hour.
+Recent executive reports remain model_rate_limited; specialist results unchanged.
+Dispatch/maintenance succeeded through 09:40. Infrastructure and supervision timer
+are healthy; zero import errors. All 26 provider-read PR heads match trusted
+records, none closed-unmerged. No new repair is indicated. Preserve settings and
+all decision/evidence gates; saved/applied 14/2/4 v4 remains draining. Periodic
+checks remain enabled; baseline/tuning have not started.
+
+09:51 UTC supervision: unchanged 37-open backlog, no active/queued/retrying
+workers or hourly ticket movement. Executive failures remain model_rate_limited;
+specialist/review blockers unchanged. Dispatch/maintenance succeed through 09:50,
+infrastructure/timer healthy, zero import errors, all 26 PR heads match trusted
+records. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; preserve gates and continue periodic checks.
+
+10:02 UTC supervision: 37 tickets remain open, no executor/reviewer work queued
+or active, no hourly ticket movement. Executive reports remain model_rate_limited.
+Manager's 09:57 run saved capacity_unavailable/provider_capacity, then its normal
+five-minute retry started and ended at 10:02:04 with the same capacity result and
+a second saved report. The configured single retry is exhausted; this is provider
+unavailability, not a report-delivery or scheduling fault. Do not force retries.
+Dispatch/maintenance succeeded through 10:00; API/database/scheduler/DAG processor,
+worker/gateway/broker/timer are healthy; zero import errors. All 26 PR heads match
+trusted evidence, none closed-unmerged. Other specialist/review blockers unchanged.
+No operational repair indicated. Saved/applied concurrency stays 14/2/4 v4 in
+draining; preserve model settings and gates, and continue periodic checks.
+
+10:11 UTC supervision: 37 open tickets, no active/queued/retrying workers and no
+hourly ticket movement. Executive reports remain model_rate_limited. Failure
+triage's 10:07 report again records capacity_unavailable/provider_capacity;
+manager's exhausted retry remains recorded, with no new operational failure.
+Dispatch/maintenance succeed through 10:10; infrastructure/timer healthy, zero
+import errors. All 26 PR heads match trusted evidence, none closed-unmerged.
+No repair or forced retry warranted. Saved/applied concurrency remains 14/2/4 v4
+in draining; preserve model settings and decision/evidence gates. Continue checks.
+
+10:21 UTC supervision: executive decision-making resumed at 10:20 after the
+06:35–10:19 provider-capacity stall. Fresh check confirms another decision at
+10:21:04, no executive error, scheduling current, and Autopilot still enabled.
+Observed decisions preserve independent review and required live/deployment
+validation gates; 37 tickets remain open with zero active executions. No hourly
+ticket movement. Dispatch/maintenance succeeded through 10:20; infrastructure and
+timer are healthy, zero import errors. All 26 PR heads match trusted evidence;
+none closed-unmerged. Specialist reports still show prior provider-capacity
+failures; their recovery is not yet verified. No repair or settings change was
+needed. Saved/applied concurrency stays 14/2/4 v4, experiment draining. State
+refreshed via check; continue periodic verification of sustained provider recovery.
+
+10:31 UTC supervision: executive decisions continue without a current error.
+UK Parliament mart execution sequence 4/revision 7 launched at 10:24 and remains
+claimed/running within its 11:24 deadline (about 53 minutes left). Executive also
+admitted job-boards retry sequence 3/revision 1; its dispatch is pending, not yet
+verified launched. Fresh state has 37 open: ready 18, blocked 11, accepted 1,
+in_progress 3, in_review 4; two active admissions. No tickets completed or were
+dismissed in the last hour. All 26 PR heads still match trusted evidence; no
+closed-unmerged mismatch. Dispatch/maintenance and recent executive cycles
+succeeded; infrastructure/timer healthy, zero import errors. Specialist results
+remain their previous capacity failures; do not claim their recovery yet.
+No operational repair/settings change indicated. Saved/applied concurrency stays
+14/2/4 v4, experiment draining. State refreshed via check; continue monitoring the
+running and newly admitted work without altering approvals or validation gates.
+
+10:42 UTC supervision: execution recovery produced three new trusted-head PRs:
+UK Parliament mart #107, job-boards summary fix #108, Environment Agency #109.
+All three stored successful executor envelopes with payload status ok. EA received
+independent approval (reviewer reran 12 offline tests and --help) and executive
+moved it ready; required live-source validation remains unproven. Job-boards
+review returned unable_to_review/review_json_invalid at 10:38. Confirmed strict
+JSON parsing in installed immutable worker; raw final response/session is removed
+by launcher cleanup, so no more specific cause can be established from retained
+evidence. Do not fabricate/replace a verdict or treat envelope success as approval.
+UK Parliament review remains running within its 11:21 deadline; no forced retry.
+The complete provider sweep now covers 29 PRs, all heads matching trusted evidence
+and none closed-unmerged. No new task completions. Executive, dispatch and
+maintenance cycles succeed; infrastructure/timer healthy, zero import errors.
+Other specialist reports remain prior capacity failures. Concurrency remains
+14/2/4 v4 and experiment draining. Refresh state via check; continue supervising
+review outcomes and preserve all live-validation/approval gates.
+
+10:52 UTC supervision: backlog reduced from 37 to 36 by executive completion of
+Environment Agency at 10:46. Direct provider read confirms #109 merged at trusted
+head with approved independent review. The recorded plan limits implementation to
+extractor/offline tests; executive explicitly deferred live smoke monitoring.
+This verifies ticket completion and merge, not live 503 recovery or deployment.
+UK Parliament #107 review ended unable_to_review/review_json_invalid, matching the
+unresolved job-boards #108 failure. Installed reviewer explicitly requests strict
+JSON and already accepts one conventional JSON fence; retained evidence lacks the
+raw invalid response, so no further parsing change or fabricated verdict is
+justified. Both independent-review requirements remain unsatisfied.
+All 28 open-ticket PR heads match trusted evidence, none closed-unmerged; the
+separate completed #109 check also matches. No active/queued/retrying workers.
+Executive's isolated decision_context_changed at 10:42 was followed by successful
+cycles; executive/dispatch/maintenance current, infrastructure/timer healthy,
+zero import errors. Specialist results unchanged. No new operational repair
+indicated. Saved/applied concurrency stays 14/2/4 v4, experiment draining.
+Refresh state via check and continue supervision, including unresolved reviews.
+
+11:01 UTC supervision: 36 open tickets, no active/queued/retrying workers or new
+completion since Environment Agency. Executive decisions continue successfully;
+latest decisions retain documented external validation/diagnosis blockers.
+No fresh review or specialist report resolves the previously recorded failures.
+All 28 open-ticket PR heads match trusted evidence, none closed-unmerged.
+Executive/dispatch/maintenance current and successful, infrastructure/timer
+healthy, zero import errors or recent failed task instances. No new operational
+repair indicated; malformed reviewer output and missing external evidence remain
+unresolved. Saved/applied concurrency stays 14/2/4 v4, experiment draining.
+Refresh state via check and continue periodic checks without changing gates.
+
+11:12 UTC supervision: investigated executive's new generic error. Saved failure
+shows a request timeout during response validation, with no unchecked action
+executed. The 11:07 run ended failed at 11:10:07; later cycles recorded successful
+decisions through 11:11:12 and the current error cleared. The PR sweep independently
+hit an SSL connect timeout; one bounded retry succeeded for all 28 open-ticket PRs,
+all trusted heads matching, none closed-unmerged. No restart or gate change needed.
+Failure triage's 11:07 run recovered from prior capacity failures and succeeded at
+11:10:34. Its report proposes two repairs: base_who_gho_odata view-test policy and
+Zenodo timeout/backoff. These are bot-produced findings/proposals, not verified
+source fixes; leave implementation/validation to the normal approval/worker flow.
+Fresh check records 38 open tickets (2 new proposed), no active executions.
+Existing invalid reviewer JSON/live-evidence blockers remain. Dispatch/maintenance,
+infrastructure and timer healthy, zero import errors. Saved/applied concurrency
+remains 14/2/4 v4, experiment draining; supervision state refreshed via check.
+
+11:21 UTC supervision: renewed executive model_rate_limited reports; fresh check
+still shows last decision 11:11:12 and no scheduling stall. A successful DAG cycle
+alone does not establish provider recovery. Backlog remains 38 (including both
+new failure-triage proposals), with no active/queued/retrying worker tasks. Failure
+triage's successful report remains latest; no newer specialist/review result.
+All 28 open-ticket PR heads match trusted evidence, none closed-unmerged.
+Dispatch/maintenance current and successful, infrastructure/timer healthy, zero
+import errors. No new operational repair warranted. Existing invalid-review and
+external-validation blockers remain; preserve settings, decisions and gates.
+Saved/applied concurrency stays 14/2/4 v4, experiment draining. Supervision state
+refreshed via check; periodic checks remain enabled.
+
+11:31 UTC supervision: unchanged 38-open backlog, no active/queued/retrying
+workers. Recent executive failures remain model_rate_limited; no new specialist
+or review result. Dispatch/maintenance succeed through 11:30; infrastructure and
+timer healthy, zero import errors. All 28 open-ticket PR heads match trusted
+records, none closed-unmerged. No new operational repair indicated; preserve
+pending approvals, invalid-review blockers, external validation gates and model
+settings. Saved/applied concurrency remains 14/2/4 v4, experiment draining.
+Refresh supervision state via check and keep periodic checks enabled.
+
+11:41 UTC supervision: verified unchanged 38-open backlog, no active/queued/
+retrying workers. Recent executive report failures remain model_rate_limited;
+no new specialist/review results or operational failure. Dispatch/maintenance
+succeed through 11:40; infrastructure/timer healthy, zero import errors. All 28
+open-ticket PR heads match trusted evidence, none closed-unmerged. No repair or
+forced retry warranted. Preserve pending approvals, independent reviews, external
+validation gates and model settings. Saved/applied concurrency remains 14/2/4 v4,
+experiment draining. Refresh state via check; periodic checks remain enabled.
+
+11:51 UTC supervision: unchanged 38-open backlog, no active/queued/retrying
+workers and no completions in the last hour. Executive failures still report
+model_rate_limited; specialist/review results unchanged. Dispatch/maintenance
+succeed through 11:50; infrastructure/timer healthy, zero import errors. All 28
+open-ticket PR heads match trusted evidence, none closed-unmerged. No new repair
+indicated. Preserve pending decisions, independent reviews, validation gates and
+model settings. Saved/applied concurrency stays 14/2/4 v4, experiment draining.
+Refresh state via check and continue periodic supervision.
+
+12:01 UTC supervision: 38 open tickets, zero active/queued/retrying workers, no
+new review/specialist result or hourly completion. Executive failures continue
+as model_rate_limited; dispatch/maintenance succeed through 12:00. Infrastructure
+and timer healthy, zero import errors. All 28 open-ticket PR heads match trusted
+evidence, none closed-unmerged. No new operational repair indicated. Preserve
+model settings and all approval/review/live-validation gates. Saved/applied
+concurrency remains 14/2/4 v4, experiment draining; refresh state via check and
+continue periodic supervision through eventual baseline/tuning.
+
+12:11 UTC supervision: 38 tickets remain open, no active/queued/retrying workers
+or hourly completion. Failure triage's 12:07 run now also reports
+capacity_unavailable/provider_capacity; executive still reports model_rate_limited.
+Reports persist normally; no new non-capacity failure or review result. All 28
+open-ticket PR heads match trusted evidence, none closed-unmerged. Dispatch and
+maintenance succeed through 12:10; infrastructure/timer healthy, zero import errors.
+No new operational repair indicated. Preserve settings and approval/review/live
+validation gates. Saved/applied concurrency stays 14/2/4 v4, experiment draining;
+refresh state via check and continue periodic supervision.
+
+12:24 UTC supervision repair (commit 608e09a7): discovered source_discovery's
+12:17 run called the model despite workload.allowed=false/open_work_limit at 38
+open tickets. The workload policy and internal GET /workload existed, but the
+runner no longer consulted them. Restored the check before context/model work
+for live source_discovery/source_vetting only. A held run records skipped /
+resolution_capacity_reserved with no model attempts; unavailable or malformed
+control-plane responses fail closed with classified report evidence. Repair,
+scheduling, review and executive roles remain outside this discretionary gate;
+dry/ephemeral diagnostics do not consult live intake. No tickets or thresholds
+changed. All 30 runner/client/model/admission tests passed, including held intake,
+allowed intake, operational roles, transient errors and malformed responses.
+The checkout is the live runner deployment; no service restart needed. Invoked
+both real bot runners with diagnostic identities against the existing live hold;
+fresh DB reads confirm two skipped reports at 12:23:25, zero attempts and no
+payload. This verifies admission recovery without claiming model/source success.
+Data analyst's 12:13 and discovery's earlier 12:17 reports were provider_capacity;
+executive remains rate limited, last decision 11:11. All 28 PR heads match trusted
+evidence; dispatch/maintenance and infrastructure/timer healthy, zero import
+errors. State check at 12:24:00 confirms 38 open, zero active, supervision enabled,
+14/2/4 v4 draining. Continue checks; invalid reviews/external evidence remain open.
+
+12:31 UTC supervision: 38 open, no active/queued/retrying workers or hourly
+arrivals/completions/dismissals. Intake repair remains present; discovery/vetting
+latest reports are the verified 12:23 diagnostic skips, not fresh scheduled runs.
+Analytics engineer's 12:27 run reports capacity_unavailable/provider_capacity;
+executive remains model_rate_limited. No new non-capacity failure/review result.
+All 28 open-ticket PR heads match trusted evidence, none closed-unmerged.
+Dispatch/maintenance succeed through 12:30; infrastructure/timer healthy, zero
+import errors. No further repair warranted. Preserve settings and all approval,
+review and validation gates. Saved/applied concurrency remains 14/2/4 v4,
+experiment draining. Refresh state via check; periodic supervision stays enabled.
+
+12:41 UTC supervision: unchanged 38-open backlog, no active/queued/retrying
+workers or hourly ticket movement. Cadence review's 12:37 run reports
+capacity_unavailable/provider_capacity; executive remains model_rate_limited.
+No new non-capacity failure or review result. All 28 open-ticket PR heads match
+trusted evidence, none closed-unmerged. Dispatch/maintenance current and successful;
+infrastructure/timer healthy, zero import errors. Intake repair remains present.
+No further operational repair indicated. Preserve model settings and all decision,
+review and validation gates. Saved/applied concurrency stays 14/2/4 v4, draining;
+refresh state via check and keep periodic supervision enabled.
+
+12:51 UTC supervision: verified the first subsequent scheduled source-vetting
+run (12:47) obeyed the repaired intake hold: task success on attempt 1, persisted
+skipped/resolution_capacity_reserved, zero model attempts, no payload. This is
+scheduled verification, beyond the earlier diagnostic invocations. Discovery's
+latest skip is still its diagnostic run. Backlog remains 38 with zero active/
+queued/retrying workers or hourly ticket movement. Executive remains rate limited;
+other specialist and review blockers unchanged. All 28 PR heads match trusted
+evidence, none closed-unmerged. Dispatch/maintenance and infrastructure/timer
+healthy, zero import errors. No further repair indicated. Saved/applied limits
+remain 14/2/4 v4, experiment draining; refresh state and continue periodic checks.
+
+13:06 UTC supervision: live audit at 13:05 confirms unchanged 38-open backlog,
+zero active/queued/retrying workers, no hourly ticket movement. Executive failures
+remain model_rate_limited; specialist/review outcomes unchanged. All 28 open-ticket
+PR heads match trusted evidence, none closed-unmerged. Dispatch/maintenance
+succeed through 13:05; infrastructure/timer healthy, zero import errors. Intake
+repair remains present; no further operational repair indicated. Preserve model
+settings and approval/review/validation gates. Saved/applied concurrency remains
+14/2/4 v4, draining; refresh state via check and continue periodic supervision.
+
+13:11 UTC supervision: unchanged 38-open backlog, zero active/queued/retrying
+workers or hourly ticket movement. Failure triage's 13:07 report again records
+capacity_unavailable/provider_capacity; executive remains model_rate_limited.
+No new non-capacity failure or review result. All 28 open-ticket PR heads match
+trusted evidence, none closed-unmerged. Dispatch/maintenance succeed through
+13:10; infrastructure/timer healthy, zero import errors. Intake repair intact;
+no further repair indicated. Preserve settings and all approval/review/validation
+gates. Saved/applied concurrency remains 14/2/4 v4, experiment draining. Refresh
+state via check and continue periodic supervision.
+
+13:21 UTC supervision: unchanged 38-open backlog, no active/queued/retrying
+workers or hourly ticket movement. Executive failures remain model_rate_limited;
+no new specialist/review result or non-capacity failure. All 28 open-ticket PR
+heads match trusted evidence, none closed-unmerged. Dispatch/maintenance current
+and successful; infrastructure/timer healthy, zero import errors. Intake repair
+intact; no further repair indicated. Preserve settings and approval/review/live
+validation gates. Saved/applied concurrency stays 14/2/4 v4, experiment draining;
+refresh state via check and continue periodic supervision.
+
+13:31 UTC supervision: 38 open tickets, no active/queued/retrying workers or
+hourly arrivals/completions/dismissals. Executive reports remain model_rate_limited;
+specialist/review results unchanged. All 28 open-ticket PR heads match trusted
+evidence, none closed-unmerged. Dispatch/maintenance succeed through 13:30;
+infrastructure/timer healthy, zero import errors. Intake repair intact; no new
+operational repair indicated. Preserve model settings and all approval/review/live
+validation gates. Saved/applied concurrency remains 14/2/4 v4, draining; refresh
+state via check and continue periodic supervision.
+
+13:41 UTC supervision: unchanged 38-open backlog, zero active/queued/retrying
+workers or hourly ticket movement. Recent executive reports remain model_rate_limited;
+no new specialist/review result or non-capacity failure. All 28 open-ticket PR
+heads match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 13:40; infrastructure/timer healthy, zero import errors. Intake repair
+intact; no further repair indicated. Preserve settings and all approval/review/live
+validation gates. Saved/applied concurrency stays 14/2/4 v4, draining; refresh
+state via check and continue periodic supervision.
+
+13:51 UTC supervision: 38 open tickets, zero active/queued/retrying workers or
+hourly ticket movement. Source scheduling's 13:47 run now saved a classified
+capacity_unavailable/provider_capacity report, replacing its old runner_failed
+as latest outcome; this verifies report delivery, not scheduling work completed.
+Executive remains model_rate_limited; no new review or non-capacity failure.
+All 28 open-ticket PR heads match trusted evidence, none closed-unmerged.
+Dispatch/maintenance succeed through 13:50; infrastructure/timer healthy, zero
+import errors. Intake repair intact; no further repair indicated. Preserve
+settings and all approval/review/live-validation gates. Saved/applied concurrency
+stays 14/2/4 v4, draining; refresh state and continue periodic supervision.
+
+14:03 UTC supervision: unchanged 38 open tickets, zero active/queued/retrying
+workers and no hourly ticket movement. Executive failures remain provider rate
+limits; specialist/review results unchanged. All 28 open-ticket PR heads match
+trusted evidence, none closed-unmerged. Dispatch/maintenance current and successful,
+infrastructure/timer healthy, zero import errors. No new operational repair
+indicated. Preserve settings and approval/review/live-validation gates. Concurrency
+experiment remains draining; refresh state via check and continue supervision.
+
+14:11 UTC supervision: 38 open tickets, no active/queued/retrying workers or
+hourly ticket movement. All 26 captured executive exceptions since 14:00 are
+provider rate limits; failure triage at 14:07 also saved capacity_unavailable.
+All 28 open-ticket PR heads match trusted evidence, none closed-unmerged; reviews
+unchanged. Dispatch/maintenance succeed through 14:10, infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, experiment draining. Preserve settings and approval/review/live
+validation gates; refresh state via check and continue periodic supervision.
+
+14:21 UTC supervision: unchanged 38 open tickets, zero active/queued/retrying
+workers and no ticket arrivals/completions/dismissals in three hours. All 25
+captured executive exceptions in the 14:10–14:20 runs are provider rate limits.
+Specialist/review results unchanged; all 28 open-ticket PR heads match trusted
+evidence, none closed-unmerged. Dispatch/maintenance succeed through 14:20;
+infrastructure/timer healthy, zero import errors. No new repair indicated.
+Concurrency remains 14/2/4 v4, draining. Preserve settings and all validation
+gates; refresh state via check and continue periodic supervision.
+
+14:31 UTC supervision: 38 open tickets, no active/queued/retrying workers or
+three-hour ticket movement. All 32 captured executive exceptions from 14:20–14:30
+are provider rate limits; specialist and review outcomes unchanged. All 28
+open-ticket PR heads match trusted evidence, none closed-unmerged. Dispatch and
+maintenance succeed through 14:30; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining. Preserve settings and all approval/review/live-validation
+gates; refresh state via check and continue periodic supervision.
+
+14:41 UTC supervision: unchanged 38-open backlog; no active/queued/retrying
+workers or three-hour ticket movement. All 22 captured executive exceptions
+from 14:30–14:40 remain provider rate limits. Specialist/review outcomes unchanged;
+all 28 open-ticket PR heads match trusted evidence, none closed-unmerged. Dispatch
+and maintenance succeed through 14:40; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining. Preserve settings and approval/review/live-validation gates;
+refresh state via check and continue periodic supervision.
+
+14:51 UTC supervision: 38 open tickets, no active/queued/retrying workers or
+three-hour ticket movement. All 28 captured executive exceptions from 14:40–14:50
+are provider rate limits; specialist/review outcomes unchanged. All 28 open-ticket
+PR heads match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 14:50; infrastructure/timer healthy, zero import errors. No new repair
+indicated. Saved/applied concurrency stays 14/2/4 v4, draining; preserve settings
+and all approval/review/live-validation gates. Refresh state via check and
+continue periodic supervision.
+
+15:01 UTC supervision: unchanged 38 open tickets, zero active/queued/retrying
+workers or three-hour ticket movement. All 28 captured executive exceptions from
+14:50–15:00 are provider rate limits. PR probe encountered an SSL handshake timeout
+after 16 reads; one bounded retry completed successfully with all 28 trusted heads
+matching, none closed-unmerged. Specialist/review outcomes unchanged. Dispatch and
+maintenance succeed through 15:00; infrastructure/timer healthy, zero import errors.
+No code repair indicated. Saved/applied concurrency stays 14/2/4 v4, draining.
+Preserve settings and all approval/review/live-validation gates; refresh state via
+check and continue periodic supervision.
+
+15:11 UTC supervision: 38 open tickets, zero active/queued/retrying workers or
+three-hour ticket movement. All 19 captured executive exceptions from 15:00–15:10
+are provider rate limits; failure triage at 15:07 also saved capacity_unavailable.
+Reviews unchanged; all 28 open-ticket PR heads match trusted evidence, none
+closed-unmerged. Dispatch/maintenance succeed through 15:10; infrastructure/timer
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency stays 14/2/4 v4, draining. Preserve settings and all approval/review/live
+validation gates; refresh state via check and continue periodic supervision.
+
+15:21 UTC supervision: 38 open tickets, no active/queued/retrying workers or
+three-hour ticket movement. All 29 captured executive exceptions from 15:10–15:20
+are provider rate limits; data analyst at 15:13 saved capacity_unavailable.
+Reviews unchanged; all 28 open-ticket PR heads match trusted evidence, none
+closed-unmerged. Dispatch/maintenance succeed through 15:20; infrastructure/timer
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency stays 14/2/4 v4, draining. Preserve settings and all approval/review/live
+validation gates; refresh state via check and continue periodic supervision.
+
+15:31 UTC supervision: executive provider recovery verified by new applied
+decisions through 15:30. At 15:29 executive accepted Zenodo timeout/backoff and
+WHO view-test repair proposals; both await executive configuration/assignment,
+with no execution record yet. GeoJSON restored to in_review by executive, existing
+review verdict retained. Backlog remains 38, zero active/queued/retrying workers;
+no completions. All 28 open-ticket PR heads match trusted evidence, none
+closed-unmerged. Dispatch/maintenance succeed through 15:30; infrastructure/timer
+healthy, zero import errors. Specialist latest reports still capacity_unavailable.
+No operational repair indicated; preserve executive decisions and validation gates.
+Concurrency experiment stays draining; refresh state and continue supervision.
+
+15:45 UTC supervision repair fd2f7550: accepted Zenodo start had been deferred
+for an hour with misleading executor_None model-connection error because executor
+assignment was absent. Executive action eligibility now suppresses start/revise
+until a valid bot profile is assigned; stale requests validate assignment before
+model lookup. 29 autopilot tests pass, including human/unassigned guards and normal
+assignment-to-start flow. Source and installed provider updated; API recovered
+healthy under existing restart policy (service-manager restart required unavailable
+interactive authentication). Audited diagnosis triggered normal reconsideration;
+executive assigned Zenodo junior at 15:44, verifying workflow recovery. No model
+mapping, task decision, review, or validation gate supplied by supervision.
+WHO retry revision 2 terminally blocked: relative transform/bin/dbt still requires
+operator shared-checkout git metadata, then validate_project has no manifest.
+Recorded exact immutable-report failures for executive reconfiguration, not success.
+All 28 open-ticket PR heads checked match trusted evidence, none closed-unmerged.
+Dispatch/maintenance and infrastructure healthy, zero import errors; experiment
+remains draining. Refresh state via check and continue scheduled supervision.
+
+15:51 UTC supervision: assignment repair fd2f7550 still deployed (source and
+installed files identical). Executive started Zenodo at 15:46; worker admitted,
+ran, and saved execution_blocked with real provider 429 plus failing offline
+checks (six selected tests and constant assertion), no PR. This verifies admission
+recovery, not task success. WHO executive reconfigured verification at 15:45/15:47
+to avoid checkout wrapper dependency and place a real dbt manifest; no new run
+verified yet. One executive response containing unsupported action_alt was rejected
+before submission at 15:45; subsequent decisions succeeded through 15:48, then
+provider rate limits returned. No gate bypass or new operational repair indicated.
+38 open (14 blocked), zero active/queued/retrying workers. All 28 open-ticket PR
+heads match trusted evidence, none closed-unmerged; reviews/specialists unchanged.
+Dispatch/maintenance and infrastructure/timer healthy, zero import errors. Keep
+concurrency experiment draining and preserve settings; refresh state via check.
+
+16:01 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 22 captured executive exceptions from 15:50–16:00
+are provider rate limits. WHO/Zenodo have no new execution or review result;
+specialists unchanged. All 28 open-ticket PR heads match trusted evidence, none
+closed-unmerged. Dispatch/maintenance succeed through 16:00; infrastructure/timer
+healthy, zero import errors. No further operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining. Preserve settings and all approval/review/
+live-validation gates; refresh state via check and continue periodic supervision.
+
+16:11 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 29 captured executive exceptions from 16:00–16:10
+are provider rate limits; failure triage at 16:07 saved capacity_unavailable.
+No new execution/review result. All 28 open-ticket PR heads match trusted evidence,
+none closed-unmerged. Dispatch/maintenance succeed through 16:10; infrastructure/
+timer healthy, zero import errors. No new operational repair indicated. Saved/
+applied concurrency remains 14/2/4 v4, draining. Preserve settings and all approval/
+review/live-validation gates; refresh state via check and continue supervision.
+
+16:21 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 24 captured executive exceptions from 16:10–16:20
+are provider rate limits. No new execution/review/specialist result. All 28
+open-ticket PR heads match trusted evidence, none closed-unmerged. Dispatch and
+maintenance succeed through 16:20; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining. Preserve settings and all approval/review/live-validation
+gates; refresh state via check and continue periodic supervision.
+
+16:30 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 24 captured executive exceptions from 16:20–16:30
+are provider rate limits; analytics engineer at 16:27 saved capacity_unavailable.
+No new execution/review result. All 28 open-ticket PR heads match trusted evidence,
+none closed-unmerged. Dispatch/maintenance succeed through 16:30; infrastructure/
+timer healthy, zero import errors. No new operational repair indicated. Saved/
+applied concurrency remains 14/2/4 v4, draining. Preserve settings and all approval/
+review/live-validation gates; refresh state via check and continue supervision.
+
+16:41 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 29 captured executive exceptions from 16:30–16:40
+are provider rate limits; cadence review at 16:37 saved capacity_unavailable.
+No new execution/review result. All 28 open-ticket PR heads match trusted evidence,
+none closed-unmerged. Dispatch/maintenance succeed through 16:40; infrastructure/
+timer healthy, zero import errors. No new operational repair indicated. Saved/
+applied concurrency remains 14/2/4 v4, draining. Preserve settings and all approval/
+review/live-validation gates; refresh state via check and continue supervision.
+
+16:51 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 22 captured executive exceptions from 16:40–16:50
+are provider rate limits. No new execution/review/specialist result. All 28
+open-ticket PR heads match trusted evidence, none closed-unmerged. Dispatch and
+maintenance succeed through 16:50; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining. Preserve settings and all approval/review/live-validation
+gates; refresh state via check and continue periodic supervision.
+
+17:01 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 28 captured executive exceptions from 16:50–17:00
+are provider rate limits. No new execution/review/specialist result. All 28
+open-ticket PR heads match trusted evidence, none closed-unmerged. Dispatch and
+maintenance succeed through 17:00; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining. Preserve settings and all approval/review/live-validation
+gates; refresh state via check and continue periodic supervision.
+
+17:11 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 29 captured executive exceptions from 17:00–17:10
+are provider rate limits; failure triage at 17:07 saved capacity_unavailable.
+No new execution/review result. All 28 open-ticket PR heads match trusted evidence,
+none closed-unmerged. Dispatch/maintenance succeed through 17:10; infrastructure/
+timer healthy, zero import errors. No new operational repair indicated. Saved/
+applied concurrency remains 14/2/4 v4, draining. Preserve settings and all approval/
+review/live-validation gates; refresh state via check and continue supervision.
+
+17:21 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 24 captured executive exceptions from 17:10–17:20
+are provider rate limits. No new execution/review/specialist result. All 28
+open-ticket PR heads match trusted evidence, none closed-unmerged. Dispatch and
+maintenance succeed through 17:20; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining. Preserve settings and all approval/review/live-validation
+gates; refresh state via check and continue periodic supervision.
+
+17:31 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 29 captured executive exceptions from 17:20–17:30
+are provider rate limits. No new execution/review/specialist result. All 28
+open-ticket PR heads match trusted evidence, none closed-unmerged. Dispatch and
+maintenance succeed through 17:30; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining. Preserve settings and all approval/review/live-validation
+gates; refresh state via check and continue periodic supervision.
+
+17:41 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 24 captured executive exceptions from 17:30–17:40
+are provider rate limits. No new execution/review/specialist result. All 28
+open-ticket PR heads match trusted evidence, none closed-unmerged. Dispatch and
+maintenance succeed through 17:40; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining. Preserve settings and all approval/review/live-validation
+gates; refresh state via check and continue periodic supervision.
+
+17:51 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 24 captured executive exceptions from 17:40–17:50
+are provider rate limits. No new execution/review/specialist result. All 28
+open-ticket PR heads match trusted evidence, none closed-unmerged. Dispatch and
+maintenance succeed through 17:50; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining. Preserve settings and all approval/review/live-validation
+gates; refresh state via check and continue periodic supervision.
+
+18:01 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 29 captured executive exceptions from 17:50–18:00
+are provider rate limits. No new execution/review/specialist result. All 28
+open-ticket PR heads match trusted evidence, none closed-unmerged. Dispatch and
+maintenance succeed through 18:00; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining. Preserve settings and all approval/review/live-validation
+gates; refresh state via check and continue periodic supervision.
+
+18:11 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 23 captured executive exceptions from 18:00–18:10
+are provider rate limits; failure triage at 18:07 saved capacity_unavailable.
+No new execution/review result. All 28 open-ticket PR heads match trusted evidence,
+none closed-unmerged. Dispatch/maintenance succeed through 18:10; infrastructure/
+timer healthy, zero import errors. No new operational repair indicated. Saved/
+applied concurrency remains 14/2/4 v4, draining. Preserve settings and all approval/
+review/live-validation gates; refresh state via check and continue supervision.
+
+18:21 UTC supervision: 38 open tickets (14 blocked), zero active/queued/retrying
+workers. All 26 captured executive exceptions from 18:10–18:20 are provider rate
+limits; data analyst at 18:13 saved capacity_unavailable. Scheduled source discovery
+at 18:17 now independently verifies the intake guard: skipped with
+resolution_capacity_reserved and zero model attempts. No new execution/review
+result. All 28 open-ticket PR heads match trusted evidence, none closed-unmerged.
+Dispatch/maintenance succeed through 18:20; infrastructure/timer healthy, zero
+import errors. No new operational repair indicated. Concurrency remains 14/2/4 v4,
+draining. Preserve settings and validation gates; refresh state via check.
+
+18:31 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 27 captured executive exceptions from 18:20–18:30
+are provider rate limits. No new execution/review/specialist result; intake guard
+remains effective. All 28 open-ticket PR heads match trusted evidence, none
+closed-unmerged. Dispatch/maintenance succeed through 18:30; infrastructure/timer
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining. Preserve settings and all approval/review/
+live-validation gates; refresh state via check and continue periodic supervision.
+
+18:41 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 24 captured executive exceptions from 18:30–18:40
+are provider rate limits. No new execution/review/specialist result; intake guard
+remains effective. All 28 open-ticket PR heads match trusted evidence, none
+closed-unmerged. Dispatch/maintenance succeed through 18:40; infrastructure/timer
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining. Preserve settings and all approval/review/
+live-validation gates; refresh state via check and continue periodic supervision.
+
+18:51 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 29 captured executive exceptions from 18:40–18:50
+are provider rate limits. Scheduled source vetting at 18:47 correctly skipped
+with resolution_capacity_reserved and zero model attempts, confirming intake guard.
+No new execution/review result. All 28 open-ticket PR heads match trusted evidence,
+none closed-unmerged. Dispatch/maintenance succeed through 18:50; infrastructure/
+timer healthy, zero import errors. No new operational repair indicated. Saved/
+applied concurrency remains 14/2/4 v4, draining. Preserve settings and all approval/
+review/live-validation gates; refresh state via check and continue supervision.
+
+19:01 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 24 captured executive exceptions from 18:50–19:00
+are provider rate limits. No new execution/review/specialist result; intake guard
+remains effective. All 28 open-ticket PR heads match trusted evidence, none
+closed-unmerged. Dispatch/maintenance succeed through 19:00; infrastructure/timer
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining. Preserve settings and all approval/review/
+live-validation gates; refresh state via check and continue periodic supervision.
+
+19:11 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 26 captured executive exceptions from 19:00–19:10
+are provider rate limits; failure triage at 19:07 saved capacity_unavailable.
+No new execution/review result. All 28 open-ticket PR heads match trusted evidence,
+none closed-unmerged. Dispatch/maintenance succeed through 19:10; infrastructure/
+timer healthy, zero import errors. No new operational repair indicated. Saved/
+applied concurrency remains 14/2/4 v4, draining. Preserve settings and all approval/
+review/live-validation gates; refresh state via check and continue supervision.
+
+19:21 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 29 captured executive exceptions from 19:10–19:20
+are provider rate limits. No new execution/review/specialist result; intake guard
+remains effective. All 28 open-ticket PR heads match trusted evidence, none
+closed-unmerged. Dispatch/maintenance succeed through 19:20; infrastructure/timer
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining. Preserve settings and all approval/review/
+live-validation gates; refresh state via check and continue periodic supervision.
+
+19:34 UTC supervision: unchanged 38 open tickets (14 blocked), zero active/
+queued/retrying workers. All 23 captured executive exceptions from 19:20–19:30
+are provider rate limits; last actual decision remains 15:48. No new execution,
+review, or specialist result. All 28 open-ticket PR heads match trusted evidence,
+none closed-unmerged. Dispatch/maintenance succeed through 19:30; infrastructure/
+timer healthy, zero import errors. No new operational repair indicated. Saved/
+applied concurrency remains 14/2/4 v4, draining; baseline cannot begin yet.
+Preserve settings and approval/review/live-validation gates; refresh state via
+check and continue periodic supervision.
+
+19:41 UTC supervision: 38 open, 14 blocked; no active/queued/retrying workers.
+All 25 captured executive exceptions from 19:30–19:40 remain provider rate limits;
+last actual decision 15:48. No new execution/review/specialist result. All 28 PR
+heads match trusted evidence; none closed-unmerged. Dispatch/maintenance current
+and healthy, zero import errors; API and supporting services/timer healthy. No new
+repair indicated. Saved/applied concurrency 14/2/4 v4, still draining. Preserve
+settings and validation gates; refresh supervision state and continue checks.
+
+19:51 UTC supervision: unchanged 38 open (14 blocked), zero active/queued/retrying
+workers. All 27 captured executive exceptions from 19:40–19:50 are provider rate
+limits; source scheduling at 19:47 also reported capacity_unavailable. No new
+execution/review outcome. All 28 checked PR heads match trusted evidence; none
+closed-unmerged. Dispatch/maintenance succeed through 19:50; infrastructure/timer
+healthy, zero import errors. No new repair indicated. Concurrency remains saved/
+applied 14/2/4 v4, draining; preserve settings and all gates. Refresh state with
+check and continue scheduled supervision.
+
+20:06 UTC supervision: 38 open (14 blocked), no active/queued/retrying workers.
+All 38 captured executive exceptions from 19:50–20:05 are provider rate limits;
+last actual decision remains 15:48. No new execution/review/specialist result.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 20:05; infrastructure/timer healthy, zero import
+errors. Rolling 24-hour completions now two as older completion leaves window;
+no new completion. No repair indicated. Saved/applied concurrency 14/2/4 v4,
+still draining; preserve settings/gates and refresh state with check.
+
+20:11 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 15 captured executive exceptions from 20:05–20:10 are provider rate
+limits; failure triage at 20:07 also reported capacity_unavailable. No new execution/
+review outcome. All 28 checked PR heads match trusted evidence; none closed-unmerged.
+Dispatch/maintenance succeed through 20:10; infrastructure/timer healthy, zero import
+errors. No new repair indicated. Saved/applied concurrency 14/2/4 v4, still draining;
+settings and gates preserved. Refresh state with check and continue supervision.
+
+20:21 UTC supervision: unchanged 38 open (14 blocked), zero active/queued/retrying
+workers. All 27 captured executive exceptions from 20:10–20:20 remain provider rate
+limits; no new actual decision or execution/review/specialist result. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 20:20; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not yet eligible. Preserve settings and gates; refresh state and continue checks.
+
+20:31 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 24 captured executive exceptions from 20:20–20:30 are provider rate
+limits; analytics engineer at 20:27 also reported capacity_unavailable. Last actual
+decision remains 15:48; no new execution/review result. All 28 checked PR heads
+match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed through
+20:30; infrastructure/timer healthy, zero import errors. No new repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining. Preserve settings/gates,
+refresh supervision state with check, and continue scheduled checks.
+
+20:41 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 28 captured executive exceptions from 20:30–20:40 are provider rate
+limits; cadence review at 20:37 also reported capacity_unavailable. Last actual
+decision remains 15:48; no new execution/review result. All 28 checked PR heads
+match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed through
+20:40; infrastructure/timer healthy, zero import errors. No new repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining. Preserve settings/gates,
+refresh state with check, and continue scheduled supervision.
+
+20:51 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 23 captured executive exceptions from 20:40–20:50 are provider rate
+limits; no new actual decision or execution/review/specialist result. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 20:50; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency 14/2/4 v4 remains in draining phase;
+baseline not eligible. Preserve settings/gates and refresh state with check.
+
+21:01 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 26 captured executive exceptions from 20:50–21:00 remain provider rate
+limits; no new actual decision or execution/review/specialist result. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 21:00; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates; refresh state and continue scheduled checks.
+
+21:11 UTC supervision: unchanged 38 open (14 blocked), zero active/queued/retrying
+workers. All 27 captured executive exceptions from 21:00–21:10 remain provider rate
+limits; failure triage at 21:07 also reported capacity_unavailable. Last actual
+decision remains 15:48; no new execution/review result. All 28 checked PR heads
+match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed through
+21:10; infrastructure/timer healthy, zero import errors. No new repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state with check, and continue scheduled checks.
+
+21:21 UTC supervision: unchanged 38 open (14 blocked), zero active/queued/retrying
+workers. All 25 captured executive exceptions from 21:10–21:20 are provider rate
+limits; data analyst at 21:13 also reported capacity_unavailable. Last actual
+decision remains 15:48; no new execution/review result. All 28 checked PR heads
+match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed through
+21:20; infrastructure/timer healthy, zero import errors. No new repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state with check, and continue scheduled checks.
+
+21:31 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 27 captured executive exceptions from 21:20–21:30 are provider rate
+limits; no new actual decision or execution/review/specialist result. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 21:30; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+21:41 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 27 captured executive exceptions from 21:30–21:40 remain provider rate
+limits; no new actual decision or execution/review/specialist result. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 21:40; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+21:51 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 25 captured executive exceptions from 21:40–21:50 remain provider rate
+limits; no new actual decision or execution/review/specialist result. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 21:50; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+22:01 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 28 captured executive exceptions from 21:50–22:00 remain provider rate
+limits; no new actual decision or execution/review/specialist result. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 22:00; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+22:11 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 22 captured executive exceptions from 22:00–22:10 remain provider rate
+limits; failure triage at 22:07 also reported capacity_unavailable. Last actual
+decision remains 15:48; no new execution/review result. All 28 checked PR heads
+match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed through
+22:10; infrastructure/timer healthy, zero import errors. No new repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state with check, and continue scheduled checks.
+
+22:21 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 28 captured executive exceptions from 22:10–22:20 remain provider rate
+limits; no new actual decision or execution/review/specialist result. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 22:20; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+22:31 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 26 captured executive exceptions from 22:20–22:30 remain provider rate
+limits; no new actual decision or execution/review/specialist result. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 22:30; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+22:41 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 24 captured executive exceptions from 22:30–22:40 remain provider rate
+limits; no new actual decision or execution/review/specialist result. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 22:40; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+22:51 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 29 captured executive exceptions from 22:40–22:50 remain provider rate
+limits; no new actual decision or execution/review/specialist result. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 22:50; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+23:01 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 26 captured executive exceptions from 22:50–23:00 remain provider rate
+limits; no new actual decision or execution/review/specialist result. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 23:00; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+23:11 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 25 captured executive exceptions from 23:00–23:10 remain provider rate
+limits; failure triage at 23:07 also reported capacity_unavailable. Last actual
+decision remains 15:48; no new execution/review result. All 28 checked PR heads
+match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed through
+23:10; infrastructure/timer healthy, zero import errors. No new repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state with check, and continue scheduled checks.
+
+23:21 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 29 captured executive exceptions from 23:10–23:20 remain provider rate
+limits; no new actual decision or execution/review/specialist result. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 23:20; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+23:31 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 21 captured executive exceptions from 23:20–23:30 remain provider rate
+limits; no new actual decision or execution/review/specialist result. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 23:30; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+23:41 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 28 captured executive exceptions from 23:30–23:40 remain provider rate
+limits; no new actual decision or execution/review/specialist result. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 23:40; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+23:51 UTC supervision: unchanged 38 open (14 blocked), no active/queued/retrying
+workers. All 27 captured executive exceptions from 23:40–23:50 remain provider rate
+limits; no new actual decision or execution/review/specialist result. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 23:50; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 00:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers. All 25 captured executive exceptions from Sep 19 23:50
+through Sep 20 00:00 remain provider rate limits; no new actual decision or
+execution/review/specialist result. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 00:00; infrastructure/
+timer healthy, zero import errors. No new operational repair indicated. Saved/
+applied concurrency remains 14/2/4 v4, draining; baseline not eligible. Preserve
+settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 00:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers. All 31 captured executive exceptions from 00:00–00:10
+remain provider rate limits; failure triage at 00:07 also reported capacity_unavailable.
+Last actual decision remains Sep 19 15:48; no new execution/review result. All 28
+checked PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance
+succeed through 00:10; infrastructure/timer healthy, zero import errors. No new
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 00:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers. All 25 captured executive exceptions from 00:10–00:20
+remain provider rate limits; data analyst at 00:13 also reported capacity_unavailable.
+Scheduled source discovery at 00:17 skipped with resolution_capacity_reserved,
+confirming intake guard remains effective. No new actual decision or execution/review
+result. All 28 checked PR heads match trusted evidence; none closed-unmerged.
+Dispatch/maintenance succeed through 00:20; infrastructure/timer healthy, zero import
+errors. No repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates, refresh state, and continue checks.
+
+2026-09-20 00:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers. All 26 captured executive exceptions from 00:20–00:30
+remain provider rate limits; analytics engineer at 00:27 also reported capacity_unavailable.
+No new actual decision or execution/review result. All 28 checked PR heads match
+trusted evidence; none closed-unmerged. Dispatch/maintenance succeed through 00:30;
+infrastructure/timer healthy, zero import errors. Rolling 24-hour completions now
+one as older completion leaves window; no new completion. No repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; preserve settings/gates,
+refresh state, and continue scheduled checks.
+
+2026-09-20 00:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers. All 28 captured executive exceptions from 00:30–00:40
+remain provider rate limits; cadence review at 00:37 also reported capacity_unavailable.
+Last actual decision remains Sep 19 15:48; no new execution/review result. All 28
+checked PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance
+succeed through 00:40; infrastructure/timer healthy, zero import errors. No new
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 00:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers. All 21 captured executive exceptions from 00:40–00:50
+remain provider rate limits. Scheduled source vetting at 00:47 skipped with
+resolution_capacity_reserved, confirming intake guard remains effective. No new
+actual decision or execution/review result. All 28 checked PR heads match trusted
+evidence; none closed-unmerged. Dispatch/maintenance succeed through 00:50;
+infrastructure/timer healthy, zero import errors. No repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/
+gates, refresh state, and continue scheduled checks.
+
+2026-09-20 01:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers. All 28 captured executive exceptions from 00:50–01:00
+remain provider rate limits; no new actual decision or execution/review/specialist
+result. All 28 checked PR heads match trusted evidence; none closed-unmerged.
+Dispatch/maintenance succeed through 01:00; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 01:16 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers. All 41 captured executive exceptions from 01:00–01:15
+remain provider rate limits; failure triage at 01:07 also reported capacity_unavailable.
+Last actual decision remains Sep 19 15:48; no new execution/review result. All 28
+checked PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance
+succeed through 01:15; infrastructure/timer healthy, zero import errors. No new
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 01:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers. All 10 captured executive exceptions from 01:15–01:20
+remain provider rate limits; no new actual decision or execution/review/specialist
+result. All 28 checked PR heads match trusted evidence; none closed-unmerged.
+Dispatch/maintenance succeed through 01:20; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 01:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers. All 30 captured executive exceptions from 01:20–01:30
+remain provider rate limits; no new actual decision or execution/review/specialist
+result. All 28 checked PR heads match trusted evidence; none closed-unmerged.
+Dispatch/maintenance succeed through 01:30; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 01:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers. All 23 captured executive exceptions from 01:30–01:40
+remain provider rate limits; no new actual decision or execution/review/specialist
+result. All 28 checked PR heads match trusted evidence; none closed-unmerged.
+Dispatch/maintenance succeed through 01:40; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 01:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers. All 26 captured executive exceptions from 01:40–01:50
+remain provider rate limits; source scheduling at 01:47 also reported capacity_unavailable.
+Last actual decision remains Sep 19 15:48; no new execution/review result. All 28
+checked PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance
+succeed through 01:50; infrastructure/timer healthy, zero import errors. No new
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 02:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers. All 28 captured executive exceptions from 01:50–02:00
+remain provider rate limits; no new actual decision or execution/review/specialist
+result. All 28 checked PR heads match trusted evidence; none closed-unmerged.
+Dispatch/maintenance succeed through 02:00; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 02:14 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers in the 02:10 inspection. All 21 captured executive
+exceptions from 02:00–02:10 remain provider rate limits; failure triage at 02:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; no new execution/review result.
+Dispatch/maintenance succeed through 02:10; API/metadatabase/scheduler/DAG processor
+and worker/gateway/broker/timer healthy at 02:13, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-20 02:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 29 captured
+executive exceptions from 02:10–02:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 02:20; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 02:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from 02:20–02:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 02:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 02:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 02:30–02:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 02:40; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 02:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 31 captured
+executive exceptions from 02:40–02:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 02:50; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 03:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 23 captured
+executive exceptions from 02:50–03:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The 02:59 successful DAG did not produce a new
+decision and does not establish provider recovery. All 28 checked PR heads match
+trusted evidence; none closed-unmerged. Dispatch/maintenance succeed through 03:00;
+infrastructure and timer healthy, zero import errors. No new operational repair
+indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline not
+eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 03:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 28 captured executive
+exceptions from 03:00–03:10 remain provider rate limits; failure triage at 03:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48;
+the successful 03:09 executive DAG did not establish provider recovery. All 28
+checked PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance
+succeed through 03:10; infrastructure/timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-20 03:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 31 captured executive
+exceptions from 03:10–03:20 remain provider rate limits; data analyst at 03:13
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 03:20; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 03:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 23 captured
+executive exceptions from 03:20–03:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 03:29 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 03:30; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 03:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 29 captured
+executive exceptions from 03:30–03:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 03:40; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 03:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 03:40–03:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 03:50; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 04:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 03:50–04:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 04:00; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 04:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 32 captured executive
+exceptions from 04:00–04:10 remain provider rate limits; failure triage at 04:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 04:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 04:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 22 captured
+executive exceptions from 04:10–04:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 04:20; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 04:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 27 captured executive
+exceptions from 04:20–04:30 remain provider rate limits; analytics engineer at 04:27
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48;
+successful executive DAGs at 04:28/04:29 did not establish provider recovery. All
+28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 04:30; infrastructure/timer healthy, zero import errors.
+No new operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-20 04:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 32 captured executive
+exceptions from 04:30–04:40 remain provider rate limits; cadence review at 04:37
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 04:40; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 04:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 22 captured
+executive exceptions from 04:40–04:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 04:50; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 05:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 27 captured
+executive exceptions from 04:50–05:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 05:00 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 05:00; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 05:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 26 captured executive
+exceptions from 05:00–05:10 remain provider rate limits; failure triage at 05:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 05:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 05:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 05:10–05:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 05:20; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 05:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 30 captured
+executive exceptions from 05:20–05:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 05:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 05:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 22 captured
+executive exceptions from 05:30–05:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 05:40; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 05:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from 05:40–05:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 05:48 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 05:50; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 06:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 31 captured
+executive exceptions from 05:50–06:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 06:00; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 06:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 23 captured executive
+exceptions from 06:00–06:10 remain provider rate limits; failure triage at 06:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 06:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 06:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 27 captured executive
+exceptions from 06:10–06:20 remain provider rate limits; data analyst at 06:13
+also reported capacity_unavailable. Source discovery at 06:17 correctly skipped
+with resolution_capacity_reserved, confirming intake admission remains effective.
+Last actual decision remains Sep 19 15:48; successful 06:20 executive DAG does
+not establish provider recovery. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 06:20; infrastructure/
+timer healthy, zero import errors. No new operational repair indicated. Saved/
+applied concurrency remains 14/2/4 v4, draining; baseline not eligible. Preserve
+settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 06:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 06:20–06:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 06:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 06:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 24 captured
+executive exceptions from 06:30–06:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 06:40; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 06:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 30 captured executive
+exceptions from 06:40–06:50 remain provider rate limits; last actual decision
+remains Sep 19 15:48. Source vetting at 06:47 correctly skipped with
+resolution_capacity_reserved, confirming intake admission remains effective. All
+28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 06:50; infrastructure/timer healthy, zero import errors.
+No new operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-20 07:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 22 captured
+executive exceptions from 06:50–07:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 07:00; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 07:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 27 captured executive
+exceptions from 07:00–07:10 remain provider rate limits; failure triage at 07:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48;
+the successful 07:08 executive DAG did not establish provider recovery. All 28
+checked PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance
+succeed through 07:10; infrastructure/timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-20 07:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 33 captured
+executive exceptions from 07:10–07:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 07:20; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 07:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 23 captured
+executive exceptions from 07:20–07:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 07:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 07:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 07:30–07:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 07:38 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 07:40; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 07:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 26 captured executive
+exceptions from 07:40–07:50 remain provider rate limits; source scheduling at 07:47
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 07:50; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 08:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from 07:50–08:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 08:00; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 08:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 31 captured executive
+exceptions from 08:00–08:10 remain provider rate limits; failure triage at 08:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 08:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 08:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 23 captured
+executive exceptions from 08:10–08:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 08:20; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 08:32 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 25 captured executive
+exceptions from 08:20–08:30 remain provider rate limits; analytics engineer at
+08:27 also reported capacity_unavailable. Last actual decision remains Sep 19
+15:48. PR inspection hit an SSL handshake timeout after 25 successful reads;
+one bounded read-only retry succeeded for all 28 PRs, with matching trusted heads
+and none closed-unmerged. Dispatch/maintenance succeed through 08:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 08:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 33 captured executive
+exceptions from 08:30–08:40 remain provider rate limits; cadence review at 08:37
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 08:40; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 08:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 24 captured
+executive exceptions from 08:40–08:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 08:50; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 09:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 08:50–09:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 08:59 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 09:00; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 09:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 28 captured executive
+exceptions from 09:00–09:10 remain provider rate limits; failure triage at 09:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 09:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 09:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 25 captured executive
+exceptions from 09:10–09:20 remain provider rate limits; data analyst at 09:13
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 09:20; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 09:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 29 captured
+executive exceptions from 09:20–09:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 09:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 09:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 23 captured
+executive exceptions from 09:30–09:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 09:40; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 09:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from 09:40–09:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 09:49 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 09:50; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 10:02 UTC supervision: unchanged 38 open (14 blocked), no active
+executions or new executor/reviewer results. All 33 captured executive exceptions
+from 09:50–10:00 remain provider rate limits; last actual decision remains Sep 19
+15:48. Manager's 09:57 attempt reported provider_capacity; followed its scheduled
+retry through terminal attempt 2 at 10:02, also capacity_unavailable. Provider
+recovery remains unverified; no extra retry forced. All 28 checked PR heads match
+trusted evidence; none closed-unmerged. Dispatch/maintenance succeed through
+10:00; infrastructure/timer healthy, zero import errors. No new operational repair
+indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline not
+eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 10:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 25 captured executive
+exceptions from 10:00–10:10 remain provider rate limits; failure triage at 10:07
+also reported capacity_unavailable. Manager retry has terminated as recorded at
+10:02; no stranded retry remains. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 10:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 10:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 10:10–10:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 10:19 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 10:20; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 10:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 28 captured
+executive exceptions from 10:20–10:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 10:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 10:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 24 captured
+executive exceptions from 10:30–10:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 10:40; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 10:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 29 captured
+executive exceptions from 10:40–10:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The last completion (Sep 19 10:46) has now aged out
+of the 24-hour flow window, leaving zero completions in that window. All 28 checked
+PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed
+through 10:50; infrastructure/timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 11:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 23 captured
+executive exceptions from 10:50–11:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 11:00; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 11:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 26 captured executive
+exceptions from 11:00–11:10 remain provider rate limits; failure triage at 11:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48;
+the successful 11:08 executive DAG did not establish recovery. PR inspection hit
+an SSL handshake timeout after 25 successful reads; one bounded read-only retry
+succeeded for all 28 PRs, with matching trusted heads and none closed-unmerged.
+Dispatch/maintenance succeed through 11:10; infrastructure/timer healthy, zero
+import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 11:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 34 captured
+executive exceptions from 11:10–11:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. No arrivals, completions or dismissals in the last
+24 hours. All 28 checked PR heads match trusted evidence; none closed-unmerged.
+Dispatch/maintenance succeed through 11:20; infrastructure/timer healthy, zero
+import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 11:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 23 captured
+executive exceptions from 11:20–11:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 11:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 11:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 24 captured
+executive exceptions from 11:30–11:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 11:40 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 11:40; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 11:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 29 captured
+executive exceptions from 11:40–11:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 11:50; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 12:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from 11:50–12:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 12:00; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 12:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 30 captured executive
+exceptions from 12:00–12:10 remain provider rate limits; failure triage at 12:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 12:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 12:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 23 captured executive
+exceptions from 12:10–12:20 remain provider rate limits; data analyst at 12:13
+also reported capacity_unavailable. Source discovery at 12:17 correctly skipped
+with resolution_capacity_reserved, confirming intake admission remains effective.
+Last actual decision remains Sep 19 15:48; the successful 12:19 executive DAG did
+not establish recovery. All 28 checked PR heads match trusted evidence; none
+closed-unmerged. Dispatch/maintenance succeed through 12:20; infrastructure/timer
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/
+gates, refresh state, and continue scheduled checks.
+
+2026-09-20 12:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 26 captured executive
+exceptions from 12:20–12:30 remain provider rate limits; analytics engineer at
+12:27 also reported capacity_unavailable. Last actual decision remains Sep 19
+15:48; the successful 12:28 executive DAG did not establish recovery. All 28
+checked PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance
+succeed through 12:30; infrastructure/timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates, refresh state, and
+continue scheduled checks.
+
+2026-09-20 12:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 34 captured executive
+exceptions from 12:30–12:40 remain provider rate limits; cadence review at 12:37
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 12:40; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 12:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 22 captured executive
+exceptions from 12:40–12:50 remain provider rate limits; last actual decision
+remains Sep 19 15:48. Source vetting at 12:47 correctly skipped with
+resolution_capacity_reserved, confirming intake admission remains effective.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 12:50; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 13:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 22 captured
+executive exceptions from 12:50–13:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. Successful 12:59/13:00 executive DAGs did not
+establish provider recovery. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 13:00; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 13:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 29 captured executive
+exceptions from 13:00–13:10 remain provider rate limits; failure triage at 13:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 13:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 13:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 13:10–13:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 13:20; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 13:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 29 captured
+executive exceptions from 13:20–13:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 13:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 13:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 23 captured
+executive exceptions from 13:30–13:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 13:40; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 13:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 26 captured executive
+exceptions from 13:40–13:50 remain provider rate limits; source scheduling at
+13:47 also reported capacity_unavailable. Last actual decision remains Sep 19
+15:48; the successful 13:48 executive DAG did not establish recovery. All 28
+checked PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance
+succeed through 13:50; infrastructure/timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates, refresh state, and
+continue scheduled checks.
+
+2026-09-20 14:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 31 captured
+executive exceptions from 13:50–14:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 14:00; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 14:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 24 captured executive
+exceptions from 14:00–14:10 remain provider rate limits; failure triage at 14:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 14:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 14:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 21 captured
+executive exceptions from 14:10–14:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. Successful 14:19/14:20 executive DAGs did not
+establish provider recovery. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 14:20; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 14:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 29 captured
+executive exceptions from 14:20–14:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 14:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 14:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 14:30–14:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 14:40; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 14:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 29 captured
+executive exceptions from 14:40–14:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 14:50; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 15:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 24 captured
+executive exceptions from 14:50–15:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The 14:59 successful executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 15:00; infrastructure and timer
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/
+gates, refresh state, and continue scheduled checks.
+
+2026-09-20 15:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 28 captured executive
+exceptions from 15:00–15:10 remain provider rate limits; failure triage at 15:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 15:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 15:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 32 captured executive
+exceptions from 15:10–15:20 remain provider rate limits; data analyst at 15:13
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 15:20; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 15:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 23 captured
+executive exceptions from 15:20–15:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 15:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 15:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 22 captured
+executive exceptions from 15:30–15:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. Successful executive DAGs at 15:38/15:39 did not
+establish provider recovery. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 15:40; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 15:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 30 captured
+executive exceptions from 15:40–15:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48, now over 24 hours ago. All 28 checked PR heads
+match trusted evidence; none closed-unmerged. Dispatch/maintenance succeed through
+15:50; infrastructure/timer healthy, zero import errors. No new operational repair
+indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline not
+eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 16:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from 15:50–16:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 15:59 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 16:00; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 16:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 29 captured executive
+exceptions from 16:00–16:10 remain provider rate limits; failure triage at 16:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48;
+the successful 16:10 executive DAG did not establish provider recovery. All 28
+checked PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance
+succeed through 16:10; infrastructure/timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates, refresh state, continue checks.
+
+2026-09-20 16:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 23 captured
+executive exceptions from 16:10–16:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 16:19 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 16:20; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 16:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 28 captured executive
+exceptions from 16:20–16:30 remain provider rate limits; analytics engineer at
+16:27 also reported capacity_unavailable. Last actual decision remains Sep 19
+15:48. All 28 checked PR heads match trusted evidence; none closed-unmerged.
+Dispatch/maintenance succeed through 16:30; infrastructure/timer healthy, zero
+import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 16:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 32 captured executive
+exceptions from 16:30–16:40 remain provider rate limits; cadence review at 16:37
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 16:40; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 16:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 23 captured
+executive exceptions from 16:40–16:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 16:50; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 17:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 23 captured
+executive exceptions from 16:50–17:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. Successful 16:58/16:59 executive DAGs did not
+establish provider recovery. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 17:00; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 17:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 30 captured executive
+exceptions from 17:00–17:10 remain provider rate limits; failure triage at 17:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 17:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 17:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from 17:10–17:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 17:20; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 17:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from 17:20–17:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. Successful 17:29/17:30 executive DAGs did not
+establish provider recovery. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 17:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 17:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 23 captured
+executive exceptions from 17:30–17:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 17:40; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 17:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from 17:40–17:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 17:50; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 18:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 33 captured
+executive exceptions from 17:50–18:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 18:00; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 18:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 26 captured executive
+exceptions from 18:00–18:10 remain provider rate limits; failure triage at 18:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 18:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 18:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 22 captured executive
+exceptions from 18:10–18:20 remain provider rate limits; data analyst at 18:13
+also reported capacity_unavailable. Source discovery at 18:17 correctly skipped
+for resolution_capacity_reserved. Last actual decision remains Sep 19 15:48;
+the successful 18:18 executive DAG did not establish provider recovery. All 28
+checked PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance
+succeed through 18:20; infrastructure/timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates, refresh state, continue checks.
+
+2026-09-20 18:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 30 captured
+executive exceptions from 18:20–18:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 18:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 18:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from 18:30–18:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 18:40; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 18:56 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 38 captured executive
+exceptions from 18:40–18:55 remain provider rate limits; last actual decision
+remains Sep 19 15:48. Source vetting at 18:47 correctly skipped for
+resolution_capacity_reserved. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 18:55; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 19:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 15 captured
+executive exceptions from 18:55–19:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 18:59 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 19:00; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 19:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 26 captured executive
+exceptions from 19:00–19:10 remain provider rate limits; failure triage at 19:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 19:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 19:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 32 captured
+executive exceptions from 19:10–19:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 19:20; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 19:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from 19:20–19:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 19:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 19:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 21 captured
+executive exceptions from 19:30–19:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 19:38 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 19:40; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 19:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 30 captured executive
+exceptions from 19:40–19:50 remain provider rate limits; source scheduling at
+19:47 also reported capacity_unavailable. Last actual decision remains Sep 19
+15:48. All 28 checked PR heads match trusted evidence; none closed-unmerged.
+Dispatch/maintenance succeed through 19:50; infrastructure/timer healthy, zero
+import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 20:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 19:50–20:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 20:00; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 20:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 27 captured executive
+exceptions from 20:00–20:10 remain provider rate limits; failure triage at 20:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48;
+the successful 20:09 executive DAG did not establish provider recovery. All 28
+checked PR heads match trusted evidence; none closed-unmerged. Dispatch/maintenance
+succeed through 20:10; infrastructure/timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates, refresh state, continue checks.
+
+2026-09-20 20:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 27 captured
+executive exceptions from 20:10–20:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 20:20; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 20:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 24 captured executive
+exceptions from 20:20–20:30 remain provider rate limits; analytics engineer at
+20:27 also reported capacity_unavailable. Last actual decision remains Sep 19
+15:48. All 28 checked PR heads match trusted evidence; none closed-unmerged.
+Dispatch/maintenance succeed through 20:30; infrastructure/timer healthy, zero
+import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 20:43 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 32 captured executive
+exceptions from 20:30–20:40 remain provider rate limits; cadence review at 20:37
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 20:40; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 20:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 20:40–20:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 20:50; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 21:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 22 captured
+executive exceptions from 20:50–21:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 20:58 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 21:00; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 21:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 30 captured executive
+exceptions from 21:00–21:10 remain provider rate limits; failure triage at 21:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 21:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 21:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 27 captured executive
+exceptions from 21:10–21:20 remain provider rate limits; data analyst at 21:13
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 21:20; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 21:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 21:20–21:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 21:30 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 21:30; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 21:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from 21:30–21:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 21:40; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 21:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 22 captured
+executive exceptions from 21:40–21:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 21:50; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 22:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 32 captured
+executive exceptions from 21:50–22:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 22:00; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 22:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 26 captured executive
+exceptions from 22:00–22:10 remain provider rate limits; failure triage at 22:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 22:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 22:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 22 captured
+executive exceptions from 22:10–22:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 22:18 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 22:20; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 22:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 30 captured
+executive exceptions from 22:20–22:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 22:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 22:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from 22:30–22:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 22:40; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 22:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 22:40–22:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 22:50 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 22:50; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 23:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from 22:50–23:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 23:00; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 23:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 24 captured executive
+exceptions from 23:00–23:10 remain provider rate limits; failure triage at 23:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 23:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-20 23:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 31 captured
+executive exceptions from 23:10–23:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 23:20; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 23:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 23:20–23:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 23:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-20 23:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 22 captured
+executive exceptions from 23:30–23:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 23:38 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 23:40; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-20 23:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 30 captured
+executive exceptions from 23:40–23:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 23:50; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-21 00:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from Sep 20 23:50–Sep 21 00:00 remain provider rate limits;
+last actual decision remains Sep 19 15:48. All 28 checked PR heads match trusted
+evidence; none closed-unmerged. Dispatch/maintenance succeed through 00:00;
+infrastructure and timer healthy, zero import errors. No new operational repair
+indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline not
+eligible. Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-21 00:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 28 captured executive
+exceptions from 00:00–00:10 remain provider rate limits; failure triage at 00:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 00:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-21 00:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 26 captured executive
+exceptions from 00:10–00:20 remain provider rate limits; data analyst at 00:13
+also reported capacity_unavailable. Source discovery at 00:17 correctly skipped
+with resolution_capacity_reserved. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 00:20; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-21 00:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 23 captured executive
+exceptions from 00:20–00:30 remain provider rate limits; analytics engineer at
+00:27 also reported capacity_unavailable. Last actual decision remains Sep 19
+15:48. All 28 checked PR heads match trusted evidence; none closed-unmerged.
+Dispatch/maintenance succeed through 00:30; infrastructure/timer healthy, zero
+import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-21 00:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 31 captured executive
+exceptions from 00:30–00:40 remain provider rate limits; cadence review at 00:37
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 00:40; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-21 00:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 27 captured executive
+exceptions from 00:40–00:50 remain provider rate limits. Source vetting at 00:47
+correctly skipped with resolution_capacity_reserved. Last actual decision remains
+Sep 19 15:48. All 28 checked PR heads match trusted evidence; none closed-unmerged.
+Dispatch/maintenance succeed through 00:50; infrastructure/timer healthy, zero
+import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-21 01:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 21 captured
+executive exceptions from 00:50–01:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 00:59 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 01:00; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-21 01:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 32 captured executive
+exceptions from 01:00–01:10 remain provider rate limits; failure triage at 01:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 01:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-21 01:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 01:10–01:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 01:20; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-21 01:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 26 captured
+executive exceptions from 01:20–01:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. The successful 01:29 executive DAG did not establish
+provider recovery. All 28 checked PR heads match trusted evidence; none closed-
+unmerged. Dispatch/maintenance succeed through 01:30; infrastructure/timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-21 01:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 27 captured
+executive exceptions from 01:30–01:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 01:40; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-21 01:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 24 captured executive
+exceptions from 01:40–01:50 remain provider rate limits; source scheduling at
+01:47 also reported capacity_unavailable. Last actual decision remains Sep 19
+15:48. All 28 checked PR heads match trusted evidence; none closed-unmerged.
+Dispatch/maintenance succeed through 01:50; infrastructure/timer healthy, zero
+import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh
+state, and continue scheduled checks.
+
+2026-09-21 02:01 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 31 captured
+executive exceptions from 01:50–02:00 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 02:00; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-21 02:11 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review results. All 27 captured executive
+exceptions from 02:00–02:10 remain provider rate limits; failure triage at 02:07
+also reported capacity_unavailable. Last actual decision remains Sep 19 15:48.
+All 28 checked PR heads match trusted evidence; none closed-unmerged. Dispatch/
+maintenance succeed through 02:10; infrastructure/timer healthy, zero import
+errors. No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates, refresh state,
+and continue scheduled checks.
+
+2026-09-21 02:21 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 21 captured
+executive exceptions from 02:10–02:20 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 02:20; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-21 02:31 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 31 captured
+executive exceptions from 02:20–02:30 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 02:30; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-21 02:41 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from 02:30–02:40 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 02:40; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-21 02:51 UTC supervision: unchanged 38 open (14 blocked), no active/
+queued/retrying workers or new execution/review/specialist results. All 25 captured
+executive exceptions from 02:40–02:50 remain provider rate limits; last actual
+decision remains Sep 19 15:48. All 28 checked PR heads match trusted evidence;
+none closed-unmerged. Dispatch/maintenance succeed through 02:50; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-21 03:03 UTC supervision: 38 open (18 ready, 14 blocked, five in review,
+one in progress), zero active/queued/retrying workers. No new execution/review
+results or 24-hour ticket movement. All 27 captured executive exceptions from
+02:50–03:00 are provider rate/capacity failures; last actual decision remains
+Sep 19 15:48. All 28 PR heads match trusted evidence, none closed-unmerged;
+specialist reports unchanged. Dispatch/maintenance succeed through 03:00,
+zero import errors, infrastructure and supervision timer healthy at 03:03.
+No new operational repair indicated. Saved/applied concurrency remains 14/2/4
+v4, draining; baseline not eligible. Preserve settings and validation gates,
+refresh supervision state, and continue scheduled checks.
+
+2026-09-21 03:11 UTC supervision: 38 open, zero active/queued/retrying workers,
+no new execution/review results or 24-hour ticket movement. All 25 captured
+executive exceptions from 03:00–03:10 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48. Failure triage at 03:07 also reports
+provider_capacity; other specialist reports unchanged. All 28 PR heads match
+trusted evidence, none closed-unmerged. Dispatch/maintenance succeed through
+03:10; infrastructure and timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-21 03:21 UTC supervision: 38 open; no active/queued/retrying workers,
+new execution/review results, or 24-hour ticket movement. All 29 captured
+executive exceptions from 03:10–03:20 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48. New data analyst report at 03:13
+also records provider_capacity. All 28 PR heads match trusted evidence, none
+closed-unmerged. Dispatch/maintenance succeed through 03:20; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh supervision state, and continue checks.
+
+2026-09-21 03:31 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 27 captured executive exceptions from 03:20–03:30 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 03:30; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 03:41 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 21 captured executive exceptions from 03:30–03:40 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 03:40; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 03:50 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 33 captured executive exceptions from 03:40–03:50 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 03:50; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 04:01 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 23 captured executive exceptions from 03:50–04:00 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 04:00; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 04:11 UTC supervision: 38 open, zero active/queued/retrying workers,
+no new execution/review results or 24-hour ticket movement. All 25 captured
+executive exceptions from 04:00–04:10 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48. Failure triage at 04:07 also reports
+provider_capacity; other specialist reports unchanged. All 28 PR heads match
+trusted evidence, none closed-unmerged. Dispatch/maintenance succeed through
+04:10; infrastructure and timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-21 04:21 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 31 captured executive exceptions from 04:10–04:20 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 04:20; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 04:31 UTC supervision: 38 open, zero active/queued/retrying workers,
+no new execution/review results or 24-hour ticket movement. All 23 captured
+executive exceptions from 04:20–04:30 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48. Analytics engineer at 04:27 also
+reports provider_capacity; other specialist reports unchanged. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 04:30; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 04:41 UTC supervision: 38 open, zero active/queued/retrying workers,
+no new execution/review results or 24-hour ticket movement. All 30 captured
+executive exceptions from 04:30–04:40 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48 (04:38 DAG success is not decision
+recovery). Cadence review at 04:37 also reports provider_capacity. All 28 PR
+heads match trusted evidence, none closed-unmerged. Dispatch/maintenance
+succeed through 04:40; infrastructure and timer healthy, zero import errors.
+No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates and
+continue scheduled checks.
+
+2026-09-21 04:51 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 27 captured executive exceptions from 04:40–04:50 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 04:50; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 05:01 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 22 captured executive exceptions from 04:50–05:00 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48 (04:58 DAG
+success did not produce a new decision). All 28 PR heads match trusted
+evidence, none closed-unmerged. Dispatch/maintenance succeed through 05:00;
+infrastructure and timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-21 05:11 UTC supervision: 38 open, zero active/queued/retrying workers,
+no new execution/review results or 24-hour ticket movement. All 33 captured
+executive exceptions from 05:00–05:10 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48. Failure triage at 05:07 also reports
+provider_capacity; other specialist reports unchanged. All 28 PR heads match
+trusted evidence, none closed-unmerged. Dispatch/maintenance succeed through
+05:10; infrastructure and timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-21 05:21 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 21 captured executive exceptions from 05:10–05:20 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 05:20; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 05:31 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 24 captured executive exceptions from 05:20–05:30 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48 (05:30 DAG
+success did not produce a new decision). All 28 PR heads match trusted
+evidence, none closed-unmerged. Dispatch/maintenance succeed through 05:30;
+infrastructure and timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-21 05:41 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 29 captured executive exceptions from 05:30–05:40 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 05:40; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 05:51 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 22 captured executive exceptions from 05:40–05:50 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 05:50; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 06:01 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 29 captured executive exceptions from 05:50–06:00 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 06:00; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 06:11 UTC supervision: 38 open, zero active/queued/retrying workers,
+no new execution/review results or 24-hour ticket movement. All 26 captured
+executive exceptions from 06:00–06:10 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48. Failure triage at 06:07 also reports
+provider_capacity; other specialist reports unchanged. All 28 PR heads match
+trusted evidence, none closed-unmerged. Dispatch/maintenance succeed through
+06:10; infrastructure and timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-21 06:21 UTC supervision: 38 open, zero active/queued/retrying workers,
+no new execution/review results or 24-hour ticket movement. All 24 captured
+executive exceptions from 06:10–06:20 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48 (06:18 DAG success is not recovery).
+Data analyst at 06:13 reports provider_capacity; source discovery at 06:17
+correctly skipped with resolution_capacity_reserved. All 28 PR heads match
+trusted evidence, none closed-unmerged. Dispatch/maintenance succeed through
+06:20; infrastructure and timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-21 06:31 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 31 captured executive exceptions from 06:20–06:30 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. Initial PR read
+failed with SSL handshake timeout after 21 reads; bounded read-only retry
+completed successfully, verifying all 28 trusted heads with none closed-unmerged.
+Dispatch/maintenance succeed through 06:30; infrastructure and timer healthy,
+zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Preserve
+settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-21 06:41 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 24 captured executive exceptions from 06:30–06:40 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. PR probe
+completed without timeout: all 28 heads match trusted evidence, none
+closed-unmerged. Dispatch/maintenance succeed through 06:40; infrastructure
+and timer healthy, zero import errors. No new operational repair indicated.
+Saved/applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Preserve settings/gates, refresh state, and continue scheduled checks.
+
+2026-09-21 06:51 UTC supervision: 38 open, zero active/queued/retrying workers,
+no new execution/review results or 24-hour ticket movement. All 23 captured
+executive exceptions from 06:40–06:50 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48 (06:49/06:50 DAG successes are not
+decision recovery). Source vetting at 06:47 correctly skipped with
+resolution_capacity_reserved; other specialist reports unchanged. All 28 PR
+heads match trusted evidence, none closed-unmerged. Dispatch/maintenance
+succeed through 06:50; infrastructure and timer healthy, zero import errors.
+No new operational repair indicated. Saved/applied concurrency remains
+14/2/4 v4, draining; baseline not eligible. Preserve settings/gates and
+continue scheduled checks.
+
+2026-09-21 07:01 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 29 captured executive exceptions from 06:50–07:00 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 07:00; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 07:11 UTC supervision: 38 open, zero active/queued/retrying workers,
+no new execution/review results or 24-hour ticket movement. All 26 captured
+executive exceptions from 07:00–07:10 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48. Failure triage at 07:07 also reports
+provider_capacity; other specialist reports unchanged. All 28 PR heads match
+trusted evidence, none closed-unmerged. Dispatch/maintenance succeed through
+07:10; infrastructure and timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-21 07:21 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 28 captured executive exceptions from 07:10–07:20 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 07:20; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 07:31 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 25 captured executive exceptions from 07:20–07:30 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 07:30; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 07:41 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 23 captured executive exceptions from 07:30–07:40 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48 (07:38 DAG
+success did not produce a new decision). All 28 PR heads match trusted
+evidence, none closed-unmerged. Dispatch/maintenance succeed through 07:40;
+infrastructure and timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-21 07:51 UTC supervision: 38 open, zero active/queued/retrying workers,
+no new execution/review results or 24-hour ticket movement. All 31 captured
+executive exceptions from 07:40–07:50 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48. Source scheduling at 07:47 also
+reports provider_capacity; other specialist reports unchanged. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 07:50; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 08:01 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 23 captured executive exceptions from 07:50–08:00 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 08:00; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 08:11 UTC supervision: 38 open, zero active/queued/retrying workers,
+no new execution/review results or 24-hour ticket movement. All 26 captured
+executive exceptions from 08:00–08:10 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48. Failure triage at 08:07 also reports
+provider_capacity; other specialist reports unchanged. All 28 PR heads match
+trusted evidence, none closed-unmerged. Dispatch/maintenance succeed through
+08:10; infrastructure and timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-21 08:21 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 31 captured executive exceptions from 08:10–08:20 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 08:20; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 08:31 UTC supervision: 38 open, zero active/queued/retrying workers,
+no new execution/review results or 24-hour ticket movement. All 24 captured
+executive exceptions from 08:20–08:30 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48. Analytics engineer at 08:27 also
+reports provider_capacity; other specialist reports unchanged. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 08:30; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 08:41 UTC supervision: 38 open, zero active/queued/retrying workers,
+no new execution/review results or 24-hour ticket movement. All 28 captured
+executive exceptions from 08:30–08:40 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48. Cadence review at 08:37 also reports
+provider_capacity; other specialist reports unchanged. All 28 PR heads match
+trusted evidence, none closed-unmerged. Dispatch/maintenance succeed through
+08:40; infrastructure and timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-21 08:51 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 26 captured executive exceptions from 08:40–08:50 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 08:50; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 09:01 UTC supervision: unchanged 38 open; zero active/queued/retrying
+workers, no new execution/review/specialist results or 24-hour ticket movement.
+All 24 captured executive exceptions from 08:50–09:00 remain provider rate/
+capacity failures; last actual decision remains Sep 19 15:48. All 28 PR heads
+match trusted evidence, none closed-unmerged. Dispatch/maintenance succeed
+through 09:00; infrastructure and timer healthy, zero import errors. No new
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Preserve settings/gates and continue checks.
+
+2026-09-21 09:11 UTC supervision: 38 open, zero active/queued/retrying workers,
+no new execution/review results or 24-hour ticket movement. All 31 captured
+executive exceptions from 09:00–09:10 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48. Failure triage at 09:07 also reports
+provider_capacity; other specialist reports unchanged. All 28 PR heads match
+trusted evidence, none closed-unmerged. Dispatch/maintenance succeed through
+09:10; infrastructure and timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+2026-09-21 09:21 UTC supervision: 38 open, zero active/queued/retrying workers,
+no new execution/review results or 24-hour ticket movement. All 26 captured
+executive exceptions from 09:10–09:20 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48. Data analyst at 09:13 also reports
+provider_capacity; other specialist reports unchanged. All 28 PR heads match
+trusted evidence, none closed-unmerged. Dispatch/maintenance succeed through
+09:20; infrastructure and timer healthy, zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve settings/gates and continue scheduled checks.
+
+### 2026-09-21 09:33 UTC scheduled check
+
+Verified 38 open tickets (18 ready, 14 blocked, 5 in review, 1 in progress),
+zero active/queued worker or reviewer runs, no new execution/review results,
+and no 24-hour ticket movement. All 25 captured executive exceptions from
+09:20–09:30 are provider rate/capacity failures; last actual decision remains
+Sep 19 15:48. The 09:29 executive DAG success produced no new decision and
+is not recovery. Specialist reports remain capacity-limited; discovery and
+vetting remain correctly admission-held. All 28 PR heads match trusted
+records, none closed-unmerged. Dispatch/maintenance succeed through 09:30;
+services, scheduler, processor and supervision timer healthy at 09:33, zero
+import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; baseline not eligible. Preserve settings/gates and
+continue scheduled checks.
+
+### 2026-09-21 09:40 UTC scheduled check
+
+Backlog remains 38 (18 ready, 14 blocked, 5 in review, 1 in progress), with
+no active/queued/retrying workers, no execution/review results in 30 minutes,
+and no ticket arrivals/completions/dismissals in 24 hours. All 32 captured
+executive exceptions from 09:30–09:40 are provider rate/capacity failures;
+last actual decision remains Sep 19 15:48. Specialist reports unchanged,
+with discovery/vetting correctly admission-held. All 28 PR heads match
+trusted records, none closed-unmerged. Dispatch/maintenance succeed through
+09:40; services and timer active, scheduler/processor/database healthy, zero
+import errors. No new operational repair indicated. Saved/applied concurrency
+remains 14/2/4 v4, draining; clean baseline is not yet eligible. Continue
+scheduled supervision while preserving settings, decisions and evidence gates.
+
+### 2026-09-21 09:50 UTC scheduled check
+
+Verified unchanged 38 open tickets (18 ready, 14 blocked, 5 in review, 1 in
+progress), zero active/queued/retrying workers and no new execution/review
+results. No ticket arrivals/completions/dismissals in 24 hours. All 24 captured
+executive exceptions from 09:40–09:50 remain provider rate/capacity failures;
+last actual decision remains Sep 19 15:48. Specialist reports unchanged;
+discovery/vetting remain correctly admission-held. All 28 PR heads match
+trusted records, none closed-unmerged. Dispatch/maintenance succeed through
+09:50, infrastructure and supervision timer healthy, zero import errors.
+No new operational repair indicated. Saved/applied concurrency stays 14/2/4
+v4, draining; baseline not eligible. Continue scheduled checks with decisions,
+review evidence, validation gates and manual settings preserved.
+
+### 2026-09-21 10:02 UTC scheduled check
+
+Backlog remains 38 (18 ready, 14 blocked, 5 in review, 1 in progress), with
+zero active/queued executors/reviewers, no new execution/review results and
+no 24-hour ticket movement. All 26 captured executive exceptions from
+09:50–10:00 are provider rate/capacity failures; last actual decision remains
+Sep 19 15:48 despite idle DAG successes at 09:58/09:59. Manager's 09:57
+capacity failure entered its normal retry wait. Followed the scheduled retry:
+try 2 started 10:02:03 and ended failed 10:02:05.863 UTC; RunReport at
+10:02:05.833 records capacity_unavailable/provider_capacity. No bot tasks
+remain running, queued or up_for_retry at 10:02:29. Other specialist reports
+unchanged; discovery/vetting correctly admission-held. All 28 PR heads match
+trusted records, none closed-unmerged. Dispatch/maintenance succeed through
+10:00, infrastructure/timer healthy and zero import errors. No new operational
+repair indicated. Saved/applied concurrency remains 14/2/4 v4, draining;
+baseline not eligible. Preserve controls/evidence and continue scheduled checks.
+
+### 2026-09-21 10:10 UTC scheduled check
+
+Verified 38 open tickets (18 ready, 14 blocked, 5 in review, 1 in progress),
+zero active/queued/retrying bot tasks, no new worker/review results in 30
+minutes and no 24-hour ticket movement. All 28 captured executive exceptions
+from 10:00–10:10 are provider rate/capacity failures; last actual decision
+remains Sep 19 15:48. The 10:09 DAG success produced no new decision and is
+not recovery. Failure triage at 10:07 also reports provider_capacity; manager
+remains terminal after its 10:02 capacity-limited retry, no stranded work.
+Other specialist reports unchanged; discovery/vetting correctly admission-held.
+All 28 PR heads match trusted records, none closed-unmerged. Dispatch and
+maintenance succeed through 10:10; services/timer and infrastructure healthy,
+zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Continue checks
+while preserving manual settings, approvals, decisions and evidence gates.
+
+### 2026-09-21 10:20 UTC scheduled check
+
+Verified unchanged 38 open tickets (18 ready, 14 blocked, 5 in review, 1 in
+progress), zero active/queued/retrying bot tasks and no new execution/review
+results or 24-hour ticket movement. All 24 captured executive exceptions from
+10:10–10:20 remain provider rate/capacity failures; last actual decision
+remains Sep 19 15:48. Specialist reports unchanged, including terminal manager
+retry and failure-triage capacity failures; discovery/vetting admission holds
+remain intact. All 28 PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 10:20; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Continue checks
+with manual settings, approvals, decisions and evidence gates preserved.
+
+### 2026-09-21 10:30 UTC scheduled check
+
+Verified unchanged 38 open tickets (18 ready, 14 blocked, 5 in review, 1 in
+progress), zero active/queued/retrying bot tasks, no new execution/review
+results and no 24-hour ticket movement. All 30 captured executive exceptions
+from 10:20–10:30 remain provider rate/capacity failures; last actual decision
+remains Sep 19 15:48. The 10:30 executive DAG success produced no new decision
+and is not recovery. Specialist reports unchanged; discovery/vetting admission
+holds remain intact. All 28 PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 10:30; infrastructure, services and timer
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Continue checks
+while preserving settings, approvals, decisions and evidence gates.
+
+### 2026-09-21 10:40 UTC scheduled check
+
+Verified unchanged 38 open tickets (18 ready, 14 blocked, 5 in review, 1 in
+progress), zero active/queued/retrying bot tasks and no new execution/review
+results or 24-hour ticket movement. All 24 captured executive exceptions from
+10:30–10:40 remain provider rate/capacity failures; last actual decision
+remains Sep 19 15:48. Specialist reports unchanged; discovery/vetting admission
+holds remain intact. All 28 PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 10:40; services, infrastructure and timer
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Continue checks
+while preserving manual settings, approvals, decisions and evidence gates.
+
+### 2026-09-21 10:50 UTC scheduled check
+
+Verified unchanged 38 open tickets (18 ready, 14 blocked, 5 in review, 1 in
+progress), zero active/queued/retrying bot tasks and no new execution/review
+results or 24-hour ticket movement. All 24 captured executive exceptions from
+10:40–10:50 remain provider rate/capacity failures; last actual decision
+remains Sep 19 15:48. The 10:48 executive DAG success produced no new decision
+and is not recovery. Specialist reports unchanged; discovery/vetting admission
+holds remain intact. All 28 PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 10:50; services, infrastructure and timer
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Continue checks
+while preserving manual settings, approvals, decisions and evidence gates.
+
+### 2026-09-21 11:09 UTC recovery and action-selection repair
+
+Provider recovery is real: executive decisions resumed at 11:00 after failures
+through 10:59, and continue successfully through 11:09 with no current error.
+Executive independently merged ECB PR #87 and ROR PR #88; iNaturalist/CelesTrak
+and several other merge decisions confirmed already-merged provider state.
+Executive completed ECB, iNaturalist, CelesTrak and ROR implementation tickets;
+these decisions explicitly do not prove outstanding live activation/deployment
+or downstream validation. Preserve those distinctions and specialist follow-ups.
+Source scheduling and analytics engineering reports succeeded at 11:05; new
+recommendations include Common Crawl, Europe PMC and failure-triage WHO policy
+work. Leave triage and duplicate resolution to the executive.
+
+WHO execution 100 (sequence 3/revision 5) recovered from its old wrapper failure:
+real dbt parse and validate_project checks both exited 0; PR #110 was published
+on trusted head 93870d67887cf045e36863d5478f7c9be0f66463. Its independent review
+ran 11:07–11:08 and returned unable_to_review/review_json_invalid, not approval.
+Actual retained review artifact is b201d6fbfc756a96e8d85892e0818359dea4ec83b63347f7db7681961fc75804;
+Execution.review_report_sha256 is not the artifact-store lookup key. The existing
+immutable /opt/vintage-bot-runtime-v6 reviewer still owns this invalid-JSON path;
+no valid review/raw response is available to infer an approval or parser repair.
+OpenFDA follow-up execution 99 ended execution_blocked: checks 1/3 passed and
+2/4/5/6 failed, including WHO view-test policy and missing Library of Congress
+visualization metadata. Its result remains failed; no validation was waived.
+
+Repaired a newly observed orchestration defect in commit 9dcb6739: the executive
+was offered revise for a published execution without a newer recommendation,
+then service correctly rejected it and deferred the ticket for an hour. The
+available action list now mirrors that existing revision requirement; configure
+remains available, and a newer admitted plan restores revise. All 30 executive
+tests passed, including rejection without changing the execution/review and
+availability after a real plan update. Only autopilot.py and its test committed;
+installed only autopilot.py. systemctl restart timed out, so the owned API process
+was terminated for its configured on-failure restart; new PID 2063650 is healthy.
+Installed live snapshots omit revise on job-board PR #108 and OpenFDA PR #44;
+audited repair comments triggered normal reconsideration. Job-board executive
+wait applied at 11:07, verifying renewed decisions without the invalid action.
+Independent review and service admission checks remain intact.
+
+At 11:09:46, 37 open (3 proposed, 13 ready, 7 in review, 12 blocked, 1 accepted,
+1 in progress), zero active executions. Dispatch/maintenance/executive succeed
+through 11:09, no running/queued/retrying bot task remains and import errors zero.
+Initial 28 PR heads matched; refreshed open-ticket inventory of 26 PRs including
+#110 also matched, none closed-unmerged. Saved/applied concurrency remains
+14/2/4 v4, draining; no clean baseline yet. Supervision check refreshed state;
+continue through backlog resolution and baseline/tuning, preserving user settings.
+
+### 2026-09-21 11:12 UTC scheduled check
+
+Executive recovery continues through 11:12 with no current error. At 11:12:57,
+34 tickets remain open (4 accepted, 10 ready, 7 in review, 12 blocked, 1 in
+progress), zero active executions. Since the previous check, executive accepted
+Europe PMC, IMF wiring and WHO policy recommendations, and completed the merged
+Zenodo restoration, NASA Exoplanet and Library of Congress implementation tickets.
+Those completion decisions are not proof of live deployment/activation. The
+revision-action repair remains effective: GeoJSON and job-board decisions use
+wait with unavailable same-plan revise omitted; reviewer verdicts unchanged.
+
+Investigated source_scheduling follow-up 28864b2e... at 11:09:34: runner_failed
+was BotError from named-schema validation, specifically
+plans.0.task_proposal.follow_up_bots.0 literal_error. It is a rejected unsupported
+specialist value, not a scheduler outage. The next follow-up cbfbb61e... succeeded
+at 11:11:57 with model_succeeded; no running/queued/retrying bot tasks at 11:12:37.
+Do not fabricate a valid report or relax the enum. Failure-triage and analytics
+reports also resumed successfully; previously recorded WHO review_json_invalid
+and OpenFDA failed validations remain unresolved. RunReport sandbox_succeeded
+only describes runner completion, not executor validation or reviewer approval.
+
+All 24 current open-ticket PR heads matched trusted records, none closed-unmerged.
+Executive/dispatch/maintenance succeed through the observed 11:10 cycle and
+executive decisions continue through 11:12. Services, scheduler, processor,
+database and supervision timer healthy; zero import errors. No additional
+operational repair indicated. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Refresh supervision state and continue scheduled
+checks while preserving settings, decisions, approvals and validation gates.
+
+### 2026-09-21 11:24 UTC scheduled check and retry-offer repair
+
+Executive recovery holds. At 11:23:55, 29 open (7 in review, 5 ready, 10 blocked,
+5 in progress, 2 accepted), 5 active admissions/executions, no executive error.
+Recent executive completions include GitLab, Tokyo MoU, Smithsonian, UK Parliament
+retry, CMS and TVMaze implementation tickets; retain the distinction from live
+activation/warehouse evidence. IMF wiring and Europe PMC workers started 11:20;
+Common Crawl started 11:23 and another WHO policy repair was admitted at 11:23.
+The existing OpenFDA parent PR was revised after an executive plan update: all
+five admitted executor checks exited 0, PR #111 is open with matching trusted
+head and independent review running. This is distinct from the failed OpenFDA
+analysis follow-up execution 99. WHO PR #110 remains unable_to_review. The model
+runner's succeeded status alone is not validation or independent review evidence.
+
+Observed two more mismatches between executive action offers and service guards:
+Digitraffic start deferred at 11:20 because no retryable terminal unpublished
+execution exists; NZ Charities start deferred at 11:18 because three terminal
+attempts exhausted the same plan. Commit f2d9e9dd filters these unavailable start
+(and exhausted-plan revise) offers using the existing requirements. Configure
+remains available and a newer plan restores retry eligibility. All 32 executive
+tests passed, including no-execution/published/no-change retry rejection, valid
+unpublished retry, and exhausted-plan recovery after a real recommendation update.
+Only autopilot.py and its test committed; installed only the tested module.
+Owned API process restarted using configured on-failure behavior; new PID 2094275
+and health endpoint verified healthy. Installed snapshots for Digitraffic/NZ
+Charities omit start; audited repair comments trigger normal reconsideration.
+No decisions, verdicts, model settings, validation gates or retry limits changed.
+
+All 14 open-ticket PR heads from the initial probe matched trusted records, none
+closed-unmerged; separately verified new OpenFDA #111 matches its trusted head.
+Executive/dispatch/maintenance succeed through 11:23; three executors and one
+reviewer running, another WHO admission pending normal dispatch; no retries seen.
+Specialists retain recent successful source_scheduling/analytics/failure-triage
+reports; no additional runner failures observed. Services/timer healthy, import
+errors zero. Saved/applied concurrency remains 14/2/4 v4, draining; baseline not
+eligible. Refresh state and continue monitoring active work, reviews and tuning.
+
+### 2026-09-21 11:33 UTC scheduled check; capacity failure returned
+
+Recovery lasted through executive decisions at 11:31:16. Executive failed again
+with provider rate limiting at 11:32. At 11:32:52, 28 open (8 in review, 4 ready,
+15 blocked, 1 in progress), zero active executions. The in-progress legacy Common
+Crawl ticket is not an active worker. No running/queued/retrying bot tasks remain.
+GLEIF was completed by executive during this window; preserve the distinction
+between its recorded implementation completion and live activation evidence.
+The prior retry-offer repair held: Digitraffic restored then started normally;
+NZ Charities was reconsidered without an invalid exhausted-plan start.
+
+Verified new PRs #112 (Zenodo, both executor checks exit 0) and #113 (Digitraffic,
+both checks exit 0). All 16 open-ticket PR heads matched trusted records, none
+closed-unmerged. OpenFDA #111 and Zenodo #112 independent reviews returned
+unable_to_review/review_json_invalid; Digitraffic #113 returned unable_to_review/
+reviewer_process_failed. No approval inferred from executor checks. Reviewed the
+immutable root-owned runtime parser and cleanup path read-only: invalid review
+fallback does not retain raw model output, and sandbox session files are removed
+on launcher exit. No evidence supports a safe parser change or fabricated verdict.
+These review failures remain unresolved.
+
+Followed all new failed executions through terminal state and inspected evidence:
+Open311 execution 106 failed shared-checkout dbt wrapper plus missing manifest;
+executive reconfigured at 11:29 but no replacement attempt yet. Sumo 108 and
+Workday/Sensor 109 explicitly recorded model HTTP 429 and failed checks. Sumo also
+has absent admitted model metadata path, unsupported --family CLI argument and
+WHO policy failures; Workday/Sensor test paths were absent. Europe PMC 102,
+Common Crawl 103 and WHO policy 104 also recorded 429 plus real failed checks
+(wrapper/manifest failures, 3 failed Common Crawl tests versus 19 passed, or WHO
+view tests). IMF 101 ended sandbox_exit_1 with no executor artifact or diagnostic
+beyond the control-plane code; its precise cause remains unverified. Do not call
+all these validations successful merely because most RunReports say sandbox_succeeded.
+No forced retry, source implementation, validation or review bypass performed.
+
+Source scheduling succeeded at 11:26; other specialist reports retain prior
+successes/capacity failures. Dispatch/maintenance succeed through 11:32;
+infrastructure/services/timer healthy, zero import errors. No further operational
+repair supported by available evidence. Saved/applied concurrency remains
+14/2/4 v4, draining; no baseline eligible. Refresh supervision state and continue
+scheduled monitoring for provider recovery and independent review repair evidence.
+
+### 2026-09-21 11:41 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks. All 18 captured executive
+exceptions from 11:32–11:40 are provider rate/capacity failures; last actual
+decision remains 11:31:16. Specialist reports and independent-review outcomes
+unchanged. Recent runner report counts include the already-inspected attempts
+from the recovery window; sandbox_succeeded does not imply passed verification
+or reviewer approval. Existing WHO/OpenFDA/Zenodo invalid-review and Digitraffic
+process-review failures, failed execution checks, and IMF's opaque sandbox exit
+remain unresolved. No new evidence supports a further operational repair.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Executive scheduling continues; dispatch/maintenance succeed through 11:40,
+services/timer and infrastructure healthy at 11:41, zero import errors. Saved
+and applied concurrency remains 14/2/4 v4, draining; baseline not eligible.
+Refresh state and continue scheduled checks without changing manual settings,
+executive decisions, independent review or validation gates.
+
+### 2026-09-21 11:50 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks. All 23 captured executive
+exceptions from 11:40–11:50 remain provider rate/capacity failures; last actual
+decision remains 11:31:16. Specialist reports, PR review outcomes and ticket
+states unchanged. Recent runner report counts still describe the inspected
+recovery-window attempts, not new passing validations. Existing independent
+review failures and failed/opaque execution results remain unresolved.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 11:50; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, executive decisions, independent
+review and validation gates preserved.
+
+### 2026-09-21 12:00 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks. All 16 captured executive
+exceptions from 11:50–12:00 are provider rate/capacity failures; last actual
+decision remains 11:31:16. Specialist reports and PR review outcomes unchanged;
+recent runner report counts include previously inspected terminal attempts,
+not new successful validations. Independent review and failed execution blockers
+remain unresolved. No additional operational repair supported by new evidence.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 12:00; infrastructure, services and timer
+healthy, zero import errors. Saved/applied concurrency remains 14/2/4 v4,
+draining; baseline not eligible. Refresh state and continue scheduled checks,
+preserving manual settings, executive decisions, review and validation gates.
+
+### 2026-09-21 12:10 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks and no worker/reviewer reports
+in 30 minutes. All 21 captured executive exceptions from 12:00–12:10 are
+provider rate/capacity failures; last actual decision remains 11:31:16. The
+12:08 executive DAG success produced no new decision and is not recovery.
+Failure triage at 12:07 also reports provider_capacity; other specialist reports
+and review outcomes unchanged. Existing review and validation blockers remain.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 12:10; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, independent review and
+validation gates preserved.
+
+### 2026-09-21 12:20 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks and no worker/reviewer reports
+in 30 minutes. All 18 captured executive exceptions from 12:10–12:20 remain
+provider rate/capacity failures; last actual decision remains 11:31:16. The
+12:18 executive DAG success produced no decision and is not recovery. Data
+analyst at 12:13 also reports provider_capacity. Source discovery at 12:17
+correctly skipped with resolution_capacity_reserved; other specialist reports
+and independent review outcomes unchanged. Existing blockers remain unresolved.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 12:20; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, review and validation
+gates preserved.
+
+### 2026-09-21 12:30 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks and no worker/reviewer reports
+in 30 minutes. All 19 captured executive exceptions from 12:20–12:30 remain
+provider rate/capacity failures; last actual decision remains 11:31:16. The
+12:29 executive DAG success produced no new decision and is not recovery.
+Analytics engineer at 12:27 also reports provider_capacity. Other specialist
+reports and independent review outcomes remain unchanged; existing review,
+validation and environment blockers remain unresolved.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 12:30; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, review and validation
+gates preserved.
+
+### 2026-09-21 12:40 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks and no worker/reviewer reports
+in 30 minutes. All 21 captured executive exceptions from 12:30–12:40 remain
+provider rate/capacity failures; last actual decision remains 11:31:16. The
+12:39 and 12:40 executive DAG successes produced no new decision and are not
+recovery. Cadence review at 12:37 also reports provider_capacity. Other
+specialist reports and independent review outcomes remain unchanged; existing
+review, validation and environment blockers remain unresolved.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 12:40; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, review and validation
+gates preserved.
+
+### 2026-09-21 12:50 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks and no worker/reviewer reports
+in 30 minutes. All 13 captured executive exceptions from 12:40–12:50 remain
+provider rate/capacity failures; last actual decision remains 11:31:16. The
+12:48 and 12:50 executive DAG successes produced no new decision and are not
+recovery. Source vetting at 12:47 correctly skipped with
+resolution_capacity_reserved. Other specialist reports and independent review
+outcomes remain unchanged; existing review, validation and environment blockers
+remain unresolved.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 12:50; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, review and validation
+gates preserved.
+
+### 2026-09-21 13:00 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks and no worker/reviewer reports
+in 30 minutes. All 22 captured executive exceptions from 12:50–13:00 remain
+provider rate/capacity failures; last actual decision remains 11:31:16.
+Specialist reports and independent review outcomes remain unchanged; existing
+review, validation and environment blockers remain unresolved. No provider
+recovery or new operational fault was observed.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 13:00; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, review and validation
+gates preserved.
+
+### 2026-09-21 13:10 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks and no worker/reviewer reports
+in 30 minutes. All 23 captured executive exceptions from 13:00–13:10 remain
+provider rate/capacity failures; last actual decision remains 11:31:16.
+Failure triage at 13:07 also reports provider_capacity. Other specialist reports
+and independent review outcomes remain unchanged; existing review, validation
+and environment blockers remain unresolved. No provider recovery or new
+operational fault was observed.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 13:10; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, review and validation
+gates preserved.
+
+### 2026-09-21 13:20 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks and no worker/reviewer reports
+in 30 minutes. All 16 captured executive exceptions from 13:10–13:20 remain
+provider rate/capacity failures; last actual decision remains 11:31:16.
+Specialist reports and independent review outcomes remain unchanged; existing
+review, validation and environment blockers remain unresolved. No provider
+recovery or new operational fault was observed.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 13:20; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, review and validation
+gates preserved.
+
+### 2026-09-21 13:30 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks and no worker/reviewer reports
+in 30 minutes. All 20 captured executive exceptions from 13:20–13:30 remain
+provider rate/capacity failures; last actual decision remains 11:31:16.
+Specialist reports and independent review outcomes remain unchanged; existing
+review, validation and environment blockers remain unresolved. No provider
+recovery or new operational fault was observed.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 13:30; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, review and validation
+gates preserved.
+
+### 2026-09-21 13:40 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks and no worker/reviewer reports
+in 30 minutes. All 18 captured executive exceptions from 13:30–13:40 remain
+provider rate/capacity failures; last actual decision remains 11:31:16. The
+13:38 executive DAG success produced no new decision and is not recovery.
+Specialist reports and independent review outcomes remain unchanged; existing
+review, validation and environment blockers remain unresolved. No new
+operational fault was observed.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 13:40; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, review and validation
+gates preserved.
+
+### 2026-09-21 13:50 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks and no worker/reviewer reports
+in 30 minutes. All 22 captured executive exceptions from 13:40–13:50 remain
+provider rate/capacity failures; last actual decision remains 11:31:16.
+Source scheduling at 13:47 also reports provider_capacity. Other specialist
+reports and independent review outcomes remain unchanged; existing review,
+validation and environment blockers remain unresolved. No provider recovery
+or new operational fault was observed.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 13:50; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, review and validation
+gates preserved.
+
+### 2026-09-21 14:00 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks and no worker/reviewer reports
+in 30 minutes. All 21 captured executive exceptions from 13:50–14:00 remain
+provider rate/capacity failures; last actual decision remains 11:31:16. The
+13:59 executive DAG success produced no new decision and is not recovery.
+Specialist reports and independent review outcomes remain unchanged; existing
+review, validation and environment blockers remain unresolved. No new
+operational fault was observed.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 14:00; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, review and validation
+gates preserved.
+
+### 2026-09-21 14:10 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks and no worker/reviewer reports
+in 30 minutes. All 13 captured executive exceptions from 14:00–14:10 remain
+provider rate/capacity failures; last actual decision remains 11:31:16. The
+14:09 and 14:10 executive DAG successes produced no new decision and are not
+recovery. Failure triage at 14:07 also reports provider_capacity. Other
+specialist reports and independent review outcomes remain unchanged; existing
+review, validation and environment blockers remain unresolved.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 14:10; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, review and validation
+gates preserved.
+
+### 2026-09-21 14:20 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks and no worker/reviewer reports
+in 30 minutes. All 23 captured executive exceptions from 14:10–14:20 remain
+provider rate/capacity failures; last actual decision remains 11:31:16. The
+14:18 executive DAG success produced no new decision and is not recovery.
+Specialist reports and independent review outcomes remain unchanged; existing
+review, validation and environment blockers remain unresolved. No new
+operational fault was observed.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 14:20; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, review and validation
+gates preserved.
+
+### 2026-09-21 14:30 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks and no worker/reviewer reports
+in 30 minutes. All 23 captured executive exceptions from 14:20–14:30 remain
+provider rate/capacity failures; last actual decision remains 11:31:16.
+No tickets completed in the last three hours. Specialist reports and independent
+review outcomes remain unchanged; existing review, validation and environment
+blockers remain unresolved. No provider recovery or new operational fault was
+observed.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 14:30; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, review and validation
+gates preserved.
+
+### 2026-09-21 14:40 UTC scheduled check
+
+Verified unchanged 28 open tickets (8 in review, 4 ready, 15 blocked, 1 in
+progress), zero active/queued/retrying bot tasks and no worker/reviewer reports
+in 30 minutes. All 16 captured executive exceptions from 14:30–14:40 remain
+provider rate/capacity failures; last actual decision remains 11:31:16.
+No tickets completed in the last three hours. Specialist reports and independent
+review outcomes remain unchanged; existing review, validation and environment
+blockers remain unresolved. No provider recovery or new operational fault was
+observed.
+
+All 16 open-ticket PR heads match trusted records, none closed-unmerged.
+Dispatch/maintenance succeed through 14:40; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, review and validation
+gates preserved.
+
+### 2026-09-21 14:50 UTC scheduled check — provider recovery
+
+Executive rate failures continued through 14:45, followed by actual recorded
+decisions starting 14:46:40 and continuing through 14:51. At the first live
+probe, 28 tickets remained (7 in review, 4 ready, 14 blocked, 3 in progress).
+Two executors are running attempt 1: Workday/Sensor.Community sequence 2 r3
+and Sumo sequence 3 r7. Open311 sequence 2 r3 published PR #114 at 14:49 and
+its independent reviewer is running attempt 1. Source scheduling is also
+running on an executive-requested GitHub follow-up. No queued or retrying tasks
+were observed, and no new executor/reviewer failure was reported during this
+check. These runs remain in flight for subsequent supervision.
+
+All 17 open-ticket PR heads match trusted records, none closed-unmerged.
+Open311 head da51627b3e12d8ea6ef4423684f66c0934628987 has an immutable
+executor report with four exit-0 checks and observation digests. Those checks
+only establish media_url presence in the four selected files plus YAML parsing;
+they do not establish dbt compilation, warehouse migration, or live validation.
+Independent review is still pending. GitHub's follow-up requests planning for
+its unresolved pre-merge live prerequisite; it does not waive or prove that gate.
+Existing unable-to-review and external validation blockers remain unresolved.
+
+Dispatch/maintenance succeed through 14:51; services/timer and infrastructure
+healthy, zero import errors. No new operational repair indicated. Saved/applied
+concurrency remains 14/2/4 v4, draining; baseline not eligible. Refresh state
+and continue checks with manual settings, decisions, review and validation
+gates preserved.
+
+### 2026-09-21 15:00 UTC scheduled check — resumed work and review
+
+Live inspection at 15:05–15:06 confirms continuing executive decisions and
+worker activity. Backlog grew to 30 from two new follow-ups: Schedule Common
+Crawl Index ingestion (a33ea29e-112a-4108-8790-f852cc5a49ac) and Add Library of
+Congress snapshot dashboard (2cd7e741-68f9-489d-882e-0a4ee2039d4d). No ticket
+completion was observed. Source scheduling succeeded at 14:52:59 and analytics
+engineering at 14:59:36. Legacy Common Crawl, NZ Charities and the new Common
+Crawl schedule were running attempt 1; the executive also admitted a newly
+configured WHO policy repair at 15:05:58. No stranded retry was observed.
+
+Open311 PR #114 received a substantive independent changes_requested review at
+14:55:14: adding media_url to an existing incremental model with
+on_schema_change=fail requires an explicit migration/activation strategy and
+verification against the prior physical schema. The four presence checks did
+not prove that gate. The executive preserved the blocker at 15:03. This is a
+successful reviewer execution, not an approval or live-validation result.
+
+OpenFDA trends published PR #115 at 15:02:58 with dbt parse and both analysis
+checks exit 0; Workday/Sensor.Community published PR #116 at 15:05:02 with both
+configured test scripts exit 0. Immutable reports retain observation digests;
+independent reviews remain pending/in progress. All 19 open-ticket PR heads
+matched trusted records, none closed-unmerged.
+
+Sumo sequence 3 r7 delivered its report successfully at 15:05:29, but the
+execution correctly remains blocked, unpublished: dbt parse and analysis pass;
+targeted compile fails because /output/raw.duckdb is absent, and deterministic
+content checking fails on out-of-scope Library of Congress visualization
+metadata. Transport success must not be counted as successful implementation.
+Preserve the failed checks and hand prerequisite resolution back to the bots.
+
+One 15:00 executive attempt timed out during response validation at 15:03:04;
+no unchecked action was authorized. Subsequent decisions succeeded through
+15:05:58, including fresh configured admissions. Dispatch/maintenance and
+infrastructure remain healthy, zero import errors. No new operational repair
+was indicated. Saved/applied concurrency remains 14/2/4 v4, draining; baseline
+not eligible. Refresh state and continue periodic checks with manual settings,
+review, evidence and validation gates preserved.

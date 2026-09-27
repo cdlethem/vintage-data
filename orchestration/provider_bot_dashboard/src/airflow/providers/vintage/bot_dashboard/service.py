@@ -32,6 +32,7 @@ from .models import (
 MANAGER_DAG_ID = "bot__manager"
 EXECUTOR_DAG_ID = "bot__task_executor"
 HUMAN_ACTION_STATES = {"proposed", "accepted", "blocked", "in_review", "ready"}
+HUMAN_DECISION_STATES = {"proposed", "blocked", "in_review", "ready"}
 # Imported history is evidence, never current freshness: it never ran in Airflow.
 LIVE_RUN = RunReport.dag_id.not_like("legacy\\_\\_%", escape="\\")
 LEGAL = {
@@ -280,6 +281,8 @@ def create_validation_gate(session: Session, task_id: str, *, version: int, acto
     if session.scalar(select(ValidationGate.id).where(
             ValidationGate.task_id == task.id, ValidationGate.gate_key == value["gate_key"])):
         raise Conflict("Validation gate key already exists")
+    _validate_gate_contract(value)
+    _validate_gate_dependencies(session, task, [value])
     row = ValidationGate(task_id=task.id, **value)
     session.add(row)
     task.version += 1; task.updated_at = utcnow()
@@ -307,12 +310,16 @@ def record_validation_gate(session: Session, gate_id: str, *, version: int, acto
         raise DomainError("Validation result must be passed or failed")
     execution = session.scalar(select(Execution).where(Execution.task_id == row.task_id)
                                .order_by(Execution.sequence.desc()).limit(1))
-    if execution and execution.trusted_head_sha and re.fullmatch(r"[a-f0-9]{40,64}", subject):
+    if execution and re.fullmatch(r"[a-f0-9]{40,64}", subject):
         if execution.trusted_head_sha != subject:
             raise PreconditionFailed("Validation evidence belongs to an earlier candidate head")
     if not evidence.get("observation") and not evidence.get("url"):
         raise PreconditionFailed("Validation result requires an observed result or evidence URL")
     row.status = status; row.evidence = evidence; row.version += 1; row.updated_at = utcnow()
+    row.last_error = None if status == "passed" else "manual_validation_failed"
+    row.lease_id = None
+    row.lease_run_id = None
+    row.lease_expires_at = None
     task = _locked_task(session, str(row.task_id))
     task.version += 1; task.updated_at = utcnow()
     _event(session, task, "validation_gate_recorded", "user", actor_id,
@@ -580,6 +587,39 @@ def transition_task(session: Session, task_id: str, *, version: int, actor_id: s
         evidence = session.scalar(select(func.count()).select_from(Event).where(Event.task_id == task.id, Event.event_type == "evidence_added", decision_maker))
         if not comments or not evidence: raise PreconditionFailed("completion requires a decision-maker note and evidence")
         task.completed_at = utcnow()
+        for execution in session.scalars(
+            select(Execution)
+            .where(
+                Execution.task_id == task.id,
+                Execution.terminal_at.is_(None),
+                Execution.pr_number.is_not(None),
+            )
+            .with_for_update()
+        ).all():
+            provider_state = execution.provider_state or {}
+            if (
+                execution.trusted_head_sha
+                and provider_state.get("state") == "merged"
+                and provider_state.get("head_sha") == execution.trusted_head_sha
+            ):
+                if not execution.merged_at:
+                    execution.merged_at = utcnow()
+                execution.stage = "terminal"
+                execution.dispatch_state = "terminal"
+                execution.terminal_reason_code = "merged"
+                execution.terminal_failure_class = "TerminalOutcome"
+                execution.terminal_detail = "provider change merged at the trusted publication head"
+                execution.terminal_at = utcnow()
+                _event(
+                    session,
+                    task,
+                    "execution_finalized",
+                    "system",
+                    "completion",
+                    from_state=previous,
+                    to_state="completed",
+                    payload={"code": "merged", "execution_id": execution.execution_id},
+                )
     if to_state == "dismissed": task.dismissed_at = utcnow()
     if to_state == "accepted": task.accepted_at = utcnow()
     task.state = to_state; task.version += 1; task.updated_at = utcnow()
@@ -648,15 +688,8 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
         .order_by(Revision.revision_number.desc())
         .limit(1)
     )
-    if (
-        not task.planned_resolution
-        or latest_revision is None
-        or not latest_revision.verification_commands
-        or not latest_revision.allowed_path_globs
-    ):
-        raise PreconditionFailed(
-            "bot execution requires resolution, argv verification, path policy, and profile"
-        )
+    if latest_revision is None:
+        raise PreconditionFailed("task has no plan revision to execute")
     active = session.scalar(
         select(Execution)
         .where(Execution.task_id == task.id, Execution.terminal_at.is_(None))
@@ -680,6 +713,10 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
         seed = capture_seed(session, active)
     elif retry_previous is not None:
         seed = get_seed(session, retry_previous)
+    gate_history = []
+    if seed and seed.get("trusted_head_sha"):
+        from .conflict_recovery import _rebind_candidate_gates
+        gate_history = _rebind_candidate_gates(session, task, seed["trusted_head_sha"])
     if retry_previous is not None:
         previous_state = task.state
         task.state = "accepted"
@@ -762,7 +799,8 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
         actor_kind,
         actor_id,
         payload={"sequence": row.sequence, "revision": row.revision,
-                 "execution_id": row.execution_id, "revision_seed": seed},
+                 "execution_id": row.execution_id, "revision_seed": seed,
+                 "invalidated_candidate_gates": gate_history},
     )
     task.version += 1
     task.updated_at = utcnow()
@@ -847,7 +885,7 @@ def queue_summary(session: Session) -> dict:
     counts = dict(session.execute(select(Task.state, func.count()).group_by(Task.state)).all())
     return {
         "counts": counts,
-        "attention_count": sum(counts.get(state, 0) for state in HUMAN_ACTION_STATES),
+        "attention_count": sum(counts.get(state, 0) for state in HUMAN_DECISION_STATES),
         "active_count": sum(count for state, count in counts.items() if state not in {"completed", "dismissed"}),
     }
 
@@ -949,7 +987,7 @@ def overview(session: Session) -> dict:
     )
     actions = session.scalars(
         select(Task)
-        .where(Task.state.in_(HUMAN_ACTION_STATES))
+        .where(Task.state.in_(HUMAN_DECISION_STATES))
         .order_by(Task.priority, Task.updated_at.desc())
         .limit(5)
     ).all()
@@ -1511,13 +1549,60 @@ def _configure_acceptance_gates(session: Session, task: Task, values: list[dict]
                 existing.stage != value["stage"] or existing.required != value["required"]
                 or existing.subject != value["subject"] or existing.recipe != value["recipe"]
                 or existing.dependencies != value["dependencies"]
+                or existing.required_capability != value["required_capability"]
+                or existing.recipe_args != value["recipe_args"]
+                or existing.recheck_condition != value["recheck_condition"]
+                or existing.owner != value["owner"]
             ):
                 raise PreconditionFailed("The executive cannot weaken or reclassify an existing validation gate")
-        _reconcile_proposed_gates(session, task, {"acceptance_gates": [value]})
+    _reconcile_proposed_gates(session, task, {"acceptance_gates": values})
+
+
+def _validate_gate_contract(value: dict) -> None:
+    if value["owner"] != "validation-service":
+        return
+    from .validation_recipes import validate_admission, ValidationRecipeError
+    candidate = dict(value)
+    if candidate["subject"] in {"candidate_head", "pending_candidate"}:
+        candidate["subject"] = "0" * 40
+    try:
+        validate_admission(candidate)
+    except ValidationRecipeError as exc:
+        raise PreconditionFailed(str(exc)) from exc
+
+
+def _validate_gate_dependencies(session: Session, task: Task, values: list[dict]) -> None:
+    graph = {gate.gate_key: {"dependencies": gate.dependencies, "stage": gate.stage}
+             for gate in session.scalars(select(ValidationGate).where(ValidationGate.task_id == task.id))}
+    graph.update({value["gate_key"]: value for value in values})
+    ranks = {"publication": 0, "merge": 1, "activation": 2, "completion": 3}
+    visited, visiting = set(), set()
+
+    def visit(key):
+        if key in visiting:
+            raise PreconditionFailed("Validation dependencies contain a cycle")
+        if key in visited:
+            return
+        visiting.add(key)
+        for dependency in graph[key].get("dependencies", []):
+            if dependency not in graph:
+                raise PreconditionFailed("Validation dependency does not exist in this task")
+            if ranks[graph[dependency]["stage"]] > ranks[graph[key]["stage"]]:
+                raise PreconditionFailed("Validation cannot depend on a later lifecycle stage")
+            visit(dependency)
+        visiting.remove(key)
+        visited.add(key)
+
+    for key in graph:
+        visit(key)
 
 
 def _reconcile_proposed_gates(session: Session, task: Task, proposal: dict) -> None:
     """Create/update pending gate contracts; never erase observed gate history."""
+    values = proposal.get("acceptance_gates", [])
+    for value in values:
+        _validate_gate_contract(value)
+    _validate_gate_dependencies(session, task, values)
     for value in proposal.get("acceptance_gates", []):
         row = session.scalar(select(ValidationGate).where(
             ValidationGate.task_id == task.id,

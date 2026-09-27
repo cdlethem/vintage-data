@@ -73,6 +73,10 @@ Current constraints that drive the design:
 
 ### 7. Complete source-specific observability and run shadow efficiency trials
 
+> **Superseded for OpenActive and Sensor.Community (2026-09-22):** both sources are retired
+> (`extract/retired_sources.yml`). Do not implement the OpenActive/Sensor.Community items below
+> (summaries in step 1, candidates B in steps 3–4) or run trials against them.
+
 1. Add schema-v2 summaries to OpenActive and Sensor.Community as well as the sources above.
    - OpenActive: discovered/attempted/completed/failed feeds, provider/feed coverage, pages, updated/deleted items, cursor advances, requests and bytes.
    - Sensor.Community: retrieval mode/partitions, readings, distinct reading IDs/sensors/countries, time range, indoor/exact-location/quality-flag distributions, requests and bytes.

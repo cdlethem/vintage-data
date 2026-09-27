@@ -7,6 +7,8 @@ import hashlib
 import json
 import os
 import pathlib
+import re
+import selectors
 import stat
 import subprocess
 import tarfile
@@ -22,6 +24,97 @@ except ImportError:
 
 _MAX_RESULT = 1_048_576
 
+
+_MAX_SANDBOX_STDERR = 4_096
+_STDERR_TRUNCATED = b"[launcher stderr truncated]\n"
+
+
+def _run_sandbox(argv: list[str], *, timeout: float, env: dict[str, str]) -> subprocess.CompletedProcess:
+    """Run the launcher while retaining only a bounded tail of stderr."""
+    process = subprocess.Popen(
+        argv,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        env=env,
+    )
+    assert process.stderr is not None
+    stderr = bytearray()
+    truncated = False
+    deadline = time.monotonic() + timeout
+    selector = selectors.DefaultSelector()
+    selector.register(process.stderr, selectors.EVENT_READ)
+    try:
+        while selector.get_map():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(argv, timeout)
+            for key, _ in selector.select(remaining):
+                chunk = os.read(key.fileobj.fileno(), 65_536)
+                if not chunk:
+                    selector.unregister(key.fileobj)
+                    continue
+                limit = _MAX_SANDBOX_STDERR - len(_STDERR_TRUNCATED)
+                if len(chunk) >= limit:
+                    stderr[:] = chunk[-limit:]
+                    truncated = True
+                else:
+                    excess = len(stderr) + len(chunk) - limit
+                    if excess > 0:
+                        del stderr[:excess]
+                        truncated = True
+                    stderr.extend(chunk)
+        process.wait(timeout=max(0.001, deadline - time.monotonic()))
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+        raise
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait()
+        selector.close()
+        process.stderr.close()
+    return subprocess.CompletedProcess(
+        argv, process.returncode,
+        stderr=(_STDERR_TRUNCATED if truncated else b"") + bytes(stderr),
+    )
+
+
+def _sandbox_stderr_diagnostic(stderr: bytes) -> str:
+    """Redact bounded launcher stderr before it enters a durable error envelope."""
+    detail = stderr.decode("utf-8", errors="replace").strip()
+    marker = _STDERR_TRUNCATED.decode().strip()
+    if detail.startswith(marker):
+        detail = detail[len(marker):].lstrip()
+    if not detail:
+        return ""
+    if detail.lstrip().startswith("{") or (
+        "admission" in detail.casefold() and ("{" in detail or "[" in detail)
+    ):
+        return "launcher stderr omitted because it contained admission data"
+    try:
+        from airflow._shared.secrets_masker import redact
+        detail = str(redact(detail, "sandbox_stderr", max_depth=20))
+    except Exception:  # noqa: BLE001 - never persist unredacted launch output
+        return "launcher stderr omitted because redaction was unavailable"
+    detail = re.sub(
+        r"(?i)\b(authorization|api[_ -]?key|access[_ -]?token|password|secret|credential)"
+        r"\b\s*(?:[:=]\s*|\s+)(?:bearer\s+)?[^\s,;]+",
+        r"\1=***",
+        detail,
+    )
+    try:
+        from .bot_runner import _failure_detail
+    except ImportError:
+        from bot_runner import _failure_detail
+    return _failure_detail(RuntimeError(detail))
+
+
+def _sandbox_exit_error(error_type, returncode: int, stderr: bytes) -> Exception:
+    error = error_type(f"sandbox_exit_{returncode}", "terminal")
+    if diagnostic := _sandbox_stderr_diagnostic(stderr):
+        error.args = (f"{error}: launcher stderr: {diagnostic}",)
+    return error
 
 def _sandbox_attempt(model_role: str, started_at: datetime, duration_ms: int) -> dict:
     usage = usage_tools.normalize({}, format="openai")
@@ -300,6 +393,70 @@ def _write_review_context(root: pathlib.Path, admission: dict, patch: bytes, rep
     return path
 
 
+def _write_seed_rejects(admission: dict, seed: bytes, workdir: pathlib.Path, error_type) -> None:
+    """Materialize a trusted textual patch as adjacent rejects when Git cannot.
+
+    Git emits no ``.rej`` for some valid file-level conflicts (notably an upstream
+    deletion).  Keep each verified file section adjacent to its only permitted
+    target so the confined executor can resolve it, while rejecting malformed,
+    binary, renamed, or policy-escaping inputs.
+    """
+    sections: list[tuple[str, bytes]] = []
+    current: list[bytes] = []
+    for line in seed.splitlines(keepends=True):
+        if line.startswith(b"diff --git "):
+            if current:
+                sections.append(_seed_reject_section(current, error_type))
+            current = [line]
+        elif current:
+            current.append(line)
+    if current:
+        sections.append(_seed_reject_section(current, error_type))
+    if not sections:
+        raise error_type("revision_seed_patch_invalid", "terminal")
+    paths = [path for path, _ in sections]
+    _validate_paths(admission, paths, len(seed), error_type)
+    for path, section in sections:
+        parent = workdir / pathlib.PurePosixPath(path).parent
+        parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        reject = workdir / f"{path}.rej"
+        try:
+            descriptor = os.open(
+                reject,
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+                0o400,
+            )
+        except OSError as exc:
+            raise error_type("revision_seed_reject_write_failed", "terminal") from exc
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(section)
+
+
+def _seed_reject_section(lines: list[bytes], error_type) -> tuple[str, bytes]:
+    header = lines[0].rstrip(b"\n").split(b" ")
+    if len(header) != 4 or header[:2] != [b"diff", b"--git"]:
+        raise error_type("revision_seed_patch_invalid", "terminal")
+    old, new = header[2:]
+    if not old.startswith(b"a/") or not new.startswith(b"b/") or old[2:] != new[2:]:
+        raise error_type("revision_seed_patch_invalid", "terminal")
+    try:
+        path = new[2:].decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise error_type("revision_seed_patch_invalid", "terminal") from exc
+    section = b"".join(lines)
+    old_marker = b"--- a/" + new[2:] + b"\n"
+    new_marker = b"+++ b/" + new[2:] + b"\n"
+    valid_markers = (
+        (old_marker in lines and new_marker in lines)
+        or (b"--- /dev/null\n" in lines and new_marker in lines)
+        or (old_marker in lines and b"+++ /dev/null\n" in lines)
+    )
+    if (b"GIT binary patch" in section or b"Binary files " in section
+            or not valid_markers
+            or not any(line.startswith(b"@@ -") and b" +" in line for line in lines)):
+        raise error_type("revision_seed_patch_invalid", "terminal")
+    return path, section
+
 def _apply_revision_seed(admission: dict, client, workdir: pathlib.Path, metadata: pathlib.Path, error_type) -> None:
     """Restore a prior patch onto the admitted base, leaving real conflicts for repair.
 
@@ -337,11 +494,9 @@ def _apply_revision_seed(admission: dict, client, workdir: pathlib.Path, metadat
     )
     if process.returncode == 0:
         return
-    if process.returncode == 1 and any(
-        path.is_file() for path in workdir.rglob("*.rej")
-    ):
+    if any(path.is_file() for path in workdir.rglob("*.rej")):
         return
-    raise error_type("revision_seed_apply_failed", "terminal")
+    _write_seed_rejects(admission, seed, workdir, error_type)
 
 
 
@@ -424,7 +579,7 @@ def run(context: dict, cfg: dict, runner, dashboard_module):
             attempt_started_at = datetime.now(timezone.utc)
             attempt_started = time.monotonic()
             with _admitted_gateway(admission, client, root, deadline_at, dashboard_module.ControlPlaneError) as gateway:
-                process = subprocess.run(
+                process = _run_sandbox(
                     [
                         str(launcher),
                         "--protocol",
@@ -436,10 +591,7 @@ def run(context: dict, cfg: dict, runner, dashboard_module):
                         "--result",
                         str(result_path),
                     ],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
                     timeout=budget.timeout(cfg["model_budget_minutes"] * 60),
-                    check=False,
                     env={
                         key: value
                         for key, value in os.environ.items()
@@ -451,8 +603,8 @@ def run(context: dict, cfg: dict, runner, dashboard_module):
                     raise ModelRateLimited()
             duration_ms = int((time.monotonic() - attempt_started) * 1000)
             if process.returncode:
-                raise dashboard_module.ControlPlaneError(
-                    f"sandbox_exit_{process.returncode}", "terminal"
+                raise _sandbox_exit_error(
+                    dashboard_module.ControlPlaneError, process.returncode, process.stderr
                 )
             raw_result = _read_result(result_path, dashboard_module.ControlPlaneError)
             result_type = ExecutorResultV2 if kind == "executor" else ReviewerResultV2

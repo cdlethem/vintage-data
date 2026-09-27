@@ -1,0 +1,61 @@
+{
+  "meta": {
+    "goldenCopy": {
+      "publishDate": "2026-09-17T10:00:00Z"
+    }
+  },
+  "links": {
+    "self": "https://api.gleif.org/api/v1/lei-records?page[number]=2&page[size]=2",
+    "next": null
+  },
+  "data": [
+    {
+      "type": "lei-records",
+      "id": "CCCCCCCCCCCCCCCCCCCC",
+      "attributes": {
+        "lei": "CCCCCCCCCCCCCCCCCCCC",
+        "entity": {
+          "legalName": {
+            "name": "Gamma SA",
+            "language": "en"
+          }
+        },
+        "registration": {
+          "lastUpdateDate": "2026-09-17T01:00:00Z",
+          "status": "ISSUED"
+        }
+      },
+      "relationships": {
+        "direct-parent": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/CCCCCCCCCCCCCCCCCCCC/direct-parent-relationship"
+          }
+        }
+      }
+    },
+    {
+      "type": "lei-records",
+      "id": "DDDDDDDDDDDDDDDDDDDD",
+      "attributes": {
+        "lei": "DDDDDDDDDDDDDDDDDDDD",
+        "entity": {
+          "legalName": {
+            "name": "Delta Ltd",
+            "language": "en"
+          }
+        },
+        "registration": {
+          "lastUpdateDate": "2026-09-17T02:00:00Z",
+          "status": "ISSUED"
+        }
+      },
+      "relationships": {
+        "direct-parent": {
+          "links": {
+            "related": "https://api.gleif.org/api/v1/lei-records/DDDDDDDDDDDDDDDDDDDD/direct-parent-relationship"
+          }
+        }
+      }
+    }
+  ]
+}

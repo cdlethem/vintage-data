@@ -163,20 +163,21 @@ def publish_execution_change(
     _, patch = read_artifact(session, patch_sha)
     validate_changed_paths(config, changed_paths, len(patch))
     task_allowed = tuple(revision.allowed_path_globs)
-    narrowed = RepositoryConfig(
-        provider=config.provider,
-        project=config.project,
-        api_base_url=config.api_base_url,
-        clone_url=config.clone_url,
-        base_branch=config.base_branch,
-        allowed_path_globs=task_allowed,
-        denied_path_globs=config.denied_path_globs,
-        max_changed_files=config.max_changed_files,
-        max_diff_bytes=config.max_diff_bytes,
-        service_account_id=config.service_account_id,
-        token=config.token,
-    )
-    validate_changed_paths(narrowed, changed_paths, len(patch))
+    if task_allowed:
+        narrowed = RepositoryConfig(
+            provider=config.provider,
+            project=config.project,
+            api_base_url=config.api_base_url,
+            clone_url=config.clone_url,
+            base_branch=config.base_branch,
+            allowed_path_globs=task_allowed,
+            denied_path_globs=config.denied_path_globs,
+            max_changed_files=config.max_changed_files,
+            max_diff_bytes=config.max_diff_bytes,
+            service_account_id=config.service_account_id,
+            token=config.token,
+        )
+        validate_changed_paths(narrowed, changed_paths, len(patch))
     # Persist immutable evidence BEFORE external effects. A provider outage after
     # push must resume this patch rather than run the model again on retry.
     from .report_schemas import VerificationManifestV1
@@ -264,7 +265,6 @@ def publish_execution_change(
     # placeholder exactly once at the trusted publication boundary.
     for gate in session.scalars(select(ValidationGate).where(
             ValidationGate.task_id == task.id,
-            ValidationGate.stage.in_(("publication", "merge")),
             ValidationGate.subject.in_(("candidate_head", "pending_candidate")),
             ValidationGate.status == "pending")).all():
         gate.subject = head_sha

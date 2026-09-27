@@ -34,6 +34,7 @@ def _get(station: str, timeout: int):
     request = urllib.request.Request(
         f"{BASE_URL}/{station}?{query}",
         headers={
+            "Accept": "application/json",
             "Accept-Encoding": "gzip",
             "Digitraffic-User": USER_AGENT,
             "User-Agent": USER_AGENT,
@@ -50,6 +51,8 @@ def _get(station: str, timeout: int):
 
 
 def fetch_trains(station: str = "HKI", limit: int = 100, timeout: int = 30):
+    if limit <= 0:
+        return
     fetched_at = datetime.now(timezone.utc).isoformat()
     for train in _get(station, timeout)[:limit]:
         departure_date = train.get("departureDate")

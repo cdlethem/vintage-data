@@ -22,5 +22,8 @@ if [[ "${SKIP_SYSTEMD:-0}" != 1 ]]; then
     sudo install -m 0644 generated/systemd/vintage-lightdash.service /etc/systemd/system/vintage-lightdash.service
     sudo systemctl daemon-reload
     sudo systemctl enable --now vintage-lightdash.service
+    # Existing workers retain their old enablement flag and serving credentials.
+    # enable --now does not reload the environment of a running service.
+    sudo systemctl try-restart 'airflow-worker@*.service'
 fi
 echo "Lightdash ready at $LIGHTDASH_URL. See visualization/README.md for first project bootstrap."

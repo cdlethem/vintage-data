@@ -40,7 +40,10 @@ Actions:
 - configure: improve planned_resolution, verification_commands (arrays of argv,
   never shell strings), allowed_path_globs (narrow repo-relative files), resource_keys,
   follow_up_bots, or acceptance_gates. Supply changes including the task's current
-  version. Do this before start if scope/checks are missing, or before revise to address review.
+  version. Empty task-level checks and path scope are valid; repository policy
+  still confines changed files. Do not configure merely to fill those fields.
+  Configure before start only when the plan or evidence needs a substantive fix,
+  or before revise to address review.
   Turn required validation in prose into explicit stage/subject/capability gates.
   Use only advertised validation recipes and fixed command IDs. Never invent a
   capability, weaken an existing gate, or move a pre-merge requirement after merge.

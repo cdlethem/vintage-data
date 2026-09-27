@@ -1,8 +1,9 @@
 """Explicit recovery of exhausted provider capacity failures without losing PR evidence."""
 import hashlib
+from datetime import timezone
 from sqlalchemy import select, func
 from sqlalchemy.orm import object_session
-from .models import Execution, Event
+from .models import Execution, Event, RunReport, ValidationGate
 from .service import Conflict, PreconditionFailed, _locked_task, _event, start_task, task_dict
 from .model_settings import model_for_role
 
@@ -18,8 +19,27 @@ def retry_review_launch(session, task_id, *, version, actor_id, idempotency_key,
                   idempotency_key=idempotency_key, max_queued=max_queued, launch=True)
 
 
+def new_review_evidence(session, row):
+    """Return newly completed exact-head gates, never prior review evidence."""
+    if (row is None or row.stage != "reviewed" or not row.review_report_sha256
+            or not row.trusted_head_sha or (row.provider_state or {}).get("review_repair")):
+        return []
+    report = session.scalar(select(RunReport).where(RunReport.sha256 == row.review_report_sha256))
+    if report is None:
+        return []
+    gates = session.scalars(select(ValidationGate).where(
+        ValidationGate.task_id == row.task_id, ValidationGate.required.is_(True),
+        ValidationGate.stage.in_(("publication", "merge")),
+    )).all()
+    if not gates or any(gate.status != "passed" or gate.subject != row.trusted_head_sha for gate in gates):
+        return []
+    return [{"gate_key": gate.gate_key, "version": gate.version, "subject": gate.subject}
+            for gate in gates if gate.updated_at.replace(tzinfo=gate.updated_at.tzinfo or timezone.utc)
+            > report.created_at.replace(tzinfo=report.created_at.tzinfo or timezone.utc)]
+
+
 def retry_review_result(session, task_id, *, version, actor_id, idempotency_key, max_queued=20):
-    """Retry a same-head review whose execution produced no usable code verdict."""
+    """Retry an unusable verdict or reconsider newly completed exact-head evidence."""
     event_type = "review_result_retry_requested"
     task = _locked_task(session, task_id)
     events = session.scalars(
@@ -36,6 +56,9 @@ def retry_review_result(session, task_id, *, version, actor_id, idempotency_key,
     failure_kind = (row.provider_state or {}).get("review_failure_kind") if row else None
     if row and row.review_verdict == "unable_to_review" and failure_kind is None:
         failure_kind = "legacy_untyped"
+    evidence = new_review_evidence(session, row)
+    unusable = (row and row.review_verdict == "unable_to_review"
+                and failure_kind in {"legacy_untyped", "transport_failed", "format_failed", "evidence_unavailable"})
     previous_state = task.state
     if (
         task.state not in {"in_review", "blocked"}
@@ -43,10 +66,9 @@ def retry_review_result(session, task_id, *, version, actor_id, idempotency_key,
         or row is None
         or row.admission_kind != "pr_reviewer"
         or row.stage != "reviewed"
-        or row.review_verdict != "unable_to_review"
-        or failure_kind not in {"legacy_untyped", "transport_failed", "format_failed", "evidence_unavailable"}
+        or not (unusable or evidence)
     ):
-        raise PreconditionFailed("Review retry requires a typed unusable-review result")
+        raise PreconditionFailed("Review retry requires an unusable verdict or new exact-head validation evidence")
     _require_same_open_review_head(row)
     if session.scalar(
         select(func.count()).select_from(Execution).where(
@@ -60,6 +82,7 @@ def retry_review_result(session, task_id, *, version, actor_id, idempotency_key,
     if object_session(task) is not session or object_session(row) is not session:
         raise Conflict("Recovery session was closed during provider lookup; use an independent session")
     prior_run = row.target_run_id
+    prior_verdict, prior_report = row.review_verdict, row.review_report_sha256
     suffix = hashlib.sha256(idempotency_key.encode()).hexdigest()[:20]
     row.target_run_id = f"review__{task.id}__{row.sequence}__r{row.revision}__retry_{suffix}"
     row.claimed_run_id = None
@@ -86,6 +109,9 @@ def retry_review_result(session, task_id, *, version, actor_id, idempotency_key,
                "previous_run_id": prior_run,
                "run_id": row.target_run_id,
                "previous_failure_kind": failure_kind,
+               "previous_review_verdict": prior_verdict,
+               "previous_review_report_sha256": prior_report,
+               "new_validation_evidence": evidence,
                "sequence": row.sequence,
                "revision": row.revision,
            })

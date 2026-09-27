@@ -54,9 +54,9 @@ from datetime import datetime, timezone
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 BASE = "https://zenodo.org/api/records"
 
-REQUEST_TIMEOUT_SECONDS = 30
-MAX_ATTEMPTS = 3
-RETRY_DELAYS_SECONDS = (1, 2)
+REQUEST_TIMEOUT_SECONDS = 60
+MAX_ATTEMPTS = 5
+RETRY_DELAYS_SECONDS = (2, 5, 10)
 
 
 def _is_timeout(error):
@@ -106,7 +106,7 @@ def _get(**params):
                 return _validate_response(json.load(resp))
         except Exception as error:
             if _is_timeout(error) and attempt_count < MAX_ATTEMPTS:
-                time.sleep(RETRY_DELAYS_SECONDS[attempt_count - 1])
+                time.sleep(RETRY_DELAYS_SECONDS[min(attempt_count - 1, len(RETRY_DELAYS_SECONDS) - 1)])
                 continue
             _report_request_failure(params, error, attempt_count)
             raise

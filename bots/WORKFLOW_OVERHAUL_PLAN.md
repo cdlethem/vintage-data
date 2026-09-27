@@ -352,8 +352,72 @@ prompts favor the current ticket and require an owner for external gates.
 
 The provider wheel was installed and migration `0006_validation_gates` applied on
 2026-09-21. API, scheduler, and DAG processor health were verified after loading
-the provider. A version-7 sandbox was prepared under the operator state directory;
-activation still requires copying it into a new root-owned immutable `/opt`
-directory, running its confinement check as the Airflow user, and changing the
-launcher path only for new admissions. The live root-owned version-6 runtime was
-left untouched while admitted reviews were running.
+the provider. At that initial rollout, version 7 was staged but not activated,
+and the root-owned version-6 runtime remained untouched while admitted reviews
+were running. The subsequent version-8 deployment below supersedes that staging
+status without rewriting either earlier runtime.
+
+### Backlog recovery deployment, 2026-09-21
+
+Migration `0007_validation_execution` adds recipe arguments, versioned leases,
+attempt counters, and failure evidence. `bot_dashboard__validation` executes one
+gate per tick on the confined-worker queue, independently of executive decisions.
+Its public-source catalog uses exact-head source/patch artifacts, fixed extractor
+arguments, a read-only candidate tree, bounded systemd cgroups, and a per-run
+public-only egress proxy. It cannot reach host credentials or private addresses.
+Enable only the installed catalog with
+`BOT_DASHBOARD_VALIDATION_CAPABILITIES='["public-network-readonly"]'`; the
+configuration renderer now preserves runtime and capability settings.
+
+Validation failures remain failures. Runner failures have at most three attempts
+per candidate, with a 15-minute delay between failed attempts; abandoned leases
+also stop after three attempts. Every retry retains its previous evidence in an
+audit event. Passed evidence from an earlier head cannot authorize the current
+candidate. Newly passed exact-head gates can request a fresh independent review,
+and their evidence is included in the reviewer admission.
+
+Conflicted PRs have a dedicated fresh-base repair admission. The old execution,
+PR, review, and artifacts remain historical evidence; the repair gets a new
+execution/run identity and requires fresh checks and review. Safe file-level
+patch conflicts are presented as scoped reject evidence, not replayed indefinitely
+against the original base. Required candidate-bound gates reset on a new head.
+
+Requested specialist runs now receive their authenticated parent context rather
+than the global backlog. Failed/skipped requests are not treated as active work;
+planning status and durable child links are present in executive context.
+Provider synchronization preserves structured reviewer repair diagnostics.
+
+Immutable runtime `/opt/vintage-bot-runtime-v8` passed its confinement probe and
+instantiated 171 extraction DAGs with their `run` tasks. It includes Airflow 3.3.1,
+the standard operators, Pendulum, and YAML. The configured launcher now points to
+v8; existing v6/v7 installations were not rewritten.
+
+Six existing public-source requirements were migrated to executable exact-head
+gates. Live checks passed for MusicBrainz, arXiv, Digitraffic, Open Library,
+Workday, and Sensor Community at their tested heads. Workday and Sensor Community
+also attest exactly one mandatory summary using the canonical
+`orchestration/include/run_metadata.py` validator, retaining summary size,
+aggregate counts, failure-sample counts, invocation identity, and digest.
+These are head-specific observations, not approvals or production activation:
+a later candidate automatically invalidated and reran its checks, including a
+real Workday failure that remains a failure rather than reusing the earlier pass.
+The operator diagnostic identified `UnboundLocalError` in
+`fetch_job_boards.py:113` (`stats` read before assignment) at candidate
+`9d232f950082b64c3b4bf8bf3d1adfab7ef5a768`; the gate retains that actionable
+failure and does not exceed its automatic retry cap.
+
+The recovered live workflow merged MusicBrainz and completed Digitraffic.
+Common Crawl coverage was claimed for a fresh-base repair, Common Crawl ingestion
+returned to review, and arXiv was claimed for independent review after its live
+evidence arrived. Legacy seed branches are recovered only from the immutable
+same-task source execution, never inferred from a retry's sequence. Related
+legacy test paths were authorized narrowly for reconciliation, not broad scope
+expansion. OSV's runtime/DAG check now passes; its remaining repository-wide
+failure is linked to the existing WHO prerequisite.
+
+Launcher failures retain bounded, redacted stderr instead of only an exit code.
+Validation failures retain a bounded diagnostic tail so a traceback's opening
+frames cannot hide the actual source error. Warehouse-backed dbt, disposable
+migration, Lightdash preview, and activation requirements still require their
+specifically authorized capabilities. The public runner never substitutes
+offline checks for those requirements.

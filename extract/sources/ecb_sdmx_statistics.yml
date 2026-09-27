@@ -1,0 +1,22 @@
+name: ecb_sdmx_statistics
+script: fetch_ecb_sdmx_statistics.py
+# One exact exchange-rate series request. Omitted dates select the seven complete
+# UTC dates before each run; the extractor rejects windows longer than 31 days.
+args: ["EXR", "D.USD.EUR.SP00.A", "--timeout", "60"]
+schedule: "41 16 * * *"  # UTC; one request per daily run
+enabled: false
+retries: 0
+timeout_minutes: 10
+sink: local
+
+# Revision snapshots are useful daily; automatic cadence changes stay disabled.
+cadence:
+  auto: false
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "one exact EXR/D.USD.EUR.SP00.A request for seven complete UTC days per daily run"
+rate_limit: "one bounded ECB SDMX data request per daily run; maximum request window is 31 days"
+licence: "ECB copyright and re-use policy"
+attribution: "European Central Bank (ECB), Statistical Data Warehouse"
+attribution_required: true
+activation_note: "keep paused until independent review, authorized live-source smoke, deployed DAG discovery, cadence and activation controls are recorded"
