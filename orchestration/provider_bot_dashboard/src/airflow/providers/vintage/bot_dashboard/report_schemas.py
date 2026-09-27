@@ -158,8 +158,8 @@ class AcceptanceGateV1(StrictModel):
     gate_key: str = Field(min_length=1, max_length=100, pattern=KEY_PATTERN)
     stage: Literal["publication", "merge", "activation", "completion"]
     recipe: Literal[
-        "public_source_smoke", "disposable_schema_migration", "warehouse_check",
-        "dag_inspection", "lightdash_preview", "manual",
+        "public_source_smoke", "public_source_reconciliation", "trusted_workflow_check",
+        "disposable_schema_migration", "warehouse_check", "dag_inspection", "lightdash_preview", "manual",
     ]
     owner: str = Field(min_length=1, max_length=250)
     required_capability: str = Field(min_length=1, max_length=250)

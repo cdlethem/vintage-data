@@ -146,7 +146,7 @@ def claim_run(
         row.executor_deadline_at = deadline_at
     else:
         row.review_deadline_at = deadline_at
-    if kind == "executor" and task.state in {"accepted", "in_review"}:
+    if kind == "executor" and task.state in {"accepted", "in_review", "ready"}:
         previous = task.state
         task.state = "in_progress"
         task.version += 1

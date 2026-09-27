@@ -281,6 +281,8 @@ def create_validation_gate(session: Session, task_id: str, *, version: int, acto
     task = _locked_task(session, task_id, version)
     if task.state in {"completed", "dismissed"}:
         raise PreconditionFailed("Closed work cannot receive a new validation gate")
+    if task.assignee_kind == "bot" and value["owner"] != "validation-service":
+        raise PreconditionFailed("Bot-owned work requires executable bot-owned validation")
     if session.scalar(select(ValidationGate.id).where(
             ValidationGate.task_id == task.id, ValidationGate.gate_key == value["gate_key"])):
         raise Conflict("Validation gate key already exists")
@@ -296,6 +298,60 @@ def create_validation_gate(session: Session, task_id: str, *, version: int, acto
     return gate_dict(row)
 
 
+def convert_manual_validation_gate(session: Session, gate_id: str, *, version: int, actor_id: str,
+                                   recipe: str, required_capability: str, recipe_args: dict) -> dict:
+    """Convert a human-owned manual requirement without clearing or passing observed evidence."""
+    try:
+        identity = uuid.UUID(gate_id)
+    except ValueError as exc:
+        raise NotFound("validation gate not found") from exc
+    row = session.scalar(select(ValidationGate).where(ValidationGate.id == identity).with_for_update())
+    if row is None:
+        raise NotFound("validation gate not found")
+    if row.version != version:
+        raise Conflict("Validation gate version is stale")
+    if row.recipe != "manual" or row.owner == "validation-service" or row.status not in {"pending", "failed"}:
+        raise PreconditionFailed("Only pending or failed manual gates can be converted")
+    task = _locked_task(session, str(row.task_id))
+    if task.state in {"completed", "dismissed"} and row.stage not in {"activation", "completion"}:
+        raise PreconditionFailed("Closed work cannot change a premerge validation gate")
+    candidate = {"recipe": recipe, "required_capability": required_capability,
+                 "recipe_args": recipe_args, "subject": row.subject}
+    _validate_gate_contract({**candidate, "owner": "validation-service"})
+    prior = {"recipe": row.recipe, "owner": row.owner, "status": row.status,
+             "subject": row.subject, "required_capability": row.required_capability,
+             "recipe_args": row.recipe_args, "evidence": row.evidence, "last_error": row.last_error}
+    execution = session.scalar(select(Execution).where(
+        Execution.task_id == row.task_id,
+    ).order_by(Execution.sequence.desc(), Execution.revision.desc()).limit(1))
+    if execution and execution.trusted_head_sha and execution.trusted_head_sha != row.subject:
+        from .git_provider import GitProviderError
+        from .validation_lane import _candidate_snapshot
+        old_subject = row.subject
+        row.subject = execution.trusted_head_sha
+        try:
+            _candidate_snapshot(session, row)
+        except (PreconditionFailed, GitProviderError) as exc:
+            row.subject = old_subject
+            raise PreconditionFailed("Current candidate head cannot be attested for gate conversion") from exc
+    row.recipe = recipe
+    row.owner = "validation-service"
+    row.required_capability = required_capability
+    row.recipe_args = recipe_args
+    row.status = "pending"
+    row.version += 1
+    row.updated_at = utcnow()
+    task.version += 1
+    task.updated_at = utcnow()
+    _event(session, task, "validation_gate_converted", "user", actor_id,
+           payload={"gate_key": row.gate_key, "stage": row.stage, "subject": row.subject,
+                    "required": row.required, "before": prior,
+                    "after": {"recipe": recipe, "owner": row.owner,
+                              "required_capability": required_capability, "recipe_args": recipe_args}})
+    session.flush()
+    return gate_dict(row)
+
+
 def record_validation_gate(session: Session, gate_id: str, *, version: int, actor_id: str,
                            status: str, subject: str, evidence: dict) -> dict:
     try:
@@ -307,6 +363,11 @@ def record_validation_gate(session: Session, gate_id: str, *, version: int, acto
         raise NotFound("validation gate not found")
     if row.version != version:
         raise Conflict("Validation gate version is stale")
+    if row.owner == "validation-service":
+        raise PreconditionFailed("Bot-owned validation results require the automatic validation lane")
+    task = session.get(Task, row.task_id)
+    if task is not None and task.assignee_kind == "bot":
+        raise PreconditionFailed("Bot-assigned work cannot pass through a manual validation result")
     if subject != row.subject:
         raise PreconditionFailed("Validation evidence belongs to a different subject")
     if status not in {"passed", "failed"}:
@@ -683,7 +744,24 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
             or retry_previous.pr_url is not None
         ):
             raise PreconditionFailed("retry requires a failed terminal execution without a published PR; resolve other blockers before starting")
-    if retry_previous is None and task.state not in ({"in_review"} if revision else {"accepted"}):
+    failed_ready_gate = False
+    if revision and task.state == "ready":
+        current_head = session.scalar(
+            select(Execution.trusted_head_sha).where(Execution.task_id == task.id)
+            .order_by(Execution.sequence.desc(), Execution.revision.desc()).limit(1)
+        )
+        failed_ready_gate = bool(current_head and session.scalar(
+            select(ValidationGate.id).where(
+                ValidationGate.task_id == task.id,
+                ValidationGate.required.is_(True),
+                ValidationGate.stage == "merge",
+                ValidationGate.status == "failed",
+                ValidationGate.owner == "validation-service",
+                ValidationGate.subject == current_head,
+            ).limit(1)
+        ))
+    permitted_states = {"in_review", "ready"} if failed_ready_gate else {"in_review"} if revision else {"accepted"}
+    if retry_previous is None and task.state not in permitted_states:
         raise PreconditionFailed("task state cannot start this execution")
     latest_revision = session.scalar(
         select(Revision)
@@ -700,6 +778,8 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
     )
     if active and not revision:
         raise Conflict("task already has an active execution", task_dict(task))
+    if active and latest_revision.revision_number <= active.revision:
+        raise PreconditionFailed("a revised execution requires a newer task recommendation revision")
     queued = session.scalar(
         select(func.count())
         .select_from(Execution)
@@ -751,10 +831,6 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
         session.add(row)
     else:
         row = active
-        if latest_revision.revision_number <= row.revision:
-            raise PreconditionFailed(
-                "a revised execution requires a newer task recommendation revision"
-            )
         row.admission_kind = "executor"
         row.revision = latest_revision.revision_number
         row.execution_id = secrets.token_hex(32)
@@ -1558,11 +1634,14 @@ def _configure_acceptance_gates(session: Session, task: Task, values: list[dict]
                 or existing.owner != value["owner"]
             ):
                 raise PreconditionFailed("The executive cannot weaken or reclassify an existing validation gate")
-    _reconcile_proposed_gates(session, task, {"acceptance_gates": values})
+    _reconcile_proposed_gates(session, task, {"acceptance_gates": values},
+                              bot_proposal=actor_kind != "user" or task.assignee_kind == "bot")
 
 
-def _validate_gate_contract(value: dict) -> None:
+def _validate_gate_contract(value: dict, *, bot_proposal: bool = False) -> None:
     if value["owner"] != "validation-service":
+        if bot_proposal:
+            raise PreconditionFailed("Bot proposals require executable bot-owned validation gates")
         return
     from .validation_recipes import validate_admission, ValidationRecipeError
     candidate = dict(value)
@@ -1600,11 +1679,12 @@ def _validate_gate_dependencies(session: Session, task: Task, values: list[dict]
         visit(key)
 
 
-def _reconcile_proposed_gates(session: Session, task: Task, proposal: dict) -> None:
+def _reconcile_proposed_gates(session: Session, task: Task, proposal: dict, *,
+                              bot_proposal: bool = False) -> None:
     """Create/update pending gate contracts; never erase observed gate history."""
     values = proposal.get("acceptance_gates", [])
     for value in values:
-        _validate_gate_contract(value)
+        _validate_gate_contract(value, bot_proposal=bot_proposal)
     _validate_gate_dependencies(session, task, values)
     for value in proposal.get("acceptance_gates", []):
         row = session.scalar(select(ValidationGate).where(
@@ -1719,6 +1799,40 @@ def _matching_proposed_failure_task(session: Session, proposal: dict, bot: str) 
     )
 
 
+def _provably_denied_proposal_scope(proposal: dict) -> bool:
+    """Reject only scopes whose every proposed path is provably unpublishable.
+
+    Recognize disjoint fixed roots or an explicit denied-directory prefix.
+    Unknown/broad intersections remain for the executor's exact path check;
+    never guess that a distinct deliverable is impossible.
+    """
+    from airflow.exceptions import AirflowNotFoundException
+    from .git_provider import GitProviderError, load_repository_config
+
+    try:
+        config = load_repository_config()
+    except (AirflowNotFoundException, GitProviderError, OSError):
+        return False  # No trusted policy snapshot from which to prove a denial.
+
+    def root(pattern: str) -> str | None:
+        component = pattern.split("/", 1)[0]
+        return None if any(char in component for char in "*?[") else component
+
+    allowed_roots = {root(pattern) for pattern in config.allowed_path_globs}
+    for pattern in proposal["allowed_path_globs"]:
+        fixed_prefix = re.split(r"[*?\[]", pattern, maxsplit=1)[0]
+        wholly_denied = any(
+            rule.endswith(("/**", "/*")) and fixed_prefix.startswith(rule.rsplit("/", 1)[0] + "/")
+            for rule in config.denied_path_globs
+        )
+        if wholly_denied:
+            continue
+        component = root(pattern)
+        if component is None or None in allowed_roots or component in allowed_roots:
+            return False
+    return True
+
+
 def reconcile_recommendations(
     session: Session, report: RunReport, payload: dict
 ) -> dict[str, int]:
@@ -1739,6 +1853,26 @@ def reconcile_recommendations(
     from . import follow_up
     planning_parent = follow_up.record(session, report, payload)
     for proposal in _task_proposals(report.report_schema or "", payload):
+        if _provably_denied_proposal_scope(proposal):
+            continue
+        try:
+            for gate in proposal.get("acceptance_gates", []):
+                _validate_gate_contract(gate, bot_proposal=True)
+        except PreconditionFailed as exc:
+            if planning_parent:
+                parent = session.get(Task, planning_parent, with_for_update=True)
+                reason = ("validation_capability_unavailable" if "capability" in str(exc)
+                          else "validation_gate_unexecutable")
+                prior = session.scalars(select(Event).where(
+                    Event.task_id == planning_parent, Event.event_type == "specialist_gate_rejected",
+                )).all()
+                if parent and not any(
+                        (event.payload or {}).get("recommendation_key") == proposal["recommendation_key"]
+                        and (event.payload or {}).get("reason_code") == reason for event in prior):
+                    _event(session, parent, "specialist_gate_rejected", "system", report.bot_name,
+                           payload={"recommendation_key": proposal["recommendation_key"],
+                                    "reason_code": reason, "detail": str(exc)[:200]})
+            continue
         recommendation_key = _recommendation_identity(report.bot_name, proposal, epoch)
         if planning_parent:
             recommendation_key = hashlib.sha256(f"planning:{planning_parent}:{recommendation_key}".encode()).hexdigest()
@@ -1877,7 +2011,7 @@ def reconcile_recommendations(
             source_map_index=report.map_index,
         )
         session.add(revision)
-        _reconcile_proposed_gates(session, task, proposal)
+        _reconcile_proposed_gates(session, task, proposal, bot_proposal=True)
         policy = session.scalar(
             select(Policy)
             .where(Policy.category.in_((proposal["category"], "*")))

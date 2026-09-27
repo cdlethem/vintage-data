@@ -6,6 +6,8 @@ Autopilot checks.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import secrets
 from datetime import timedelta
 from typing import Any, Callable
@@ -151,9 +153,21 @@ def _fail_admission(session: Session, row: ValidationGate, error: Exception) -> 
     row.lease_id = None
     row.lease_run_id = None
     row.lease_expires_at = None
-    row.last_error = f"validation_admission_{type(error).__name__}"[:200]
+    from airflow.exceptions import AirflowNotFoundException
+    from .git_provider import GitProviderError
+    unavailable = "validation capability" in str(error) or "configured validation capabilities" in str(error)
+    workflow_unavailable = row.recipe == "trusted_workflow_check" and isinstance(
+        error, (GitProviderError, AirflowNotFoundException))
+    workflow_invalid = row.recipe == "trusted_workflow_check" and "trusted workflow" in str(error)
+    row.last_error = ("validation_capability_unavailable" if unavailable
+                      else "validation_workflow_attestation_unavailable" if workflow_unavailable
+                      else "validation_workflow_attestation_invalid" if workflow_invalid
+                      else f"validation_admission_{type(error).__name__}"[:200])
     row.evidence = {
-        "label": "Validation admission failed",
+        "label": ("Validation capability unavailable" if unavailable
+                  else "Validation workflow attestation unavailable" if workflow_unavailable
+                  else "Validation workflow attestation invalid" if workflow_invalid
+                  else "Validation admission failed"),
         "observation": f"exact subject {row.subject}; gate was not executed",
         "reason_code": row.last_error,
     }
@@ -178,6 +192,7 @@ def claim_pending(
     rows = session.scalars(select(ValidationGate).where(
         ValidationGate.status == "pending",
         ValidationGate.owner == AUTOMATIC_OWNER,
+        ValidationGate.recipe != "trusted_workflow_check",
         ValidationGate.subject.not_in(("candidate_head", "pending_candidate")),
     ).order_by(ValidationGate.created_at, ValidationGate.id).limit(MAX_CLAIM).with_for_update(skip_locked=True)).all()
     claimed = []
@@ -209,6 +224,95 @@ def claim_pending(
         claimed.append(_gate_dict(row, candidate=candidate))
     session.flush()
     return claimed
+
+
+def poll_trusted_workflows(session: Session, *, limit: int, autopilot_enabled: bool) -> list[dict[str, Any]]:
+    """Finish only completed, provider-attested workflow checks for exact candidate heads."""
+    if not autopilot_enabled:
+        return []
+    from airflow.exceptions import AirflowNotFoundException
+    from .git_provider import GitProviderError, get_provider, load_repository_config
+
+    rows = session.scalars(select(ValidationGate).where(
+        ValidationGate.status == "pending",
+        ValidationGate.owner == AUTOMATIC_OWNER,
+        ValidationGate.recipe == "trusted_workflow_check",
+        ValidationGate.subject.not_in(("candidate_head", "pending_candidate")),
+    ).order_by(ValidationGate.created_at, ValidationGate.id)
+        .limit(min(max(limit, 1), MAX_CLAIM)).with_for_update(skip_locked=True)).all()
+    finished = []
+    for row in rows:
+        try:
+            task = _task(session, row)
+            _admission(row)
+            if not _dependencies_passed(session, row):
+                continue
+            _candidate_snapshot(session, row)
+            execution = session.scalar(select(Execution).where(
+                Execution.task_id == row.task_id,
+            ).order_by(Execution.sequence.desc(), Execution.revision.desc()).limit(1))
+            config = load_repository_config()
+            attested = get_provider(config).read_validation_workflow(
+                execution.pr_number, row.subject, row.recipe_args["workflow_path"],
+                row.recipe_args["job_name"],
+            )
+            if attested is None:
+                continue  # No completed trusted run yet; polling never consumes an attempt.
+            if (not isinstance(attested, dict) or attested.get("status") not in {"passed", "failed"}
+                    or attested.get("head_sha") != row.subject
+                    or attested.get("workflow_path") != row.recipe_args["workflow_path"]
+                    or attested.get("job_name") != row.recipe_args["job_name"]):
+                raise PreconditionFailed("trusted workflow attestation is invalid")
+            run_id, check_id, run_url = (
+                attested.get("run_id"), attested.get("check_run_id"), attested.get("run_url"))
+            if (run_id is not None and (type(run_id) is not int or run_id <= 0)
+                    or check_id is not None and (type(check_id) is not int or check_id <= 0)
+                    or run_url is not None and (
+                        not isinstance(run_url, str) or not run_url.startswith("https://")
+                        or len(run_url) > 2048)):
+                raise PreconditionFailed("trusted workflow evidence identity is invalid")
+            diagnostic = attested.get("diagnostic")
+            if attested["status"] == "failed" and (
+                    not isinstance(diagnostic, str) or not diagnostic or len(diagnostic) > 200
+                    or attested.get("workflow_run_id") != run_id):
+                raise PreconditionFailed("trusted workflow failure lacks a bounded diagnostic")
+            if attested["status"] == "passed" and (
+                    run_id is None or check_id is None
+                    or attested.get("event") != "pull_request" or attested.get("conclusion") != "success"
+                    or diagnostic is not None or attested.get("workflow_run_id") != run_id):
+                raise PreconditionFailed("trusted workflow pass lacks exact pull-request attestation")
+        except (PreconditionFailed, GitProviderError, AirflowNotFoundException) as exc:
+            _fail_admission(session, row, exc)
+            finished.append(_gate_dict(row))
+            continue
+        status = attested["status"]
+        assertions = {
+            "workflow_path": attested["workflow_path"], "job_name": attested["job_name"],
+            "head_sha": row.subject, "run_id": attested["run_id"],
+            "check_run_id": attested["check_run_id"], "event": attested.get("event"),
+            "conclusion": attested.get("conclusion"),
+        }
+        row.status = status
+        row.last_error = "validation_workflow_failed" if status == "failed" else None
+        row.evidence = {
+            "label": "Trusted workflow validation",
+            "observation": f"exact subject {row.subject}; attested workflow job {status}",
+            "subject": row.subject, "recipe": row.recipe, "command_id": row.recipe_args["command_id"],
+            "sha256": hashlib.sha256(json.dumps(assertions, sort_keys=True).encode()).hexdigest(),
+            "assertions": assertions,
+            **({"url": run_url} if run_url else {}),
+            **({"reason_code": "validation_workflow_failed", "diagnostic_tail": diagnostic}
+               if status == "failed" else {}),
+        }
+        row.attempt += 1
+        row.version += 1
+        row.updated_at = utcnow()
+        _record(task, row, "validation_gate_recorded", {
+            "status": status, "reason_code": row.last_error, "evidence_sha256": row.evidence["sha256"],
+        }, session)
+        finished.append(_gate_dict(row))
+    session.flush()
+    return finished
 
 
 def start(
@@ -318,3 +422,60 @@ def recover_expired(session: Session, *, limit: int, autopilot_enabled: bool) ->
         recovered += 1
     session.flush()
     return recovered
+
+
+def rebind_candidate_gates(session: Session, task: Task, new_head: str) -> int:
+    """Schedule fresh bot validation when publication attests a different candidate head."""
+    from .validation_recipes import _HEAD
+    if not _HEAD.fullmatch(new_head):
+        raise PreconditionFailed("validation candidate head is invalid")
+    rows = session.scalars(select(ValidationGate).where(
+        ValidationGate.task_id == task.id,
+        ValidationGate.owner == AUTOMATIC_OWNER,
+        ValidationGate.status.in_(("pending", "passed", "failed")),
+        ValidationGate.subject.not_in(("candidate_head", "pending_candidate", new_head)),
+    ).with_for_update()).all()
+    for row in rows:
+        _schedule_recheck(session, task, row, new_head)
+    session.flush()
+    return len(rows)
+
+
+def _schedule_recheck(session: Session, task: Task, row: ValidationGate, new_head: str) -> None:
+    prior = {"subject": row.subject, "status": row.status, "evidence": row.evidence,
+             "last_error": row.last_error, "attempt": row.attempt}
+    row.subject = new_head
+    row.status = "pending"
+    row.evidence = None
+    row.last_error = None
+    row.attempt = 0
+    row.version += 1
+    row.updated_at = utcnow()
+    _record(task, row, "validation_gate_recheck_scheduled",
+            {"previous_result": prior, "new_head": new_head}, session)
+
+
+def recheck_new_candidate(session: Session, *, gate_id: str, version: int, new_head: str,
+                          autopilot_enabled: bool) -> dict[str, Any]:
+    """Explicit bot recheck only after a newly attested, distinct candidate head."""
+    from .validation_recipes import _HEAD
+    if not autopilot_enabled:
+        raise PreconditionFailed("Autopilot is disabled")
+    if not _HEAD.fullmatch(new_head):
+        raise PreconditionFailed("validation candidate head is invalid")
+    row = _locked_gate(session, gate_id)
+    if row.version != version:
+        raise Conflict("validation gate version is stale")
+    if row.owner != AUTOMATIC_OWNER or row.status not in {"failed", "passed"} or row.subject == new_head:
+        raise PreconditionFailed("validation gate needs a distinct candidate head and observed result")
+    task = _task(session, row)
+    old_head = row.subject
+    row.subject = new_head
+    try:
+        _candidate_snapshot(session, row)
+        _admission(row)
+    finally:
+        row.subject = old_head
+    _schedule_recheck(session, task, row, new_head)
+    session.flush()
+    return _gate_dict(row)

@@ -37,17 +37,60 @@ _BWRAP_PREFIX: Final[tuple[str, ...]] = (
 # NDJSON, and releases only bounded structural evidence.  Candidate stdout never
 # becomes validation evidence verbatim.
 _EXTRACTOR_ENVELOPE: Final[str] = r'''
+import csv
+import hashlib
+import io
 import json
 import subprocess
 import sys
 import tempfile
+import urllib.error
+import urllib.request
 
 record_type = sys.argv[1]
 expected_source = sys.argv[2]
 required_string_key = sys.argv[3] or None
 required_equals_key = sys.argv[4] or None
 required_equals_value = sys.argv[5] or None
-extractor_argv = sys.argv[6:]
+reference_url, expected_status, baseline_count, id_columns = sys.argv[6:10]
+extractor_argv = sys.argv[10:]
+reference_ids = None
+if reference_url:
+    # All reference parameters belong to this installed command, not the gate.
+    count = int(baseline_count)
+    columns = id_columns.split(",")
+    try:
+        with urllib.request.urlopen(reference_url, timeout=45) as response:
+            if response.status != int(expected_status):
+                raise SystemExit("reference source returned an unexpected status")
+            length = response.headers.get("Content-Length")
+            payload = response.read(8 * 1024 * 1024 + 1)
+            if length is not None and len(payload) != int(length):
+                raise SystemExit("reference source response is incomplete")
+    except urllib.error.HTTPError as exc:
+        if exc.code in (401, 403):
+            raise SystemExit("reference source authorization unavailable") from exc
+        raise
+    if len(payload) > 8 * 1024 * 1024:
+        raise SystemExit("reference source exceeds its response bound")
+    try:
+        reader = csv.DictReader(io.StringIO(payload.decode("utf-8-sig")))
+        if not reader.fieldnames or not set(columns) <= set(reader.fieldnames):
+            raise ValueError("required reference columns are missing")
+        reference_ids = []
+        for index, row in enumerate(reader):
+            if index >= 100000:
+                raise ValueError("reference source exceeds its row bound")
+            if index < count:
+                fields = [row[field] for field in columns]
+                if any(not field or len(field) > 256 for field in fields):
+                    raise ValueError("reference source has invalid identity")
+                reference_ids.append(":".join(fields))
+    except (UnicodeError, csv.Error, ValueError, TypeError) as exc:
+        raise SystemExit(f"reference source is invalid: {exc}") from exc
+    if len(reference_ids) != count or len(set(reference_ids)) != count:
+        raise SystemExit("reference source does not meet pinned coverage baseline")
+    reference_sha256 = hashlib.sha256(payload).hexdigest()
 stderr = tempfile.TemporaryFile()
 child = subprocess.Popen(
     extractor_argv,
@@ -105,6 +148,8 @@ if exit_code != 0:
     diagnostic = stderr.read(2000).decode("utf-8", "replace").strip()
     stderr.close()
     raise SystemExit(f"extractor failed ({exit_code}): {diagnostic or 'no stderr captured'}")
+if reference_ids is not None and (observed != len(reference_ids) or seen != set(reference_ids)):
+    raise SystemExit("candidate extractor coverage differs from pinned public reference")
 stderr.seek(0)
 summary_output = stderr.read(131073)
 if len(summary_output) > 131072:
@@ -115,6 +160,10 @@ if not observed:
     raise SystemExit("extractor produced no records")
 if not required_string_seen:
     raise SystemExit("extractor did not satisfy fixed string-field assertion")
+if reference_ids is not None:
+    print(json.dumps({"kind": "reconciliation", "source_record_count": len(reference_ids),
+                      "matched_count": observed, "baseline_count": count,
+                      "response_sha256": reference_sha256}, separators=(",", ":")))
 '''
 
 
@@ -138,6 +187,7 @@ def _public_smoke(record_type: str, expected_source: str, *extractor_argv: str, 
             required_string_key,
             required_equals_key,
             required_equals_value,
+            "", "", "", "",
             "/usr/bin/python3",
             *extractor_argv,
         ],
@@ -150,6 +200,29 @@ def _public_smoke(record_type: str, expected_source: str, *extractor_argv: str, 
     }
 
 
+
+
+def _public_reconciliation(record_type: str, expected_source: str, *extractor_argv: str,
+                           source_url: str, id_columns: tuple[str, ...], baseline_count: int,
+                           expected_status: int, timeout_seconds: int) -> dict[str, object]:
+    """Compare fixed candidate extraction with a trusted bounded public CSV reference."""
+    return {
+        "recipe": "public_source_reconciliation",
+        "capability": "public-network-readonly",
+        "argv": [
+            *_BWRAP_PREFIX,
+            _EXTRACTOR_ENVELOPE, record_type, expected_source, "", "", "",
+            source_url, str(expected_status), str(baseline_count), ",".join(id_columns),
+            "/usr/bin/python3", *extractor_argv,
+        ],
+        "timeout_seconds": timeout_seconds,
+        "network_profile": "public-egress-proxy-v1",
+        "source_url": source_url,
+        "expected_status": expected_status,
+        "baseline_count": baseline_count,
+        "summary_required": True,
+        "credential_env": [],
+    }
 COMMANDS: Final[dict[str, dict[str, object]]] = {
     # The source scripts are from the exact candidate mounted at /work.  Every
     # request is fixed and deliberately small; no ticket argument reaches argv.
@@ -182,5 +255,13 @@ COMMANDS: Final[dict[str, dict[str, object]]] = {
         source_url="https://2020companies.wd1.myworkdayjobs.com/wday/cxs/2020companies/external_careers/jobs",
         expected_status=200, timeout_seconds=180, required_string_key="title",
         required_equals_key="provider", required_equals_value="workday", summary_required=True,
+    ),
+    "reconcile-public-csv": _public_reconciliation(
+        "celestrak_socrates", "celestrak_socrates",
+        "/work/extract/scripts/fetch_celestrak_socrates.py", "--mode", "table",
+        "--sort", "maxProb", "--limit", "100",
+        source_url="https://celestrak.org/SOCRATES/sort-maxProb.csv",
+        id_columns=("NORAD_CAT_ID_1", "NORAD_CAT_ID_2", "TCA"),
+        baseline_count=100, expected_status=200, timeout_seconds=300,
     ),
 }

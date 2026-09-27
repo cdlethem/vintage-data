@@ -17,6 +17,7 @@ from .artifacts import put_artifact, read_artifact
 from .git_provider import GitProviderError, RepositoryConfig, get_provider, load_repository_config, validate_changed_paths
 from .models import Execution, Revision, Task, ValidationGate, utcnow
 from .service import _event
+from .validation_lane import rebind_candidate_gates
 
 
 def _git_environment(root: pathlib.Path, config: RepositoryConfig) -> dict[str, str]:
@@ -270,6 +271,9 @@ def publish_execution_change(
         gate.subject = head_sha
         gate.version += 1
         gate.updated_at = utcnow()
+    # A new attested head invalidates prior automatic results for this task.
+    # Do not reset manual or same-head failed gates into retry loops.
+    rebind_candidate_gates(session, task, head_sha)
     _event(
         session,
         task,

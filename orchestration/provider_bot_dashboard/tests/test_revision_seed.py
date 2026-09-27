@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 import test_execution_retry as fixtures
 from airflow.providers.vintage.bot_dashboard import service
-from airflow.providers.vintage.bot_dashboard.models import Execution, utcnow
+from airflow.providers.vintage.bot_dashboard.models import Execution, ValidationGate, utcnow
 from airflow.providers.vintage.bot_dashboard.revision_seed import capture_seed, get_seed
 from bots.admitted_runner import _initialize_baseline, _git, _apply_revision_seed
 
@@ -96,6 +96,64 @@ class RevisionSeedTest(unittest.TestCase):
             self.assertIn('reconcile every rejected hunk', resolution)
             self.assertIn('There is no external or human blocker', resolution)
             self.assertIn('Retain implementation and fix review defect', resolution)
+
+    def test_failed_live_merge_gate_can_revise_reviewed_ready_candidate(self):
+        from airflow.providers.vintage.bot_dashboard.autopilot import _actions
+        from airflow.providers.vintage.bot_dashboard.service import PreconditionFailed, get_task
+        with Session(self.engine) as session:
+            task, row = self.fixture(session)
+            task.state = "ready"
+            row.terminal_at = None
+            row.stage = "reviewed"
+            row.base_sha = "a" * 40
+            row.source_artifact_sha256 = "b" * 64
+            row.patch_sha256 = "c" * 64
+            row.provider = "github"
+            row.repository = "org/repo"
+            row.target_branch = "main"
+            row.pr_number = 37
+            row.pr_url = "https://example.test/pull/37"
+            row.trusted_head_sha = "d" * 40
+            gate = ValidationGate(
+                task_id=task.id, gate_key="source", stage="merge",
+                recipe="trusted_workflow_check", owner="validation-service",
+                required_capability="github-actions-readonly", subject=row.trusted_head_sha,
+                recheck_condition="Repair source parsing and compare the new candidate head",
+                required=True, status="failed",
+                evidence={"label": "Live source", "observation": "HTML pair schema mismatch"},
+            )
+            session.add(gate)
+            session.commit()
+            self.assertNotIn("revise", _actions(get_task(session, str(task.id))))
+            with patch("airflow.providers.vintage.bot_dashboard.artifacts.read_artifact"):
+                with self.assertRaisesRegex(PreconditionFailed, "newer task recommendation revision"):
+                    service.start_task(session, str(task.id), version=task.version,
+                                       actor_id="executive", idempotency_key="premature", revision=True)
+            service.patch_task(session, str(task.id), version=task.version, actor_id="executive",
+                               changes={"planned_resolution": "Repair the existing HTML pair parser"})
+            session.commit()
+            session.expire_all()
+            self.assertIn("revise", _actions(get_task(session, str(task.id))))
+            with patch("airflow.providers.vintage.bot_dashboard.artifacts.read_artifact"):
+                service.start_task(session, str(task.id), version=task.version,
+                                   actor_id="executive", idempotency_key="repair", revision=True)
+            self.assertEqual("pending_candidate", gate.subject)
+            self.assertEqual("pending", gate.status)
+            self.assertIsNone(row.review_verdict)
+            self.assertIsNone(row.trusted_head_sha)
+            from airflow.providers.vintage.bot_dashboard.execution import claim_run
+            config = SimpleNamespace(provider="github", project="org/repo", base_branch="main",
+                                     allowed_path_globs=["src/**"], denied_path_globs=[],
+                                     max_changed_files=5, max_diff_bytes=10000)
+            with ExitStack() as stack:
+                stack.enter_context(patch("airflow.providers.vintage.bot_dashboard.execution.require_executor_preconditions"))
+                stack.enter_context(patch("airflow.providers.vintage.bot_dashboard.git_provider.load_repository_config", return_value=config))
+                stack.enter_context(patch("airflow.providers.vintage.bot_dashboard.repository_ops.create_source_artifact", return_value={"sha256": "b" * 64, "byte_count": 100}))
+                stack.enter_context(patch("airflow.providers.vintage.bot_dashboard.model_settings.model_for_role", return_value={"provider_id": "fixture", "model": "small", "base_url": "https://model.example/v1"}))
+                claim_run(session, dag_id="bot__task_executor", run_id=row.target_run_id,
+                          conf_value={"execution_id": row.execution_id, "revision": row.revision},
+                          kind="executor", deadline_at=utcnow() + timedelta(minutes=10))
+            self.assertEqual("in_progress", task.state)
 
     def test_seed_retains_prior_tests_and_produces_cumulative_patch(self):
         with TemporaryDirectory() as tmp:

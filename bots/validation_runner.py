@@ -50,6 +50,18 @@ class ValidationRunnerError(RuntimeError):
     pass
 
 
+class ValidationCapabilityUnavailable(ValidationRunnerError):
+    """The deployed validation isolation/egress capability is not operational."""
+
+
+class ValidationSourceCheckFailed(ValidationRunnerError):
+    """The fixed public-source comparison did not meet its asserted coverage."""
+
+
+class ValidationSourceUnavailable(ValidationRunnerError):
+    """The source check timed out; it cannot be treated as validated."""
+
+
 @dataclass(frozen=True)
 class CommandSpec:
     command_id: str
@@ -62,12 +74,13 @@ class CommandSpec:
     source_url: str | None = None
     expected_status: int | None = None
     summary_required: bool = False
+    baseline_count: int | None = None
 
     @classmethod
     def parse(cls, command_id: str, value: object) -> "CommandSpec":
         if not _TOKEN.fullmatch(command_id) or not isinstance(value, dict):
             raise ValidationRunnerError("validation command catalog is invalid")
-        expected = {"recipe", "capability", "argv", "timeout_seconds", "credential_env", "network_profile", "source_url", "expected_status", "summary_required"}
+        expected = {"recipe", "capability", "argv", "timeout_seconds", "credential_env", "network_profile", "source_url", "expected_status", "summary_required", "baseline_count"}
         if set(value) - expected or {"recipe", "capability", "argv", "timeout_seconds"} - set(value):
             raise ValidationRunnerError("validation command catalog has unknown fields")
         recipe, capability, argv, timeout = value["recipe"], value["capability"], value["argv"], value["timeout_seconds"]
@@ -92,15 +105,22 @@ class CommandSpec:
         if profile is not None and profile != "public-egress-proxy-v1":
             raise ValidationRunnerError("validation network profile is invalid")
         source_url, expected_status = value.get("source_url"), value.get("expected_status")
-        if recipe == "public_source_smoke":
+        if recipe in {"public_source_smoke", "public_source_reconciliation"}:
             if not isinstance(source_url, str) or not source_url.startswith("https://") or type(expected_status) is not int:
                 raise ValidationRunnerError("public validation catalog assertions are invalid")
         elif source_url is not None or expected_status is not None:
             raise ValidationRunnerError("non-public validation command has public assertions")
+        baseline = value.get("baseline_count")
+        if recipe == "public_source_reconciliation":
+            if type(baseline) is not int or not 1 <= baseline <= 100 or profile != "public-egress-proxy-v1":
+                raise ValidationRunnerError("public reconciliation baseline is invalid")
+        elif baseline is not None:
+            raise ValidationRunnerError("non-reconciliation command has a coverage baseline")
         summary_required = value.get("summary_required", False)
-        if type(summary_required) is not bool or (summary_required and recipe != "public_source_smoke"):
+        if type(summary_required) is not bool or (
+                summary_required and recipe not in {"public_source_smoke", "public_source_reconciliation"}):
             raise ValidationRunnerError("validation summary requirement is invalid")
-        return cls(command_id, recipe, capability, tuple(argv), timeout, tuple(names), profile, source_url, expected_status, summary_required)
+        return cls(command_id, recipe, capability, tuple(argv), timeout, tuple(names), profile, source_url, expected_status, summary_required, baseline)
 
 
 class CommandCatalog:
@@ -118,7 +138,7 @@ class CommandCatalog:
         spec = self._commands.get(request.command_id)
         if spec is None or spec.recipe != request.recipe or spec.capability != request.required_capability:
             raise ValidationRunnerError("validation recipe has no matching trusted command")
-        if request.recipe == "public_source_smoke" and (
+        if request.recipe in {"public_source_smoke", "public_source_reconciliation"} and (
                 spec.source_url != request.assertions["source_url"]
                 or spec.expected_status != request.assertions["expected_status"]):
             raise ValidationRunnerError("validation recipe does not match trusted public source assertions")
@@ -154,7 +174,7 @@ class SandboxExecutor:
         try:
             metadata = self.launcher.lstat()
         except OSError as exc:
-            raise ValidationRunnerError("validation sandbox launcher is unavailable") from exc
+            raise ValidationCapabilityUnavailable("validation sandbox launcher is unavailable") from exc
         if (not self.launcher.is_absolute() or not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != 0
                 or metadata.st_mode & 0o022 or not os.access(self.launcher, os.X_OK)):
             raise ValidationRunnerError("validation sandbox launcher is unsafe")
@@ -198,7 +218,7 @@ class CatalogBwrapExecutor:
         try:
             info = Path(command.argv[0]).lstat()
         except OSError as exc:
-            raise ValidationRunnerError("validation sandbox executable is unavailable") from exc
+            raise ValidationCapabilityUnavailable("validation sandbox executable is unavailable") from exc
         if (Path(command.argv[0]) != Path("/usr/bin/bwrap") or not stat.S_ISREG(info.st_mode)
                 or info.st_uid != 0 or info.st_mode & 0o022):
             raise ValidationRunnerError("validation catalog executable is unsafe")
@@ -217,7 +237,7 @@ class CatalogBwrapExecutor:
         try:
             from validation_network import PublicEgressError, public_egress
         except ImportError as exc:
-            raise ValidationRunnerError("restricted public egress proxy is unavailable") from exc
+            raise ValidationCapabilityUnavailable("restricted public egress proxy is unavailable") from exc
         try:
             with public_egress(candidate_root, command.timeout_seconds,
                                allowed_hosts={urlsplit(command.source_url).hostname}) as relay:
@@ -234,7 +254,7 @@ class CatalogBwrapExecutor:
                         "--setenv", "NO_PROXY", "", "--", *relay.argv_prefix, *argv[split + 1:])
                 return self._run(argv, candidate_root, environment, command.timeout_seconds)
         except (OSError, PublicEgressError) as exc:
-            raise ValidationRunnerError("restricted public egress proxy is unavailable") from exc
+            raise ValidationCapabilityUnavailable("restricted public egress proxy is unavailable") from exc
 
     @staticmethod
     def _run(argv: tuple[str, ...], candidate_root: Path, environment: dict[str, str], timeout_seconds: int) -> CommandResult:
@@ -252,7 +272,7 @@ class CatalogBwrapExecutor:
                                             "XDG_RUNTIME_DIR": os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"),
                                             "PYTHONDONTWRITEBYTECODE": "1", **environment})
         except OSError as exc:
-            raise ValidationRunnerError("validation sandbox could not start") from exc
+            raise ValidationCapabilityUnavailable("validation sandbox could not start") from exc
         output = bytearray()
         errors = bytearray()
         timed_out = False
@@ -405,20 +425,33 @@ def _require_strings(value: object, expected: tuple[str, ...], label: str) -> No
 
 
 
-def _assert_recipe(request: RecipeRequest, records: list[dict[str, Any]]) -> dict[str, Any]:
-    if request.recipe == "public_source_smoke":
+def _assert_recipe(request: RecipeRequest, records: list[dict[str, Any]], command: CommandSpec) -> dict[str, Any]:
+    if request.recipe in {"public_source_smoke", "public_source_reconciliation"}:
+        reconciliation = None
+        if request.recipe == "public_source_reconciliation":
+            reconciliation = _record(records, "reconciliation")
+            records = [record for record in records if record is not reconciliation]
+            if (reconciliation.get("baseline_count") != command.baseline_count
+                    or reconciliation.get("source_record_count") != command.baseline_count
+                    or reconciliation.get("matched_count") != len(records)
+                    or not isinstance(reconciliation.get("response_sha256"), str)
+                    or not _DIGEST.fullmatch(reconciliation["response_sha256"])):
+                raise ValidationRunnerError("public source reconciliation coverage assertion failed")
         kinds = request.assertions["required_record_types"]
         _require_strings([record.get("type") for record in records if isinstance(record.get("type"), str)], kinds, "extractor")
         identifiers = [record.get("id") for record in records]
         if (not all(isinstance(value, str) and value and len(value) <= 512 for value in identifiers)
                 or len(set(identifiers)) != len(identifiers)):
             raise ValidationRunnerError("public source extractor identifiers are invalid")
-        return {
+        evidence = {
             "record_count": len(records), "source_url": request.assertions["source_url"],
             "sample_records": [{"type": record["type"],
                                "id_sha256": hashlib.sha256(record["id"].encode()).hexdigest()}
                               for record in records[:3]],
         }
+        if reconciliation is not None:
+            evidence["reconciliation"] = reconciliation
+        return evidence
     if request.recipe == "warehouse_check":
         record = _record(records, "warehouse")
         if record.get("relation") != request.assertions["expected_relation"]:
@@ -500,18 +533,24 @@ class ValidationRunner:
         request = parse_recipe(recipe=gate.get("recipe"), recipe_args=gate.get("recipe_args"),
                                required_capability=gate.get("required_capability"), subject=gate.get("subject"))
         if request.required_capability not in self.capabilities:
-            raise ValidationRunnerError("validation capability is unavailable to this runner")
+            raise ValidationCapabilityUnavailable("validation capability is unavailable to this runner")
         command = self.catalog.resolve(request)
         environment = self.credentials.environment(request.required_capability, command.credential_env)
         with self.candidates.materialize(gate) as candidate:
             result = self.executor.run(command, candidate, environment)
         output_sha256 = hashlib.sha256(result.output).hexdigest()
         if result.timed_out:
+            if request.recipe in {"public_source_smoke", "public_source_reconciliation"}:
+                raise ValidationSourceUnavailable("public source validation command timed out")
             raise ValidationRunnerError("validation command timed out")
         if result.exit_code != 0:
             detail = result.stderr.decode("utf-8", errors="replace")[-2000:]
+            if command.recipe == "public_source_reconciliation" and "reference source authorization unavailable" in detail:
+                raise ValidationCapabilityUnavailable("public reference source authorization unavailable")
+            if command.recipe in {"public_source_smoke", "public_source_reconciliation"}:
+                raise ValidationSourceCheckFailed(f"public source check exited {result.exit_code}: {detail}")
             raise ValidationRunnerError(f"validation command exited {result.exit_code}: {detail}")
-        assertions = _assert_recipe(request, _ndjson(result.output))
+        assertions = _assert_recipe(request, _ndjson(result.output), command)
         if command.summary_required:
             assertions["run_summary"] = _run_summary_evidence(result.stderr)
         duration_ms = int((time.monotonic() - started) * 1000)
@@ -557,11 +596,20 @@ class ValidationRunner:
                 from bot_runner import _failure_detail
                 diagnostic = str(redact(str(exc), "validation_error", max_depth=20))
                 status = "failed"
+                category = (
+                    ("Validation capability unavailable", "validation_capability_unavailable")
+                    if isinstance(exc, ValidationCapabilityUnavailable) else
+                    ("Validation source unavailable", "validation_source_unavailable")
+                    if isinstance(exc, ValidationSourceUnavailable) else
+                    ("Validation source check failed", "validation_source_check_failed")
+                    if isinstance(exc, ValidationSourceCheckFailed) else
+                    ("Validation runner failure", _failure_detail(RuntimeError(diagnostic))[:200])
+                )
                 evidence = {
-                    "label": "Validation runner failure",
+                    "label": category[0],
                     "observation": f"exact subject {gate.get('subject', '')}; {type(exc).__name__}",
                     "subject": gate.get("subject"), "recipe": gate.get("recipe"),
-                    "reason_code": _failure_detail(RuntimeError(diagnostic))[:200],
+                    "reason_code": category[1],
                     "diagnostic_tail": _failure_detail(RuntimeError(diagnostic[-2000:])),
                     "sha256": hashlib.sha256(str(exc).encode()).hexdigest(),
                 }
@@ -580,7 +628,7 @@ def runner_from_environment(*, catalog: dict[str, Any], credentials: dict[str, d
     from airflow.providers.vintage.bot_dashboard.validation_recipes import available_capabilities
     capabilities = available_capabilities()
     if not capabilities:
-        raise ValidationRunnerError("validation runner deployment is incomplete")
+        raise ValidationCapabilityUnavailable("validation runner deployment has no validation capability")
     executor: RestrictedExecutor
     if launcher:
         executor = SandboxExecutor(Path(launcher), capabilities)
@@ -595,13 +643,17 @@ def run(context: dict[str, Any]) -> dict[str, Any]:
     from provider_dashboard import DashboardClient
     from validation_catalog import COMMANDS
     from airflow.providers.vintage.bot_dashboard.validation_recipes import available_capabilities
-    if not available_capabilities():
-        return {"status": "disabled", "items": []}
-
+    capabilities = available_capabilities()
     client = DashboardClient.from_environment()
     client.recover_validation_gates()
+    workflows = client.poll_validation_workflows(limit=20)
+    if not capabilities:
+        # Re-check admitted gates against the now-missing installed capability,
+        # persisting a blocked result rather than silently idling.
+        client.claim_validation_gates(limit=100, runner_id="validation.capability-check")
+        return {"status": "capability_unavailable", "items": workflows}
     ti = context["ti"]
     identity = f"{ti.dag_id}\x00{context['dag_run'].run_id}\x00{ti.task_id}".encode()
     runner_id = "validation." + hashlib.sha256(identity).hexdigest()
     worker = runner_from_environment(catalog=COMMANDS, credentials={}, client=client)
-    return {"items": worker.run_once(client, runner_id=runner_id, limit=1)}
+    return {"items": workflows + worker.run_once(client, runner_id=runner_id, limit=1)}

@@ -4,6 +4,7 @@ from __future__ import annotations
 import fnmatch
 import ipaddress
 import json
+import re
 import socket
 from dataclasses import dataclass
 from typing import Any
@@ -138,6 +139,10 @@ class GitProvider:
             finally: response.close()
     def create_change(self, branch: str, title: str, body: str) -> dict: raise NotImplementedError
     def read_change(self, number: int) -> dict: raise NotImplementedError
+    def read_validation_workflow(
+        self, pr_number: int, head_sha: str, workflow_path: str, job_name: str
+    ) -> dict | None:
+        raise GitProviderError("workflow attestation capability unavailable for this Git provider")
     def read_base_identity(self) -> str: raise NotImplementedError
     def post_comment(self, number: int, body: str) -> None: raise NotImplementedError
     def upsert_comment(self, number: int, marker: str, body: str) -> None: raise NotImplementedError
@@ -150,6 +155,215 @@ class GitHubProvider(GitProvider):
     def _headers(self): return {"Authorization": f"Bearer {self.config.token}", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
     def create_change(self, branch, title, body): return self._request("POST", f"repos/{self.config.project}/pulls", payload={"head": branch, "base": self.config.base_branch, "title": title[:200], "body": body[:20_000], "draft": True})
     def read_change(self, number): return normalize_github(self._request("GET", f"repos/{self.config.project}/pulls/{number}"))
+    def read_validation_workflow(
+        self, pr_number: int, head_sha: str, workflow_path: str, job_name: str
+    ) -> dict | None:
+        """Attest an Actions job from a trusted base workflow for one current PR head.
+
+        None means that the expected PR run has not finished yet. A completed but
+        untrusted or unsuccessful run is a bounded, typed failure, never a pass.
+        """
+        if type(pr_number) is not int or pr_number < 1:
+            raise GitProviderError("invalid pull request number")
+        if not isinstance(head_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", head_sha):
+            raise GitProviderError("invalid reviewed head SHA")
+        if not isinstance(workflow_path, str) or not re.fullmatch(
+            r"\.github/workflows/[A-Za-z0-9_.-]+\.ya?ml", workflow_path
+        ) or ".." in workflow_path:
+            raise GitProviderError("invalid trusted workflow path")
+        if not isinstance(job_name, str) or not job_name or len(job_name) > 200:
+            raise GitProviderError("invalid trusted job name")
+
+        root = f"repos/{self.config.project}"
+        def request(path: str) -> Any:
+            try:
+                return self._request("GET", path)
+            except httpx.RequestError as exc:
+                raise GitProviderTransientError("provider request failed during workflow attestation") from exc
+
+        def get(path: str) -> dict:
+            value = request(path)
+            if not isinstance(value, dict):
+                raise GitProviderError("provider returned malformed workflow attestation data")
+            return value
+
+        def repo_matches(value: Any, expected: dict) -> bool:
+            return (
+                isinstance(value, dict)
+                and type(value.get("id")) is int
+                and value["id"] == expected["id"]
+                and value.get("full_name") == self.config.project
+            )
+
+        def failure(code: str, run: dict | None = None, check_id: int | None = None) -> dict:
+            run_id = run.get("id") if isinstance(run, dict) and type(run.get("id")) is int else None
+            return {
+                "status": "failed", "diagnostic": code, "head_sha": head_sha,
+                "workflow_run_id": run_id, "run_id": run_id,
+                "run_url": (
+                    f"{self.config.clone_url.removesuffix('.git')}/actions/runs/{run_id}"
+                    if run_id and run_id > 0 else None
+                ),
+                "check_run_id": check_id, "conclusion": None, "event": "pull_request",
+                "workflow_path": workflow_path, "job_name": job_name,
+            }
+
+        pr = get(f"{root}/pulls/{pr_number}")
+        pr_head, pr_base = pr.get("head"), pr.get("base")
+        if not isinstance(pr_head, dict) or not isinstance(pr_base, dict):
+            raise GitProviderError("provider returned malformed pull request identity")
+        base_repo = pr_base.get("repo")
+        if not isinstance(base_repo, dict) or not repo_matches(base_repo, base_repo):
+            return failure("wrong_base_repository")
+        if pr.get("number") != pr_number or pr.get("state") != "open":
+            return failure("pull_request_not_open")
+        if pr_base.get("ref") != self.config.base_branch or not repo_matches(pr_head.get("repo"), base_repo):
+            return failure("wrong_pr_repository_or_base")
+        if pr_head.get("sha") != head_sha:
+            return failure("pr_head_changed")
+        branch = pr_head.get("ref")
+        if not isinstance(branch, str) or not branch or len(branch) > 250:
+            raise GitProviderError("provider returned invalid pull request branch")
+
+        workflow = get(f"{root}/actions/workflows/{quote(workflow_path.rsplit('/', 1)[-1], safe='')}")
+        workflow_id = workflow.get("id")
+        if (
+            type(workflow_id) is not int or workflow_id < 1
+            or workflow.get("path") != workflow_path or workflow.get("state") != "active"
+        ):
+            return failure("untrusted_workflow_identity")
+        base_file = get(
+            f"{root}/contents/{workflow_path}?ref={quote(self.config.base_branch, safe='')}"
+        )
+        base_blob = base_file.get("sha")
+        if not isinstance(base_blob, str) or not re.fullmatch(r"[0-9a-f]{40}", base_blob):
+            return failure("missing_base_workflow_blob")
+
+        runs = get(
+            f"{root}/actions/workflows/{workflow_id}/runs"
+            f"?event=pull_request&branch={quote(branch, safe='')}&per_page=100"
+        )
+        items = runs.get("workflow_runs")
+        count = runs.get("total_count")
+        if not isinstance(items, list) or type(count) is not int or count < len(items) or count > 100:
+            raise GitProviderError("workflow run listing is incomplete or ambiguous")
+        merge_sha = pr.get("merge_commit_sha")
+        if not isinstance(merge_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", merge_sha):
+            merge_sha = None
+        candidates = []
+        for run in items:
+            if not isinstance(run, dict):
+                raise GitProviderError("malformed workflow run")
+            linked = run.get("pull_requests")
+            if not isinstance(linked, list):
+                raise GitProviderError("workflow run has malformed pull request association")
+            associated = [item for item in linked if isinstance(item, dict) and item.get("number") == pr_number]
+            if associated and any(
+                isinstance(item.get("head"), dict)
+                and item["head"].get("sha") != head_sha for item in associated
+            ):
+                continue  # Prior run of this PR, not evidence for its current head.
+            if associated or run.get("head_sha") in {head_sha, merge_sha}:
+                candidates.append(run)
+
+
+        if len(candidates) > 1:
+            return failure("ambiguous_workflow_runs")
+        if not candidates:
+            return None
+        run = candidates[0]
+        run_id = run.get("id")
+        # GitHub may supply either the candidate or the synthetic PR merge SHA.
+        if (
+            type(run_id) is not int or run_id < 1
+            or run.get("event") != "pull_request"
+            or run.get("workflow_id") != workflow_id
+            or run.get("path") not in {workflow_path, f"{workflow_path}@{self.config.base_branch}"}
+            or not repo_matches(run.get("repository"), base_repo)
+            or not repo_matches(run.get("head_repository"), base_repo)
+            or run.get("head_branch") != branch
+            or not isinstance(run.get("head_sha"), str)
+            or not re.fullmatch(r"[0-9a-f]{40}", run["head_sha"])
+            or run["head_sha"] not in {head_sha, merge_sha}
+            or (
+                bool(run["pull_requests"])
+                and not any(
+                    isinstance(item, dict) and item.get("number") == pr_number
+                    and (not isinstance(item.get("head"), dict)
+                         or item["head"].get("sha") == head_sha)
+                    and (not isinstance(item.get("base"), dict)
+                         or item["base"].get("ref") == self.config.base_branch)
+                    for item in run["pull_requests"]
+                )
+            )
+        ):
+            return failure("untrusted_workflow_run", run)
+        if not run["pull_requests"]:
+            # GitHub can omit pull_requests even for same-repository PR runs.
+            # An exact current SHA and branch only identify this PR if no other
+            # open PR shares the head branch (possibly targeting another base).
+            owner = self.config.project.split("/", 1)[0]
+            open_heads = request(
+                f"{root}/pulls?state=open&head={quote(f'{owner}:{branch}', safe=':')}&per_page=2"
+            )
+            if (
+                not isinstance(open_heads, list) or len(open_heads) != 1
+                or not isinstance(open_heads[0], dict)
+                or open_heads[0].get("number") != pr_number
+                or not isinstance(open_heads[0].get("head"), dict)
+                or open_heads[0]["head"].get("sha") != head_sha
+                or not isinstance(open_heads[0].get("base"), dict)
+                or open_heads[0]["base"].get("ref") != self.config.base_branch
+            ):
+                return failure("ambiguous_pull_request_head", run)
+        if run.get("status") != "completed":
+            if run.get("status") not in {"queued", "in_progress", "waiting", "requested", "pending"}:
+                return failure("unknown_workflow_status", run)
+            return None
+        # The event executes the trusted PR merge definition even when Actions
+        # reports the source SHA, which may not itself contain this workflow.
+        executed_ref = merge_sha or run["head_sha"]
+        executed_file = get(f"{root}/contents/{workflow_path}?ref={executed_ref}")
+        if executed_file.get("sha") != base_blob:
+            return failure("workflow_differs_from_base", run)
+
+        jobs = get(f"{root}/actions/runs/{run_id}/jobs?per_page=100")
+        job_items, job_count = jobs.get("jobs"), jobs.get("total_count")
+        if not isinstance(job_items, list) or type(job_count) is not int or job_count < len(job_items) or job_count > 100:
+            return failure("ambiguous_workflow_jobs", run)
+        matches = [job for job in job_items if isinstance(job, dict) and job.get("name") == job_name]
+        if len(matches) != 1:
+            return failure("missing_or_ambiguous_job", run)
+        job = matches[0]
+        check_id = job.get("id")
+        if (
+            type(check_id) is not int or check_id < 1
+            or job.get("run_id") != run_id or job.get("head_sha") != run["head_sha"]
+            or job.get("check_run_url") != f"{self.config.api_base_url}/{root}/check-runs/{check_id}"
+        ):
+            return failure("untrusted_workflow_job", run)
+        if job.get("status") != "completed":
+            return failure("job_not_completed", run, check_id)
+        check = get(f"{root}/check-runs/{check_id}")
+        if (
+            check.get("id") != check_id or check.get("name") != job_name
+            or check.get("head_sha") != run["head_sha"]
+            or type(run.get("check_suite_id")) is not int or run["check_suite_id"] < 1
+            or not isinstance(check.get("check_suite"), dict)
+            or check["check_suite"].get("id") != run["check_suite_id"]
+            or not isinstance(check.get("app"), dict)
+            or check["app"].get("slug") != "github-actions"
+            or check.get("status") != "completed"
+            or check.get("conclusion") != job.get("conclusion")
+        ):
+            return failure("untrusted_check_run", run, check_id)
+        result = failure("job_not_successful", run, check_id)
+        result["conclusion"] = job.get("conclusion") if isinstance(job.get("conclusion"), str) else None
+        if run.get("conclusion") != "success":
+            result["diagnostic"] = "workflow_not_successful"
+        elif job.get("conclusion") == "success":
+            result.update(status="passed", diagnostic=None)
+        return result
     def read_base_identity(self):
         value = self._request(
             "GET", f"repos/{self.config.project}/commits/{quote(self.config.base_branch, safe='')}"
