@@ -8,7 +8,7 @@ first-class LLM-analysis corpus (topic drift, embedding trajectories,
 
 Docs-verified 2026-09-02 against the official user manual
 (https://info.arxiv.org/help/api/user-manual.html). Endpoint
-export.arxiv.org/api/query is explicitly public; hard limit 3 req/sec,
+https://export.arxiv.org/api/query is explicitly public; hard limit 3 req/sec,
 recommended <= 1 req / 3 sec with pagination sleeps.
 
 Quirks:
@@ -32,7 +32,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 
-BASE = "http://export.arxiv.org/api/query"
+BASE = "https://export.arxiv.org/api/query"
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 NS = {"a": "http://www.w3.org/2005/Atom", "arxiv": "http://arxiv.org/schemas/atom"}
 

@@ -7,6 +7,7 @@ import re
 import subprocess
 import sys
 import urllib.error
+import urllib.parse
 from datetime import datetime, timedelta, timezone
 from email.message import Message
 from unittest import TestCase, mock
@@ -175,6 +176,31 @@ class FetchArxivNewTests(TestCase):
         self.assertEqual(urlopen.call_args.kwargs, {"timeout": 60})
         sleep.assert_not_called()
 
+    def test_bounded_success_uses_secure_export_query(self):
+        sleep = mock.Mock()
+        with mock.patch.object(MODULE.urllib.request, "urlopen", return_value=Response(ATOM)) as urlopen:
+            records = list(MODULE.fetch_new_papers(
+                category="cs.AI", hours_back=24, max_results=1,
+                sleep=sleep, clock=lambda: NOW,
+            ))
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["id"], "http://arxiv.org/abs/2609.00001v1")
+        request = urlopen.call_args.args[0]
+        parsed = urllib.parse.urlsplit(request.full_url)
+        self.assertEqual((parsed.scheme, parsed.netloc, parsed.path),
+                         ("https", "export.arxiv.org", "/api/query"))
+        self.assertEqual(urllib.parse.parse_qs(parsed.query), {
+            "search_query": ["cat:cs.AI AND submittedDate:[202609161200 TO 202609171200]"],
+            "sortBy": ["submittedDate"],
+            "sortOrder": ["descending"],
+            "start": ["0"],
+            "max_results": ["1"],
+        })
+        self.assertEqual(request.get_header("User-agent"), MODULE.USER_AGENT)
+        self.assertEqual(urlopen.call_args.kwargs, {"timeout": 60})
+        sleep.assert_not_called()
+
     def test_429_then_success_reuses_identical_query_and_equivalent_records(self):
         immediate, _, _ = fetch([Response(ATOM)])
         records, urlopen, sleep = fetch([http_error(429, "8"), Response(ATOM)])
@@ -239,6 +265,18 @@ class FetchArxivNewTests(TestCase):
         urlopen.assert_called_once()
         self.assertTrue(error.fp.closed)
 
+    def test_406_rejection_is_immediate_and_closes_error(self):
+        error = http_error(406)
+        sleep = mock.Mock()
+        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error) as urlopen:
+            with self.assertRaises(urllib.error.HTTPError) as raised:
+                list(MODULE.fetch_new_papers(sleep=sleep, clock=lambda: NOW))
+
+        self.assertEqual(raised.exception.code, 406)
+        urlopen.assert_called_once()
+        sleep.assert_not_called()
+        self.assertTrue(error.fp.closed)
+
     def test_transport_failure_is_immediate(self):
         with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=urllib.error.URLError("secret endpoint")) as urlopen:
             with self.assertRaises(urllib.error.URLError):
@@ -295,6 +333,12 @@ class FetchArxivNewTests(TestCase):
         self.assert_safe_cli_failure(
             [{"kind": "http", "status": 503}],
             "HTTP 503 after 1 attempt(s)",
+        )
+
+    def test_cli_406_rejection_is_safe_and_immediate(self):
+        self.assert_safe_cli_failure(
+            [{"kind": "http", "status": 406}],
+            "HTTP 406 after 1 attempt(s)",
         )
 
     def test_cli_transport_failure_is_safe(self):
