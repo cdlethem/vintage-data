@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, select, func
 from sqlalchemy.orm import Session
 from airflow.models.variable import Variable
 from airflow.providers.vintage.bot_dashboard import autopilot as ap, planning, follow_up, service
-from airflow.providers.vintage.bot_dashboard.models import metadata, Task, Revision, Execution, Event, Policy, utcnow
+from airflow.providers.vintage.bot_dashboard.models import metadata, Task, Revision, Execution, Event, Policy, RunReport, utcnow
 
 
 class PlanningTest(unittest.TestCase):
@@ -52,6 +52,24 @@ class PlanningTest(unittest.TestCase):
         self.assertEqual("applied", result["status"])
         self.assertEqual("blocked", self.task.state)
         self.assertEqual("changes_requested", self.execution.review_verdict)
+        self.assertEqual([], planning.options(self.s, self.task, self.execution, self.revision))
+        with self.assertRaises(service.PreconditionFailed):
+            self.request()
+
+    def test_plan_rewording_cannot_request_the_same_specialist_again_for_same_pr(self):
+        first = self.request()
+        report = RunReport(
+            dag_id="bot__analytics_engineer", run_id=first.payload["run_id"],
+            task_id="run", bot_name="analytics_engineer", status="completed",
+            outcome="success", retry_class="terminal", reason_code="planned",
+            started_at=utcnow(), finished_at=utcnow(), deadline_at=utcnow(),
+            duration_ms=1, context_sha256="a" * 64, context_byte_count=1,
+            context_build_ms=1, sha256="b" * 64, byte_count=1,
+            expires_at=utcnow(),
+        )
+        self.s.add(report)
+        self.revision.revision_number += 1
+        self.s.commit()
         self.assertEqual([], planning.options(self.s, self.task, self.execution, self.revision))
         with self.assertRaises(service.PreconditionFailed):
             self.request()

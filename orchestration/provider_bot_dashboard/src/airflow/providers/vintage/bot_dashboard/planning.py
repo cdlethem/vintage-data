@@ -37,7 +37,7 @@ def options(session, task, execution, revision):
     if not revision or not _eligible(task, execution):
         return []
     requested = {}
-    for event in _requests(session, task, execution, revision):
+    for event in _requests(session, task, execution):
         requested.setdefault(event.payload.get("bot"), []).append(event)
     available = []
     for bot in sorted(set(revision.follow_up_bots or []) & BOTS):
@@ -48,18 +48,22 @@ def options(session, task, execution, revision):
             report = session.scalar(select(RunReport).where(
                 RunReport.run_id == attempts[-1].payload["run_id"], RunReport.bot_name == bot,
             ).order_by(RunReport.try_number.desc()).limit(1))
-            if report and report.outcome in {"failed", "timed_out", "capacity_unavailable", "skipped"}:
+            # Rewording a plan is not a new reason to ask the same specialist.
+            # An undispatched request for an obsolete revision may be retried
+            # once; its exact-revision validation cannot run after the edit.
+            stale = attempts[-1].payload.get("revision_number") != revision.revision_number
+            if (report and report.outcome in {"failed", "timed_out", "capacity_unavailable", "skipped"}
+                    or stale and not report):
                 available.append(bot)
     return available
 
 
-def _requests(session, task, execution, revision):
+def _requests(session, task, execution):
     return [event for event in session.scalars(select(Event).where(
         Event.task_id == task.id, Event.event_type == "planning_requested",
     ).order_by(Event.id)).all()
         if event.payload.get("execution_id") == execution.execution_id
-        and event.payload.get("revision_number") == revision.revision_number
-        and event.payload.get("head_sha") == execution.trusted_head_sha]
+        and event.payload.get("head_sha") == _subject(execution)]
 
 
 def request(session, task, bot, rationale):
@@ -70,7 +74,7 @@ def request(session, task, bot, rationale):
     if bot not in options(session, task, execution, revision):
         raise service.PreconditionFailed("A new, configured specialist planning handoff is not available")
     run_id = f"planning__{task.id}__{execution.sequence}__r{revision.revision_number}__{bot}"
-    attempt = 1 + sum(event.payload.get("bot") == bot for event in _requests(session, task, execution, revision))
+    attempt = 1 + sum(event.payload.get("bot") == bot for event in _requests(session, task, execution))
     if attempt > 1:
         run_id += f"__retry_{attempt}"
     service._event(session, task, "planning_requested", "system", "executive", payload={

@@ -24,23 +24,23 @@ Return exactly one complete `FailureTriageV2` JSON object, not one bare failure 
 ## Context
 {{FAILURE_CONTEXT}}
 
-In each `failures.reason`, `summary`, and any task proposal, start with the
-affected dataset, service, pipeline, or DAG; describe the failure's observable
-symptom and impact. Distinguish a confirmed cause from a plausible hypothesis
-and state what evidence is missing. Say why a person needs to act now, whether
-the next step is repair, a specific diagnostic check, or observation, and who
-can do it. On an existing ticket, give a clear repair handoff and wake-up event,
-not a second proposal. For `human_review`, ask a concrete question and recommend
-the safest next action; for `observe`, state what signal would trigger action.
-Explain `planned_resolution`, `why_now`, benefit, risk, rollback, and verification
-in reader-facing terms without claiming a check was run. Lead with the
-plain-language finding; use fingerprints, run IDs, commands, and bot workflow
-states only as supporting details. Do not mistake historical validation for a
-fix or present a pending check as completed.
-Start `planned_resolution` with one or two plain sentences naming the affected
-system, its observed failure or unresolved diagnosis, and the exact recommended
-repair or check; put detailed evidence afterward. Distinguish routine pending
-validation from a genuine human decision, and never call a merge recovery.
+In each `failures.reason`, `summary`, and any task proposal, describe the
+affected dataset, service, pipeline, or DAG, the observed failure and its
+impact. Distinguish confirmed causes from hypotheses and name missing evidence.
+For `human_review`, ask a concrete question and recommend the safest bounded
+choice; for `observe`, state the signal that would trigger action. An active
+bot repair or validation check does not require a person to act just because
+the ticket is in an attention queue. On existing work, give its bot or
+operator a concrete repair handoff and wake-up event, not a duplicate proposal.
+Start any `planned_resolution` with "Next action — Autopilot: ..." and "No
+action needed from you now" when bot work can proceed; use "Decision needed
+from owner: ..." only for a specific authorization or judgment required now.
+State who can grant it, a recommended bounded option, how to record the
+decision, and what Autopilot does after approval. Put a hypothetical owner
+fallback after the current bot action, not in its place. Then explain
+`why_now`, benefit, risk, rollback and verification without claiming an
+unrun check passed. Keep fingerprints, run IDs, commands, and workflow states
+as supporting details. Never call a merge production recovery.
 
 Use a short action title naming the dataset or service and intended change.
 Keep snake_case identifiers, timestamps, hashes, and run IDs in evidence, not

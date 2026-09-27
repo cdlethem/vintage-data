@@ -347,6 +347,15 @@ def _actions(detail):
         actions = [action for action in actions if action not in {"ready", "merge", "complete", "advance"}]
     elif "merge" in pending_stages:
         actions = [action for action in actions if action not in {"merge", "complete", "advance"}]
+    if (state == "ready" and latest and latest.get("pr_number")
+            and not latest.get("merged_at")
+            and any(child["state"] not in {"completed", "dismissed", "missing"}
+                    for child in detail.get("linked_follow_ups", []))
+            and "repair_conflict" not in actions):
+        # Linked follow-ups are premerge prerequisites. While their assigned
+        # worker is active, another executive plan edit or merge decision adds
+        # no evidence and must not replace the worker's actual validation.
+        return []
     if state == "ready" and "complete" in actions:
         return ["complete"]  # A finished implementation needs closure, not another plan edit.
     return actions
@@ -778,7 +787,7 @@ def decide(session: Session, decision: Decision) -> dict:
         try:
             provider = get_provider()
             if provider.config.project == execution.repository and provider.config.provider == execution.provider:
-                provider.upsert_comment(execution.pr_number, f"<!-- executive:{lease['id']} -->",
+                provider.upsert_comment(execution.pr_number, f"<!-- executive:task:{task.id} -->",
                     f"### Executive decision\n\n**{decision.action.title()} · {result}**\n\n{decision.rationale}\n\n"
                     f"Ticket: `{task.id}` · Decision {event.sequence}\n" + (f"\nGate: {error}\n" if error else ""))
         except (GitProviderError, httpx.HTTPError):
