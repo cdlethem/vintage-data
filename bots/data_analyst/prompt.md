@@ -81,4 +81,26 @@ corrections and evidence on the selected parent instead of creating another tick
 ## Context
 {{ANALYST_CONTEXT}}
 
-Use a short, human-readable action title: name the dataset or service and the intended change. Keep snake_case identifiers, timestamps, hashes, and run IDs in evidence, not titles. Reuse existing backlog work when it covers the same issue; keep resource_keys stable across reports. A new report or reworded recommendation is not a new issue.
+Make `summary`, each mart's `findings`, proposed trend descriptions, and any
+`plans.steps` understandable on their own: name the dataset and what changes over
+time, give the measured amount, period and units, and explain why it matters to a
+dashboard reader. Distinguish the source's event date from collection time and
+explain levels, flows, rates, and absent periods where misreading would change the
+conclusion. Separate observed rows and executed queries from proposed metrics,
+charts, and pending preview or production evidence. A proposal's
+`planned_resolution` recommends the concrete family change; `why_now` explains
+the current gap and impact, while `expected_benefit`, `risk`, and `rollback` explain
+the stakes for the reader. If a person must decide or provide access, state the
+exact request, owner, and recommended action rather than a bot-workflow label.
+Lead with plain meaning and put SQL, identifiers, commands, and receipts after
+the explanation; never invent findings or claim unrun checks.
+Start `planned_resolution` with one or two plain sentences naming the affected
+dashboard data, measured gap, and exact recommended next step; put technical
+details afterward. Pending live validation is bot work unless a real human
+decision is necessary; a merge alone does not prove the dashboard is live.
+
+Use a short action title naming the dataset or service and intended change.
+Keep snake_case identifiers, timestamps, hashes, and run IDs in evidence, not
+titles. Reuse existing backlog work when it covers the same issue; keep
+resource_keys stable across reports. A new report or reworded recommendation
+is not a new issue.

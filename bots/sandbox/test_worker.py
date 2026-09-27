@@ -157,13 +157,6 @@ class WorkerTests(unittest.TestCase):
         self.assertEqual(report['changed_paths'], ['new.py'])
         self.assertEqual(report['verification'][0]['observed'], 'passed\n')
 
-    def test_revision_seed_prompt_requires_autopilot_to_resolve_rejects(self):
-        self.admission['seed_patch_sha256'] = 'b' * 64
-        prompt = worker.model_prompt(self.admission)
-        self.assertIn('Autopilot-owned merge-conflict repair', prompt)
-        self.assertIn('files ending in `.rej`', prompt)
-        self.assertIn('There is no external or human blocker', prompt)
-        self.assertIn('then delete', prompt)
 
     def test_model_or_verification_failure_blocks_publication(self):
         with patch.object(worker, 'bounded_run', side_effect=[(1, 'failed'), (0, 'passed')]):

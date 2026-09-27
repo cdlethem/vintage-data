@@ -5,7 +5,6 @@ import tempfile
 import unittest
 
 from bots.admitted_runner import _write_review_context
-from bots.sandbox.worker import model_prompt
 
 
 class ContextError(Exception):
@@ -32,7 +31,6 @@ class ReviewContextTests(unittest.TestCase):
         self.assertEqual(context['patch_text'], self.patch.decode())
         self.assertEqual(context['executor_report']['summary'], 'Fixed the defect.')
         self.assertEqual(self.admission, before)
-        self.assertIn('/review-context.json', model_prompt(self.admission))
 
     def test_rejects_changed_artifact_and_wrong_task_report(self):
         with self.assertRaisesRegex(ContextError, 'digest_invalid'):

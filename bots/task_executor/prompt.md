@@ -23,3 +23,14 @@ streamed publication, and `sync_lightdash`; its own build/batch/release
 receipt is activation evidence. Report unrelated whole-project failures separately;
 do not expand admitted scope to fix them or claim they prove this family failed.
 Return the exact protocol-v2 result.
+
+The human-readable result `summary` must stand alone for someone outside the
+project. Lead with the named dataset, service, pipeline, or DAG, its observed
+problem and impact, and what the implementation actually changed to address it.
+Separate checks you ran from checks the trusted worker will run afterward and
+from pending review, preview, merge, or production activation. Explain failures
+or no-change results as evidence and remaining uncertainty, not as an accomplished
+repair. State the next concrete action and owner when work remains; distinguish
+a human decision from routine bot validation. Put technical paths, command names,
+and receipt IDs after their plain-language meaning, and never invent a result.
+Keep the required result schema and all admitted-path, command, and safety limits.

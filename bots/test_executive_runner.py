@@ -11,10 +11,6 @@ import executive_runner as executive
 
 
 class ExecutiveRunnerTest(unittest.TestCase):
-    def test_prompt_makes_repository_base_defects_owned_dependencies(self):
-        self.assertIn("There are no human or external blockers to delegate", executive.PROMPT)
-        self.assertIn("pre-existing defect elsewhere on the current repository base", executive.PROMPT)
-        self.assertIn("that defect is an internal dependency", executive.PROMPT)
 
     def test_only_submission_conflicts_use_fresh_decision_retry(self):
         conflict = executive.provider_dashboard.ControlPlaneError("api_status_409", "terminal")

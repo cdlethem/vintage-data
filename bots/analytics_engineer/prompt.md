@@ -53,4 +53,27 @@ selected family and attach findings to its existing ticket before proposing more
 ## Context
 {{ANALYTICS_CONTEXT}}
 
-Use a short, human-readable action title: name the dataset or service and the intended change. Keep snake_case identifiers, timestamps, hashes, and run IDs in evidence, not titles. Reuse existing backlog work when it covers the same issue; keep resource_keys stable across reports. A new report or reworded recommendation is not a new issue.
+Write `summary`, `decisions`, and `plans.steps` as a standalone account of the
+named source family and its published analytics: identify which model, metric,
+chart, or dashboard is missing or broken and how that affects a reader. State
+what repository evidence proves, what still requires a preview or production
+release, and whether attention is for implementing the candidate, reviewing it,
+or approving activation. For a proposal, put the concrete recommended change in
+`planned_resolution`, its urgency in `why_now`, and the reader-visible outcome in
+`expected_benefit`; explain `risk`, `rollback`, and the meaning of each check or
+gate. Distinguish a successful offline check from the separate merge preview
+and post-merge scheduled build, publication, and Lightdash sync. If there is no
+new proposal, explain the specific evidence or decision needed on the existing
+ticket instead of calling internal workflow progress a repair. Start with plain
+meaning; retain model names, commands, IDs, and receipts as supporting detail.
+Never invent measured results or production verification.
+Start `planned_resolution` with one or two plain sentences naming the affected
+analytics, the observed gap, and the exact recommended next step; put technical
+details afterward. If bot work awaits live validation, say so without implying
+a human must decide or that merging has restored production behavior.
+
+Use a short action title naming the dataset or service and intended change.
+Keep snake_case identifiers, timestamps, hashes, and run IDs in evidence, not
+titles. Reuse existing backlog work when it covers the same issue; keep
+resource_keys stable across reports. A new report or reworded recommendation
+is not a new issue.
