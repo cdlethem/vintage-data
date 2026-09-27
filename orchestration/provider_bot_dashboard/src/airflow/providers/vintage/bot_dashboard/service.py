@@ -36,6 +36,7 @@ HUMAN_ACTION_STATES = {"proposed", "accepted", "blocked", "in_review", "ready"}
 HUMAN_DECISION_STATES = {"proposed", "blocked", "in_review", "ready"}
 # Imported history is evidence, never current freshness: it never ran in Airflow.
 LIVE_RUN = RunReport.dag_id.not_like("legacy\\_\\_%", escape="\\")
+FAILURE_OCCURRENCE_KINDS = frozenset({"failure_occurrence", "airflow_failure_log"})
 LEGAL = {
     "proposed": {"accepted", "dismissed", "blocked"},
     "accepted": {"in_progress", "dismissed", "blocked"},
@@ -1641,7 +1642,7 @@ def _post_merge_failure_reference(
     merged = _utc_stamp(merged_at)
     reported = _utc_stamp(report.started_at)
     for evidence in proposal.get("evidence", []):
-        if evidence.get("kind") != "failure_occurrence":
+        if evidence.get("kind") not in FAILURE_OCCURRENCE_KINDS:
             continue
         parts = [part.strip().split("=", 1) for part in evidence.get("reference", "").split(";")]
         if len(parts) != 3 or any(len(part) != 2 for part in parts):
@@ -1792,7 +1793,7 @@ def reconcile_recommendations(
             # new evidence and must not rewrite an already proposed repair.
             current = {
                 evidence["reference"] for evidence in proposal["evidence"]
-                if evidence.get("kind") == "failure_occurrence"
+                if evidence.get("kind") in FAILURE_OCCURRENCE_KINDS
             }
             prior = {
                 evidence["reference"]
@@ -1800,7 +1801,7 @@ def reconcile_recommendations(
                     select(Revision.evidence).where(Revision.task_id == task.id)
                 )
                 for evidence in (evidence_list or [])
-                if evidence.get("kind") == "failure_occurrence"
+                if evidence.get("kind") in FAILURE_OCCURRENCE_KINDS
             }
             if current <= prior:
                 continue
