@@ -130,6 +130,27 @@ class FetchPokeAPITests(unittest.TestCase):
                 f"https://pokeapi.co/api/v2/pokemon/{record['id']}/",
             )
 
+    def test_configured_page_size_continues_to_catalog_boundary(self):
+        first_page = page([pokemon(identifier) for identifier in range(1, 101)], 100, limit=100)
+        first_page["count"] = 101
+        last_page = page([pokemon(101)], None, limit=100)
+        last_page["count"] = 101
+
+        result, opener, sleeper = self.fetch(
+            [first_page, last_page], page_size=100
+        )
+
+        self.assertFalse(result.truncated)
+        self.assertEqual([record["id"] for record in result.records], list(range(1, 102)))
+        self.assertEqual(
+            [call[0].full_url for call in opener.calls],
+            [
+                "https://pokeapi.co/api/v2/pokemon/?limit=100&offset=0",
+                "https://pokeapi.co/api/v2/pokemon/?offset=100&limit=100",
+            ],
+        )
+        sleeper.assert_called_once_with(MODULE.REQUEST_INTERVAL)
+
     def test_follows_valid_api_continuation_without_trailing_slash(self):
         continuation = "https://pokeapi.co/api/v2/pokemon?offset=2&limit=2"
         first_page = page([pokemon(1), pokemon(2)], 2)
@@ -336,6 +357,28 @@ class FetchPokeAPITests(unittest.TestCase):
         self.assertNotIn(next_url, diagnostic)
         for private_part in ("user", "password", "secret", "fragment", "token="):
             self.assertNotIn(private_part, diagnostic)
+
+    def test_later_off_catalog_continuation_emits_no_partial_snapshot(self):
+        first_page = page([pokemon(1), pokemon(2)], 2)
+        second_page = page([pokemon(3)], None)
+        second_page["next"] = "https://pokeapi.co/api/v2/ability/?limit=2&offset=4"
+        opener = FixtureOpener([first_page, second_page])
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        with (
+            mock.patch.object(MODULE.urllib.request, "build_opener", return_value=opener),
+            mock.patch.object(MODULE.time, "sleep"),
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(stderr),
+            self.assertRaises(SystemExit) as raised,
+        ):
+            MODULE.main(["pokemon", "2", "--max-pages", "20"])
+
+        self.assertEqual(raised.exception.code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("PokéAPI next URL", stderr.getvalue())
+        self.assertEqual(len(opener.calls), 2)
 
     def test_redirect_handler_and_final_response_reject_off_origin_urls(self):
         handler = MODULE.CatalogRedirectHandler()
