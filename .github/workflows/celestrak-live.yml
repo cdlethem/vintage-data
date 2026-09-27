@@ -48,15 +48,13 @@ jobs:
           candidate = load("candidate", Path("candidate/extract/scripts/fetch_celestrak_socrates.py"))
           opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), validator.NoRedirect())
           table_text = validator._download(opener, validator.TABLE_URL, {"text/html"}, validator.MAX_TABLE_BYTES)
-          csv_text = validator._download(
-              opener, validator.BASELINE_URL,
-              {"text/csv", "text/plain", "application/octet-stream"}, validator.MAX_CSV_BYTES,
-          )
           parsed_html = validator.TableParser()
           parsed_html.feed(table_text)
           parsed_html.close()
           safe = lambda value: re.sub(r"[^ -~]", "?", value)[:120]
           title = re.search(r"<title[^>]*>(.*?)</title>", table_text, re.IGNORECASE | re.DOTALL)
+          header_at = table_text.find("NORAD")
+          header_markup = table_text[max(0, header_at - 500):header_at + 2100] if header_at >= 0 else ""
           print(json.dumps({
               "table_sha256": hashlib.sha256(table_text.encode()).hexdigest(),
               "table_bytes": len(table_text.encode()), "table_rows_seen": len(parsed_html.rows),
@@ -68,7 +66,15 @@ jobs:
                   if any(label in " ".join(row).lower() for label in ("norad", "max prob", "closest approach"))
               ][:6],
               "html_prefix": safe(re.sub(r"<[^>]+>", " ", table_text)) if not parsed_html.rows else None,
+              "table_open_tags": len(re.findall(r"<table\b", table_text, re.IGNORECASE)),
+              "table_close_tags": len(re.findall(r"</table\s*>", table_text, re.IGNORECASE)),
+              "header_markup": re.sub(r"[^ -~]", "?", header_markup)[:2600],
+              "last_cells": [[safe(cell) for cell in row[:10]] for row in parsed_html.rows[-4:]],
           }, sort_keys=True), flush=True)
+          csv_text = validator._download(
+              opener, validator.BASELINE_URL,
+              {"text/csv", "text/plain", "application/octet-stream"}, validator.MAX_CSV_BYTES,
+          )
           sample = csv.reader(io.StringIO(csv_text))
           print(json.dumps({
               "csv_sha256": hashlib.sha256(csv_text.encode()).hexdigest(),
