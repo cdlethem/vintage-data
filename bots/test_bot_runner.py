@@ -223,6 +223,70 @@ class InferenceSlotTest(unittest.TestCase):
         flock.assert_called_once_with(first, bot_runner.fcntl.LOCK_UN)
 
 
+class SandboxDiagnosticTest(unittest.TestCase):
+    class LaunchError(Exception):
+        def __init__(self, code, retry_class):
+            self.code = code
+            self.retry_class = retry_class
+            super().__init__(code)
+
+    def test_failed_launcher_retains_bounded_stdout_and_stderr_without_credentials(self):
+        import admitted_runner
+
+        child = (
+            "import sys; "
+            "sys.stdout.write('x' * 10000 + '\\nGateway refused "
+            "https://user:URL_SECRET@example.invalid/private?token=URL_SECRET\\n'); "
+            "sys.stderr.write('Authorization: Bearer STDERR_SECRET\\nconfined child failed\\n'); "
+            "sys.exit(7)"
+        )
+        result = admitted_runner._run_sandbox(
+            [sys.executable, "-c", child], timeout=5, env={"PATH": "/usr/bin:/bin"},
+        )
+        error = admitted_runner._sandbox_exit_error(
+            self.LaunchError, result.returncode, result.stdout, result.stderr,
+        )
+        detail = str(error)
+        self.assertEqual((error.code, error.retry_class), ("sandbox_exit_7", "terminal"))
+        self.assertLessEqual(len(result.stdout), admitted_runner._MAX_SANDBOX_STDOUT)
+        self.assertLessEqual(len(result.stderr), admitted_runner._MAX_SANDBOX_STDERR)
+        self.assertIn("stdout: [truncated]", detail)
+        self.assertIn("Gateway refused <url>", detail)
+        self.assertIn("stderr: Authorization=***", detail)
+        self.assertIn("confined child failed", detail)
+        for secret in ("URL_SECRET", "STDERR_SECRET", "example.invalid"):
+            self.assertNotIn(secret, detail)
+
+    def test_failed_launcher_omits_admission_data_from_stdout(self):
+        import admitted_runner
+
+        error = admitted_runner._sandbox_exit_error(
+            self.LaunchError, 12,
+            b'{"admission":{"model":"PRIVATE_VALUE"}}',
+            b"outside sandbox namespace",
+        )
+        self.assertIn("sandbox_exit_12", str(error))
+        self.assertIn("outside sandbox namespace", str(error))
+        self.assertNotIn("PRIVATE_VALUE", str(error))
+
+    def test_chatty_launcher_drains_both_streams_without_unbounded_retention(self):
+        import admitted_runner
+
+        child = (
+            "import sys; "
+            "sys.stdout.write('a' * 200000); sys.stdout.flush(); "
+            "sys.stderr.write('b' * 200000); sys.stderr.flush(); sys.exit(3)"
+        )
+        result = admitted_runner._run_sandbox(
+            [sys.executable, "-c", child], timeout=5, env={"PATH": "/usr/bin:/bin"},
+        )
+        self.assertEqual(result.returncode, 3)
+        self.assertEqual(len(result.stdout), admitted_runner._MAX_SANDBOX_STDOUT)
+        self.assertEqual(len(result.stderr), admitted_runner._MAX_SANDBOX_STDERR)
+        self.assertTrue(result.stdout.startswith(admitted_runner._OUTPUT_TRUNCATED))
+        self.assertTrue(result.stderr.startswith(admitted_runner._OUTPUT_TRUNCATED))
+
+
 class CommandChildStdinTest(unittest.TestCase):
     """An argv prompt must leave the child no inherited stdin to block on."""
 

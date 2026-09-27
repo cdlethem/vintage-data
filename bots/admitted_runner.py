@@ -25,44 +25,51 @@ except ImportError:
 _MAX_RESULT = 1_048_576
 
 
+_MAX_SANDBOX_STDOUT = 2_048
 _MAX_SANDBOX_STDERR = 4_096
-_STDERR_TRUNCATED = b"[launcher stderr truncated]\n"
+_OUTPUT_TRUNCATED = b"[launcher output truncated]\n"
 
 
 def _run_sandbox(argv: list[str], *, timeout: float, env: dict[str, str]) -> subprocess.CompletedProcess:
-    """Run the launcher while retaining only a bounded tail of stderr."""
+    """Drain both launcher streams, retaining only bounded tails."""
     process = subprocess.Popen(
         argv,
-        stdout=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         env=env,
     )
-    assert process.stderr is not None
-    stderr = bytearray()
-    truncated = False
+    assert process.stdout is not None and process.stderr is not None
+    captured = {
+        process.stdout: (bytearray(), _MAX_SANDBOX_STDOUT),
+        process.stderr: (bytearray(), _MAX_SANDBOX_STDERR),
+    }
+    truncated = set()
     deadline = time.monotonic() + timeout
     selector = selectors.DefaultSelector()
-    selector.register(process.stderr, selectors.EVENT_READ)
+    for pipe in captured:
+        selector.register(pipe, selectors.EVENT_READ)
     try:
         while selector.get_map():
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise subprocess.TimeoutExpired(argv, timeout)
             for key, _ in selector.select(remaining):
-                chunk = os.read(key.fileobj.fileno(), 65_536)
+                pipe = key.fileobj
+                chunk = os.read(pipe.fileno(), 65_536)
                 if not chunk:
-                    selector.unregister(key.fileobj)
+                    selector.unregister(pipe)
                     continue
-                limit = _MAX_SANDBOX_STDERR - len(_STDERR_TRUNCATED)
+                buffer, maximum = captured[pipe]
+                limit = maximum - len(_OUTPUT_TRUNCATED)
                 if len(chunk) >= limit:
-                    stderr[:] = chunk[-limit:]
-                    truncated = True
+                    buffer[:] = chunk[-limit:]
+                    truncated.add(pipe)
                 else:
-                    excess = len(stderr) + len(chunk) - limit
+                    excess = len(buffer) + len(chunk) - limit
                     if excess > 0:
-                        del stderr[:excess]
-                        truncated = True
-                    stderr.extend(chunk)
+                        del buffer[:excess]
+                        truncated.add(pipe)
+                    buffer.extend(chunk)
         process.wait(timeout=max(0.001, deadline - time.monotonic()))
     except subprocess.TimeoutExpired:
         process.kill()
@@ -73,30 +80,38 @@ def _run_sandbox(argv: list[str], *, timeout: float, env: dict[str, str]) -> sub
             process.kill()
             process.wait()
         selector.close()
+        process.stdout.close()
         process.stderr.close()
+
+    def bounded(pipe):
+        return (_OUTPUT_TRUNCATED if pipe in truncated else b"") + bytes(captured[pipe][0])
+
     return subprocess.CompletedProcess(
         argv, process.returncode,
-        stderr=(_STDERR_TRUNCATED if truncated else b"") + bytes(stderr),
+        stdout=bounded(process.stdout), stderr=bounded(process.stderr),
     )
 
 
-def _sandbox_stderr_diagnostic(stderr: bytes) -> str:
-    """Redact bounded launcher stderr before it enters a durable error envelope."""
-    detail = stderr.decode("utf-8", errors="replace").strip()
-    marker = _STDERR_TRUNCATED.decode().strip()
-    if detail.startswith(marker):
+def _sandbox_output_diagnostic(output: bytes) -> str:
+    """Redact bounded launcher output before it enters a durable error envelope."""
+    detail = output.decode("utf-8", errors="replace").strip()
+    marker = _OUTPUT_TRUNCATED.decode().strip()
+    was_truncated = detail.startswith(marker)
+    if was_truncated:
         detail = detail[len(marker):].lstrip()
     if not detail:
         return ""
     if detail.lstrip().startswith("{") or (
         "admission" in detail.casefold() and ("{" in detail or "[" in detail)
     ):
-        return "launcher stderr omitted because it contained admission data"
+        return "launcher output omitted because it contained admission data"
+    # An authenticated URL may carry a secret in its query, path, or userinfo.
+    detail = re.sub(r"(?i)\b(?:https?|wss?)://[^\s<>'\"`]+", "<url>", detail)
     try:
         from airflow._shared.secrets_masker import redact
-        detail = str(redact(detail, "sandbox_stderr", max_depth=20))
+        detail = str(redact(detail, "sandbox_output", max_depth=20))
     except Exception:  # noqa: BLE001 - never persist unredacted launch output
-        return "launcher stderr omitted because redaction was unavailable"
+        return "launcher output omitted because redaction was unavailable"
     detail = re.sub(
         r"(?i)\b(authorization|api[_ -]?key|access[_ -]?token|password|secret|credential)"
         r"\b\s*(?:[:=]\s*|\s+)(?:bearer\s+)?[^\s,;]+",
@@ -107,13 +122,19 @@ def _sandbox_stderr_diagnostic(stderr: bytes) -> str:
         from .bot_runner import _failure_detail
     except ImportError:
         from bot_runner import _failure_detail
-    return _failure_detail(RuntimeError(detail))
+    diagnostic = _failure_detail(RuntimeError(detail))
+    return f"[truncated] {diagnostic}" if was_truncated else diagnostic
 
 
-def _sandbox_exit_error(error_type, returncode: int, stderr: bytes) -> Exception:
+def _sandbox_exit_error(error_type, returncode: int, stdout: bytes, stderr: bytes) -> Exception:
     error = error_type(f"sandbox_exit_{returncode}", "terminal")
-    if diagnostic := _sandbox_stderr_diagnostic(stderr):
-        error.args = (f"{error}: launcher stderr: {diagnostic}",)
+    diagnostics = [
+        f"{name}: {detail}"
+        for name, output in (("stdout", stdout), ("stderr", stderr))
+        if (detail := _sandbox_output_diagnostic(output))
+    ]
+    if diagnostics:
+        error.args = (f"{error}: launcher " + "; ".join(diagnostics),)
     return error
 
 def _sandbox_attempt(model_role: str, started_at: datetime, duration_ms: int) -> dict:
@@ -604,7 +625,8 @@ def run(context: dict, cfg: dict, runner, dashboard_module):
             duration_ms = int((time.monotonic() - attempt_started) * 1000)
             if process.returncode:
                 raise _sandbox_exit_error(
-                    dashboard_module.ControlPlaneError, process.returncode, process.stderr
+                    dashboard_module.ControlPlaneError, process.returncode,
+                    process.stdout, process.stderr,
                 )
             raw_result = _read_result(result_path, dashboard_module.ControlPlaneError)
             result_type = ExecutorResultV2 if kind == "executor" else ReviewerResultV2
