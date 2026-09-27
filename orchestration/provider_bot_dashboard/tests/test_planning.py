@@ -74,6 +74,37 @@ class PlanningTest(unittest.TestCase):
         with self.assertRaises(service.PreconditionFailed):
             self.request()
 
+    def test_existing_specialist_child_covers_its_prerequisite_but_not_other_specialists(self):
+        self.revision.follow_up_bots = ["analytics_engineer", "data_analyst"]
+        value = service.create_manual_task(
+            self.s, title="Implement linked analytics requirement", category="other", priority=1,
+            planned_resolution="Repair the separately scoped analytics output.",
+            actor_id="owner", actor_name="Owner",
+        )
+        child = self.s.get(Task, uuid.UUID(value["id"]))
+        child.related_task_id = self.task.id
+        child.source_bot = "analytics_engineer"
+        child.state = "in_progress"
+        child_revision = self.s.scalar(select(Revision).where(Revision.task_id == child.id))
+        child_revision.resource_keys = ["analytics:unrelated"]
+        self.s.commit()
+        self.assertEqual(["analytics_engineer", "data_analyst"], planning.options(
+            self.s, self.task, self.execution, self.revision
+        ))
+        child_revision.resource_keys = list(self.revision.resource_keys)
+        self.s.commit()
+        self.assertEqual(["data_analyst"], planning.options(
+            self.s, self.task, self.execution, self.revision
+        ))
+        with self.assertRaises(service.PreconditionFailed):
+            self.request()
+        child.state = "completed"
+        child.completed_at = utcnow()
+        self.s.commit()
+        self.assertEqual(["analytics_engineer", "data_analyst"], planning.options(
+            self.s, self.task, self.execution, self.revision
+        ))
+
     def test_unconfigured_route_or_changed_head_cannot_request_planning(self):
         with self.assertRaises(service.PreconditionFailed):
             planning.request(self.s, self.task, "data_analyst", "Not configured")

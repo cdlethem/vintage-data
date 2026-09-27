@@ -1,7 +1,13 @@
 name: CelesTrak live reconciliation
 
 on:
-  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - extract/scripts/fetch_celestrak_socrates.py
+      - extract/scripts/test_fetch_celestrak_socrates.py
+      - extract/scripts/validate_celestrak_socrates.py
+      - extract/tests/test_validate_celestrak_socrates.py
 
 permissions:
   contents: read
@@ -9,30 +15,41 @@ permissions:
 jobs:
   compare:
     name: Compare reviewed CelesTrak table parser with official CSV
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 7
     steps:
-      - name: Check out reviewed fixed-source validator
+      - name: Check out exact PR candidate
         uses: actions/checkout@v4
         with:
-          ref: 2c6d925c8b0d8c0cb569ad31d9cf6999e09fdf8d
-          path: validator
-          persist-credentials: false
-      - name: Check out reviewed candidate parser
-        uses: actions/checkout@v4
-        with:
-          ref: e1142515d8bb12f127c44c26b61fe1d1f359ebfa
+          ref: ${{ github.event.pull_request.head.sha }}
           path: candidate
           persist-credentials: false
-      - name: Compare live fixed endpoints and actual candidate records
+      - name: Check out protected base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+      - name: Compare official live responses and changed candidate code
         shell: bash
+        env:
+          CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha }}
+          BASE_HEAD: ${{ github.event.pull_request.base.sha }}
         run: |
           python3 - <<'PY'
+          import hashlib
           import importlib.util
           import json
+          import os
           import urllib.request
           from pathlib import Path
           from unittest import mock
+
+          TABLE_URL = "https://celestrak.org/SOCRATES/table-socrates.php?NAME=,&ORDER=MAXPROB&MAX=100"
+          CSV_URL = "https://celestrak.org/SOCRATES/sort-maxProb.csv"
+          validator_file = Path("extract/scripts/validate_celestrak_socrates.py")
+          parser_file = Path("extract/scripts/fetch_celestrak_socrates.py")
 
           def load(name, path):
               spec = importlib.util.spec_from_file_location(name, path)
@@ -40,30 +57,45 @@ jobs:
               spec.loader.exec_module(module)
               return module
 
-          validator = load("validator", Path("validator/extract/scripts/validate_celestrak_socrates.py"))
-          candidate = load("candidate", Path("candidate/extract/scripts/fetch_celestrak_socrates.py"))
+          def changed(path):
+              base = Path("base") / path
+              candidate = Path("candidate") / path
+              return candidate.is_file() and (not base.is_file() or candidate.read_bytes() != base.read_bytes())
+
+          validator_path = Path("candidate") / validator_file if changed(validator_file) else Path("base") / validator_file
+          if not validator_path.is_file():
+              raise RuntimeError("reviewed fixed-source validator is not installed on the protected base or this candidate")
+          validator = load("validator", validator_path)
+          if validator.TABLE_URL != TABLE_URL or validator.BASELINE_URL != CSV_URL:
+              raise RuntimeError("the validator's source destinations do not match this protected workflow")
           opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), validator.NoRedirect())
-          table_text = validator._download(opener, validator.TABLE_URL, {"text/html"}, validator.MAX_TABLE_BYTES)
+          table_text = validator._download(opener, TABLE_URL, {"text/html"}, validator.MAX_TABLE_BYTES)
           csv_text = validator._download(
-              opener, validator.BASELINE_URL,
-              {"text/csv", "text/plain", "application/octet-stream"}, validator.MAX_CSV_BYTES,
+              opener, CSV_URL, {"text/csv", "text/plain", "application/octet-stream"}, validator.MAX_CSV_BYTES,
           )
           table = validator._table(table_text)
           baseline, total = validator._baseline(csv_text)
           if validator._coverage(table, "table") != validator._coverage(baseline, "baseline CSV"):
               raise validator.ValidationError("official table and CSV top-100 event coverage differs")
-          with mock.patch.object(candidate, "_get", return_value=(table_text, 200, 1, len(table_text), 0.0)):
-              parsed_table = list(candidate.fetch_conjunctions("maxProb", 100, "table"))
-          with mock.patch.object(candidate, "_get", return_value=(csv_text, 200, 1, len(csv_text), 0.0)):
-              parsed_csv = list(candidate.fetch_conjunctions("maxProb", 100, "csv"))
-          identity = lambda row: (row["norad_id_1"], row["norad_id_2"], row["tca"])
-          if ([identity(row) for row in parsed_table] != table
-                  or [identity(row) for row in parsed_csv] != baseline):
-              raise validator.ValidationError("reviewed candidate parser differs from official top-100 event coverage")
+
+          if changed(parser_file):
+              candidate = load("candidate_parser", Path("candidate") / parser_file)
+              with mock.patch.object(candidate, "_get", return_value=(table_text, 200, 1, len(table_text), 0.0)):
+                  parsed_table = list(candidate.fetch_conjunctions("maxProb", 100, "table"))
+              with mock.patch.object(candidate, "_get", return_value=(csv_text, 200, 1, len(csv_text), 0.0)):
+                  parsed_csv = list(candidate.fetch_conjunctions("maxProb", 100, "csv"))
+              identity = lambda row: (row["norad_id_1"], row["norad_id_2"], row["tca"])
+              if ([identity(row) for row in parsed_table] != table
+                      or [identity(row) for row in parsed_csv] != baseline):
+                  raise validator.ValidationError("reviewed candidate parser differs from official top-100 event coverage")
+
           print(json.dumps({
-              "result": "passed", "table_rows": len(parsed_table), "baseline_rows": total,
-              "matched_events": len(table), "candidate_head": "e1142515d8bb12f127c44c26b61fe1d1f359ebfa",
-              "validator_head": "2c6d925c8b0d8c0cb569ad31d9cf6999e09fdf8d",
-              "table_url": validator.TABLE_URL, "baseline_url": validator.BASELINE_URL,
+              "result": "passed", "candidate_head": os.environ["CANDIDATE_HEAD"],
+              "base_head": os.environ["BASE_HEAD"], "table_rows": len(table),
+              "baseline_rows": total, "matched_events": len(table),
+              "table_sha256": hashlib.sha256(table_text.encode()).hexdigest(),
+              "csv_sha256": hashlib.sha256(csv_text.encode()).hexdigest(),
+              "validator_sha256": hashlib.sha256(validator_path.read_bytes()).hexdigest(),
+              "candidate_parser_checked": changed(parser_file),
           }, sort_keys=True))
           PY

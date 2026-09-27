@@ -156,6 +156,7 @@ def failed(session: Session, body: FailedDecision) -> dict:
     task = service._locked_task(session, lease["task_id"])
     service._event(session, task, "executive_error", "system", "executive", payload={
         "reason": state["last_error"], "result_version": task.version,
+        "external_context_sha256": lease.get("external_digest"),
         "revisit_at": (utcnow() + timedelta(minutes=delay)).isoformat(), "lease_id": body.lease_id,
         "reason_code": body.reason_code})
     _save(session, row, state)
@@ -244,6 +245,50 @@ def _digest(detail):
                 detail.get("validation_capability_error"), detail.get("user_implementation_evidence")]
     return hashlib.sha256(json.dumps(evidence, sort_keys=True, default=str).encode()).hexdigest()
 
+def _external_digest(detail):
+    """Evidence that can wake an administrative or deterministically blocked decision.
+
+    The executive's own assignment, plan edits and planning requests are not
+    new instructions to itself. Their effects are reflected in the ordinary
+    lease digest, but must not reset the per-evidence decision history.
+    """
+    executions = [{k: v for k, v in e.items() if k not in {"synced_at", "lifecycle_durations_ms"}}
+                  for e in detail["executions"]]
+    gates = [{k: gate.get(k) for k in (
+        "gate_key", "stage", "recipe", "owner", "required_capability", "subject",
+        "dependencies", "status", "evidence", "required", "recipe_args", "last_error",
+    )} for gate in detail.get("validation_gates", [])]
+    evidence = [
+        detail["state"], detail.get("blocked_from_state"),
+        [event for event in detail["events"]
+         if not (event["actor_kind"] == "system" and event["actor_id"] == "executive")],
+        executions, gates, detail.get("reports"), detail.get("linked_follow_ups"),
+        detail.get("planning_requests"), detail.get("follow_up_options"),
+        detail.get("validation_recipes"), detail.get("validation_capabilities"),
+        detail.get("validation_capability_error"), detail.get("user_implementation_evidence"),
+    ]
+    return hashlib.sha256(json.dumps(evidence, sort_keys=True, default=str).encode()).hexdigest()
+
+
+_ADMIN_ACTIONS = {"assign", "configure", "request_follow_up"}
+
+
+def _remaining_actions(detail, latest, actions, external):
+    if not latest or latest.event_type != "executive_decision":
+        return actions
+    payload = latest.payload
+    if payload.get("external_context_sha256") == external:
+        if payload.get("retry_on_change") and payload.get("result") == "deferred":
+            return []
+        actions = [action for action in actions if action not in payload.get("suppressed_actions", [])]
+    # A guarded merge does not justify repeating the merge until maintenance
+    # observes it, but provider errors remain retryable after their cooldown.
+    unchanged = (payload.get("result_version") == detail["version"]
+                 and payload.get("result_context_sha256") == _digest(detail))
+    if unchanged and payload.get("result") == "applied" and payload.get("action") == "merge":
+        actions = [action for action in actions if action not in {"merge", "advance"}]
+    return actions
+
 
 def _payload_uuid(value):
     try:
@@ -316,6 +361,13 @@ def _actions(detail):
             actions += ["complete"]
     if state == "ready":
         actions += ["configure"]
+        if (latest and latest.get("pr_number") and current_revision > latest["revision"]
+                and any(gate.get("required") and gate.get("stage") == "merge"
+                        and gate.get("status") == "failed"
+                        and gate.get("owner") == "validation-service"
+                        and gate.get("subject") == latest.get("trusted_head_sha")
+                        for gate in detail.get("validation_gates", []))):
+            actions += ["revise"]
     if detail.get("follow_up_options"):
         actions += ["request_follow_up"]
     if detail.get("new_review_evidence") and state in {"blocked", "in_review"} and "retry_review" not in actions:
@@ -353,14 +405,17 @@ def _actions(detail):
     elif "merge" in pending_stages:
         actions = [action for action in actions if action not in {"merge", "complete", "advance"}]
     if (state == "ready" and latest and latest.get("pr_number")
-            and not latest.get("merged_at")
-            and any(child["state"] not in {"completed", "dismissed", "missing"}
-                    for child in detail.get("linked_follow_ups", []))
-            and "repair_conflict" not in actions):
-        # Linked follow-ups are premerge prerequisites. While their assigned
-        # worker is active, another executive plan edit or merge decision adds
-        # no evidence and must not replace the worker's actual validation.
-        return []
+            and not latest.get("merged_at") and "repair_conflict" not in actions):
+        unresolved = [child for child in detail.get("linked_follow_ups", [])
+                      if child["state"] not in {"completed", "dismissed", "missing"}]
+        if any(child["state"] != "blocked" for child in unresolved):
+            # A worker or approval is still advancing the linked prerequisite.
+            return []
+        if unresolved:
+            # A blocked child cannot satisfy the merge gate; its failure is
+            # material evidence for a bounded parent plan correction, never a
+            # reason to bypass the child and merge anyway.
+            actions = [action for action in actions if action not in {"merge", "advance", "complete"}]
     if state == "ready" and "complete" in actions:
         return ["complete"]  # A finished implementation needs closure, not another plan edit.
     return actions
@@ -506,24 +561,24 @@ def claim(session: Session, identity: dict | None = None) -> dict:
         if not actions:
             continue
         latest = session.scalar(select(Event).where(Event.task_id == task.id, Event.event_type.in_(["executive_decision", "executive_error"])).order_by(Event.sequence.desc()).limit(1))
+        prior_decision = latest if latest and latest.event_type == "executive_decision" else session.scalar(
+            select(Event).where(Event.task_id == task.id, Event.event_type == "executive_decision")
+            .order_by(Event.sequence.desc()).limit(1))
+        external = _external_digest(detail)
+        actions = _remaining_actions(detail, prior_decision, actions, external)
+        if not actions:
+            continue
         if latest:
-            # A plan edit or guarded merge does not justify another decision
-            # about the same evidence. Historical wait decisions do not park.
-            unchanged = (latest.event_type == "executive_decision"
-                         and latest.payload.get("result_version") == task.version
-                         and latest.payload.get("result_context_sha256") == _digest(detail))
-            if unchanged and latest.payload.get("result") == "applied":
-                if latest.payload.get("action") == "configure":
-                    actions = [action for action in actions if action != "configure"]
-                if latest.payload.get("action") == "merge":
-                    actions = [action for action in actions if action not in {"merge", "advance"}]
-            if not actions:
-                continue
             retry = latest.payload.get("revisit_at")
-            if retry and retry > now.isoformat() and latest.payload.get("result_version") == task.version:
+            if (retry and retry > now.isoformat()
+                    and (latest.payload.get("external_context_sha256") or external) == external
+                    and latest.payload.get("result_version") == task.version):
                 continue
+        suppressed = (prior_decision.payload.get("suppressed_actions", [])
+                      if prior_decision and prior_decision.payload.get("external_context_sha256") == external else [])
         lease = {"id": secrets.token_hex(32), "task_id": str(task.id), "version": task.version,
-                 "digest": _digest(detail), "model": model, "actions": actions,
+                 "digest": _digest(detail), "external_digest": external,
+                 "suppressed_actions": suppressed, "model": model, "actions": actions,
                  "owner": identity,
                  "expires_at": (now + timedelta(minutes=5)).isoformat()}
         _leases(state).append(lease)
@@ -768,7 +823,7 @@ def decide(session: Session, decision: Decision) -> dict:
         raise service.Conflict("Ticket evidence changed while the executive was deciding")
     if decision.action not in lease["actions"]:
         raise service.DomainError("This action is not available at the current decision point")
-    result, error = "applied", None
+    result, error, retry_on_change = "applied", None, False
     try:
         with session.begin_nested():
             _perform(session, task, decision, lease)
@@ -776,13 +831,25 @@ def decide(session: Session, decision: Decision) -> dict:
     except (service.DomainError, GitProviderError, httpx.HTTPError) as exc:
         result = "deferred"
         error = str(exc)[:500] if isinstance(exc, service.DomainError) else "Git provider could not apply this decision; existing checks remain in force"
+        # Admission capacity and provider transport recover independently of
+        # this ticket; other rejected preconditions need new material evidence.
+        retry_on_change = isinstance(exc, service.DomainError) and str(exc) != "execution admission queue is full"
     delay = 60 if result == "deferred" else 1
     now = utcnow()
     session.expire(task, ["events", "revisions"])
-    result_digest = _digest(_snapshot(session, str(task.id)))
+    detail = _snapshot(session, str(task.id))
+    result_digest = _digest(detail)
+    external_digest = _external_digest(detail)
+    suppressed = set(lease.get("suppressed_actions", []))
+    if result == "applied" and decision.action in _ADMIN_ACTIONS:
+        suppressed.add(decision.action)
+    elif external_digest != lease.get("external_digest"):
+        suppressed.clear()
     payload = {"action": decision.action, "rationale": decision.rationale, "model": lease["model"]["model"],
                "result": result, "error": error, "lease_id": lease["id"], "context_sha256": lease["digest"],
                "result_context_sha256": result_digest, "result_version": task.version,
+               "external_context_sha256": external_digest, "suppressed_actions": sorted(suppressed),
+               "retry_on_change": retry_on_change,
                "revisit_at": (now + timedelta(minutes=delay)).isoformat()}
     event = service._event(session, task, "executive_decision", "system", "executive", payload=payload)
     session.flush()

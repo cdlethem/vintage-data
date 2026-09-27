@@ -53,17 +53,30 @@ def installed_recipe_catalog() -> dict[str, dict[str, Any]]:
     for command_id, item in value.items():
         if not isinstance(command_id, str) or not _TOKEN.fullmatch(command_id) or not isinstance(item, dict):
             raise ValidationRecipeError("configured validation recipe catalog is invalid")
-        if set(item) - {"recipe", "capability", "source_url", "expected_status"}:
+        if set(item) - {"recipe", "capability", "source_url", "expected_status", "baseline_count",
+                         "workflow_path", "job_name"}:
             raise ValidationRecipeError("configured validation recipe catalog is invalid")
         recipe, capability = item.get("recipe"), item.get("capability")
         if recipe not in AUTOMATED_RECIPES or capability != RECIPE_CAPABILITIES[recipe]:
             raise ValidationRecipeError("configured validation recipe catalog is invalid")
-        if recipe == "public_source_smoke":
+        if recipe in {"public_source_smoke", "public_source_reconciliation"}:
             _https(item.get("source_url"), "source_url")
             status = item.get("expected_status")
             if type(status) is not int or not 200 <= status <= 599:
                 raise ValidationRecipeError("configured validation recipe catalog is invalid")
-        elif "source_url" in item or "expected_status" in item:
+            if recipe == "public_source_reconciliation":
+                count = item.get("baseline_count")
+                if type(count) is not int or not 1 <= count <= 100:
+                    raise ValidationRecipeError("configured reconciliation baseline is invalid")
+            elif "baseline_count" in item:
+                raise ValidationRecipeError("configured validation recipe catalog is invalid")
+        elif recipe == "trusted_workflow_check":
+            _workflow_identity(item.get("workflow_path"), item.get("job_name"))
+            if "source_url" in item or "expected_status" in item or "baseline_count" in item:
+                raise ValidationRecipeError("configured validation recipe catalog is invalid")
+        elif set(item) - {"recipe", "capability"}:
+            raise ValidationRecipeError("configured validation recipe catalog is invalid")
+        if recipe != "trusted_workflow_check" and ("workflow_path" in item or "job_name" in item):
             raise ValidationRecipeError("configured validation recipe catalog is invalid")
         result[command_id] = dict(item)
     return result
@@ -71,9 +84,21 @@ def installed_recipe_catalog() -> dict[str, dict[str, Any]]:
 _HEAD = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
 _TOKEN = re.compile(r"^[a-z][a-z0-9_-]{0,99}$")
 _UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", re.I)
+_WORKFLOW_PATH = re.compile(r"^\.github/workflows/[a-zA-Z0-9_.-]+\.ya?ml$")
+_JOB_NAME = re.compile(r"^[a-zA-Z][a-zA-Z0-9 _./-]{0,99}$")
+
+
+def _workflow_identity(path: object, job: object) -> tuple[str, str]:
+    if not isinstance(path, str) or not _WORKFLOW_PATH.fullmatch(path):
+        raise ValidationRecipeError("workflow path must name a fixed GitHub Actions workflow")
+    if not isinstance(job, str) or not _JOB_NAME.fullmatch(job):
+        raise ValidationRecipeError("workflow job must be a bounded fixed name")
+    return path, job
 
 RECIPE_CAPABILITIES = {
     "public_source_smoke": "public-network-readonly",
+    "trusted_workflow_check": "github-actions-readonly",
+    "public_source_reconciliation": "public-network-readonly",
     "warehouse_check": "warehouse-readonly",
     "disposable_schema_migration": "disposable-schema-write",
     "dag_inspection": "candidate-tree-readonly",
@@ -91,6 +116,12 @@ DEFAULT_RECIPE_CATALOG = {
                            "source_url": "https://openlibrary.org/recentchanges/add-book.json?limit=20", "expected_status": 200},
     "smoke-workday": {"recipe": "public_source_smoke", "capability": "public-network-readonly",
                       "source_url": "https://2020companies.wd1.myworkdayjobs.com/wday/cxs/2020companies/external_careers/jobs", "expected_status": 200},
+    "reconcile-public-csv": {"recipe": "public_source_reconciliation", "capability": "public-network-readonly",
+                             "source_url": "https://celestrak.org/SOCRATES/sort-maxProb.csv",
+                             "expected_status": 200, "baseline_count": 100},
+    "check-source-coverage": {"recipe": "trusted_workflow_check", "capability": "github-actions-readonly",
+                              "workflow_path": ".github/workflows/celestrak-live.yml",
+                              "job_name": "Compare reviewed CelesTrak table parser with official CSV"},
 }
 AUTOMATED_RECIPES = frozenset(RECIPE_CAPABILITIES)
 
@@ -150,7 +181,7 @@ def parse_recipe(*, recipe: object, recipe_args: object, required_capability: ob
     if not isinstance(recipe_args, dict):
         raise ValidationRecipeError("recipe arguments must be an object")
 
-    if recipe == "public_source_smoke":
+    if recipe in {"public_source_smoke", "public_source_reconciliation"}:
         _exact_keys(recipe_args, {"command_id", "source_url", "expected_status", "required_record_types"})
         status = recipe_args["expected_status"]
         if type(status) is not int or not 200 <= status <= 599:
@@ -175,6 +206,10 @@ def parse_recipe(*, recipe: object, recipe_args: object, required_capability: ob
             "dag_id": _token(recipe_args["dag_id"], "dag_id"),
             "expected_tasks": _tokens(recipe_args["expected_tasks"], "expected_tasks", minimum=1, maximum=100),
         }
+    elif recipe == "trusted_workflow_check":
+        _exact_keys(recipe_args, {"command_id", "workflow_path", "job_name"})
+        path, job = _workflow_identity(recipe_args["workflow_path"], recipe_args["job_name"])
+        assertions = {"workflow_path": path, "job_name": job}
     else:
         _exact_keys(recipe_args, {"command_id", "project_uuid", "explore", "fields"})
         project_uuid = recipe_args["project_uuid"]
@@ -215,8 +250,12 @@ def validate_admission(gate: dict[str, Any], capabilities: set[str] | None = Non
     item = catalog.get(request.command_id)
     if item is None or item["recipe"] != request.recipe or item["capability"] != request.required_capability:
         raise ValidationRecipeError("validation command is not installed")
-    if request.recipe == "public_source_smoke" and (
+    if request.recipe in {"public_source_smoke", "public_source_reconciliation"} and (
             item["source_url"] != request.assertions["source_url"]
             or item["expected_status"] != request.assertions["expected_status"]):
         raise ValidationRecipeError("validation command does not match public source assertions")
+    if request.recipe == "trusted_workflow_check" and (
+            item["workflow_path"] != request.assertions["workflow_path"]
+            or item["job_name"] != request.assertions["job_name"]):
+        raise ValidationRecipeError("validation command does not match trusted workflow assertions")
     return request

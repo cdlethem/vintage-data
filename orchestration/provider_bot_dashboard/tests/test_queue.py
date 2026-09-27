@@ -338,6 +338,64 @@ class QueueTest(unittest.TestCase):
         self.assertEqual(1, result["created"])
         self.assertEqual(2, self.session.scalar(select(func.count()).select_from(Task)))
 
+    def test_proven_repository_policy_denial_rejects_only_impossible_bot_scopes(self):
+        config = SimpleNamespace(allowed_path_globs=("extract/**", "transform/**"),
+                                 denied_path_globs=(".github/workflows/**",))
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.load_repository_config",
+                   return_value=config):
+            # Both proposed roots are denied by the actual repository allowlist.
+            blocked = dict(recommendation_key="validator-policy", title="Change validator policy",
+                category="other", priority=1, planned_resolution="Edit bot validator policy",
+                why_now="Validator cannot execute", expected_benefit="Executable validation",
+                risk="Low", rollback="Revert", suggested_executor="junior", evidence=[],
+                verification_commands=[["python", "check.py"]],
+                allowed_path_globs=["bots/**", "orchestration/provider_bot_dashboard/**"],
+                resource_keys=["validation:source"], follow_up_bots=[])
+            report = SimpleNamespace(id=uuid.uuid4(), report_schema="analytics_engineer_v2",
+                bot_name="analytics_engineer", dag_id="bot__analytics_engineer",
+                run_id=str(uuid.uuid4()), task_id="run", map_index=-1, started_at=utcnow())
+            result = reconcile_recommendations(self.session, report, {"plans": [{"task_proposal": blocked}]})
+            self.assertEqual(0, result["created"])
+            self.assertEqual(0, self.session.scalar(select(func.count()).select_from(Task)))
+            valid = {**blocked, "recommendation_key": "source-check", "title": "Fix extractor",
+                     "allowed_path_globs": ["extract/scripts/**", "bots/**"]}
+            result = reconcile_recommendations(self.session, report, {"plans": [{"task_proposal": valid}]})
+            self.assertEqual(1, result["created"])
+        config = SimpleNamespace(allowed_path_globs=(".github/**",),
+                                 denied_path_globs=(".github/workflows/**",))
+        from airflow.providers.vintage.bot_dashboard.service import _provably_denied_proposal_scope
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.load_repository_config",
+                   return_value=config):
+            self.assertTrue(_provably_denied_proposal_scope(
+                {"allowed_path_globs": [".github/workflows/*.yml"]}))
+            self.assertFalse(_provably_denied_proposal_scope(
+                {"allowed_path_globs": [".github/workflows/*.yml", ".github/ISSUE_TEMPLATE/*.yml"]}))
+
+    def test_bot_report_cannot_create_manual_only_merge_dependency(self):
+        config = SimpleNamespace(allowed_path_globs=("extract/**",), denied_path_globs=())
+        manual_gate = {
+            "gate_key": "live-source", "stage": "merge", "recipe": "manual",
+            "owner": "operator", "required_capability": "public-network",
+            "subject": "a" * 40, "dependencies": [],
+            "recheck_condition": "candidate head changes", "required": True,
+            "recipe_args": {},
+        }
+        proposal = dict(recommendation_key="manual-live-source", title="Fix extractor",
+            category="other", priority=1, planned_resolution="Fix source and validate",
+            why_now="Missing live coverage", expected_benefit="Verified complete source",
+            risk="Low", rollback="Revert", suggested_executor="junior", evidence=[],
+            verification_commands=[["python", "check.py"]],
+            allowed_path_globs=["extract/scripts/**"], resource_keys=["source:public"],
+            follow_up_bots=[], acceptance_gates=[manual_gate])
+        report = SimpleNamespace(id=uuid.uuid4(), report_schema="analytics_engineer_v2",
+            bot_name="analytics_engineer", dag_id="bot__analytics_engineer",
+            run_id=str(uuid.uuid4()), task_id="run", map_index=-1, started_at=utcnow())
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.load_repository_config",
+                   return_value=config):
+            result = reconcile_recommendations(self.session, report, {"plans": [{"task_proposal": proposal}]})
+        self.assertEqual(0, result["created"])
+        self.assertEqual(0, self.session.scalar(select(func.count()).select_from(Task)))
+
     def test_accepted_bot_work_is_active_not_awaiting_a_human_decision(self):
         self.propose()
         task = self.session.scalar(select(Task))
