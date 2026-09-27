@@ -1,3 +1,4 @@
+BASE_URL = "https://zenodo.org/api/records"
 import contextlib
 import importlib.util
 import io
@@ -103,6 +104,37 @@ class FetchZenodoTests(unittest.TestCase):
         })
         self.assertNotIn(secret, stderr.getvalue())
         self.assertNotIn(response_body, stderr.getvalue())
+
+    def test_http_504_recovers_on_second_attempt(self):
+        error = urllib.error.HTTPError(BASE_URL, 504, "Gateway Timeout", {}, None)
+        with patch.object(fetch_zenodo.urllib.request, "urlopen", side_effect=[error, JsonResponse(self.document())]) as urlopen:
+            with patch.object(fetch_zenodo.time, "sleep") as sleep:
+                records = list(fetch_zenodo.fetch_recent())
+
+        self.assertEqual(records[0]["id"], 123)
+        self.assertEqual(urlopen.call_count, 2)
+        self.assertEqual(sleep.call_args_list, [unittest.mock.call(2)])
+
+    def test_http_504_exhaustion_raises_after_bounded_attempts(self):
+        stderr = io.StringIO()
+        error = urllib.error.HTTPError(BASE_URL, 504, "Gateway Timeout", {}, None)
+
+        with patch.object(fetch_zenodo.urllib.request, "urlopen", side_effect=error) as urlopen:
+            with patch.object(fetch_zenodo.time, "sleep") as sleep:
+                with contextlib.redirect_stderr(stderr):
+                    with self.assertRaises(urllib.error.HTTPError):
+                        list(fetch_zenodo.fetch_recent())
+
+        self.assertEqual(urlopen.call_count, fetch_zenodo.MAX_ATTEMPTS)
+        self.assertEqual(sleep.call_args_list, [
+            unittest.mock.call(2),
+            unittest.mock.call(5),
+            unittest.mock.call(10),
+            unittest.mock.call(10),
+        ])
+        diagnostic = json.loads(stderr.getvalue())
+        self.assertEqual(diagnostic["attempt_count"], fetch_zenodo.MAX_ATTEMPTS)
+        self.assertEqual(diagnostic["terminal_error"]["class"], "HTTPError")
 
     def test_read_timeout_recovers_on_second_attempt(self):
         """Verify timeout recovery with new delay of 2 seconds."""
