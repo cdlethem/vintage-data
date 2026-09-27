@@ -22,14 +22,13 @@ from airflow.configuration import conf
 from airflow.models.variable import Variable
 
 from .api_models import InternalIdentity, PatchTask, StrictBody
-from .models import Event, Execution, Policy, Revision, RunReport, Task, utcnow
+from .models import Event, Execution, Policy, Revision, RunReport, Task, ValidationGate, utcnow
 from .model_settings import model_for_role
 from . import service
 
 KEY = "bot_dashboard_autopilot"
 ACTOR = {"actor_id": "executive", "actor_kind": "system"}
 EXECUTIVE_META_EVENTS = {"executive_decision", "executive_error", "executive_comment_failed"}
-PARKING_ACTIONS = {"wait", "block"}
 
 
 class Toggle(StrictBody):
@@ -48,7 +47,7 @@ class ClaimRequest(StrictBody):
 
 class Decision(StrictBody):
     lease_id: str = Field(pattern=r"^[a-f0-9]{64}$")
-    action: Literal["accept", "assign", "configure", "start", "revise", "repair", "repair_conflict", "retry_review", "advance", "ready", "merge", "complete", "block", "dismiss", "restore", "wait", "request_follow_up"]
+    action: Literal["accept", "assign", "configure", "start", "revise", "repair", "repair_conflict", "retry_review", "advance", "ready", "merge", "complete", "block", "dismiss", "restore", "request_follow_up"]
     rationale: str = Field(min_length=10, max_length=8000)
     profile: Literal["junior", "senior", "staff"] | None = None
     changes: PatchTask | None = None
@@ -203,6 +202,11 @@ def _snapshot(session: Session, task_id: str) -> dict:
     rows = session.scalars(select(Execution).where(Execution.task_id == uuid.UUID(task_id)).order_by(Execution.sequence.desc()).limit(1)).all()
     if rows:
         execution = rows[0]
+        if execution.terminal_at and not execution.pr_number:
+            detail["user_implementation_evidence"] = session.scalar(select(Event.sequence).where(
+                Event.task_id == execution.task_id, Event.event_type == "evidence_added",
+                Event.actor_kind == "user", Event.created_at > execution.terminal_at,
+            ).order_by(Event.sequence.desc()).limit(1))
         from . import planning
         revision = session.scalar(select(Revision).where(Revision.task_id == uuid.UUID(task_id))
                                   .order_by(Revision.revision_number.desc()).limit(1))
@@ -237,7 +241,7 @@ def _digest(detail):
                 detail["events"], detail.get("reports"), detail.get("follow_up_options"),
                 detail.get("linked_follow_ups"), detail.get("validation_gates"), detail.get("planning_requests"),
                 detail.get("validation_recipes"), detail.get("validation_capabilities"),
-                detail.get("validation_capability_error")]
+                detail.get("validation_capability_error"), detail.get("user_implementation_evidence")]
     return hashlib.sha256(json.dumps(evidence, sort_keys=True, default=str).encode()).hexdigest()
 
 
@@ -254,7 +258,7 @@ def _actions(detail):
     current_revision = max((r["revision_number"] for r in detail.get("revisions", [])), default=0)
     if latest and not latest["terminal_at"] and latest["stage"] not in {"reviewed", "provider_sync"}:
         return []  # An admitted executor/reviewer owns this decision point.
-    actions = ["wait"]
+    actions = []
     if state == "proposed": actions += ["accept", "dismiss"]
     if state == "accepted": actions += ["assign", "configure", "start", "dismiss"]
     if state == "blocked":
@@ -294,9 +298,17 @@ def _actions(detail):
             actions += ["revise"]
     if state in {"in_review", "ready"} and latest and latest["pr_number"]:
         if latest["review_verdict"] == "approved" or not latest["reviewer_required"]:
-            actions += ["ready"] if state == "in_review" else ["merge", "complete"]
-            actions += ["advance"]
-    if state == "ready" and (not latest or not latest["pr_number"]): actions += ["complete"]
+            if state == "in_review":
+                actions += ["ready", "advance"]
+            elif latest.get("merged_at") and (latest.get("provider_state") or {}).get("state") == "merged":
+                actions += ["complete"]
+            else:
+                actions += ["merge", "advance"]
+    if state == "ready" and (not latest or not latest["pr_number"]):
+        if (not latest or (latest.get("terminal_reason_code") == "no_change"
+                           and latest["revision"] == current_revision)
+                or detail.get("user_implementation_evidence")):
+            actions += ["complete"]
     if state == "ready":
         actions += ["configure"]
     if detail.get("follow_up_options"):
@@ -329,6 +341,14 @@ def _actions(detail):
         actions = [action for action in actions if action not in {"start", "revise", "repair", "repair_conflict"}]
     elif state == "accepted" and "start" in actions:
         actions += ["advance"]
+    pending_stages = {gate["stage"] for gate in detail.get("validation_gates", [])
+                      if gate["required"] and gate["status"] != "passed"}
+    if "publication" in pending_stages:
+        actions = [action for action in actions if action not in {"ready", "merge", "complete", "advance"}]
+    elif "merge" in pending_stages:
+        actions = [action for action in actions if action not in {"merge", "complete", "advance"}]
+    if state == "ready" and "complete" in actions:
+        return ["complete"]  # A finished implementation needs closure, not another plan edit.
     return actions
 
 
@@ -473,12 +493,17 @@ def claim(session: Session, identity: dict | None = None) -> dict:
             continue
         latest = session.scalar(select(Event).where(Event.task_id == task.id, Event.event_type.in_(["executive_decision", "executive_error"])).order_by(Event.sequence.desc()).limit(1))
         if latest:
-            parked_digest = latest.payload.get("result_context_sha256")
-            if (latest.event_type == "executive_decision"
-                    and latest.payload.get("action") in PARKING_ACTIONS
-                    and latest.payload.get("result") == "applied"
-                    and latest.payload.get("result_version") == task.version
-                    and parked_digest == _digest(detail)):
+            # A plan edit or guarded merge does not justify another decision
+            # about the same evidence. Historical wait decisions do not park.
+            unchanged = (latest.event_type == "executive_decision"
+                         and latest.payload.get("result_version") == task.version
+                         and latest.payload.get("result_context_sha256") == _digest(detail))
+            if unchanged and latest.payload.get("result") == "applied":
+                if latest.payload.get("action") == "configure":
+                    actions = [action for action in actions if action != "configure"]
+                if latest.payload.get("action") == "merge":
+                    actions = [action for action in actions if action not in {"merge", "advance"}]
+            if not actions:
                 continue
             retry = latest.payload.get("revisit_at")
             if retry and retry > now.isoformat() and latest.payload.get("result_version") == task.version:
@@ -588,7 +613,8 @@ def _perform(session, task, decision, lease):
                 return _perform(session, task, decision.model_copy(update={"action": "complete"}), lease)
             return _perform(session, task, decision.model_copy(update={"action": "merge"}), lease)
         raise service.PreconditionFailed("No guarded continuation is available")
-    if action == "wait": return
+    # No no-op decision is available: active work is owned by its worker and
+    # other tickets become eligible only when their material evidence changes.
     if action == "assign":
         service.assign_task(session, **kwargs, actor_name="Executive", kind="bot", profile=decision.profile, reviewer_required=True)
     elif action == "request_follow_up":
@@ -635,7 +661,6 @@ def _perform(session, task, decision, lease):
         model_for_role(session, f"executor_{task.assignee_profile}")
         if task.reviewer_required: model_for_role(session, "pr_reviewer")
         # Bound repeated retries; new evidence/scope should resolve a recurring failure.
-        from .models import Revision
         current_revision = session.scalar(select(func.max(Revision.revision_number)).where(Revision.task_id == task.id))
         failures = session.scalar(select(func.count()).select_from(Execution).where(Execution.task_id == task.id, Execution.revision == current_revision, Execution.terminal_at.is_not(None)))
         if failures >= 3:
@@ -646,7 +671,9 @@ def _perform(session, task, decision, lease):
         stages = {
             "ready": ("publication",),
             "merge": ("publication", "merge"),
-            "complete": ("publication", "merge", "activation", "completion"),
+            # Completion means the reviewed implementation is merged, not that
+            # production activation or a live source check has passed.
+            "complete": ("publication", "merge"),
         }[action]
         service.require_validation_gates(session, task.id, *stages)
         execution = _latest_execution(session, task)
@@ -674,15 +701,34 @@ def _perform(session, task, decision, lease):
                 # Human-performed work uses the same existing evidence gate.
                 service.transition_task(session, **kwargs, to_state="ready", reason=decision.rationale)
                 return
-            if execution and execution.terminal_reason_code == "no_change":
+            current_revision = session.scalar(select(func.max(Revision.revision_number)).where(
+                Revision.task_id == task.id))
+            if (execution and execution.terminal_reason_code == "no_change"
+                    and execution.revision == current_revision):
                 evidence = {"label": "Verified no-change execution", "observation": f"Execution {execution.sequence}: no_change"}
             else:
-                verified = session.scalar(select(Event).where(Event.task_id == task.id, Event.event_type == "evidence_added",
-                    Event.actor_kind == "user").order_by(Event.sequence.desc()).limit(1))
-                if execution or not verified:
-                    raise service.PreconditionFailed("Completion requires a verified no-change execution, a merged PR, or human verification evidence")
-                evidence = {"label": "Human verification reviewed", "observation": f"Executive reviewed the evidence recorded in activity event {verified.sequence}"}
+                query = select(Event).where(Event.task_id == task.id, Event.event_type == "evidence_added",
+                    Event.actor_kind == "user")
+                if execution:
+                    if execution.pr_number or not execution.terminal_at:
+                        raise service.PreconditionFailed("Completion requires a reviewed merge or human implementation evidence")
+                    query = query.where(Event.created_at > execution.terminal_at)
+                verified = session.scalar(query.order_by(Event.sequence.desc()).limit(1))
+                if not verified:
+                    raise service.PreconditionFailed("Completion requires current no-change evidence, a reviewed merge, or human implementation evidence")
+                evidence = {"label": "Human implementation evidence", "observation": f"User evidence recorded in activity event {verified.sequence}"}
         if action == "complete":
+            # Keep outstanding live requirements visible without claiming that
+            # merge evidence is evidence of production recovery.
+            pending = session.scalars(select(ValidationGate).where(
+                ValidationGate.task_id == task.id,
+                ValidationGate.required.is_(True),
+                ValidationGate.stage.in_(("activation", "completion")),
+                ValidationGate.status != "passed",
+            )).all()
+            evidence["production_validation"] = "unverified" if pending else "not_established_by_implementation"
+            if pending:
+                evidence["pending_gate_keys"] = [gate.gate_key for gate in pending]
             service.add_event_items(session, **kwargs, event_type="comment_added", items=[decision.rationale])
             kwargs["version"] = task.version
             service.add_event_items(session, **kwargs, event_type="evidence_added", items=[evidence])
@@ -716,8 +762,9 @@ def decide(session: Session, decision: Decision) -> dict:
     except (service.DomainError, GitProviderError, httpx.HTTPError) as exc:
         result = "deferred"
         error = str(exc)[:500] if isinstance(exc, service.DomainError) else "Git provider could not apply this decision; existing checks remain in force"
-    delay = 60 if result == "deferred" else 15 if decision.action == "wait" else 1
+    delay = 60 if result == "deferred" else 1
     now = utcnow()
+    session.expire(task, ["events", "revisions"])
     result_digest = _digest(_snapshot(session, str(task.id)))
     payload = {"action": decision.action, "rationale": decision.rationale, "model": lease["model"]["model"],
                "result": result, "error": error, "lease_id": lease["id"], "context_sha256": lease["digest"],
@@ -727,7 +774,7 @@ def decide(session: Session, decision: Decision) -> dict:
     session.flush()
     # Mirror reasoning onto the actual PR. A comment failure never undoes an action.
     execution = _latest_execution(session, task)
-    if execution and execution.pr_number and decision.action != "wait":
+    if execution and execution.pr_number:
         try:
             provider = get_provider()
             if provider.config.project == execution.repository and provider.config.provider == execution.provider:

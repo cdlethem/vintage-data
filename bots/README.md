@@ -106,8 +106,13 @@ A reviewer admission exists only after that identity is durable. The reviewer se
 exact source, patch, head, executor report, and verification manifest and cannot modify
 the worktree. One stable-marker comment is upserted. Maintenance is the only provider
 observer; drift or closed-unmerged changes block for human attention. `ready` requires
-the trusted head plus the required approving verdict and provider state. `completed`
-still requires human evidence/comment and transition.
+the trusted head plus the required approving verdict and provider state. With Autopilot
+enabled, the executive has no `wait` action: it completes a reviewed implementation
+after the trusted merge is observed, even when post-merge source validation is pending.
+Completion records the merge or user-attested implementation evidence and a decision
+note; it does **not** assert production recovery or mark a pending validation gate passed.
+Publication and merge-stage requirements still block promotion or merge. Activation and
+completion-stage checks can record their actual outcomes after implementation completion.
 
 For dbt/Lightdash work, the executor's admitted scope must include both the semantic
 or analysis specification and its exact generated chart/dashboard outputs. It may
@@ -118,7 +123,8 @@ activation-stage `manual` gate records the affected
 `transform__<family>__<cadence>` build, streamed publication, and
 `sync_lightdash` receipt after merge. Unrelated family failures are separate work;
 runtime validation and delivery are dependency-scoped, and healthy partial releases
-retain unrelated last-good definitions.
+retain unrelated last-good definitions. A completed implementation with this gate
+still pending is not a delivered visualization.
 Use the supported `lightdash_preview` and `manual` recipes rather than inventing a
 production-sync gate. PR review/merge evidence and release evidence are never
 interchangeable.
@@ -232,18 +238,24 @@ corepack pnpm build
 
 The action queue defaults to **Needs attention**: proposed recommendations,
 blocked work, pull requests under review, and work marked ready for completion.
-These states do not all require a human decision. A ready code change may still
-need live-source evidence before anyone can call the pipeline repaired. Each
-ticket should identify the affected dataset, source, service, or DAG; the observed
-problem and impact; what is confirmed versus unknown; why it remains open; and
-the recommended next action and its owner. Keep run IDs, paths, and validation
-commands as supporting evidence rather than the opening explanation. The queue
-shows a longer preview; open the ticket for evidence and remaining requirements.
-For an owner-only authorization, it must name the decision, recommend a bounded
-option and its conditions, and keep the existing restriction until approval.
-**All active** also includes accepted and ongoing work, while **History** retains
-completed and archived actions. Search and pagination operate on server-side
-results.
+These states do not all require a human decision. A ready, merged code change
+is completed even when live-source recovery remains unverified; the completion
+evidence distinguishes those claims and retains pending post-merge checks. A later
+failed source run after that merge is a new repair: failure triage creates a
+related proposal with exact failed-DAG-run evidence rather than rewriting an
+admitted or completed ticket. Failure groups rotate through ten-at-a-time
+hourly batches instead of leaving later groups permanently unreviewed. Invalid
+triage report envelopes receive one bounded schema correction attempt; if
+both attempts fail, no proposal is invented.
+Each ticket should identify the affected dataset, source, service, or DAG; the
+observed problem and impact; what is confirmed versus unknown; and the next
+action and its owner. Keep run IDs, paths, and validation commands as supporting
+evidence rather than the opening explanation. Open the ticket for evidence and
+remaining requirements. For an owner-only authorization, name the decision,
+recommend a bounded option and its conditions, and keep the existing restriction
+until approval. **All active** includes accepted and ongoing work, while
+**History** retains completed and archived implementation tickets. Search and
+pagination operate on server-side results.
 Bot health shows actual bot definitions, paused status, latest outcomes, and drill-down
 run evidence; infrastructure DAGs are excluded.
 Empty results and failed requests have distinct states.

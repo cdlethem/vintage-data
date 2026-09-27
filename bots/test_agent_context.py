@@ -122,11 +122,17 @@ class FailureAndAnalyticsBoundsTest(unittest.TestCase):
             items.append({"dag_id": "etl_same", "task_id": "load", "run_id": f"same-{i}", "ended_at": f"2026-01-01T00:00:{i:02d}+00:00", "exception_type": "ValueError", "error_code": "bad_input", "detail": "same detail", "sink": f"marker-{i}"})
         items.append({"dag_id": "etl_same", "task_id": "load", "run_id": "different-code", "ended_at": "2026-01-01T00:00:00+00:00", "exception_type": "ValueError", "error_code": "other_code", "detail": "same detail", "sink": "other"})
         client = FakeClient(failures=items)
-        with mock.patch.object(agent_context, "_control_client", return_value=client):
+        with mock.patch.object(agent_context, "_control_client", return_value=client), \
+             mock.patch.object(agent_context, "_now", side_effect=[
+                 "2026-01-01T00:00:00+00:00", "2026-01-01T01:00:00+00:00"
+             ]):
             context = agent_context.failure_context(batch_size=50)
+            following = agent_context.failure_context(batch_size=50)
         self.assertEqual(context["failure_count"], 14)
         self.assertLessEqual(len(context["selected_failures"]), 10)
-        same = next(group for group in context["selected_failures"] if group["component"] == "etl_same")
+        groups = context["selected_failures"] + following["selected_failures"]
+        self.assertEqual(14, len({group["fingerprint"] for group in groups}))
+        same = next(group for group in groups if group["component"] == "etl_same" and group["error_code"] == "bad_input")
         self.assertEqual(same["count"], 15)
         self.assertLessEqual(len(same["occurrences"]), 10)
         self.assertLessEqual(len(same["sink_markers"]), 20)

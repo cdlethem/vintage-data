@@ -14,6 +14,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 from airflow.configuration import conf
+from airflow.models.dagrun import DagRun
 from airflow.sdk.observability import stats
 
 from .models import (
@@ -226,6 +227,7 @@ def get_task(session: Session, task_id: str) -> dict:
         "executor_deadline_at": row.executor_deadline_at.isoformat() if row.executor_deadline_at else None,
         "review_deadline_at": row.review_deadline_at.isoformat() if row.review_deadline_at else None,
         "synced_at": row.synced_at.isoformat() if row.synced_at else None,
+        "merged_at": row.merged_at.isoformat() if row.merged_at else None,
         "terminal_at": row.terminal_at.isoformat() if row.terminal_at else None,
         "terminal_reason_code": getattr(row, "terminal_reason_code", None),
         "terminal_failure_class": getattr(row, "terminal_failure_class", None),
@@ -1626,6 +1628,96 @@ def _reconcile_proposed_gates(session: Session, task: Task, proposal: dict) -> N
                 row.updated_at = utcnow()
 
 
+def _utc_stamp(value: datetime) -> datetime:
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+
+
+def _post_merge_failure_reference(
+    session: Session, proposal: dict, report: RunReport, merged_at: datetime | None
+) -> str | None:
+    """Prove the cited failed run started after merge and ended before triage."""
+    if merged_at is None:
+        return None
+    merged = _utc_stamp(merged_at)
+    reported = _utc_stamp(report.started_at)
+    for evidence in proposal.get("evidence", []):
+        if evidence.get("kind") != "failure_occurrence":
+            continue
+        parts = [part.strip().split("=", 1) for part in evidence.get("reference", "").split(";")]
+        if len(parts) != 3 or any(len(part) != 2 for part in parts):
+            continue
+        fields = dict(parts)
+        if set(fields) != {"component", "run_id", "occurred_at"} or not fields["component"] or not fields["run_id"]:
+            continue
+        try:
+            occurred = datetime.fromisoformat(fields["occurred_at"].replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if occurred.tzinfo is None:
+            continue
+        run = session.execute(
+            select(DagRun.start_date, DagRun.end_date)
+            .where(
+                DagRun.dag_id == fields["component"],
+                DagRun.run_id == fields["run_id"],
+                DagRun.state == "failed",
+            )
+        ).first()
+        if not run or not run.start_date or not run.end_date:
+            continue
+        started, ended = _utc_stamp(run.start_date), _utc_stamp(run.end_date)
+        if merged < started <= _utc_stamp(occurred) <= ended <= reported:
+            return evidence["reference"]
+    return None
+
+
+def _related_failure_task(session: Session, parent: Task, proposal: dict, bot: str) -> Task | None:
+    children = session.scalars(
+        select(Task)
+        .where(Task.related_task_id == parent.id, Task.source_bot == bot, Task.category == proposal["category"])
+        .options(selectinload(Task.revisions))
+        .order_by(Task.created_at.desc(), Task.id.desc())
+        .with_for_update()
+    ).all()
+    resources = set(proposal.get("resource_keys") or [])
+    return next(
+        (child for child in children if child.revisions and
+         _same_work_resources(resources, set(child.revisions[-1].resource_keys or []))),
+        None,
+    )
+
+def _matching_merged_failure_task(session: Session, proposal: dict, bot: str) -> Task | None:
+    candidates = session.scalars(
+        select(Task)
+        .where(Task.state == "completed", Task.source_bot == bot, Task.category == proposal["category"])
+        .options(selectinload(Task.revisions))
+        .order_by(Task.created_at.desc(), Task.id.desc())
+        .with_for_update()
+    ).all()
+    resources = set(proposal.get("resource_keys") or [])
+    return next(
+        (candidate for candidate in candidates if candidate.revisions and
+         _same_work_resources(resources, set(candidate.revisions[-1].resource_keys or []))),
+        None,
+    )
+
+
+def _matching_proposed_failure_task(session: Session, proposal: dict, bot: str) -> Task | None:
+    candidates = session.scalars(
+        select(Task)
+        .where(Task.state == "proposed", Task.source_bot == bot, Task.category == proposal["category"])
+        .options(selectinload(Task.revisions))
+        .order_by(Task.created_at, Task.id)
+        .with_for_update()
+    ).all()
+    resources = set(proposal.get("resource_keys") or [])
+    return next(
+        (candidate for candidate in candidates if candidate.revisions and
+         _same_work_resources(resources, set(candidate.revisions[-1].resource_keys or []))),
+        None,
+    )
+
+
 def reconcile_recommendations(
     session: Session, report: RunReport, payload: dict
 ) -> dict[str, int]:
@@ -1656,6 +1748,62 @@ def reconcile_recommendations(
         )
         if task is None:
             task = _matching_open_task(session, proposal, report.bot_name, exclude_task_id=planning_parent)
+        if task is None and report.report_schema == "failure_triage_v2":
+            task = _matching_merged_failure_task(session, proposal, report.bot_name)
+        failure_parent = None
+        if task and task.state != "proposed" and report.report_schema == "failure_triage_v2":
+            # A merged repair is immutable; only a failed run explicitly observed
+            # after that merge can open a separate repair lineage.
+            while task.state in {"ready", "completed"}:
+                merged_at = session.scalar(
+                    select(Execution.merged_at)
+                    .where(Execution.task_id == task.id, Execution.merged_at.is_not(None))
+                    .order_by(Execution.merged_at.desc())
+                    .limit(1)
+                )
+                if not _post_merge_failure_reference(session, proposal, report, merged_at):
+                    break
+                child = _related_failure_task(session, task, proposal, report.bot_name)
+                if child is None:
+                    existing = _matching_proposed_failure_task(session, proposal, report.bot_name)
+                    if existing is not None:
+                        task = existing
+                        break
+                    failure_parent = task.id
+                    recommendation_key = "work-" + hashlib.sha256(
+                        f"failure-follow-up:{task.id}".encode()
+                    ).hexdigest()
+                    task = None
+                    break
+                task = child
+                if task.state == "proposed":
+                    break
+        if (task and task.state == "proposed" and task.related_task_id
+                and report.report_schema == "failure_triage_v2"):
+            parent_merge = session.scalar(
+                select(Execution.merged_at)
+                .where(Execution.task_id == task.related_task_id, Execution.merged_at.is_not(None))
+                .order_by(Execution.merged_at.desc())
+                .limit(1)
+            )
+            if not _post_merge_failure_reference(session, proposal, report, parent_merge):
+                continue
+            # A different triage report describing the same failed run is not
+            # new evidence and must not rewrite an already proposed repair.
+            current = {
+                evidence["reference"] for evidence in proposal["evidence"]
+                if evidence.get("kind") == "failure_occurrence"
+            }
+            prior = {
+                evidence["reference"]
+                for evidence_list in session.scalars(
+                    select(Revision.evidence).where(Revision.task_id == task.id)
+                )
+                for evidence in (evidence_list or [])
+                if evidence.get("kind") == "failure_occurrence"
+            }
+            if current <= prior:
+                continue
         if task and planning_parent:
             from . import planning
             planning.link(session, planning_parent, task, report)
@@ -1676,7 +1824,7 @@ def reconcile_recommendations(
             continue
         if task is None:
             task = Task(
-                related_task_id=planning_parent,
+                related_task_id=planning_parent or failure_parent,
                 source="specialist",
                 source_bot=report.bot_name,
                 recommendation_key=recommendation_key,
@@ -1736,10 +1884,11 @@ def reconcile_recommendations(
             .limit(1)
             .with_for_update()
         )
-        if not planning_parent and task.state == "proposed" and policy and policy.mode in {
-            "auto_accept",
-            "auto_delegate",
-        }:
+        if (not planning_parent and not failure_parent
+                and not (report.report_schema == "failure_triage_v2" and task.related_task_id)
+                and task.state == "proposed" and policy and policy.mode in {
+                    "auto_accept", "auto_delegate",
+                }):
             task.state = "accepted"
             task.accepted_at = utcnow()
             if policy.mode == "auto_delegate":

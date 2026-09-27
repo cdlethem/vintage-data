@@ -52,7 +52,9 @@ def _locked_gate(session: Session, gate_id: str) -> ValidationGate:
 
 def _task(session: Session, row: ValidationGate) -> Task:
     task = session.scalar(select(Task).where(Task.id == row.task_id).with_for_update())
-    if task is None or task.state in {"completed", "dismissed"}:
+    if task is None or task.state == "dismissed" or (
+        task.state == "completed" and row.stage not in {"activation", "completion"}
+    ):
         raise PreconditionFailed("validation gate task is unavailable")
     return task
 
@@ -103,10 +105,14 @@ def _candidate_snapshot(session: Session, row: ValidationGate) -> dict[str, str]
     execution = session.scalar(select(Execution).where(
         Execution.task_id == row.task_id,
     ).order_by(Execution.sequence.desc(), Execution.revision.desc()).limit(1).with_for_update())
-    if (execution is None or execution.terminal_at is not None or execution.trusted_head_sha != row.subject
+    post_merge = row.stage in {"activation", "completion"}
+    if (execution is None or execution.trusted_head_sha != row.subject
+            or (post_merge and (not execution.merged_at
+                                or (execution.provider_state or {}).get("state") != "merged"))
+            or (not post_merge and execution.terminal_at is not None)
             or not all((execution.source_artifact_sha256, execution.patch_sha256,
                         execution.provider, execution.repository, execution.branch,
-                                     execution.target_branch, execution.service_account_id, execution.pr_number,
+                        execution.target_branch, execution.service_account_id, execution.pr_number,
                         execution.base_sha, execution.verification_manifest))):
         raise PreconditionFailed("validation candidate checkpoint is unavailable")
     source = session.get(Artifact, execution.source_artifact_sha256)
@@ -128,7 +134,8 @@ def _candidate_snapshot(session: Session, row: ValidationGate) -> dict[str, str]
     expected = {
         "provider": execution.provider, "number": execution.pr_number,
         "head_ref": execution.branch, "base_ref": execution.target_branch,
-        "author_id": execution.service_account_id, "head_sha": row.subject, "state": "open",
+        "author_id": execution.service_account_id, "head_sha": row.subject,
+        "state": "merged" if post_merge else "open",
     }
     if any(observed.get(key) != value for key, value in expected.items()):
         raise PreconditionFailed("validation candidate trusted head changed")
@@ -153,7 +160,9 @@ def _fail_admission(session: Session, row: ValidationGate, error: Exception) -> 
     row.version += 1
     row.updated_at = utcnow()
     task = session.scalar(select(Task).where(Task.id == row.task_id).with_for_update())
-    if task is not None and task.state not in {"completed", "dismissed"}:
+    if task is not None and task.state != "dismissed" and (
+        task.state != "completed" or row.stage in {"activation", "completion"}
+    ):
         _record(task, row, "validation_gate_admission_failed", {"reason_code": row.last_error}, session)
 
 def claim_pending(
@@ -289,7 +298,9 @@ def recover_expired(session: Session, *, limit: int, autopilot_enabled: bool) ->
         if prior_status == "failed" and (prior_evidence or {}).get("label") != "Validation runner failure":
             continue
         task = session.scalar(select(Task).where(Task.id == row.task_id).with_for_update())
-        retry = task is not None and task.state not in {"completed", "dismissed"} and row.attempt < 3
+        retry = (task is not None and task.state != "dismissed"
+                 and (task.state != "completed" or row.stage in {"activation", "completion"})
+                 and row.attempt < 3)
         row.status = "pending" if retry else "failed"
         row.lease_id = None
         row.lease_run_id = None
