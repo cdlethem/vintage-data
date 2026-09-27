@@ -126,6 +126,19 @@ fixed; the previous attempt remains in history. If reporting fails after a PR wa
 published, the Airflow retry validates its current identity and saved artifacts,
 then resumes reporting and review without running the agent or publishing again.
 
+A nonzero launcher exit keeps its `sandbox_exit_<status>` reason code. The
+parent drains both streams while retaining only bounded stdout (2 KiB) and
+stderr (4 KiB) tails in memory. Failure detail contains only recognized,
+non-sensitive categories (for example, a confined-process exit code or a
+confinement setup error), never raw child output. Partial first lines after
+truncation, structured admissions, and unrecognized content are omitted.
+These are diagnostics for that run, not proof that the launcher caused a
+different revision failure. A model-reported `blocked` result instead has its
+own verification report. Older attempts that discarded launcher output cannot be
+diagnosed retroactively from an exit code.
+Do not treat a no-change diagnostic or a passing compilation check as a repaired
+handoff; require a scoped candidate, review, and trusted merge evidence.
+
 Check **Models & connections** first for missing mappings, then task execution
 history for admission/verification/publication errors. Provider changes apply to new
 runs; an admitted run fails if its provider endpoint changes before launch. Deployment

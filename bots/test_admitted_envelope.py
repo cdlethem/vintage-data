@@ -126,14 +126,15 @@ class SandboxLaunchDiagnosticsTests(unittest.TestCase):
             env={"PATH": os.environ.get("PATH", "/usr/bin:/bin")},
         )
         error = admitted_runner._sandbox_exit_error(
-            ControlPlaneError, process.returncode, process.stderr
+            ControlPlaneError, process.returncode, process.stdout, process.stderr
         )
 
         self.assertEqual(1, process.returncode)
+        self.assertEqual(b"", process.stdout)
         self.assertLessEqual(len(process.stderr), admitted_runner._MAX_SANDBOX_STDERR)
-        self.assertTrue(process.stderr.startswith(admitted_runner._STDERR_TRUNCATED))
+        self.assertTrue(process.stderr.startswith(admitted_runner._OUTPUT_TRUNCATED))
         self.assertEqual("sandbox_exit_1", error.code)
-        self.assertIn("RuntimeError: confined process exited 1", str(error))
+        self.assertIn("stderr: [truncated] confined process exited 1", str(error))
         self.assertNotIn(secret, str(error))
 if __name__ == '__main__':
     unittest.main()
