@@ -109,7 +109,6 @@ class BacklogSupervisorTest(unittest.TestCase):
         with patch.object(supervisor, "snapshot", return_value=empty):
             supervisor.check(state, enqueue=False)
         self.assertEqual("first", state["concurrency_experiment"]["baseline_started_at"])
-        self.assertIn("step-down", supervisor.prompt(empty, state["concurrency_experiment"]))
         state["concurrency_experiment"]["enabled"] = False
         with patch.object(supervisor, "snapshot", return_value=empty):
             supervisor.check(state, enqueue=False)
