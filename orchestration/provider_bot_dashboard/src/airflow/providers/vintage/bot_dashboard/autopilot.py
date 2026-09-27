@@ -363,7 +363,7 @@ def _actions(detail):
         actions += ["configure"]
         if (latest and latest.get("pr_number") and current_revision > latest["revision"]
                 and any(gate.get("required") and gate.get("stage") == "merge"
-                        and gate.get("status") == "failed"
+                        and gate.get("status") in {"pending", "failed"}
                         and gate.get("owner") == "validation-service"
                         and gate.get("subject") == latest.get("trusted_head_sha")
                         for gate in detail.get("validation_gates", []))):

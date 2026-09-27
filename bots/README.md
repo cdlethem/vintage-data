@@ -123,11 +123,11 @@ failed, stale, or manually dispatched run cannot pass it. A failed comparison
 is actionable evidence to repair the existing candidate, not a reason to open
 another specialist ticket or request an operator to click a gate.
 
-When an automatic merge-stage check fails on a reviewed `ready` ticket, the
-executive uses that evidence to revise the admitted plan and re-executes from
-the previous immutable patch. The old result is audited, the next candidate
-must receive a new exact-head check and independent review, and a same-head
-retry cannot pass the gate.
+When an automatic merge-stage check fails or cannot yet start on a reviewed
+`ready` ticket, a material plan correction may re-execute from the previous
+immutable patch without waiting for an operator or a check on obsolete code.
+The old result is audited, the next candidate must receive a new exact-head
+check and independent review, and a same-head retry cannot pass the gate.
 
 For dbt/Lightdash work, the executor's admitted scope must include both the semantic
 or analysis specification and its exact generated chart/dashboard outputs. It may
