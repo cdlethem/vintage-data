@@ -71,6 +71,23 @@ class AutopilotTest(unittest.TestCase):
         self.assertIn("start", ap._actions(detail))
         self.assertEqual([], self.session.scalars(select(Execution)).all())
 
+    def test_assigned_accepted_ticket_does_not_repeat_assignment(self):
+        task = self.task("accepted")
+        task.assignee_kind = "bot"
+        task.assignee_profile = "staff"
+        self.session.commit()
+        actions = ap._actions(ap._snapshot(self.session, str(task.id)))
+        self.assertNotIn("assign", actions)
+        self.assertIn("start", actions)
+
+    def test_human_owned_accepted_ticket_waits_without_executive_reassignment(self):
+        task = self.task("accepted")
+        task.assignee_kind = "human"
+        task.assignee_profile = None
+        self.session.commit()
+        self.enable()
+        self.assertEqual("idle", ap.claim(self.session)["status"])
+
     def test_human_assignment_never_offers_model_execution(self):
         task = self.task("accepted")
         task.assignee_kind = "human"

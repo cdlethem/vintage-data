@@ -260,7 +260,12 @@ def _actions(detail):
         return []  # An admitted executor/reviewer owns this decision point.
     actions = []
     if state == "proposed": actions += ["accept", "dismiss"]
-    if state == "accepted": actions += ["assign", "configure", "start", "dismiss"]
+    if state == "accepted":
+        if detail.get("assignee_kind") == "human":
+            return []  # Human-owned implementation or authorization is not an executive decision.
+        actions += ["configure", "start", "dismiss"]
+        if detail.get("assignee_kind") != "bot" or detail.get("assignee_profile") not in {"junior", "senior", "staff"}:
+            actions.insert(0, "assign")
     if state == "blocked":
         actions += ["restore", "configure", "start", "dismiss"]
         review_state = (latest or {}).get("provider_state") or {}
