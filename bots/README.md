@@ -239,6 +239,8 @@ problem and impact; what is confirmed versus unknown; why it remains open; and
 the recommended next action and its owner. Keep run IDs, paths, and validation
 commands as supporting evidence rather than the opening explanation. The queue
 shows a longer preview; open the ticket for evidence and remaining requirements.
+For an owner-only authorization, it must name the decision, recommend a bounded
+option and its conditions, and keep the existing restriction until approval.
 **All active** also includes accepted and ongoing work, while **History** retains
 completed and archived actions. Search and pagination operate on server-side
 results.
