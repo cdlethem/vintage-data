@@ -144,6 +144,11 @@ class Sync:
             return existing[0]
         if len(existing) > 1:
             raise DeploymentError("ambiguous cached provider wheels")
+        # Reuse only dependency caches, never the candidate checkout or its
+        # credentials. Otherwise each release redownloads Corepack and 300 UI
+        # packages before the verified build can begin.
+        tool_cache = self.state_dir / "tool-cache"
+        tool_cache.mkdir(parents=True, exist_ok=True, mode=0o700)
         with tempfile.TemporaryDirectory(prefix="vintage-stage-") as temporary:
             scratch = Path(temporary)
             source = scratch / "source"
@@ -157,8 +162,10 @@ class Sync:
                     if key in os.environ
                 }
                 isolated.update({
-                    "HOME": str(scratch / "home"), "XDG_CACHE_HOME": str(scratch / "cache"),
-                    "COREPACK_HOME": str(scratch / "corepack"), "UV_CACHE_DIR": str(scratch / "uv-cache"),
+                    "HOME": str(scratch / "home"), "XDG_CACHE_HOME": str(tool_cache / "xdg"),
+                    "XDG_DATA_HOME": str(tool_cache / "data"),
+                    "COREPACK_HOME": str(tool_cache / "corepack"),
+                    "UV_CACHE_DIR": str(tool_cache / "uv"),
                     "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1",
                     "AIRFLOW_HOME": str(scratch / "airflow"), "AIRFLOW__CORE__LOAD_EXAMPLES": "False",
                     "PYTHONNOUSERSITE": "1",
@@ -168,7 +175,8 @@ class Sync:
                 provider = source / "orchestration/provider_bot_dashboard"
                 if validate:
                     self.validate(source, scratch, isolated)
-                self.run(["corepack", "pnpm", "install", "--frozen-lockfile"], cwd=ui, env=isolated)
+                self.run(["corepack", "pnpm", "install", "--frozen-lockfile",
+                          "--store-dir", str(tool_cache / "pnpm-store")], cwd=ui, env=isolated)
                 if validate:
                     self.run(["corepack", "pnpm", "test"], cwd=ui, env=isolated)
                     self.run(["corepack", "pnpm", "exec", "tsc", "--noEmit"], cwd=ui, env=isolated)
