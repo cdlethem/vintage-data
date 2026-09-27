@@ -134,7 +134,7 @@ class SandboxLaunchDiagnosticsTests(unittest.TestCase):
         self.assertLessEqual(len(process.stderr), admitted_runner._MAX_SANDBOX_STDERR)
         self.assertTrue(process.stderr.startswith(admitted_runner._OUTPUT_TRUNCATED))
         self.assertEqual("sandbox_exit_1", error.code)
-        self.assertIn("RuntimeError: confined process exited 1", str(error))
+        self.assertIn("stderr: [truncated] confined process exited 1", str(error))
         self.assertNotIn(secret, str(error))
 if __name__ == '__main__':
     unittest.main()

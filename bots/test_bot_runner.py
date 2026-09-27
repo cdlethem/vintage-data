@@ -237,7 +237,8 @@ class SandboxDiagnosticTest(unittest.TestCase):
             "import sys; "
             "sys.stdout.write('x' * 10000 + '\\nGateway refused "
             "https://user:URL_SECRET@example.invalid/private?token=URL_SECRET\\n'); "
-            "sys.stderr.write('Authorization: Bearer STDERR_SECRET\\nconfined child failed\\n'); "
+            "sys.stderr.write('RuntimeError: confined process exited 7; "
+            "Authorization: Bearer STDERR_SECRET\\n'); "
             "sys.exit(7)"
         )
         result = admitted_runner._run_sandbox(
@@ -251,23 +252,48 @@ class SandboxDiagnosticTest(unittest.TestCase):
         self.assertLessEqual(len(result.stdout), admitted_runner._MAX_SANDBOX_STDOUT)
         self.assertLessEqual(len(result.stderr), admitted_runner._MAX_SANDBOX_STDERR)
         self.assertIn("stdout: [truncated]", detail)
-        self.assertIn("Gateway refused <url>", detail)
-        self.assertIn("stderr: Authorization=***", detail)
-        self.assertIn("confined child failed", detail)
+        self.assertIn("model gateway refused a request", detail)
+        self.assertIn("stderr: confined process exited 7", detail)
         for secret in ("URL_SECRET", "STDERR_SECRET", "example.invalid"):
             self.assertNotIn(secret, detail)
 
-    def test_failed_launcher_omits_admission_data_from_stdout(self):
+    def test_failed_launcher_omits_prefixed_admission_and_authenticated_uri(self):
         import admitted_runner
 
         error = admitted_runner._sandbox_exit_error(
             self.LaunchError, 12,
-            b'{"admission":{"model":"PRIVATE_VALUE"}}',
-            b"outside sandbox namespace",
+            b'Loading task: {"task":{"planned_resolution":"PRIVATE_VALUE"}}',
+            b"bwrap: namespace failed at redis://:REDIS_SECRET@cache.internal",
         )
         self.assertIn("sandbox_exit_12", str(error))
-        self.assertIn("outside sandbox namespace", str(error))
-        self.assertNotIn("PRIVATE_VALUE", str(error))
+        self.assertIn("stdout: launcher output omitted", str(error))
+        self.assertIn("stderr: bubblewrap reported a confinement error", str(error))
+        for secret in ("PRIVATE_VALUE", "REDIS_SECRET", "cache.internal"):
+            self.assertNotIn(secret, str(error))
+
+    def test_truncated_url_fragment_is_never_persisted(self):
+        import admitted_runner
+
+        error = admitted_runner._sandbox_exit_error(
+            self.LaunchError, 1,
+            admitted_runner._OUTPUT_TRUNCATED
+            + b"?token=BOUNDARY_SECRET\nRuntimeError: confined process exited 1\n",
+            b"redis://:REDIS_SECRET@cache.internal",
+        )
+        self.assertIn("stdout: [truncated] confined process exited 1", str(error))
+        for secret in ("BOUNDARY_SECRET", "REDIS_SECRET", "cache.internal"):
+            self.assertNotIn(secret, str(error))
+
+    def test_truncated_single_line_omits_all_unknown_content(self):
+        import admitted_runner
+
+        error = admitted_runner._sandbox_exit_error(
+            self.LaunchError, 1,
+            admitted_runner._OUTPUT_TRUNCATED + b"?token=BOUNDARY_SECRET",
+            b"",
+        )
+        self.assertIn("stdout: [truncated] launcher output omitted", str(error))
+        self.assertNotIn("BOUNDARY_SECRET", str(error))
 
     def test_chatty_launcher_drains_both_streams_without_unbounded_retention(self):
         import admitted_runner

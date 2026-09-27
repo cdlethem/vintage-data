@@ -93,36 +93,36 @@ def _run_sandbox(argv: list[str], *, timeout: float, env: dict[str, str]) -> sub
 
 
 def _sandbox_output_diagnostic(output: bytes) -> str:
-    """Redact bounded launcher output before it enters a durable error envelope."""
-    detail = output.decode("utf-8", errors="replace").strip()
-    marker = _OUTPUT_TRUNCATED.decode().strip()
-    was_truncated = detail.startswith(marker)
-    if was_truncated:
-        detail = detail[len(marker):].lstrip()
-    if not detail:
+    """Report only known, non-sensitive signals from untrusted launcher output."""
+    if not output:
         return ""
-    if detail.lstrip().startswith("{") or (
-        "admission" in detail.casefold() and ("{" in detail or "[" in detail)
-    ):
-        return "launcher output omitted because it contained admission data"
-    # An authenticated URL may carry a secret in its query, path, or userinfo.
-    detail = re.sub(r"(?i)\b(?:https?|wss?)://[^\s<>'\"`]+", "<url>", detail)
-    try:
-        from airflow._shared.secrets_masker import redact
-        detail = str(redact(detail, "sandbox_output", max_depth=20))
-    except Exception:  # noqa: BLE001 - never persist unredacted launch output
-        return "launcher output omitted because redaction was unavailable"
-    detail = re.sub(
-        r"(?i)\b(authorization|api[_ -]?key|access[_ -]?token|password|secret|credential)"
-        r"\b\s*(?:[:=]\s*|\s+)(?:bearer\s+)?[^\s,;]+",
-        r"\1=***",
-        detail,
-    )
-    try:
-        from .bot_runner import _failure_detail
-    except ImportError:
-        from bot_runner import _failure_detail
-    diagnostic = _failure_detail(RuntimeError(detail))
+    was_truncated = output.startswith(_OUTPUT_TRUNCATED)
+    if was_truncated:
+        # The retained tail may start in the middle of an authenticated URI or
+        # admission value. Never interpret or persist that incomplete first line.
+        output = output[len(_OUTPUT_TRUNCATED):].partition(b"\n")[2]
+        if not output:
+            return "[truncated] launcher output omitted before a complete line"
+    if b"{" in output or b"[" in output or b"admission" in output.lower():
+        return "launcher output omitted because it contained structured or admission data"
+    detail = output.decode("utf-8", errors="replace")
+    # systemd-run forwards arbitrary model output. Redacting a few credential
+    # spellings is insufficient; only fixed classifications may be persisted.
+    match = re.search(r"(?m)^RuntimeError: confined process exited ([1-9]\d{0,2})(?!\d)", detail)
+    if match and int(match.group(1)) <= 255:
+        diagnostic = f"confined process exited {match.group(1)}"
+    elif re.search(r"(?mi)^(?:bwrap|bubblewrap):", detail):
+        diagnostic = "bubblewrap reported a confinement error"
+    elif re.search(r"(?mi)^(?:systemd-run:|Failed to start transient service unit)", detail):
+        diagnostic = "systemd reported a transient sandbox service error"
+    elif re.search(r"(?mi)^Gateway refused\b", detail):
+        diagnostic = "model gateway refused a request"
+    elif re.search(r"(?m)^(?:TimeoutExpired|subprocess.TimeoutExpired):", detail):
+        diagnostic = "launcher subprocess timed out"
+    elif re.search(r"(?m)^(?:ValueError|RuntimeError|FileNotFoundError|PermissionError):", detail):
+        diagnostic = "launcher reported a Python error"
+    else:
+        diagnostic = "unrecognized launcher diagnostic omitted"
     return f"[truncated] {diagnostic}" if was_truncated else diagnostic
 
 
