@@ -29,7 +29,9 @@ jobs:
         run: |
           python3 - <<'PY'
           import importlib.util
+          import hashlib
           import json
+          import re
           import urllib.request
           from pathlib import Path
           from unittest import mock
@@ -48,6 +50,18 @@ jobs:
               opener, validator.BASELINE_URL,
               {"text/csv", "text/plain", "application/octet-stream"}, validator.MAX_CSV_BYTES,
           )
+          parsed_html = validator.TableParser()
+          parsed_html.feed(table_text)
+          parsed_html.close()
+          safe = lambda value: re.sub(r"[^ -~]", "?", value)[:120]
+          title = re.search(r"<title[^>]*>(.*?)</title>", table_text, re.IGNORECASE | re.DOTALL)
+          print(json.dumps({
+              "table_sha256": hashlib.sha256(table_text.encode()).hexdigest(),
+              "table_bytes": len(table_text.encode()), "table_rows_seen": len(parsed_html.rows),
+              "table_title": safe(title.group(1).strip()) if title else None,
+              "first_cells": [[safe(cell) for cell in row[:5]] for row in parsed_html.rows[:3]],
+              "html_prefix": safe(re.sub(r"<[^>]+>", " ", table_text)) if not parsed_html.rows else None,
+          }, sort_keys=True), flush=True)
           table = validator._table(table_text)
           baseline, total = validator._baseline(csv_text)
           if validator._coverage(table, "table") != validator._coverage(baseline, "baseline CSV"):
