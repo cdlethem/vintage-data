@@ -99,12 +99,12 @@ class QueueTest(unittest.TestCase):
         self.session.commit()
 
     def triage(self, reference, *, key="source-repair", title="Repair failing extraction", resources=None,
-               run_id=None, started=None):
+               run_id=None, started=None, evidence_kind="failure_occurrence"):
         proposal = dict(
             recommendation_key=key, title=title, category="reliability", priority=1,
             planned_resolution=title, why_now="Extraction failed", expected_benefit="Restore the feed",
             risk="Missing data", rollback="Revert", suggested_executor="senior",
-            evidence=[{"kind": "failure_occurrence", "reference": reference, "summary": "Failed source run"}],
+            evidence=[{"kind": evidence_kind, "reference": reference, "summary": "Failed source run"}],
             verification_commands=[["python", "check.py"]], allowed_path_globs=["dags/**"],
             resource_keys=resources or ["source:daily"], follow_up_bots=[], reviewer_required=True,
         )
@@ -206,6 +206,37 @@ class QueueTest(unittest.TestCase):
         self.assertEqual(2, self.session.scalar(
             select(func.count()).select_from(Revision).where(Revision.task_id == child.id)
         ))
+
+    def test_post_merge_airflow_failure_log_creates_repair_without_duplicate_revision(self):
+        merged = utcnow() - timedelta(hours=2)
+        old = merged - timedelta(minutes=10)
+        old_reference = f"component=extract__daily; run_id=old-run; occurred_at={old.isoformat()}"
+        self.source_run("old-run", old - timedelta(minutes=2), old)
+        self.triage(old_reference, started=merged - timedelta(minutes=5))
+        original = self.session.scalar(select(Task))
+        original.state = "ready"
+        original.planned_resolution = "Preserve merged implementation"
+        self.session.add(Execution(
+            execution_id="c" * 64, task_id=original.id, sequence=1, revision=1,
+            idempotency_key="merged-source", target_run_id="executor-run", profile="senior",
+            merged_at=merged, terminal_at=merged, stage="terminal", dispatch_state="terminal",
+        ))
+        self.session.commit()
+        failed = merged + timedelta(minutes=15)
+        reference = f"component=extract__daily; run_id=new-run; occurred_at={failed.isoformat()}"
+        self.source_run("new-run", failed - timedelta(minutes=2), failed)
+        result, _, _ = self.triage(reference, key="new-failure", started=failed + timedelta(minutes=5),
+                                   evidence_kind="airflow_failure_log")
+        self.assertEqual(1, result["created"])
+        child = self.session.scalar(select(Task).where(Task.related_task_id == original.id))
+        self.assertIsNotNone(child)
+        self.assertEqual("proposed", child.state)
+        self.assertEqual("Preserve merged implementation", original.planned_resolution)
+        repeat, _, _ = self.triage(reference, key="renamed-failure", started=failed + timedelta(minutes=10))
+        self.assertEqual({"created": 0, "revised": 0, "delegated": 0}, repeat)
+        self.assertEqual(1, self.session.scalar(select(func.count()).select_from(Revision).where(
+            Revision.task_id == child.id
+        )))
 
     def test_historical_failure_does_not_reopen_completed_fix(self):
         merged = utcnow() - timedelta(hours=2)

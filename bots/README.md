@@ -14,7 +14,7 @@ data_analyst --------------------------------------------------> dashboard queue
 seven freshness-qualified specialist reports -----------------> manager
 human accept/assign/start -> task_executor -> draft PR -> pr_reviewer
 provider observer -> preview/review + merged-head evidence -> trusted cadence sync
--> human completion
+-> Autopilot completes merged implementation; live validation remains separate
 ```
 
 The dashboard database is authoritative for run reports, recommendations, tasks,
@@ -242,11 +242,13 @@ These states do not all require a human decision. A ready, merged code change
 is completed even when live-source recovery remains unverified; the completion
 evidence distinguishes those claims and retains pending post-merge checks. A later
 failed source run after that merge is a new repair: failure triage creates a
-related proposal with exact failed-DAG-run evidence rather than rewriting an
-admitted or completed ticket. Failure groups rotate through ten-at-a-time
-hourly batches instead of leaving later groups permanently unreviewed. Invalid
-triage report envelopes receive one bounded schema correction attempt; if
-both attempts fail, no proposal is invented.
+related proposal only after confirming the cited post-merge failed DAG run in
+Airflow. Both `failure_occurrence` and `airflow_failure_log` evidence labels
+are accepted; neither can create a repair without the matching failed run.
+Admitted or completed implementation scope is never rewritten. Failure groups
+rotate through ten-at-a-time hourly batches instead of leaving later groups
+permanently unreviewed. Invalid triage report envelopes receive one bounded
+schema correction attempt; if both attempts fail, no proposal is invented.
 Each ticket should identify the affected dataset, source, service, or DAG; the
 observed problem and impact; what is confirmed versus unknown; and the next
 action and its owner. Keep run IDs, paths, and validation commands as supporting
