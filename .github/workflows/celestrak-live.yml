@@ -59,7 +59,12 @@ jobs:
               "table_sha256": hashlib.sha256(table_text.encode()).hexdigest(),
               "table_bytes": len(table_text.encode()), "table_rows_seen": len(parsed_html.rows),
               "table_title": safe(title.group(1).strip()) if title else None,
-              "first_cells": [[safe(cell) for cell in row[:5]] for row in parsed_html.rows[:3]],
+              "first_cells": [[safe(cell) for cell in row[:10]] for row in parsed_html.rows[:12]],
+              "header_candidates": [
+                  [index, [safe(cell) for cell in row[:10]]]
+                  for index, row in enumerate(parsed_html.rows)
+                  if any(label in " ".join(row).lower() for label in ("norad", "max prob", "closest approach"))
+              ][:6],
               "html_prefix": safe(re.sub(r"<[^>]+>", " ", table_text)) if not parsed_html.rows else None,
           }, sort_keys=True), flush=True)
           table = validator._table(table_text)
