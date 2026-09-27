@@ -258,6 +258,19 @@ recommend a bounded option and its conditions, and keep the existing restriction
 until approval. **All active** includes accepted and ongoing work, while
 **History** retains completed and archived implementation tickets. Search and
 pagination operate on server-side results.
+
+When Autopilot owns the next check, open the plan with **Next action — Autopilot**
+and say no owner action is needed now. Use **Decision needed from owner** only
+for an authorization or judgment required now; put a possible later permission
+under **If blocked later** instead. While a linked pre-merge child is active,
+the executive leaves its ready parent idle rather than rewriting its plan,
+requesting the same specialist, or attempting a premature merge. A completed
+child reopens the parent for a decision; it does not prove that validation
+passed. Specialist planning requests are bounded by the execution and trusted
+head, so a wording-only revision cannot restart a successful handoff. The
+latest executive decision replaces its prior PR status comment for that ticket;
+the ticket retains each decision in its audit history.
+
 Bot health shows actual bot definitions, paused status, latest outcomes, and drill-down
 run evidence; infrastructure DAGs are excluded.
 Empty results and failed requests have distinct states.

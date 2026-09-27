@@ -565,6 +565,43 @@ class AutopilotTest(unittest.TestCase):
         self.assertIn("merge", claim["actions"])
         self.assertNotIn("complete", claim["actions"])
 
+    def test_ready_parent_with_active_prerequisite_does_not_reconsider_merge_or_rewrite_plan(self):
+        task = self.task("ready")
+        self.execution(task)
+        child = self.task("in_progress")
+        self.execution(child, execution_id="f" * 64, stage="executing",
+                       pr_number=None, pr_url=None)
+        child.related_task_id = task.id
+        ap.service._event(self.session, task, "follow_up_ticket_linked", "system", "source_scheduling",
+                          payload={"task_id": str(child.id), "title": child.title})
+        self.session.commit()
+        self.enable()
+        self.assertEqual("idle", ap.claim(self.session)["status"])
+        child.state = "completed"
+        child.completed_at = utcnow()
+        self.session.commit()
+        claim = ap.claim(self.session)
+        self.assertEqual(str(task.id), claim["task"]["id"])
+        self.assertIn("merge", claim["actions"])
+
+    def test_executive_reuses_one_pr_comment_per_ticket(self):
+        from datetime import timedelta
+        task = self.task("ready")
+        self.execution(task)
+        self.enable()
+        provider = self.provider()
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=provider):
+            first = ap.claim(self.session); self.session.commit()
+            self.decide(first, "configure", changes=ap.PatchTask(
+                version=task.version, planned_resolution="Verify the public source before merging."))
+            with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(minutes=2)):
+                second = ap.claim(self.session); self.session.commit()
+            self.decide(second, "merge")
+        markers = [call.args[1] for call in provider.upsert_comment.call_args_list]
+        self.assertEqual(2, len(markers))
+        self.assertEqual(markers[0], markers[1])
+        self.assertIn(str(task.id), markers[0])
+
     def test_premerge_validation_remains_required_for_reviewed_change(self):
         task = self.task("ready")
         self.execution(task)
