@@ -155,6 +155,41 @@ class RevisionSeedTest(unittest.TestCase):
                           kind="executor", deadline_at=utcnow() + timedelta(minutes=10))
             self.assertEqual("in_progress", task.state)
 
+    def test_pending_auto_check_does_not_trap_a_superseded_candidate(self):
+        from airflow.providers.vintage.bot_dashboard.autopilot import _actions
+        from airflow.providers.vintage.bot_dashboard.service import get_task
+        with Session(self.engine) as session:
+            task, row = self.fixture(session)
+            task.state = "ready"
+            row.terminal_at = None
+            row.stage = "reviewed"
+            row.base_sha = "a" * 40
+            row.source_artifact_sha256 = "b" * 64
+            row.patch_sha256 = "c" * 64
+            row.provider = "github"
+            row.repository = "org/repo"
+            row.target_branch = "main"
+            row.pr_number = 37
+            row.trusted_head_sha = "d" * 40
+            gate = ValidationGate(
+                task_id=task.id, gate_key="live", stage="merge",
+                recipe="trusted_workflow_check", owner="validation-service",
+                required_capability="github-actions-readonly", subject=row.trusted_head_sha,
+                recheck_condition="Validate revised source head", required=True, status="pending",
+            )
+            session.add(gate)
+            service.patch_task(session, str(task.id), version=task.version, actor_id="executive",
+                               changes={"planned_resolution": "Repair source layout before live comparison"})
+            session.commit()
+            session.expire_all()
+            self.assertIn("revise", _actions(get_task(session, str(task.id))))
+            with patch("airflow.providers.vintage.bot_dashboard.artifacts.read_artifact"):
+                service.start_task(session, str(task.id), version=task.version, actor_id="executive",
+                                   idempotency_key="repair-pending", revision=True)
+            self.assertEqual("pending_candidate", gate.subject)
+            self.assertEqual("pending", gate.status)
+            self.assertIsNone(row.trusted_head_sha)
+
     def test_seed_retains_prior_tests_and_produces_cumulative_patch(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp); work = root / 'work'; work.mkdir()

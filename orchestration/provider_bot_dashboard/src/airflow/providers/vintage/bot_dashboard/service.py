@@ -744,23 +744,23 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
             or retry_previous.pr_url is not None
         ):
             raise PreconditionFailed("retry requires a failed terminal execution without a published PR; resolve other blockers before starting")
-    failed_ready_gate = False
+    outstanding_ready_gate = False
     if revision and task.state == "ready":
         current_head = session.scalar(
             select(Execution.trusted_head_sha).where(Execution.task_id == task.id)
             .order_by(Execution.sequence.desc(), Execution.revision.desc()).limit(1)
         )
-        failed_ready_gate = bool(current_head and session.scalar(
+        outstanding_ready_gate = bool(current_head and session.scalar(
             select(ValidationGate.id).where(
                 ValidationGate.task_id == task.id,
                 ValidationGate.required.is_(True),
                 ValidationGate.stage == "merge",
-                ValidationGate.status == "failed",
+                ValidationGate.status.in_(("pending", "failed")),
                 ValidationGate.owner == "validation-service",
                 ValidationGate.subject == current_head,
             ).limit(1)
         ))
-    permitted_states = {"in_review", "ready"} if failed_ready_gate else {"in_review"} if revision else {"accepted"}
+    permitted_states = {"in_review", "ready"} if outstanding_ready_gate else {"in_review"} if revision else {"accepted"}
     if retry_previous is None and task.state not in permitted_states:
         raise PreconditionFailed("task state cannot start this execution")
     latest_revision = session.scalar(
