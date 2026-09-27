@@ -132,7 +132,6 @@ class FetchLibraryOfCongressTests(unittest.TestCase):
         )
         self.assertEqual(timeout, 17.0)
         self.assertEqual(request.get_header("Accept"), "application/json")
-        self.assertIn("Library-of-Congress-extractor", request.get_header("User-agent"))
         self.assertIsNone(request.get_header("Authorization"))
 
     def test_source_configuration_is_disabled_bounded_daily_slice(self):

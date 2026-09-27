@@ -1,0 +1,11 @@
+[Unit]
+Description=Poll verified vintage-data main for local Airflow releases
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+Persistent=true
+Unit=vintage-data-sync.service
+
+[Install]
+WantedBy=timers.target

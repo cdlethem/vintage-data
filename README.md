@@ -231,6 +231,60 @@ needing Airflow at all. The admin login is `admin`; the password is generated at
 api-server start into
 `orchestration/airflow_home/simple_auth_manager_passwords.json.generated`.
 
+### Merged-code release
+
+The bot executor proposes a draft PR; it does not merge or deploy it. Human
+merges to protected `main` after the read-only GitHub Actions checks pass
+(`.github/workflows/verify.yml`). The local `vintage-data-sync.timer` polls
+`origin/main` every five minutes. It does nothing when the revision is unchanged;
+it refuses a dirty, non-`main`, or diverged checkout rather than overwriting
+local work. `orchestration/deploy/sync.py` verifies a detached candidate
+worktree, builds the dashboard UI and provider wheel before promotion, then
+fast-forwards this checkout, installs the wheel in `orchestration/.venv`,
+rerenders local environment files and runs `airflow db migrate`. The root-owned
+service restarts Airflow and the active bot worker only after those steps pass.
+Private machine configuration and the warehouse stay outside the candidate
+checkout; deployment never takes a bot feature branch directly.
+
+After installing the release script and rendering units on this machine, install
+the root-owned service and timer once (or rerun `orchestration/setup/04_systemd.sh`,
+which also enables the Airflow units):
+
+```bash
+orchestration/setup/render_config.sh
+sudo install -m 0644 orchestration/generated/systemd/vintage-data-sync.service \
+  orchestration/generated/systemd/vintage-data-sync.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now vintage-data-sync.timer
+sudo systemctl start vintage-data-sync.service
+systemctl status vintage-data-sync.service vintage-data-sync.timer
+```
+
+On an existing clean `main` checkout behind the remote, running
+`python3 orchestration/deploy/sync.py deploy` manually stages, verifies,
+promotes and installs the first release (exit 10 means changed); restart the
+Airflow and bot-worker units once after this manual promotion. Alternatively,
+install the timer before promotion so its service handles both deployment and
+restarts. If the checkout already matches the remote, deployment is a no-op:
+install the initial Airflow runtime/provider through the normal setup first.
+Subsequent remote commits are promoted and reloaded by the service.
+
+When the tracked unit templates change, rerender and reinstall them; the timer
+does not replace its own root-owned unit definition. Check pending releases
+without changing the checkout with `python3 orchestration/deploy/sync.py check`.
+The service journal (`journalctl -u vintage-data-sync.service`) records
+validation, promotion, restarts and rollback failures. On a failed restart the
+service rolls back the checkout/provider to the recorded previous revision and
+restarts again; a failure remains visible rather than silently reporting a
+successful release. The failed SHA is quarantined until a newer `main` commit
+arrives. An operator can invoke
+`python3 orchestration/deploy/sync.py rollback` while the latest release is
+still checked out, then restart the Airflow and bot-worker units to activate it.
+Database migrations are forward-only: a code rollback does not downgrade the
+Airflow metadata database. Review schema compatibility before merging a provider
+migration and keep a separate metadata dump for disaster recovery. Do not bypass
+the PR checks by pushing directly to `main`.
+
 ## Repository layout
 
 The top level is organized by independently evolving platform capability, not by

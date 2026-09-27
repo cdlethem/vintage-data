@@ -226,9 +226,16 @@ def _column_description(source_name: str, column_name: str) -> str:
     )
 
 
-def _schema_document(sources: list[RawSource]) -> str:
+def _schema_document(sources: list[RawSource], project_dir: pathlib.Path) -> str:
     tables = []
     models = []
+    # A hand-authored schema owns its model contract; dbt rejects duplicate
+    # declarations if the generated raw inventory also describes that model.
+    described_models = set()
+    for path in (project_dir / "models" / "base").glob("*.yml"):
+        if path.name != SOURCE_YAML.name:
+            document = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+            described_models.update(model["name"] for model in document.get("models", []))
     for source in sources:
         columns = [
             {
@@ -245,16 +252,17 @@ def _schema_document(sources: list[RawSource]) -> str:
                 "columns": columns,
             }
         )
-        models.append(
-            {
-                "name": f"base_{source.name}",
-                "description": (
-                    f"Thin governed view over the `{source.name}` raw source. "
-                    "Values and load lineage are preserved without semantic cleaning."
-                ),
-                "columns": columns,
-            }
-        )
+        if f"base_{source.name}" not in described_models:
+            models.append(
+                {
+                    "name": f"base_{source.name}",
+                    "description": (
+                        f"Thin governed view over the `{source.name}` raw source. "
+                        "Values and load lineage are preserved without semantic cleaning."
+                    ),
+                    "columns": columns,
+                }
+            )
     document = {
         "version": 2,
         "sources": [
@@ -287,7 +295,7 @@ def write_all(project_dir: pathlib.Path, sources: list[RawSource]) -> list[str]:
     base_dir.mkdir(parents=True, exist_ok=True)
     changed: list[str] = []
     schema_path = project_dir / SOURCE_YAML
-    schema_text = _schema_document(sources)
+    schema_text = _schema_document(sources, project_dir)
     if not schema_path.is_file() or schema_path.read_text(encoding="utf-8") != schema_text:
         schema_path.write_text(schema_text, encoding="utf-8")
         changed.append(str(schema_path.relative_to(project_dir)))
