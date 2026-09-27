@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read-only check of the official SOCRATES table against the production CSV export.
 
-This is a manual validation command, not a replacement for the CSV extractor.
+This is a fixed-source validation command used by the automatic PR check, not a replacement for the CSV extractor.
 A passing result requires both fixed CelesTrak views to agree on the top 100
 conjunctions. It does not establish scheduled-run reliability.
 """
