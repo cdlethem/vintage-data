@@ -95,10 +95,11 @@ class FetchEnvironmentAgencyFloodsTests(unittest.TestCase):
         records, _ = self.fetch(floods_document([]))
         self.assertEqual(records, [])
 
-    def test_zero_limit_returns_without_an_http_call(self):
+    def test_nonpositive_limit_fails_without_an_http_call(self):
         with mock.patch.object(MODULE.urllib.request, "urlopen") as urlopen:
-            records = list(MODULE.fetch_warnings(limit=0))
-        self.assertEqual(records, [])
+            for limit in (0, -1):
+                with self.subTest(limit=limit), self.assertRaisesRegex(ValueError, "limit must be positive"):
+                    list(MODULE.fetch_warnings(limit=limit))
         urlopen.assert_not_called()
 
     def test_limit_bounds_emitted_records(self):
@@ -129,6 +130,16 @@ class FetchEnvironmentAgencyFloodsTests(unittest.TestCase):
             with self.assertRaises(urllib.error.HTTPError):
                 list(MODULE.fetch_warnings())
         urlopen.assert_called_once()
+
+    def test_main_does_not_emit_successful_output_on_503(self):
+        error = urllib.error.HTTPError(MODULE.URL, 503, "Backend fetch failed", {}, None)
+        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error), mock.patch(
+            "sys.argv", ["fetch_environment_agency_floods.py"]
+        ), mock.patch("sys.stdout", new_callable=io.StringIO) as output:
+            with self.assertRaises(urllib.error.HTTPError) as raised:
+                MODULE.main()
+        self.assertEqual(raised.exception.code, 503)
+        self.assertEqual(output.getvalue(), "")
 
     def test_main_emits_ndjson(self):
         with mock.patch.object(

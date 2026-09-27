@@ -2,15 +2,11 @@
 """Environment Agency — active flood warnings for England.
 
 Warnings are explicit transient objects with severity, message, raised time, and state
-change timestamps. The keyless endpoint began returning HTTP 503 ("Backend fetch
-failed") for requests that only identified themselves via User-Agent; the underlying
-Linked Data platform content-negotiates on the Accept header and appears to reject
-requests that omit it (or an Accept-Language) as non-browser traffic before reaching
-the backend. Requesting ``application/json`` explicitly, alongside a descriptive
-User-Agent and an Accept-Language header, restores access without changing the
-endpoint, query parameters, output schema, timeout, or cadence. Empty output is a
-valid no-warning state. Data is licensed under OGL 3.0; poll every 15 minutes during
-flood events and less often otherwise.
+change timestamps. Request JSON with an identifying User-Agent and language preference;
+HTTP errors remain visible to the runner. An empty items list is a valid no-warning
+state, but a nonpositive limit must not skip the request and appear successful.
+Data is licensed under OGL 3.0; poll every 15 minutes during flood events and less
+often otherwise.
 
 Stdlib only.
 """
@@ -33,7 +29,7 @@ REQUEST_HEADERS = {
 
 def fetch_warnings(limit: int = 1000, timeout: int = 60):
     if limit <= 0:
-        return
+        raise ValueError("limit must be positive")
     request = urllib.request.Request(URL, headers=REQUEST_HEADERS)
     fetched_at = datetime.now(timezone.utc).isoformat()
     with urllib.request.urlopen(request, timeout=timeout) as response:
