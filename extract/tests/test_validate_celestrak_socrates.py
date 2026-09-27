@@ -15,30 +15,44 @@ assert SPEC.loader is not None
 SPEC.loader.exec_module(MODULE)
 
 HEADERS = [
-    "NORAD_CAT_ID_1", "NORAD_CAT_ID_2", "OBJECT_NAME_1", "OBJECT_NAME_2", "TCA",
-    "TCA_RANGE", "TCA_RELATIVE_SPEED", "MAX_PROB", "DILUTION",
+    "NORAD_CAT_ID_1", "OBJECT_NAME_1", "DSE_1", "NORAD_CAT_ID_2",
+    "OBJECT_NAME_2", "DSE_2", "TCA", "TCA_RANGE", "TCA_RELATIVE_SPEED", "MAX_PROB", "DILUTION",
 ]
 
 
 def rows():
-    # Pair 1:2 recurs at two different TCAs; it is not a duplicate conjunction.
-    return [[str(1 + index // 2), str(2 + index // 2), "OBJECT A", "OBJECT B",
-             f"2026-09-27T{index // 60:02d}:{index % 60:02d}:00Z", "1.5", "12.3",
-             "8.810E-02", ""] for index in range(MODULE.ROW_COUNT)]
+    # Object pair 58509:58625 recurs at two different TCAs.
+    return [[str(58509 + index // 2), str(58625 + index // 2),
+             "STARLINK-31020 [P]", "STARLINK-30774 [+]",
+             "2026-10-01 17:17:29.297" if index == 0 else
+             f"2026-10-01 17:{index // 60:02d}:{index % 60:02d}.297", "0.014", "3.829",
+             "1.000E+00", "0.000"] for index in range(MODULE.ROW_COUNT)]
 
 
 def csv_text(data):
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(HEADERS)
-    writer.writerows(data)
+    writer.writerows([[row[0], row[2], "5.015", row[1], row[3], "5.152", *row[4:]]
+                     for row in data])
     return output.getvalue()
 
 
 def table_text(data):
-    header = "<tr>" + "".join(f"<th>{field}</th>" for field in HEADERS) + "</tr>"
-    body = "".join("<tr>" + "".join(f"<td>{value}</td>" for value in row) + "</tr>" for row in data)
-    return f"<html><table>{header}{body}</table></html>"
+    body = []
+    for index, row in enumerate(data):
+        if index % 10 == 0:
+            body.append("<tr>" + "".join(f"<th>{field.replace('&', '&amp;')}</th>"
+                                         for field in MODULE.TABLE_FIRST_HEADER) + "</tr>")
+            body.append("<tr>" + "".join(f"<th>{field}</th>"
+                                         for field in MODULE.TABLE_SECOND_HEADER) + "</tr>")
+        first = ["GP Data", row[0], row[2], "5.015", row[4], row[5], row[6]]
+        second = ["50 km  All", row[1], row[3], "5.152", row[7], row[8]]
+        body.extend("<tr>" + "".join(f"<td>{cell}</td>" for cell in cells) + "</tr>"
+                    for cells in (first, second))
+    return ("<html><table><tr><th>Navigation</th></tr></table><table>" +
+            "".join(body) + "<tr><td>Data Fields: Data: The GP Data button links to GP data</td></tr>" +
+            "</table></html>")
 
 
 class Response:
@@ -87,9 +101,31 @@ class ValidateCelestrakSocratesTests(unittest.TestCase):
         self.assertEqual(result["result"], "passed")
         self.assertEqual(result["intended_source_baseline"], MODULE.BASELINE_URL)
         self.assertEqual(result["baseline_rows"], 101)
-        self.assertEqual(result["matched_ids"], 51)
+        self.assertEqual(result["matched_ids"], 100)
         self.assertEqual(result["matched_object_pairs"], 50)
         self.assertEqual(result["matched_tcas"], 100)
+
+    def test_csv_iso_utc_timestamp_and_display_timestamp_resolve_to_same_event(self):
+        data = rows()
+        data[0][4] = "2026-10-01T17:17:29.297Z"
+        self.csv_response = Response(MODULE.BASELINE_URL, csv_text(data), content_type="text/csv")
+        self.assertEqual(self.run_validator()["matched_tcas"], 100)
+
+    def test_missing_pairs_and_partial_second_rows_fail(self):
+        for document, message in (
+            (table_text(rows()[:99]), "expected 100 rows"),
+            (table_text(rows()).replace("<td>5.152</td>", "", 1), "malformed data row"),
+            (table_text(rows()).replace("<th>MaxProbability</th><th>DilutionThreshold(km)</th>",
+                                        "", 1), "display headers"),
+            (table_text(rows()).replace("MaxProbability", "UnexpectedHeading", 1), "display headers"),
+            (table_text(rows()).replace("Data&amp;Graphs", "UnexpectedHeading", 1),
+             "event-shaped rows before first display header"),
+        ):
+            with self.subTest(message=message, document_length=len(document)):
+                self.table_response = Response(MODULE.TABLE_URL, document)
+                with self.assertRaisesRegex(MODULE.ValidationError, message):
+                    self.run_validator()
+
 
     def test_ids_pairs_and_tcas_must_each_match(self):
         for field, index, replacement, dimension in (
@@ -110,7 +146,7 @@ class ValidateCelestrakSocratesTests(unittest.TestCase):
         self.table_response = Response(MODULE.TABLE_URL, table_text(data))
         with self.assertRaisesRegex(
             MODULE.ValidationError,
-            "IDs 51/51, object pairs 50/50, TCAs 100/100, conjunctions 98/100",
+            "IDs 100/100, object pairs 50/50, TCAs 100/100, conjunctions 98/100",
         ):
             self.run_validator()
 
@@ -142,8 +178,8 @@ class ValidateCelestrakSocratesTests(unittest.TestCase):
         self.table_response = Response(MODULE.TABLE_URL, table_text(data))
         with self.assertRaisesRegex(MODULE.ValidationError, "MAX_PROB"):
             self.run_validator()
-        self.table_response = Response(MODULE.TABLE_URL, table_text(rows()).replace("MAX_PROB", "WRONG"))
-        with self.assertRaisesRegex(MODULE.ValidationError, "required headers"):
+        self.table_response = Response(MODULE.TABLE_URL, table_text(rows()).replace("MaxProbability", "Wrong", 1))
+        with self.assertRaisesRegex(MODULE.ValidationError, "display headers"):
             self.run_validator()
         self.table_response = Response(MODULE.TABLE_URL, table_text(rows()))
         self.csv_response = Response(MODULE.BASELINE_URL, csv_text(rows()[:99]), content_type="text/csv")
@@ -151,14 +187,14 @@ class ValidateCelestrakSocratesTests(unittest.TestCase):
             self.run_validator()
 
     def test_malformed_table_row_is_not_silently_skipped(self):
-        document = table_text(rows()).replace("<td>1.5</td>", "", 1)
+        document = table_text(rows()).replace("<td>5.152</td>", "", 1)
         self.table_response = Response(MODULE.TABLE_URL, document)
         with self.assertRaisesRegex(MODULE.ValidationError, "malformed data row"):
             self.run_validator()
 
     def test_extra_csv_columns_are_not_silently_ignored(self):
         data = rows()
-        document = csv_text(data).replace("8.810E-02,\r\n", "8.810E-02,,EXTRA\r\n", 1)
+        document = csv_text(data).replace("1.000E+00,0.000\r\n", "1.000E+00,0.000,EXTRA\r\n", 1)
         self.csv_response = Response(MODULE.BASELINE_URL, document, content_type="text/csv")
         with self.assertRaisesRegex(MODULE.ValidationError, "malformed row"):
             self.run_validator()

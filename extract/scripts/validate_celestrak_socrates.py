@@ -15,6 +15,7 @@ import math
 import sys
 import urllib.request
 from html.parser import HTMLParser
+from datetime import datetime
 
 
 TABLE_URL = "https://celestrak.org/SOCRATES/table-socrates.php?NAME=,&ORDER=MAXPROB&MAX=100"
@@ -22,9 +23,14 @@ TABLE_URL = "https://celestrak.org/SOCRATES/table-socrates.php?NAME=,&ORDER=MAXP
 BASELINE_URL = "https://celestrak.org/SOCRATES/sort-maxProb.csv"
 ROW_COUNT = 100
 REQUIRED = {
-    "NORAD_CAT_ID_1", "NORAD_CAT_ID_2", "OBJECT_NAME_1", "OBJECT_NAME_2",
+    "NORAD_CAT_ID_1", "OBJECT_NAME_1", "DSE_1", "NORAD_CAT_ID_2", "OBJECT_NAME_2", "DSE_2",
     "TCA", "TCA_RANGE", "TCA_RELATIVE_SPEED", "MAX_PROB", "DILUTION",
 }
+# Official display headings, repeated every ten conjunctions (not CSV headers).
+TABLE_FIRST_HEADER = ("Data&Graphs", "NORADCatalogNumber", "Name [Ops Status]",
+                      "DaysSinceEpoch", "TCA(UTC)", "MinRange(km)", "RelativeSpeed(km/sec)")
+TABLE_SECOND_HEADER = ("MaxProbability", "DilutionThreshold(km)")
+
 USER_AGENT = "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 MAX_TABLE_BYTES = 2 * 1024 * 1024
 MAX_CSV_BYTES = 128 * 1024 * 1024
@@ -42,19 +48,23 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 class TableParser(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
-        self.rows = []
-        self.data_rows = set()
-        self._row = None
-        self._cell = None
-        self._data_row = False
+        self.rows: list[tuple[int, list[str]]] = []
+        self.unclosed_rows: set[int] = set()
+        self._table = 0
+        self._table_depth = 0
+        self._row: list[str] | None = None
+        self._cell: list[str] | None = None
 
     def handle_starttag(self, tag, attrs):
-        if tag == "tr":
+        if tag == "table":
+            if self._table_depth == 0:
+                self._table += 1
+            self._table_depth += 1
+        elif tag == "tr" and self._table_depth == 1:
+            if self._row is not None:
+                self.unclosed_rows.add(self._table)
             self._row = []
-            self._data_row = False
         elif tag in ("th", "td") and self._row is not None:
-            if tag == "td":
-                self._data_row = True
             self._cell = []
 
     def handle_data(self, data):
@@ -66,11 +76,15 @@ class TableParser(HTMLParser):
             self._row.append("".join(self._cell).strip())
             self._cell = None
         elif tag == "tr" and self._row is not None:
-            if self._row:
-                if self._data_row:
-                    self.data_rows.add(len(self.rows))
-                self.rows.append(self._row)
+            self.rows.append((self._table, self._row))
             self._row = None
+            self._cell = None
+        elif tag == "table" and self._table_depth:
+            if self._table_depth == 1 and self._row is not None:
+                self.unclosed_rows.add(self._table)
+                self._row = None
+                self._cell = None
+            self._table_depth -= 1
 
 
 def _download(opener, url: str, media_types: set[str], max_bytes: int) -> str:
@@ -115,9 +129,16 @@ def _identity(row: dict[str, str], label: str) -> tuple[str, str, str]:
     first, second, tca = (row[field].strip() for field in ("NORAD_CAT_ID_1", "NORAD_CAT_ID_2", "TCA"))
     if not first.isascii() or not first.isdecimal() or not second.isascii() or not second.isdecimal() or not tca:
         raise ValidationError(f"{label}: invalid NORAD ID or TCA")
+    try:
+        instant = datetime.fromisoformat(tca.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValidationError(f"{label}: invalid TCA") from exc
+    if instant.tzinfo is not None and instant.utcoffset().total_seconds() != 0:
+        raise ValidationError(f"{label}: non-UTC TCA")
+    tca = instant.replace(tzinfo=None).isoformat(sep=" ")
     if not row["OBJECT_NAME_1"].strip() or not row["OBJECT_NAME_2"].strip():
         raise ValidationError(f"{label}: missing object name")
-    for field in ("TCA_RANGE", "TCA_RELATIVE_SPEED", "MAX_PROB", "DILUTION"):
+    for field in ("DSE_1", "DSE_2", "TCA_RANGE", "TCA_RELATIVE_SPEED", "MAX_PROB", "DILUTION"):
         value = row[field].strip()
         if field == "DILUTION" and not value:
             continue
@@ -133,19 +154,53 @@ def _identity(row: dict[str, str], label: str) -> tuple[str, str, str]:
 def _table(text: str) -> list[tuple[str, str, str]]:
     parser = TableParser()
     parser.feed(text)
-    header_index = next((i for i, cells in enumerate(parser.rows) if REQUIRED.issubset(cells)), None)
+    parser.close()
+    header_index = next((i for i, (_, cells) in enumerate(parser.rows)
+                         if tuple(cells) == TABLE_FIRST_HEADER), None)
     if header_index is None:
-        raise ValidationError("table: required headers not found")
-    headers = parser.rows[header_index]
-    _headers(headers, "table")
+        raise ValidationError("table: required display headers not found")
+    table_number = parser.rows[header_index][0]
+    if any(number == table_number and len(cells) in (6, 7)
+           for number, cells in parser.rows[:header_index]):
+        raise ValidationError("table: event-shaped rows before first display header")
+    if any(number != table_number and tuple(cells) == TABLE_FIRST_HEADER
+           for number, cells in parser.rows):
+        raise ValidationError("table: ambiguous display sections")
+    if table_number in parser.unclosed_rows or parser._table_depth:
+        raise ValidationError("table: unfinished display table row")
+    rows = []
+    for number, cells in parser.rows[header_index:]:
+        if number != table_number:
+            break
+        rows.append(cells)
+    # The official display has a final prose legend inside the result table.
+    if rows and len(rows[-1]) == 1 and rows[-1][0].startswith("Data Fields:"):
+        rows.pop()
     records = []
-    for index in sorted(parser.data_rows):
-        if index <= header_index:
-            continue
-        cells = parser.rows[index]
-        if len(cells) != len(headers):
-            raise ValidationError("table: malformed data row")
-        records.append(_identity(dict(zip(headers, cells)), "table"))
+    index = 0
+    while index < len(rows):
+        if tuple(rows[index]) != TABLE_FIRST_HEADER or index + 1 >= len(rows) or tuple(rows[index + 1]) != TABLE_SECOND_HEADER:
+            raise ValidationError("table: malformed display headers")
+        index += 2
+        pairs_in_section = 0
+        while index < len(rows) and tuple(rows[index]) != TABLE_FIRST_HEADER:
+            if index + 1 >= len(rows) or len(rows[index]) != 7 or len(rows[index + 1]) != 6:
+                raise ValidationError("table: malformed data row or incomplete conjunction pair")
+            first, second = rows[index:index + 2]
+            if not first[0] or not second[0]:
+                raise ValidationError("table: malformed data row")
+            row = {
+                "NORAD_CAT_ID_1": first[1], "NORAD_CAT_ID_2": second[1],
+                "DSE_1": first[3], "DSE_2": second[3],
+                "OBJECT_NAME_1": first[2], "OBJECT_NAME_2": second[2],
+                "TCA": first[4], "TCA_RANGE": first[5], "TCA_RELATIVE_SPEED": first[6],
+                "MAX_PROB": second[4], "DILUTION": second[5],
+            }
+            records.append(_identity(row, "table"))
+            pairs_in_section += 1
+            index += 2
+        if not pairs_in_section:
+            raise ValidationError("table: empty display section")
     if len(records) != ROW_COUNT:
         raise ValidationError(f"table: expected {ROW_COUNT} rows, received {len(records)}")
     return records
