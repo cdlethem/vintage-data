@@ -43,11 +43,13 @@ class Response(io.BytesIO):
         self.close()
 
 
-def http_error(status, retry_after=None):
+def http_error(status, retry_after=None, *, content_type=None, body=b""):
     headers = Message()
     if retry_after is not None:
         headers["Retry-After"] = retry_after
-    return urllib.error.HTTPError("http://invalid.test/private-query", status, "failure", headers, io.BytesIO())
+    if content_type is not None:
+        headers["Content-Type"] = content_type
+    return urllib.error.HTTPError("http://invalid.test/private-query", status, "failure", headers, io.BytesIO(body))
 
 
 def fetch(responses, *, sleep=None):
@@ -94,10 +96,12 @@ def urlopen(request, timeout):
         headers = Message()
         if event.get("retry_after") is not None:
             headers["Retry-After"] = event["retry_after"]
+        if event.get("content_type") is not None:
+            headers["Content-Type"] = event["content_type"]
         raise urllib.error.HTTPError(
             "https://SYNTHETIC_SENSITIVE_URL.invalid/private-query",
             event["status"], "SYNTHETIC_SENSITIVE_REASON", headers,
-            io.BytesIO(b"SYNTHETIC_RAW_BODY"),
+            io.BytesIO(event.get("body", "SYNTHETIC_RAW_BODY").encode("utf-8")),
         )
     raise urllib.error.URLError(
         "SYNTHETIC_SENSITIVE_REASON https://SYNTHETIC_SENSITIVE_URL.invalid"
@@ -156,6 +160,17 @@ def run_cli(events):
 
 
 class FetchArxivNewTests(TestCase):
+    def test_help_exits_without_fetching(self):
+        output = io.StringIO()
+        with mock.patch.object(MODULE, "fetch_new_papers", side_effect=AssertionError("unexpected request")) as fetcher:
+            with mock.patch("sys.stdout", output):
+                with self.assertRaises(SystemExit) as raised:
+                    MODULE.main(["--help"])
+
+        self.assertEqual(raised.exception.code, 0)
+        self.assertIn("category", output.getvalue())
+        fetcher.assert_not_called()
+
     def test_immediate_success_preserves_response_schema_and_request_contract(self):
         records, urlopen, sleep = fetch([Response(ATOM)])
 
@@ -277,6 +292,28 @@ class FetchArxivNewTests(TestCase):
         sleep.assert_not_called()
         self.assertTrue(error.fp.closed)
 
+    def test_406_rejection_summarizes_response_without_exposing_contents(self):
+        body = b"<!doctype html> SYNTHETIC_RAW_BODY " + b"x" * 1000
+        error = http_error(406, content_type="text/html; charset=utf-8", body=body)
+        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error) as urlopen:
+            with self.assertRaises(urllib.error.HTTPError) as raised:
+                list(MODULE.fetch_new_papers(sleep=mock.Mock(), clock=lambda: NOW))
+
+        urlopen.assert_called_once()
+        self.assertTrue(error.fp.closed)
+        self.assertEqual(raised.exception.arxiv_response_summary,
+                         "content_type=text/html, body=html, body_prefix_bytes=512, body_truncated=True")
+        self.assertNotIn("SYNTHETIC_RAW_BODY", raised.exception.arxiv_response_summary)
+
+    def test_406_rejection_missing_headers_and_body_are_explicit(self):
+        error = http_error(406)
+        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error):
+            with self.assertRaises(urllib.error.HTTPError) as raised:
+                list(MODULE.fetch_new_papers(sleep=mock.Mock(), clock=lambda: NOW))
+
+        self.assertEqual(raised.exception.arxiv_response_summary,
+                         "content_type=missing, body=empty, body_prefix_bytes=0, body_truncated=False")
+
     def test_transport_failure_is_immediate(self):
         with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=urllib.error.URLError("secret endpoint")) as urlopen:
             with self.assertRaises(urllib.error.URLError):
@@ -340,6 +377,18 @@ class FetchArxivNewTests(TestCase):
             [{"kind": "http", "status": 406}],
             "HTTP 406 after 1 attempt(s)",
         )
+
+    def test_cli_406_reports_bounded_response_shape_not_untrusted_details(self):
+        result = run_cli([{"kind": "http", "status": 406,
+                          "content_type": "text/html; secret=SYNTHETIC_SENSITIVE_REASON",
+                          "body": "<html> SYNTHETIC_RAW_BODY " + "x" * 1000}])
+        self.assert_safe_cli_failure_result(result, "HTTP 406 after 1 attempt(s)")
+        self.assertIn("content_type=text/html, body=html, body_prefix_bytes=512, body_truncated=True",
+                      result.stderr)
+
+    def test_cli_406_without_response_metadata_reports_unknown_shape(self):
+        result = run_cli([{"kind": "http", "status": 406}])
+        self.assert_safe_cli_failure_result(result, "content_type=missing, body=other")
 
     def test_cli_transport_failure_is_safe(self):
         self.assert_safe_cli_failure(
