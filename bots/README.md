@@ -102,6 +102,12 @@ starts. Preserving that patch without additional edits is changed work, not
 `no_change`; the trusted parent still requires a nonempty cumulative Git diff
 and fresh checks before publishing the new candidate.
 
+The parent also interprets a sandbox result of no *additional* edits against
+its staged cumulative Git diff for an admitted seed. It records `ok` only for
+a real nonempty diff; an unseeded no-change report with edits and an empty
+successful patch both fail closed. This keeps installed confined runtimes
+compatible without trusting the model's status over repository evidence.
+
 Trusted server code recreates the exact base, applies the artifact, makes a deterministic
 commit, pushes `bot-dashboard/<task-id>/<sequence>-r<revision>`, and creates or recovers a
 draft PR. It rereads and persists provider, repository, service-account, base, branch,

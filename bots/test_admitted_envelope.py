@@ -6,6 +6,7 @@ import os
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import Mock, patch
 
@@ -101,6 +102,32 @@ class AdmittedEnvelopeTests(unittest.TestCase):
                 self.assertEqual(normalized['attempts'][0]['outcome'], 'succeeded')
                 self.assertFalse(normalized['attempts'][0]['fallback_used'])
                 self.assertIsNone(normalized['usage_total']['cost_micro_usd'])
+
+    def test_trusted_cumulative_seed_diff_is_changed_even_if_sandbox_made_no_extra_edits(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            work = root / 'work'
+            work.mkdir()
+            (work / 'validator.py').write_text('check = False\n')
+            metadata = admitted_runner._initialize_baseline(root, work)
+            (work / 'validator.py').write_text('check = True\n')
+            admitted_runner._git(work, metadata, 'add', '-A')
+            current_diff = admitted_runner._git(
+                work, metadata, 'diff', '--cached', '--binary', 'HEAD', '--', binary=True,
+            )
+            self.assertTrue(current_diff)
+            report = {'status': 'no_change'}
+            admission = {'seed_patch_sha256': hashlib.sha256(current_diff).hexdigest()}
+            admitted_runner._cumulative_executor_status(report, admission, current_diff, ControlPlaneError)
+            self.assertEqual('ok', report['status'])
+            with self.assertRaisesRegex(ControlPlaneError, 'no_change_contains_diff'):
+                admitted_runner._cumulative_executor_status(
+                    {'status': 'no_change'}, {}, current_diff, ControlPlaneError,
+                )
+            with self.assertRaisesRegex(ControlPlaneError, 'successful_change_is_empty'):
+                admitted_runner._cumulative_executor_status(
+                    {'status': 'ok'}, admission, b'', ControlPlaneError,
+                )
 
     def test_attempt_counters_come_from_normalized_usage(self):
         measured = usage.normalize({'prompt_tokens': 123, 'completion_tokens': 45, 'total_tokens': 168}, format='openai')
