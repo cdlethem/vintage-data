@@ -281,11 +281,13 @@ def _remaining_actions(detail, latest, actions, external):
         if payload.get("retry_on_change") and payload.get("result") == "deferred":
             return []
         actions = [action for action in actions if action not in payload.get("suppressed_actions", [])]
-    # A guarded merge does not justify repeating the merge until maintenance
-    # observes it, but provider errors remain retryable after their cooldown.
+    # Do not repeat a submitted merge until the provider observes it. A refreshed
+    # branch is not merged yet and must be retried once its checks finish.
     unchanged = (payload.get("result_version") == detail["version"]
                  and payload.get("result_context_sha256") == _digest(detail))
-    if unchanged and payload.get("result") == "applied" and payload.get("action") == "merge":
+    if (unchanged and payload.get("result") == "applied" and payload.get("action") == "merge"
+            and not (detail["assignee_kind"] == "bot" and detail["executions"]
+                     and (detail["executions"][-1].get("provider_state") or {}).get("refresh_pending_merge"))):
         actions = [action for action in actions if action not in {"merge", "advance"}]
     return actions
 
@@ -622,6 +624,44 @@ def _trusted_change(provider, execution, task):
     return value
 
 
+def _refresh_behind_bot_pr(session, task, execution, provider):
+    if task.assignee_kind != "bot" or execution.provider != "github" or not execution.base_sha:
+        return False
+    current_base = provider.read_base_identity()
+    if current_base in {execution.base_sha, (execution.provider_state or {}).get("refreshed_base_sha")}:
+        return False
+    old_head = execution.trusted_head_sha
+    updated = provider.refresh_change(execution.pr_number, old_head)
+    expected = {
+        "provider": execution.provider, "number": execution.pr_number,
+        "head_ref": execution.branch, "base_ref": execution.target_branch,
+        "author_id": execution.service_account_id, "state": "open",
+    }
+    changed_paths = (execution.verification_manifest or {}).get("changed_paths")
+    if (any(updated.get(key) != value for key, value in expected.items())
+            or not isinstance(changed_paths, list)
+            or not provider.refreshed_change_preserves_paths(
+                old_head, updated.get("head_sha"), changed_paths,
+            )):
+        raise service.PreconditionFailed("Updated bot PR changed the published candidate files")
+    execution.trusted_head_sha = updated["head_sha"]
+    execution.provider_state = {
+        **updated, "refreshed_base_sha": current_base, "refresh_pending_merge": True,
+        "review_verdict": execution.review_verdict,
+    }
+    execution.provider_fingerprint = hashlib.sha256(
+        json.dumps(updated, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    execution.synced_at = utcnow()
+    service._event(
+        session, task, "bot_pr_base_refreshed", "provider", str(execution.pr_number),
+        payload={"pr_number": execution.pr_number, "old_head": old_head,
+                 "new_head": updated["head_sha"], "base_sha": current_base},
+    )
+    session.flush()
+    return True
+
+
 _REPAIR_EXCLUDED_WORDS = {
     "credential", "secret", "security", "permission", "production", "deploy",
     "migration", "schema migration", "drop table", "delete data", "destructive",
@@ -770,7 +810,15 @@ def _perform(session, task, decision, lease):
                 if observation["draft"]:
                     raise service.PreconditionFailed("PR must be ready for review before merging")
                 if observation["state"] != "merged":
+                    if _refresh_behind_bot_pr(session, task, execution, provider):
+                        # GitHub reruns required checks on this same refreshed PR.
+                        return
                     provider.merge_change(execution.pr_number, execution.trusted_head_sha)
+                    if (execution.provider_state or {}).get("refresh_pending_merge"):
+                        execution.provider_state = {
+                            key: value for key, value in execution.provider_state.items()
+                            if key != "refresh_pending_merge"
+                        }
                 # Maintenance observes the merge and schedules existing follow-ups.
                 execution.synced_at = None
                 return

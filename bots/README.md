@@ -125,6 +125,12 @@ outcomes are still recorded as evidence, but do not block bot implementation del
 or imply recovery of production schedules. Human-owned work retains its own evidence
 and validation requirements.
 
+When protected main advances, Autopilot updates a behind GitHub bot PR in place,
+checks that the provider's old-to-new head comparison leaves every published
+candidate path unchanged, and records the new trusted head. GitHub reruns its
+required checks on that head before Autopilot retries the same PR's merge;
+the refresh does not create another ticket or PR.
+
 The protected **CelesTrak live reconciliation** pull-request check reads only the
 fixed official table and CSV endpoints. It checks a changed parser's event coverage
 against the trusted validator on protected main. The workflow compares normalized

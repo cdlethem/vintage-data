@@ -613,6 +613,41 @@ class AutopilotTest(unittest.TestCase):
         self.assertIn("changed", result["error"])
         self.assertEqual("ready", task.state)
 
+    def test_behind_bot_pr_refreshes_same_head_without_merging_until_checks_rerun(self):
+        task = self.task("ready")
+        task.assignee_kind = "bot"
+        task.assignee_profile = "senior"
+        row = self.execution(task, base_sha="b" * 40,
+                             verification_manifest={"changed_paths": ["src/candidate.py"]})
+        self.enable()
+        claim = ap.claim(self.session); self.session.commit()
+        provider = self.provider()
+        provider.read_base_identity.return_value = "c" * 40
+        provider.refresh_change.return_value = provider.read_change.return_value | {"head_sha": "d" * 40}
+        provider.refreshed_change_preserves_paths.return_value = True
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=provider):
+            self.assertEqual("applied", self.decide(claim, "merge")["status"])
+        provider.refresh_change.assert_called_once_with(17, "a" * 40)
+        provider.refreshed_change_preserves_paths.assert_called_once_with(
+            "a" * 40, "d" * 40, ["src/candidate.py"],
+        )
+        provider.merge_change.assert_not_called()
+        self.assertEqual("d" * 40, row.trusted_head_sha)
+        self.assertEqual("c" * 40, row.provider_state["refreshed_base_sha"])
+        self.assertTrue(self.session.scalars(select(Event).where(
+            Event.task_id == task.id, Event.event_type == "bot_pr_base_refreshed",
+        )).all())
+
+        provider.read_change.return_value = provider.refresh_change.return_value
+        from datetime import timedelta
+        with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(minutes=2)):
+            next_claim = ap.claim(self.session); self.session.commit()
+        self.assertIn("lease_id", next_claim, next_claim)
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=provider):
+            self.assertEqual("applied", self.decide(next_claim, "merge")["status"])
+        provider.merge_change.assert_called_once_with(17, "d" * 40)
+        provider.refresh_change.assert_called_once()
+
     def test_merge_is_sha_pinned_and_does_not_skip_completion(self):
         task = self.task("ready"); self.execution(task)
         self.enable(); claim = ap.claim(self.session); self.session.commit()
