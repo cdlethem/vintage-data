@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from airflow.models.variable import Variable
 from airflow.providers.vintage.bot_dashboard import autopilot as ap
 from airflow.providers.vintage.bot_dashboard.models import Event, Execution, Policy, Revision, Task, ValidationGate, metadata, utcnow
+from airflow.providers.vintage.bot_dashboard.git_provider import GitProviderError
 from airflow.providers.vintage.bot_dashboard.service import Conflict, PreconditionFailed, create_manual_task, patch_task
 
 
@@ -642,10 +643,19 @@ class AutopilotTest(unittest.TestCase):
         from datetime import timedelta
         with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(minutes=2)):
             next_claim = ap.claim(self.session); self.session.commit()
+        provider.merge_change.side_effect = GitProviderError("required checks pending")
         self.assertIn("lease_id", next_claim, next_claim)
         with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=provider):
-            self.assertEqual("applied", self.decide(next_claim, "merge")["status"])
-        provider.merge_change.assert_called_once_with(17, "d" * 40)
+            self.assertEqual("deferred", self.decide(next_claim, "merge")["status"])
+        provider.merge_change.side_effect = None
+        with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(minutes=2)):
+            checked_claim = ap.claim(self.session); self.session.commit()
+        self.assertIn("merge", checked_claim["actions"])
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=provider):
+            self.assertEqual("applied", self.decide(checked_claim, "merge")["status"])
+        self.assertEqual([(17, "d" * 40)] * 2, [
+            call.args for call in provider.merge_change.call_args_list
+        ])
         provider.refresh_change.assert_called_once()
 
     def test_merge_is_sha_pinned_and_does_not_skip_completion(self):

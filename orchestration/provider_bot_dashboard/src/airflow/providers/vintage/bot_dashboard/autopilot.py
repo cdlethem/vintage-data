@@ -896,7 +896,14 @@ def decide(session: Session, decision: Decision) -> dict:
         # Admission capacity and provider transport recover independently of
         # this ticket; other rejected preconditions need new material evidence.
         retry_on_change = isinstance(exc, service.DomainError) and str(exc) != "execution admission queue is full"
-    delay = 60 if result == "deferred" else 1
+    pending_execution = (
+        _latest_execution(session, task)
+        if result == "deferred" and decision.action == "merge" and task.assignee_kind == "bot"
+        else None
+    )
+    refresh_waiting = bool(pending_execution and
+                           (pending_execution.provider_state or {}).get("refresh_pending_merge"))
+    delay = 1 if result == "applied" or refresh_waiting else 60
     now = utcnow()
     session.expire(task, ["events", "revisions"])
     detail = _snapshot(session, str(task.id))
