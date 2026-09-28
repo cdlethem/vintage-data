@@ -813,15 +813,10 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
          and previous.review_verdict == "approved")
         or (retry_previous and retry_previous.terminal_reason_code == "no_change_contains_diff")
     ):
-        # A reviewed seed is historical code. Recheck its exact published
-        # identity and pin a new protected base before applying its patch;
-        # restoring the old source would produce another strictly-behind PR.
-        source = session.scalar(select(Execution).where(
-            Execution.task_id == task.id,
-            Execution.execution_id == seed["execution_id"],
-        ).limit(1).with_for_update())
-        if source is None or source.review_verdict != "approved":
-            raise PreconditionFailed("base refresh requires the approved immutable candidate")
+        # An in-place revision reuses the execution row and clears its former
+        # review verdict and execution ID. The immutable seed retains the old
+        # candidate identity; the provider rechecks its exact head, repository,
+        # branch, and service account before pinning a fresh protected base.
         from .conflict_recovery import _observe_seed_candidate
         observation, current_base = _observe_seed_candidate(session, task, seed, require_conflict=False)
         if current_base != seed.get("repair_base_sha", seed["base_sha"]):

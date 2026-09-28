@@ -137,6 +137,9 @@ The trusted admission first confirms the old PR still has its original head
 and repository identity, pins the current protected base, and applies the old
 patch to a fresh source snapshot; it does not republish on the obsolete base.
 If the head changed or the patch cannot apply, publication fails closed.
+Retries use the audited immutable seed, not a prior execution row's current
+review fields: an in-place revision may have cleared those fields. Current
+provider identity and a new independent review still guard the new head.
 The old result is audited, the next candidate must receive a new exact-head
 check and independent review, and a same-head retry cannot pass the gate.
 
