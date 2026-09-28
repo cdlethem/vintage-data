@@ -81,6 +81,50 @@ class GitProviderTest(unittest.TestCase):
         self.assertFalse(any("merge" in path.lower() for _, path, _ in provider.calls))
 
 
+    def test_superseded_pr_closes_only_matching_open_head(self):
+        provider = FakeGitHub(self.config)
+        old_head = "a" * 40
+        provider.read_change = lambda _number: {"state": "open", "head_sha": old_head}
+        with self.assertRaisesRegex(GitProviderError, "identity changed"):
+            provider.close_change(7, "b" * 40)
+        self.assertFalse(any(method == "PATCH" and path.endswith("/pulls/7")
+                             for method, path, _ in provider.calls))
+        provider.close_change(7, old_head)
+        self.assertIn(
+            ("PATCH", "repos/org/repo/pulls/7", {"state": "closed"}),
+            provider.calls,
+        )
+
+    def test_branch_update_pins_old_head_and_rejects_candidate_changes(self):
+        provider = FakeGitHub(self.config)
+        old, new = "a" * 40, "b" * 40
+        provider.read_change = lambda _number: {"head_sha": new}
+        self.assertEqual(new, provider.refresh_change(7, old)["head_sha"])
+        self.assertIn(
+            ("PUT", "repos/org/repo/pulls/7/update-branch", {"expected_head_sha": old}),
+            provider.calls,
+        )
+        comparison = {"status": "ahead", "behind_by": 0,
+                      "files": [{"filename": "src/unrelated.py"}]}
+        original = provider._request
+        def request(method, path, *, payload=None):
+            if "/compare/" in path:
+                return comparison
+            return original(method, path, payload=payload)
+        provider._request = request
+        self.assertTrue(provider.refreshed_change_preserves_paths(
+            old, new, ["src/candidate.py"],
+        ))
+        comparison["files"] = [{"filename": "src/candidate.py"}]
+        self.assertFalse(provider.refreshed_change_preserves_paths(
+            old, new, ["src/candidate.py"],
+        ))
+        comparison["files"] = []
+        comparison["behind_by"] = 1
+        self.assertFalse(provider.refreshed_change_preserves_paths(
+            old, new, ["src/candidate.py"],
+        ))
+
 class AttestationTest(unittest.TestCase):
     HEAD = "a" * 40
     MERGE = "b" * 40

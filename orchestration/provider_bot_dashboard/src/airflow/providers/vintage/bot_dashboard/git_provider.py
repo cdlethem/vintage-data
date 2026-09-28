@@ -6,6 +6,7 @@ import ipaddress
 import json
 import re
 import socket
+import time
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import quote, urlsplit
@@ -149,6 +150,11 @@ class GitProvider:
     def find_change(self, branch: str) -> dict | None: raise NotImplementedError
     def mark_ready(self, number: int, head_sha: str) -> None: raise NotImplementedError
     def merge_change(self, number: int, head_sha: str) -> None: raise NotImplementedError
+    def close_change(self, number: int, head_sha: str) -> None: raise NotImplementedError
+    def refresh_change(self, number: int, head_sha: str) -> dict:
+        raise GitProviderError("Provider cannot update a behind bot PR")
+    def refreshed_change_preserves_paths(self, old_sha: str, new_sha: str, changed_paths: list[str]) -> bool:
+        return False
 
 
 class GitHubProvider(GitProvider):
@@ -408,6 +414,37 @@ class GitHubProvider(GitProvider):
         result = self._request("PUT", f"repos/{self.config.project}/pulls/{number}/merge", payload={"sha": head_sha, "merge_method": "squash"})
         if result.get("merged") is not True:
             raise GitProviderError("Provider did not merge the reviewed head")
+    def close_change(self, number, head_sha):
+        current = self.read_change(number)
+        if current["state"] == "closed":
+            return
+        if current["state"] != "open" or current["head_sha"] != head_sha:
+            raise GitProviderError("Superseded PR identity changed before retirement")
+        self._request("PATCH", f"repos/{self.config.project}/pulls/{number}", payload={"state": "closed"})
+    def refresh_change(self, number, head_sha):
+        self._request("PUT", f"repos/{self.config.project}/pulls/{number}/update-branch",
+                      payload={"expected_head_sha": head_sha})
+        for _ in range(5):
+            observed = self.read_change(number)
+            if observed["head_sha"] != head_sha:
+                return observed
+            time.sleep(1)
+        raise GitProviderTransientError("Provider branch update has not yet appeared")
+
+    def refreshed_change_preserves_paths(self, old_sha, new_sha, changed_paths):
+        if not changed_paths or not all(re.fullmatch(r"[0-9a-f]{40}", sha) for sha in (old_sha, new_sha)):
+            return False
+        comparison = self._request(
+            "GET", f"repos/{self.config.project}/compare/{old_sha}...{new_sha}",
+        )
+        files = comparison.get("files")
+        return (
+            comparison.get("status") == "ahead"
+            and comparison.get("behind_by") == 0
+            and isinstance(files, list) and len(files) < 300
+            and all(isinstance(item.get("filename"), str) for item in files)
+            and not set(changed_paths).intersection(item["filename"] for item in files)
+        )
 
 class GitLabProvider(GitProvider):
     def _headers(self): return {"PRIVATE-TOKEN": self.config.token}
@@ -451,6 +488,13 @@ class GitLabProvider(GitProvider):
         result = self._request("PUT", f"projects/{self.project_path}/merge_requests/{number}/merge", payload={"sha": head_sha, "squash": True})
         if result.get("state") != "merged":
             raise GitProviderError("Provider did not merge the reviewed head")
+    def close_change(self, number, head_sha):
+        current = self.read_change(number)
+        if current["state"] == "closed":
+            return
+        if current["state"] != "open" or current["head_sha"] != head_sha:
+            raise GitProviderError("Superseded MR identity changed before retirement")
+        self._request("PUT", f"projects/{self.project_path}/merge_requests/{number}", payload={"state_event": "close"})
 
 def normalize_github(value: dict) -> dict:
     mergeable = value.get("mergeable")

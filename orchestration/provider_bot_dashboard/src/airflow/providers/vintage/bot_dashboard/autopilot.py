@@ -281,11 +281,13 @@ def _remaining_actions(detail, latest, actions, external):
         if payload.get("retry_on_change") and payload.get("result") == "deferred":
             return []
         actions = [action for action in actions if action not in payload.get("suppressed_actions", [])]
-    # A guarded merge does not justify repeating the merge until maintenance
-    # observes it, but provider errors remain retryable after their cooldown.
+    # Do not repeat a submitted merge until the provider observes it. A refreshed
+    # branch is not merged yet and must be retried once its checks finish.
     unchanged = (payload.get("result_version") == detail["version"]
                  and payload.get("result_context_sha256") == _digest(detail))
-    if unchanged and payload.get("result") == "applied" and payload.get("action") == "merge":
+    if (unchanged and payload.get("result") == "applied" and payload.get("action") == "merge"
+            and not (detail["assignee_kind"] == "bot" and detail["executions"]
+                     and (detail["executions"][-1].get("provider_state") or {}).get("refresh_pending_merge"))):
         actions = [action for action in actions if action not in {"merge", "advance"}]
     return actions
 
@@ -350,7 +352,7 @@ def _actions(detail):
         if not latest or latest["terminal_at"] or current_revision > latest["revision"]:
             actions += ["revise"]
     if state in {"in_review", "ready"} and latest and latest["pr_number"]:
-        if latest["review_verdict"] == "approved" or not latest["reviewer_required"]:
+        if detail.get("assignee_kind") == "bot" or latest["review_verdict"] == "approved" or not latest["reviewer_required"]:
             if state == "in_review":
                 actions += ["ready", "advance"]
             elif latest.get("merged_at") and (latest.get("provider_state") or {}).get("state") == "merged":
@@ -410,12 +412,14 @@ def _actions(detail):
     elif state == "accepted" and "start" in actions:
         actions += ["advance"]
     pending_stages = {gate["stage"] for gate in detail.get("validation_gates", [])
-                      if gate["required"] and gate["status"] != "passed"}
+                      if detail.get("assignee_kind") != "bot" and gate["required"] and gate["status"] != "passed"}
     if "publication" in pending_stages:
         actions = [action for action in actions if action not in {"ready", "merge", "complete", "advance"}]
     elif "merge" in pending_stages:
         actions = [action for action in actions if action not in {"merge", "complete", "advance"}]
-    if (state == "ready" and latest and latest.get("pr_number")
+    if detail.get("assignee_kind") == "bot" and latest and latest.get("pr_number") and state in {"in_review", "ready"}:
+        actions = [action for action in actions if action in {"ready", "merge", "complete", "advance", "repair_conflict"}]
+    if (detail.get("assignee_kind") != "bot" and state == "ready" and latest and latest.get("pr_number")
             and not latest.get("merged_at") and "repair_conflict" not in actions):
         unresolved = [child for child in detail.get("linked_follow_ups", [])
                       if child["state"] not in {"completed", "dismissed", "missing"}]
@@ -605,7 +609,7 @@ def _latest_execution(session, task):
     return session.scalar(select(Execution).where(Execution.task_id == task.id).order_by(Execution.sequence.desc()).limit(1).with_for_update())
 
 
-def _trusted_change(provider, execution):
+def _trusted_change(provider, execution, task):
     if not execution or not execution.pr_number or not execution.trusted_head_sha:
         raise service.PreconditionFailed("A published, trusted PR is required")
     if provider.config.project != execution.repository or provider.config.provider != execution.provider:
@@ -614,10 +618,48 @@ def _trusted_change(provider, execution):
     expected = {"provider": execution.provider, "number": execution.pr_number, "head_sha": execution.trusted_head_sha,
                 "head_ref": execution.branch, "base_ref": execution.target_branch, "author_id": execution.service_account_id}
     if any(value.get(k) != v for k, v in expected.items()) or value.get("state") not in {"open", "merged"}:
-        raise service.PreconditionFailed("PR identity or reviewed head changed; a new review is required")
-    if execution.reviewer_required and execution.review_verdict != "approved":
-        raise service.PreconditionFailed("Independent reviewer approval is required")
+        raise service.PreconditionFailed("PR identity or trusted head changed")
+    if task.assignee_kind != "bot" and execution.reviewer_required and execution.review_verdict != "approved":
+        raise service.PreconditionFailed("Independent reviewer approval is required for human-owned work")
     return value
+
+
+def _refresh_behind_bot_pr(session, task, execution, provider):
+    if task.assignee_kind != "bot" or execution.provider != "github" or not execution.base_sha:
+        return False
+    current_base = provider.read_base_identity()
+    if current_base in {execution.base_sha, (execution.provider_state or {}).get("refreshed_base_sha")}:
+        return False
+    old_head = execution.trusted_head_sha
+    updated = provider.refresh_change(execution.pr_number, old_head)
+    expected = {
+        "provider": execution.provider, "number": execution.pr_number,
+        "head_ref": execution.branch, "base_ref": execution.target_branch,
+        "author_id": execution.service_account_id, "state": "open",
+    }
+    changed_paths = (execution.verification_manifest or {}).get("changed_paths")
+    if (any(updated.get(key) != value for key, value in expected.items())
+            or not isinstance(changed_paths, list)
+            or not provider.refreshed_change_preserves_paths(
+                old_head, updated.get("head_sha"), changed_paths,
+            )):
+        raise service.PreconditionFailed("Updated bot PR changed the published candidate files")
+    execution.trusted_head_sha = updated["head_sha"]
+    execution.provider_state = {
+        **updated, "refreshed_base_sha": current_base, "refresh_pending_merge": True,
+        "review_verdict": execution.review_verdict,
+    }
+    execution.provider_fingerprint = hashlib.sha256(
+        json.dumps(updated, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    execution.synced_at = utcnow()
+    service._event(
+        session, task, "bot_pr_base_refreshed", "provider", str(execution.pr_number),
+        payload={"pr_number": execution.pr_number, "old_head": old_head,
+                 "new_head": updated["head_sha"], "base_sha": current_base},
+    )
+    session.flush()
+    return True
 
 
 _REPAIR_EXCLUDED_WORDS = {
@@ -696,7 +738,7 @@ def _perform(session, task, decision, lease):
     # No no-op decision is available: active work is owned by its worker and
     # other tickets become eligible only when their material evidence changes.
     if action == "assign":
-        service.assign_task(session, **kwargs, actor_name="Executive", kind="bot", profile=decision.profile, reviewer_required=True)
+        service.assign_task(session, **kwargs, actor_name="Executive", kind="bot", profile=decision.profile, reviewer_required=False)
     elif action == "request_follow_up":
         from . import planning
         planning.request(session, task, decision.specialist, decision.rationale)
@@ -739,7 +781,7 @@ def _perform(session, task, decision, lease):
             raise service.PreconditionFailed("Assign an allowed bot profile before starting execution")
         require_executor_preconditions()
         model_for_role(session, f"executor_{task.assignee_profile}")
-        if task.reviewer_required: model_for_role(session, "pr_reviewer")
+        # Bot-owned changes publish without a blocking reviewer.
         # Bound repeated retries; new evidence/scope should resolve a recurring failure.
         current_revision = session.scalar(select(func.max(Revision.revision_number)).where(Revision.task_id == task.id))
         failures = session.scalar(select(func.count()).select_from(Execution).where(Execution.task_id == task.id, Execution.revision == current_revision, Execution.terminal_at.is_not(None)))
@@ -755,19 +797,28 @@ def _perform(session, task, decision, lease):
             # production activation or a live source check has passed.
             "complete": ("publication", "merge"),
         }[action]
-        service.require_validation_gates(session, task.id, *stages)
+        if task.assignee_kind != "bot":
+            service.require_validation_gates(session, task.id, *stages)
         execution = _latest_execution(session, task)
         if execution and execution.pr_number:
             provider = get_provider()
-            observation = _trusted_change(provider, execution)
+            observation = _trusted_change(provider, execution, task)
             if action == "ready" and observation["draft"]:
                 provider.mark_ready(execution.pr_number, execution.trusted_head_sha)
-                observation = _trusted_change(provider, execution)
+                observation = _trusted_change(provider, execution, task)
             if action == "merge":
                 if observation["draft"]:
                     raise service.PreconditionFailed("PR must be ready for review before merging")
                 if observation["state"] != "merged":
+                    if _refresh_behind_bot_pr(session, task, execution, provider):
+                        # GitHub reruns required checks on this same refreshed PR.
+                        return
                     provider.merge_change(execution.pr_number, execution.trusted_head_sha)
+                    if (execution.provider_state or {}).get("refresh_pending_merge"):
+                        execution.provider_state = {
+                            key: value for key, value in execution.provider_state.items()
+                            if key != "refresh_pending_merge"
+                        }
                 # Maintenance observes the merge and schedules existing follow-ups.
                 execution.synced_at = None
                 return
@@ -845,7 +896,14 @@ def decide(session: Session, decision: Decision) -> dict:
         # Admission capacity and provider transport recover independently of
         # this ticket; other rejected preconditions need new material evidence.
         retry_on_change = isinstance(exc, service.DomainError) and str(exc) != "execution admission queue is full"
-    delay = 60 if result == "deferred" else 1
+    pending_execution = (
+        _latest_execution(session, task)
+        if result == "deferred" and decision.action == "merge" and task.assignee_kind == "bot"
+        else None
+    )
+    refresh_waiting = bool(pending_execution and
+                           (pending_execution.provider_state or {}).get("refresh_pending_merge"))
+    delay = 1 if result == "applied" or refresh_waiting else 60
     now = utcnow()
     session.expire(task, ["events", "revisions"])
     detail = _snapshot(session, str(task.id))
