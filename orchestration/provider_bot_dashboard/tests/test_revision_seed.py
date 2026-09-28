@@ -190,6 +190,45 @@ class RevisionSeedTest(unittest.TestCase):
             self.assertEqual("pending", gate.status)
             self.assertIsNone(row.trusted_head_sha)
 
+    def test_passed_gate_can_revise_reviewed_ready_pr_after_protected_base_advances(self):
+        from airflow.providers.vintage.bot_dashboard.autopilot import _actions
+        with Session(self.engine) as session:
+            task, row = self.fixture(session)
+            row.terminal_at = None
+            task.state = "ready"
+            row.stage = "reviewed"
+            row.base_sha = "a" * 40
+            row.source_artifact_sha256 = "b" * 64
+            row.patch_sha256 = "c" * 64
+            row.provider = "github"
+            row.repository = "org/repo"
+            row.target_branch = "main"
+            row.pr_number = 37
+            row.pr_url = "https://example.test/pull/37"
+            row.trusted_head_sha = "d" * 40
+            row.review_verdict = "approved"
+            gate = ValidationGate(
+                task_id=task.id, gate_key="live", stage="merge",
+                recipe="trusted_workflow_check", owner="validation-service",
+                required_capability="github-actions-readonly", subject=row.trusted_head_sha,
+                recheck_condition="Validate the revised head against the new base",
+                required=True, status="passed",
+            )
+            session.add(gate)
+            session.commit()
+            self.assertNotIn("revise", _actions(service.get_task(session, str(task.id))))
+            service.patch_task(session, str(task.id), version=task.version, actor_id="executive",
+                               changes={"planned_resolution": "Reapply the reviewed patch to the updated protected base"})
+            session.commit()
+            self.assertIn("revise", _actions(service.get_task(session, str(task.id))))
+            with patch("airflow.providers.vintage.bot_dashboard.artifacts.read_artifact"):
+                service.start_task(session, str(task.id), version=task.version,
+                                   actor_id="executive", idempotency_key="refresh-base", revision=True)
+            self.assertEqual("pending_candidate", gate.subject)
+            self.assertEqual("pending", gate.status)
+            self.assertIsNone(row.trusted_head_sha)
+            self.assertIsNone(row.review_verdict)
+
     def test_seed_retains_prior_tests_and_produces_cumulative_patch(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp); work = root / 'work'; work.mkdir()

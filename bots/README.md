@@ -126,6 +126,8 @@ another specialist ticket or request an operator to click a gate.
 When an automatic merge-stage check fails or cannot yet start on a reviewed
 `ready` ticket, a material plan correction may re-execute from the previous
 immutable patch without waiting for an operator or a check on obsolete code.
+The same applies to a reviewed, unmerged PR with a passed check if protected
+`main` advances and strict branch protection requires a fresh candidate.
 The old result is audited, the next candidate must receive a new exact-head
 check and independent review, and a same-head retry cannot pass the gate.
 

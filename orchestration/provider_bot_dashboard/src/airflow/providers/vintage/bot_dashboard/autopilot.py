@@ -361,12 +361,16 @@ def _actions(detail):
             actions += ["complete"]
     if state == "ready":
         actions += ["configure"]
-        if (latest and latest.get("pr_number") and current_revision > latest["revision"]
-                and any(gate.get("required") and gate.get("stage") == "merge"
-                        and gate.get("status") in {"pending", "failed"}
-                        and gate.get("owner") == "validation-service"
-                        and gate.get("subject") == latest.get("trusted_head_sha")
-                        for gate in detail.get("validation_gates", []))):
+        if (latest and latest.get("pr_number") and latest.get("trusted_head_sha")
+                and not latest.get("merged_at") and current_revision > latest["revision"]
+                and ((latest.get("review_verdict") == "approved" or not latest.get("reviewer_required"))
+                     or any(gate.get("required") and gate.get("stage") == "merge"
+                            and gate.get("status") in {"pending", "failed"}
+                            and gate.get("owner") == "validation-service"
+                            and gate.get("subject") == latest["trusted_head_sha"]
+                            for gate in detail.get("validation_gates", [])))):
+            # Even a passed head-bound gate can become unmergeable when a strict
+            # protected base advances; a new plan gets a new review and gate.
             actions += ["revise"]
     if detail.get("follow_up_options"):
         actions += ["request_follow_up"]

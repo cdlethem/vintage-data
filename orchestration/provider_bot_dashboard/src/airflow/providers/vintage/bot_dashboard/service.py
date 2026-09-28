@@ -744,23 +744,29 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
             or retry_previous.pr_url is not None
         ):
             raise PreconditionFailed("retry requires a failed terminal execution without a published PR; resolve other blockers before starting")
-    outstanding_ready_gate = False
+    ready_candidate = False
     if revision and task.state == "ready":
-        current_head = session.scalar(
-            select(Execution.trusted_head_sha).where(Execution.task_id == task.id)
+        previous = session.scalar(
+            select(Execution).where(Execution.task_id == task.id)
             .order_by(Execution.sequence.desc(), Execution.revision.desc()).limit(1)
+            .with_for_update()
         )
-        outstanding_ready_gate = bool(current_head and session.scalar(
-            select(ValidationGate.id).where(
+        # A newer plan may repair a reviewed, unmerged candidate even after its
+        # exact-head check passed: a protected base can advance before merge.
+        # Admission still captures the immutable seed and resets head-bound gates.
+        ready_candidate = bool(previous and previous.pr_number and previous.trusted_head_sha
+                               and not previous.merged_at and (
+            previous.review_verdict == "approved" or not previous.reviewer_required
+            or session.scalar(select(ValidationGate.id).where(
                 ValidationGate.task_id == task.id,
                 ValidationGate.required.is_(True),
                 ValidationGate.stage == "merge",
                 ValidationGate.status.in_(("pending", "failed")),
                 ValidationGate.owner == "validation-service",
-                ValidationGate.subject == current_head,
-            ).limit(1)
+                ValidationGate.subject == previous.trusted_head_sha,
+            ).limit(1))
         ))
-    permitted_states = {"in_review", "ready"} if outstanding_ready_gate else {"in_review"} if revision else {"accepted"}
+    permitted_states = {"in_review", "ready"} if ready_candidate else {"in_review"} if revision else {"accepted"}
     if retry_previous is None and task.state not in permitted_states:
         raise PreconditionFailed("task state cannot start this execution")
     latest_revision = session.scalar(
