@@ -140,6 +140,11 @@ If the head changed or the patch cannot apply, publication fails closed.
 The old result is audited, the next candidate must receive a new exact-head
 check and independent review, and a same-head retry cannot pass the gate.
 
+A failed unpublished executor cannot become `ready` merely because the ticket
+contains unrelated earlier evidence. If such a legacy ticket is already `ready`,
+the same failed execution remains retryable by the executive; neither path
+silently treats a failed refresh as a verified no-change completion.
+
 For dbt/Lightdash work, the executor's admitted scope must include both the semantic
 or analysis specification and its exact generated chart/dashboard outputs. It may
 generate and validate those files only with admitted credential-free offline commands.

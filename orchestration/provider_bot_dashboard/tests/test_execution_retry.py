@@ -53,6 +53,30 @@ class ExecutionRetryTest(unittest.TestCase):
             event=session.scalar(select(Event).where(Event.event_type=='execution_retry_requested'))
             self.assertEqual('in_progress',event.from_state)
 
+    def test_failed_executor_cannot_be_made_ready_by_unrelated_evidence_and_still_retries(self):
+        from airflow.providers.vintage.bot_dashboard import service
+        from airflow.providers.vintage.bot_dashboard.autopilot import _actions
+        with Session(self.engine) as session:
+            task, prior = self.fixture(session)
+            task.state = 'in_progress'
+            task.blocked_from_state = None
+            service._event(session, task, 'evidence_added', 'user', 'owner',
+                           payload={'items': [{'label': 'Historical source observation'}]})
+            session.commit()
+            self.assertNotIn('ready', _actions(service.get_task(session, str(task.id))))
+            with self.assertRaisesRegex(PreconditionFailed, 'failed unpublished execution'):
+                service.transition_task(session, str(task.id), version=task.version,
+                                        actor_id='executive', to_state='ready')
+            task.state = 'ready'  # Recover a legacy ticket promoted before the guard.
+            session.commit()
+            actions = _actions(service.get_task(session, str(task.id)))
+            self.assertIn('start', actions)
+            self.assertNotIn('complete', actions)
+            admission = start_task(session, str(task.id), version=task.version,
+                                   actor_id='executive', idempotency_key='retry-legacy-ready')
+            self.assertEqual(prior.sequence + 1, admission['admission']['sequence'])
+            self.assertEqual('accepted', task.state)
+
     def test_superseded_published_execution_does_not_block_latest_unpublished_retry(self):
         with Session(self.engine) as session:
             task,prior=self.fixture(session)

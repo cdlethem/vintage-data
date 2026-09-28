@@ -627,6 +627,12 @@ def transition_task(session: Session, task_id: str, *, version: int, actor_id: s
                 "ready requires a trusted provider head and reviewer policy"
             )
     if previous == "in_progress" and to_state == "ready":
+        latest = session.scalar(select(Execution).where(
+            Execution.task_id == task.id,
+        ).order_by(Execution.sequence.desc()).limit(1))
+        if (latest and latest.terminal_at and latest.terminal_reason_code
+                and latest.terminal_reason_code != "no_change"):
+            raise PreconditionFailed("ready cannot promote a failed unpublished execution")
         verified = session.scalar(
             select(func.count())
             .select_from(Event)
@@ -729,7 +735,7 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
     ):
         raise PreconditionFailed("task must be assigned to an allowed bot profile")
     retry_previous = None
-    if task.state in {"blocked", "in_progress"} and not revision:
+    if task.state in {"blocked", "in_progress", "ready"} and not revision:
         retry_previous = session.scalar(
             select(Execution).where(Execution.task_id == task.id)
             .order_by(Execution.sequence.desc()).limit(1).with_for_update()

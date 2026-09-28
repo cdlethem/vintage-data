@@ -323,12 +323,15 @@ def _actions(detail):
             }
         ):
             actions += ["retry_review"]
+    failed_unpublished = (latest and latest.get("terminal_at")
+                          and latest.get("admission_kind") == "executor"
+                          and latest.get("terminal_reason_code") not in {None, "no_change"}
+                          and not latest.get("pr_number") and not latest.get("pr_url"))
     if state == "in_progress":
-        actions += ["ready"]
-        if (latest and latest.get("terminal_at") and latest.get("admission_kind") == "executor"
-                and latest.get("terminal_reason_code") not in {None, "no_change"}
-                and not latest.get("pr_number") and not latest.get("pr_url")):
+        if failed_unpublished:
             actions += ["configure", "start"]
+        else:
+            actions += ["ready"]
     if state == "in_review":
         actions += ["configure"]
         review_state = (latest or {}).get("provider_state") or {}
@@ -361,6 +364,10 @@ def _actions(detail):
             actions += ["complete"]
     if state == "ready":
         actions += ["configure"]
+        if failed_unpublished:
+            # Older unrelated evidence may have promoted a failed run to ready.
+            # Keep its real unfinished executor work retryable on this ticket.
+            actions += ["start"]
         if (latest and latest.get("pr_number") and latest.get("trusted_head_sha")
                 and not latest.get("merged_at") and current_revision > latest["revision"]
                 and ((latest.get("review_verdict") == "approved" or not latest.get("reviewer_required"))
