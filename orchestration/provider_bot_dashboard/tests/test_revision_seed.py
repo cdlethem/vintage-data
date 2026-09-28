@@ -257,7 +257,7 @@ class RevisionSeedTest(unittest.TestCase):
             self.assertIsNone(row.trusted_head_sha)
             self.assertIsNone(row.review_verdict)
 
-    def test_terminal_seed_retry_moves_approved_patch_to_current_base(self):
+    def test_terminal_seed_retry_moves_reused_reviewed_patch_to_current_base(self):
         with Session(self.engine) as session:
             task, source = self.fixture(session)
             source.base_sha = "a" * 40
@@ -279,6 +279,13 @@ class RevisionSeedTest(unittest.TestCase):
             session.add(failure)
             with patch("airflow.providers.vintage.bot_dashboard.artifacts.read_artifact"):
                 seed = capture_seed(session, source)
+            # The first revision reused the reviewed execution row in place;
+            # only its audited seed still identifies the original PR and patch.
+            source.execution_id = "1" * 64
+            source.review_verdict = None
+            source.pr_number = None
+            source.trusted_head_sha = None
+            source.branch = None
             service._event(session, task, "execution_admitted", "system", "executive",
                            payload={"execution_id": failure.execution_id, "revision_seed": seed})
             session.commit()
@@ -286,7 +293,7 @@ class RevisionSeedTest(unittest.TestCase):
                                      base_branch="main", service_account_id="trusted-bot")
             provider = Mock()
             provider.read_change.return_value = {
-                "provider": "github", "number": 37, "head_ref": source.branch,
+                "provider": "github", "number": 37, "head_ref": seed["branch"],
                 "base_ref": "main", "author_id": "trusted-bot", "head_sha": "d" * 40,
                 "state": "open", "draft": False, "mergeability": "mergeable",
             }
