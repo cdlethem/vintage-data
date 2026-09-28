@@ -97,6 +97,11 @@ The trusted parent computes the binary patch, checks task/repository path-policy
 intersection, file count, diff bytes, result digests, and `VerificationManifestV1` before
 upload.
 
+For a revision, the trusted seed is already in the sandbox before the model
+starts. Preserving that patch without additional edits is changed work, not
+`no_change`; the trusted parent still requires a nonempty cumulative Git diff
+and fresh checks before publishing the new candidate.
+
 Trusted server code recreates the exact base, applies the artifact, makes a deterministic
 commit, pushes `bot-dashboard/<task-id>/<sequence>-r<revision>`, and creates or recovers a
 draft PR. It rereads and persists provider, repository, service-account, base, branch,
