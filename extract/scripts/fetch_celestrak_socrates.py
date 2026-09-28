@@ -11,6 +11,7 @@ import csv
 import http.client
 import io
 import json
+import math
 import os
 import re
 import sys
@@ -108,6 +109,10 @@ def _table_records(parser: TableParser, maximum: int, fetched_at: str) -> list[d
                     raise ValueError("SOCRATES table has incomplete data or invalid object IDs")
                 values["TCA"] = _utc_tca(pending[4])
                 record = _record(values, fetched_at)
+                for field in ("tca_range_km", "tca_relative_speed_km_s", "max_prob", "dilution_km"):
+                    number = record[field]
+                    if not math.isfinite(number) or number < 0 or field == "max_prob" and number > 1:
+                        raise ValueError(f"SOCRATES table has invalid {field}")
             except (KeyError, TypeError, ValueError) as exc:
                 _mark_parse_failure("table_row_validation")
                 raise ValueError(f"SOCRATES table event {len(records) + 1}: {_safe_error(exc)}") from exc
