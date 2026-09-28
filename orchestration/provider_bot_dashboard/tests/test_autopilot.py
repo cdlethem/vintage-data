@@ -721,7 +721,11 @@ class AutopilotTest(unittest.TestCase):
         gate.status = "failed"
         gate.evidence = {"observation": "Linked validator observed a source contract mismatch"}
         self.session.commit()
-        wake = ap.claim(self.session)
+        # Do not let the unrelated every-fifth-minute age cycle select the child
+        # before the ready parent when asserting the parent's gate-driven wake.
+        now = ap.utcnow()
+        with patch.object(ap, "utcnow", return_value=now + timedelta(minutes=(1 - now.minute) % 5)):
+            wake = ap.claim(self.session)
         self.assertEqual(str(parent.id), wake["task"]["id"])
         self.assertIn("configure", wake["actions"])
         self.assertNotIn("merge", wake["actions"])
