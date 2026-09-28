@@ -417,7 +417,7 @@ def _actions(detail):
         actions = [action for action in actions if action not in {"merge", "complete", "advance"}]
     if detail.get("assignee_kind") == "bot" and latest and latest.get("pr_number") and state in {"in_review", "ready"}:
         actions = [action for action in actions if action in {"ready", "merge", "complete", "advance", "repair_conflict"}]
-    if (state == "ready" and latest and latest.get("pr_number")
+    if (detail.get("assignee_kind") != "bot" and state == "ready" and latest and latest.get("pr_number")
             and not latest.get("merged_at") and "repair_conflict" not in actions):
         unresolved = [child for child in detail.get("linked_follow_ups", [])
                       if child["state"] not in {"completed", "dismissed", "missing"}]

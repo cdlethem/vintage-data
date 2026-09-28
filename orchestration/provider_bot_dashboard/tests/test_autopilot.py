@@ -661,6 +661,18 @@ class AutopilotTest(unittest.TestCase):
         self.assertEqual(str(task.id), claim["task"]["id"])
         self.assertIn("merge", claim["actions"])
 
+    def test_bot_pr_merges_without_waiting_for_linked_child(self):
+        task = self.task("ready")
+        task.assignee_kind = "bot"
+        task.assignee_profile = "senior"
+        self.execution(task, review_verdict="changes_requested")
+        child = self.task("in_progress")
+        child.related_task_id = task.id
+        self.session.commit()
+        actions = ap._actions(ap._snapshot(self.session, str(task.id)))
+        self.assertIn("merge", actions)
+        self.assertNotIn("configure", actions)
+
     def test_blocked_child_keeps_merge_closed_but_failed_gate_can_reopen_parent_plan(self):
         from datetime import timedelta
 
