@@ -132,6 +132,139 @@ class ValidationLaneTest(unittest.TestCase):
         self.assertEqual("validation_retry_exhausted", row.last_error)
         self.assertEqual(0, validation_lane.recover_expired(self.session, limit=10, autopilot_enabled=True))
 
+    def test_observed_failed_gate_rechecks_only_after_attested_new_head(self):
+        row = self.gate()
+        row.status = "failed"
+        row.attempt = 1
+        row.last_error = "validation_source_check_failed"
+        old = {"label": "Validation source check failed", "reason_code": row.last_error,
+               "observation": "exact subject failed reference comparison"}
+        row.evidence = old
+        self.session.flush()
+        with self.assertRaisesRegex(PreconditionFailed, "distinct candidate head"):
+            validation_lane.recheck_new_candidate(
+                self.session, gate_id=str(row.id), version=row.version,
+                new_head=SUBJECT, autopilot_enabled=True,
+            )
+        candidate = "b" * 40
+        with patch.object(validation_lane, "validate_admission"), patch.object(
+                validation_lane, "_candidate_snapshot",
+                side_effect=lambda _session, gate: {"head_sha": gate.subject} if gate.subject == candidate
+                else (_ for _ in ()).throw(PreconditionFailed("wrong candidate"))):
+            scheduled = validation_lane.recheck_new_candidate(
+                self.session, gate_id=str(row.id), version=row.version,
+                new_head=candidate, autopilot_enabled=True,
+            )
+        self.assertEqual(("pending", candidate, 0), (row.status, row.subject, row.attempt))
+        self.assertEqual("pending", scheduled["status"])
+        event = self.session.scalar(select(Event).where(Event.event_type == "validation_gate_recheck_scheduled"))
+        self.assertEqual(old, event.payload["previous_result"]["evidence"])
+        self.assertEqual(SUBJECT, event.payload["previous_result"]["subject"])
+        self.assertEqual(0, validation_lane.recover_expired(self.session, limit=10, autopilot_enabled=True))
+
+    def test_trusted_workflow_polls_exact_head_and_durably_records_failed_check(self):
+        row = self.gate()
+        row.recipe = "trusted_workflow_check"
+        row.required_capability = "github-actions-readonly"
+        row.recipe_args = {
+            "command_id": "check-source-coverage",
+            "workflow_path": ".github/workflows/celestrak-live.yml",
+            "job_name": "Compare reviewed CelesTrak table parser with official CSV",
+        }
+        self.session.add(Execution(
+            task_id=row.task_id, execution_id="e" * 64, sequence=1, revision=1,
+            idempotency_key="check", target_run_id="check", profile="senior",
+            pr_number=17, trusted_head_sha=SUBJECT,
+        ))
+        self.session.flush()
+        provider = Mock()
+        provider.read_validation_workflow.side_effect = [
+            None,
+            {"status": "failed", "diagnostic": "workflow_check_failed", "head_sha": SUBJECT,
+             "workflow_run_id": 12, "run_id": 12,
+             "run_url": "https://github.com/org/repo/actions/runs/12", "check_run_id": 34,
+             "event": "pull_request", "conclusion": "failure",
+             "workflow_path": row.recipe_args["workflow_path"], "job_name": row.recipe_args["job_name"]},
+        ]
+        with patch.object(validation_lane, "validate_admission"), patch.object(
+                validation_lane, "_candidate_snapshot", return_value={"head_sha": SUBJECT}), \
+                patch("airflow.providers.vintage.bot_dashboard.git_provider.load_repository_config",
+                      return_value=SimpleNamespace(provider="github")), \
+                patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider",
+                      return_value=provider):
+            self.assertEqual([], validation_lane.poll_trusted_workflows(
+                self.session, limit=20, autopilot_enabled=True,
+            ))
+            self.assertEqual(("pending", 0), (row.status, row.attempt))
+            completed = validation_lane.poll_trusted_workflows(
+                self.session, limit=20, autopilot_enabled=True,
+            )
+        self.assertEqual("failed", completed[0]["status"])
+        self.assertEqual("validation_workflow_failed", row.last_error)
+        self.assertEqual(1, row.attempt)
+        self.assertEqual(0, validation_lane.recover_expired(self.session, limit=20, autopilot_enabled=True))
+        self.assertEqual("failed", row.status)
+        with self.assertRaisesRegex(PreconditionFailed, "incomplete"):
+            from airflow.providers.vintage.bot_dashboard.service import require_validation_gates
+            require_validation_gates(self.session, row.task_id, "merge")
+
+    def test_workflow_capability_disappearing_parks_gate_without_provider_call(self):
+        row = self.gate()
+        row.recipe = "trusted_workflow_check"
+        row.required_capability = "github-actions-readonly"
+        row.recipe_args = {
+            "command_id": "check-source-coverage",
+            "workflow_path": ".github/workflows/celestrak-live.yml",
+            "job_name": "Compare reviewed CelesTrak table parser with official CSV",
+        }
+        self.session.flush()
+        with patch("airflow.providers.vintage.bot_dashboard.validation_recipes.available_capabilities",
+                   return_value=set()):
+            result = validation_lane.poll_trusted_workflows(
+                self.session, limit=20, autopilot_enabled=True,
+            )
+        self.assertEqual("failed", result[0]["status"])
+        self.assertEqual("validation_capability_unavailable", row.last_error)
+        self.assertEqual(0, row.attempt)
+
+    def test_successful_trusted_workflow_attestation_passes_exact_head(self):
+        row = self.gate()
+        row.recipe = "trusted_workflow_check"
+        row.required_capability = "github-actions-readonly"
+        row.recipe_args = {
+            "command_id": "check-source-coverage",
+            "workflow_path": ".github/workflows/celestrak-live.yml",
+            "job_name": "Compare reviewed CelesTrak table parser with official CSV",
+        }
+        self.session.add(Execution(
+            task_id=row.task_id, execution_id="e" * 64, sequence=1, revision=1,
+            idempotency_key="check", target_run_id="check", profile="senior",
+            pr_number=17, trusted_head_sha=SUBJECT,
+        ))
+        self.session.flush()
+        provider = Mock()
+        provider.read_validation_workflow.return_value = {
+            "status": "passed", "diagnostic": None, "head_sha": SUBJECT,
+            "workflow_run_id": 12, "run_id": 12, "check_run_id": 34,
+            "run_url": "https://github.com/org/repo/actions/runs/12",
+            "event": "pull_request", "conclusion": "success",
+            "workflow_path": row.recipe_args["workflow_path"], "job_name": row.recipe_args["job_name"],
+        }
+        with patch.object(validation_lane, "validate_admission"), patch.object(
+                validation_lane, "_candidate_snapshot", return_value={"head_sha": SUBJECT}), \
+                patch("airflow.providers.vintage.bot_dashboard.git_provider.load_repository_config",
+                      return_value=SimpleNamespace(provider="github")), \
+                patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider",
+                      return_value=provider):
+            completed = validation_lane.poll_trusted_workflows(
+                self.session, limit=20, autopilot_enabled=True,
+            )
+        self.assertEqual("passed", completed[0]["status"])
+        self.assertEqual(SUBJECT, row.evidence["assertions"]["head_sha"])
+        self.assertEqual("pull_request", row.evidence["assertions"]["event"])
+        from airflow.providers.vintage.bot_dashboard.service import require_validation_gates
+        require_validation_gates(self.session, row.task_id, "merge")
+
     def test_completed_implementation_can_record_later_live_validation(self):
         row = self.gate()
         row.stage = "completion"

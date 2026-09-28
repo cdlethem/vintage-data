@@ -96,7 +96,7 @@ def _seed_branch(session: Session, task: Task, seed: dict) -> str:
     return branch
 
 
-def _observe_seed_candidate(session: Session, task: Task, seed: dict) -> tuple[dict, str]:
+def _observe_seed_candidate(session: Session, task: Task, seed: dict, *, require_conflict: bool = True) -> tuple[dict, str]:
     config = load_repository_config()
     if (config.provider, config.project, config.base_branch) != (
         seed["provider"], seed["repository"], seed["target_branch"],
@@ -116,8 +116,10 @@ def _observe_seed_candidate(session: Session, task: Task, seed: dict) -> tuple[d
     }
     if any(observation.get(key) != value for key, value in expected.items()):
         raise PreconditionFailed("seeded candidate identity or trusted head changed")
-    if observation.get("draft") or observation.get("mergeability") != "conflicting":
+    if observation.get("draft") or (require_conflict and observation.get("mergeability") != "conflicting"):
         raise PreconditionFailed("seeded candidate is not an open merge conflict")
+    if not require_conflict and observation.get("mergeability") == "conflicting":
+        raise PreconditionFailed("seeded candidate needs merge-conflict repair")
     base_sha = provider.read_base_identity()
     if not isinstance(base_sha, str) or not _SHA.fullmatch(base_sha):
         raise PreconditionFailed("provider returned an invalid current base identity")

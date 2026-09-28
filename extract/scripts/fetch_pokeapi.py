@@ -50,6 +50,46 @@ def _bounded_int(value: Any, name: str, minimum: int, maximum: int) -> int:
     return value
 
 
+def _catalog_url_shape(url: str) -> str:
+    """Describe an untrusted URL without echoing its contents or query values."""
+    try:
+        parsed = urllib.parse.urlsplit(url)
+        hostname = parsed.hostname
+    except (TypeError, ValueError):
+        return "scheme=invalid hostname=invalid path=invalid query-keys=invalid"
+
+    scheme = parsed.scheme if parsed.scheme in {"https", "http"} else (
+        "missing" if not parsed.scheme else "other"
+    )
+    host = "pokeapi.co" if hostname == "pokeapi.co" else (
+        "missing" if hostname is None else "other"
+    )
+    path = {
+        "/api/v2/pokemon/": "catalog-slash",
+        "/api/v2/pokemon": "catalog-no-slash",
+        "": "missing",
+    }.get(parsed.path, "other")
+    try:
+        keys = [
+            key for key, _ in urllib.parse.parse_qsl(
+                parsed.query, keep_blank_values=True, strict_parsing=True,
+                max_num_fields=32,
+            )
+        ]
+    except ValueError:
+        query_keys = "invalid"
+    else:
+        def multiplicity(key: str) -> str:
+            count = keys.count(key)
+            return "missing" if count == 0 else "one" if count == 1 else "multiple"
+
+        query_keys = (
+            f"limit:{multiplicity('limit')},offset:{multiplicity('offset')},"
+            f"other:{'yes' if any(key not in {'limit', 'offset'} for key in keys) else 'no'}"
+        )
+    return f"scheme={scheme} hostname={host} path={path} query-keys={query_keys}"
+
+
 def _catalog_parameters(url: str, context: str) -> tuple[int, int]:
     """Validate a catalog URL and return its ``(limit, offset)`` values."""
     try:
@@ -58,7 +98,9 @@ def _catalog_parameters(url: str, context: str) -> tuple[int, int]:
             parsed.query, keep_blank_values=True, strict_parsing=True
         )
     except (TypeError, ValueError) as exc:
-        raise PokeAPIError(f"{context} is not a valid catalog URL") from exc
+        raise PokeAPIError(
+            f"{context} is not a valid catalog URL ({_catalog_url_shape(url)})"
+        ) from exc
 
     if (
         parsed.scheme != "https"
@@ -69,7 +111,8 @@ def _catalog_parameters(url: str, context: str) -> tuple[int, int]:
         or any(len(values) != 1 for values in parameters.values())
     ):
         raise PokeAPIError(
-            f"{context} must stay on the HTTPS pokeapi.co Pokémon catalog endpoint"
+            f"{context} must stay on the HTTPS pokeapi.co Pokémon catalog endpoint "
+            f"({_catalog_url_shape(url)})"
         )
 
     limit_text = parameters["limit"][0]
@@ -78,14 +121,18 @@ def _catalog_parameters(url: str, context: str) -> tuple[int, int]:
         limit = int(limit_text)
         offset = int(offset_text)
     except ValueError as exc:
-        raise PokeAPIError(f"{context} has invalid pagination values") from exc
+        raise PokeAPIError(
+            f"{context} has invalid pagination values ({_catalog_url_shape(url)})"
+        ) from exc
     if (
         str(limit) != limit_text
         or str(offset) != offset_text
         or not 1 <= limit <= MAX_PAGE_SIZE
         or offset < 0
     ):
-        raise PokeAPIError(f"{context} has invalid pagination values")
+        raise PokeAPIError(
+            f"{context} has invalid pagination values ({_catalog_url_shape(url)})"
+        )
     return limit, offset
 
 
@@ -129,7 +176,10 @@ class CatalogRedirectHandler(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
         current_parameters = _catalog_parameters(req.full_url, "PokéAPI request")
         if _catalog_parameters(newurl, "PokéAPI redirect") != current_parameters:
-            raise PokeAPIError("PokéAPI redirect changed the requested catalog page")
+            raise PokeAPIError(
+                "PokéAPI redirect changed the requested catalog page "
+                f"({_catalog_url_shape(newurl)})"
+            )
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
@@ -143,7 +193,10 @@ def _read_document(opener: Any, url: str, timeout: float) -> Any:
         with opener.open(request, timeout=timeout) as response:
             final_url = response.geturl()
             if _catalog_parameters(final_url, "PokéAPI response URL") != requested_parameters:
-                raise PokeAPIError("PokéAPI redirect changed the requested catalog page")
+                raise PokeAPIError(
+                    "PokéAPI redirect changed the requested catalog page "
+                    f"({_catalog_url_shape(final_url)})"
+                )
             body = response.read(MAX_RESPONSE_BYTES + 1)
     except PokeAPIError:
         raise
@@ -189,7 +242,10 @@ def _parse_page(
     if next_url is not None and not isinstance(next_url, str):
         raise PokeAPIError("PokéAPI response next must be a URL or null")
     if not results and next_url is not None:
-        raise PokeAPIError("PokéAPI returned an empty page with further pagination")
+        raise PokeAPIError(
+            "PokéAPI returned an empty page with further pagination "
+            f"({_catalog_url_shape(next_url)})"
+        )
 
     page_records: list[dict[str, Any]] = []
     page_ids: set[int] = set()
@@ -215,13 +271,10 @@ def _parse_page(
 
     if next_url is not None:
         next_limit, next_offset = _catalog_parameters(next_url, "PokéAPI next URL")
-        if (
-            next_limit != page_size
-            or next_offset <= current_offset
-            or next_offset >= count
-        ):
+        if next_limit != page_size or next_offset <= current_offset:
             raise PokeAPIError(
-                "PokéAPI next URL does not continue within the catalog pagination"
+                "PokéAPI next URL does not continue within the catalog pagination "
+                f"({_catalog_url_shape(next_url)})"
             )
     return page_records, next_url
 

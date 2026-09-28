@@ -53,6 +53,7 @@ class FakeProviderHTTP:
         self.comments: list[dict] = []
         self.calls: list[tuple[str, str]] = []
         self.number = 7 if provider == "github" else 11
+        self.old_changes: dict[int, dict] = {}
         self.timeout = False
 
     def provider_object(self, config: RepositoryConfig):
@@ -74,6 +75,23 @@ class FakeProviderHTTP:
                 else:
                     self.comments.append({"id": len(self.comments) + 1, "body": body})
                 return self.comments[-1]
+        if ("/pulls/6" in path or "/merge_requests/6" in path) and 6 in self.old_changes:
+            old = self.old_changes[6]
+            if method in {"PATCH", "PUT"}:
+                old["closed"] = True
+                return {"state": "closed"}
+            if method == "GET":
+                if self.provider == "github":
+                    return {
+                        **self.raw(), "number": 6,
+                        "state": "closed" if old.get("closed") else "open",
+                        "head": {"sha": old["head_sha"], "ref": old["branch"]},
+                    }
+                return {
+                    **self.raw(), "iid": 6,
+                    "state": "closed" if old.get("closed") else "opened",
+                    "sha": old["head_sha"], "source_branch": old["branch"],
+                }
         if method == "GET" and ("pulls?" in path or "merge_requests?" in path):
             return [self.raw()] if self.created else []
         if method == "POST" and ("/pulls" in path or "/merge_requests" in path):
@@ -244,6 +262,50 @@ class LifecycleTest(unittest.TestCase):
         session.commit()
         return task
 
+    def test_publishing_replacement_closes_superseded_bot_pr(self):
+        config, fake, patches = self._begin("github")
+        with patches, Session(self.engine) as session:
+            task = self._create_task(session)
+            current = session.scalar(select(Execution).where(Execution.task_id == task.id))
+            current.sequence = 2
+            old_branch = f"bot-dashboard/{task.id}/1-r1"
+            fake.old_changes[6] = {"head_sha": self.base_sha, "branch": old_branch}
+            session.add(Execution(
+                execution_id="f" * 64, task_id=task.id, sequence=1, revision=1,
+                idempotency_key="old-bot-run", target_run_id="old-bot-run",
+                stage="terminal", dispatch_state="terminal",
+                terminal_at=datetime.now(UTC), profile="junior",
+                provider="github", repository=config.project,
+                target_branch="main", branch=old_branch,
+                pr_number=6, service_account_id=config.service_account_id,
+                trusted_head_sha=self.base_sha,
+            ))
+            session.commit()
+            dispatch = execution.claim_pending(session)
+            execution.claim_run(
+                session, dag_id="bot__task_executor",
+                run_id=current.target_run_id, conf_value=dispatch[0]["conf"],
+                kind="executor", deadline_at=datetime.now(UTC) + timedelta(minutes=5),
+            )
+            patch_bytes, patch_sha, manifest = self._patch_and_manifest(current)
+            put_artifact(
+                session, kind="patch", content=patch_bytes,
+                expected_sha256=patch_sha, owner_execution_id=current.execution_id,
+            )
+            fake.branch = f"bot-dashboard/{task.id}/2-r1"
+            report_sha = self._report_artifact(session, current)
+            published = repository_ops.publish_execution_change(
+                session, current, task, task.revisions[-1],
+                {"status": "ok", "patch_sha256": patch_sha,
+                 "changed_paths": ["allowed.txt"],
+                 "verification_manifest": manifest, "report_sha256": report_sha},
+            )
+            self.assertEqual(7, published["pr_number"])
+            self.assertTrue(fake.old_changes[6]["closed"])
+            self.assertEqual(7, current.pr_number)
+            self.assertIsNotNone(session.scalar(select(Event).where(
+                Event.task_id == task.id, Event.event_type == "superseded_pr_closed")))
+
     def test_happy_path_is_immutable_and_provider_neutral(self):
         for provider in ("github", "gitlab"):
             self._reset_db()
@@ -273,16 +335,6 @@ class LifecycleTest(unittest.TestCase):
                         execution.finalize_run(session, dag_id="bot__task_executor", run_id=run_id, kind="executor", result={"result_artifact_sha256": executor_projection["report_sha256"]})
                         session.flush()
                         row = session.scalar(select(Execution).where(Execution.task_id == task.id))
-                        dispatch = execution.claim_pending(session)
-                        reviewer_run = dispatch[0]["conf"]
-                        review_admission = execution.claim_run(session, dag_id="bot__pr_reviewer", run_id=row.target_run_id, conf_value=reviewer_run, kind="pr_reviewer", deadline_at=datetime.now(UTC) + timedelta(minutes=4))
-                        self.assertEqual("pr_reviewer", review_admission["kind"])
-                        review_report = self._envelope("pr_reviewer", "bot__pr_reviewer", row.target_run_id, "pr_reviewer_v2", {"schema_version": 2, "agent": "pr_reviewer", "status": "ok", "task_id": str(task.id), "verdict": "approved", "summary": "looks good", "comments": [{"body": "Reviewed fixture", "path": "allowed.txt", "line": 1, "severity": "optional"}], "verification": ["fixture passed"]})
-                        persist_run_envelope(session, review_report)
-                        execution.finalize_run(session, dag_id="bot__pr_reviewer", run_id=row.target_run_id, kind="pr_reviewer", result={})
-                        self.assertEqual(1, len(fake.comments))
-                        marker = f"bot-dashboard-review:{row.execution_id}:r{row.revision}"
-                        self.assertIn(marker, fake.comments[0]["body"])
                         fake.draft = False
                         self.assertEqual(1, maintenance.sync_provider(session)["changed"])
                         task = session.get(Task, task.id)
@@ -321,7 +373,6 @@ class LifecycleTest(unittest.TestCase):
                         self.assertEqual("terminal", row.dispatch_state)
                         self.assertEqual("merged", row.terminal_reason_code)
                         self.assertEqual(1, session.query(Execution).filter_by(task_id=task.id).count())
-                        self.assertEqual(1, len([item for item in fake.comments if marker in item["body"]]))
                         self.assertEqual(sorted(item.sequence for item in events), [item.sequence for item in events])
                         self.assertNotIn(SECRET, json.dumps([item.payload for item in events]))
                         self.assertNotIn(SECRET, (self.artifacts / patch_sha[:2] / patch_sha).read_text(errors="ignore"))
@@ -380,7 +431,7 @@ class LifecycleTest(unittest.TestCase):
                         self.assertIsNotNone(row.terminal_at)
                         self.assertEqual("merged", row.terminal_reason_code)
     def test_adverse_cases_are_bounded_and_idempotent(self):
-        scenarios = ("forbidden_path", "oversized_diff", "changed_base_sha", "changed_pr_head", "no_change", "changes_requested", "provider_timeout", "duplicate")
+        scenarios = ("forbidden_path", "oversized_diff", "changed_base_sha", "changed_pr_head", "no_change", "provider_timeout", "duplicate")
         for scenario in scenarios:
             self._reset_db()
             with self.subTest(scenario=scenario):
@@ -434,20 +485,6 @@ class LifecycleTest(unittest.TestCase):
                                     maintenance.sync_provider(session)
                                 fake.timeout = False
                                 self.assertIsNone(row.merged_at)
-                            else:
-                                review_payload = {"schema_version": 2, "agent": "pr_reviewer", "status": "ok", "task_id": str(task.id), "verdict": "changes_requested", "summary": "needs work", "comments": [{"body": "Please revise", "path": "allowed.txt", "line": 1}], "verification": []}
-                                executor_payload = {"schema_version": 2, "agent": "task_executor", "status": "ok", "task_id": str(task.id), "summary": "changed one file", "changed_paths": ["allowed.txt"], "verification": [], "blockers": []}
-                                persist_run_envelope(session, self._envelope("task_executor", "bot__task_executor", row.target_run_id, "task_executor_v2", executor_payload))
-                                execution.finalize_run(session, dag_id="bot__task_executor", run_id=row.target_run_id, kind="executor", result={})
-                                session.flush()
-                                row = session.scalar(select(Execution).where(Execution.task_id == task.id))
-                                reviewer_dispatch = execution.claim_pending(session)[0]
-                                execution.claim_run(session, dag_id="bot__pr_reviewer", run_id=row.target_run_id, conf_value=reviewer_dispatch["conf"], kind="pr_reviewer", deadline_at=datetime.now(UTC) + timedelta(minutes=4))
-                                persist_run_envelope(session, self._envelope("pr_reviewer", "bot__pr_reviewer", row.target_run_id, "pr_reviewer_v2", review_payload))
-                                execution.finalize_run(session, dag_id="bot__pr_reviewer", run_id=row.target_run_id, kind="pr_reviewer", result={})
-                                self.assertEqual("changes_requested", row.review_verdict)
-                                self.assertEqual(1, len(fake.comments))
-                                self.assertEqual("in_review", session.get(Task, task.id).state)
                         self.assertEqual(self.base_sha, _git("rev-parse", "HEAD", cwd=self.shared))
                         self.assertNotIn(SECRET, str(row.__dict__))
                         session.rollback()

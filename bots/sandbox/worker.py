@@ -202,7 +202,7 @@ def model_prompt(admission: dict, repair_checks: list[dict] | None = None) -> st
                        'action needed; do not ask a person to handle routine Autopilot work. Do not commit or publish.\n')
         if admission.get('seed_patch_sha256'):
             instruction += (
-                'This is an Autopilot-owned merge-conflict repair. A prior approved candidate was applied to the '
+                'This is an Autopilot-owned candidate revision. A prior trusted patch was applied to the '
                 'current base before you started. Inspect the entire worktree for files ending in `.rej`; each is '
                 'a rejected patch hunk that you must reconcile into its adjacent target file, then delete. Preserve '
                 'the candidate intent while incorporating current-base changes, and resolve any related code or test '
@@ -385,8 +385,12 @@ def execute(admission: dict, workdir: Path, output_dir: Path) -> dict:
         if summary.lstrip().startswith('BLOCKED:'):
             blockers.append(summary.strip()[:2000])
         blockers.extend(f"{check['name']} failed with exit code {check['exit_code']}." for check in checks if check['exit_code'])
+        # The snapshot begins after a trusted revision seed is applied. A model
+        # may preserve that entire patch without further edits; the parent must
+        # still verify a nonempty cumulative Git diff before publishing it.
+        status = 'blocked' if blockers else ('ok' if changed or admission.get('seed_patch_sha256') else 'no_change')
         report = {'schema_version': 2, 'agent': 'task_executor', 'task_id': admission['task_id'],
-                  'status': 'blocked' if blockers else ('ok' if changed else 'no_change'),
+                  'status': status,
                   'summary': summary[-20_000:], 'changed_paths': changed, 'verification': checks,
                   'verification_attempts': verification_attempts, 'blockers': blockers}
     else:

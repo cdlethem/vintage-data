@@ -124,22 +124,54 @@ class FetchEnvironmentAgencyFloodsTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "missing @id and floodAreaID"):
                 list(MODULE.fetch_warnings())
 
-    def test_propagates_http_errors_without_retry(self):
+    def test_503_recovers_after_one_delay(self):
         error = urllib.error.HTTPError(MODULE.URL, 503, "Backend fetch failed", {}, None)
-        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error) as urlopen:
+        with mock.patch.object(
+            MODULE.urllib.request, "urlopen", side_effect=[error, response(floods_document())]
+        ) as urlopen, mock.patch.object(MODULE.time, "sleep") as sleep:
+            records = list(MODULE.fetch_warnings())
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["id"], floods_document()["items"][0]["@id"])
+        self.assertEqual(urlopen.call_count, 2)
+        sleep.assert_called_once_with(MODULE.SERVICE_RETRY_DELAY_SECONDS)
+
+    def test_non_503_http_error_fails_without_retry(self):
+        error = urllib.error.HTTPError(MODULE.URL, 404, "Not found", {}, None)
+        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error) as urlopen, mock.patch.object(
+            MODULE.time, "sleep"
+        ) as sleep:
             with self.assertRaises(urllib.error.HTTPError):
                 list(MODULE.fetch_warnings())
         urlopen.assert_called_once()
+        sleep.assert_not_called()
 
-    def test_main_does_not_emit_successful_output_on_503(self):
-        error = urllib.error.HTTPError(MODULE.URL, 503, "Backend fetch failed", {}, None)
-        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error), mock.patch(
-            "sys.argv", ["fetch_environment_agency_floods.py"]
-        ), mock.patch("sys.stdout", new_callable=io.StringIO) as output:
-            with self.assertRaises(urllib.error.HTTPError) as raised:
-                MODULE.main()
-        self.assertEqual(raised.exception.code, 503)
+    def test_main_exhausted_503_fails_with_redacted_stderr_and_no_records(self):
+        error = urllib.error.HTTPError(
+            MODULE.URL + "?token=private", 503, "Backend secret=private", {}, None
+        )
+        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error) as urlopen, mock.patch.object(
+            MODULE.time, "sleep"
+        ) as sleep, mock.patch("sys.argv", ["fetch_environment_agency_floods.py"]), mock.patch(
+            "sys.stdout", new_callable=io.StringIO
+        ) as output, mock.patch("sys.stderr", new_callable=io.StringIO) as diagnostics:
+            status = MODULE.main()
+        self.assertEqual(status, 1)
         self.assertEqual(output.getvalue(), "")
+        self.assertEqual(diagnostics.getvalue(), "Environment Agency flood warnings: HTTP 503\n")
+        self.assertEqual(urlopen.call_count, 2)
+        sleep.assert_called_once_with(MODULE.SERVICE_RETRY_DELAY_SECONDS)
+
+    def test_main_successful_empty_response_is_not_a_failure(self):
+        with mock.patch.object(
+            MODULE.urllib.request, "urlopen", return_value=response(floods_document([]))
+        ) as urlopen, mock.patch("sys.argv", ["fetch_environment_agency_floods.py"]), mock.patch(
+            "sys.stdout", new_callable=io.StringIO
+        ) as output, mock.patch("sys.stderr", new_callable=io.StringIO) as diagnostics:
+            status = MODULE.main()
+        self.assertEqual(status, 0)
+        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(diagnostics.getvalue(), "")
+        urlopen.assert_called_once()
 
     def test_main_emits_ndjson(self):
         with mock.patch.object(

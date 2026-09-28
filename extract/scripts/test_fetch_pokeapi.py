@@ -130,6 +130,40 @@ class FetchPokeAPITests(unittest.TestCase):
                 f"https://pokeapi.co/api/v2/pokemon/{record['id']}/",
             )
 
+    def test_configured_page_size_continues_to_catalog_boundary(self):
+        first_page = page([pokemon(identifier) for identifier in range(1, 101)], 100, limit=100)
+        first_page["count"] = 101
+        last_page = page([pokemon(101)], None, limit=100)
+        last_page["count"] = 101
+
+        result, opener, sleeper = self.fetch(
+            [first_page, last_page], page_size=100
+        )
+
+        self.assertFalse(result.truncated)
+        self.assertEqual([record["id"] for record in result.records], list(range(1, 102)))
+        self.assertEqual(
+            [call[0].full_url for call in opener.calls],
+            [
+                "https://pokeapi.co/api/v2/pokemon/?limit=100&offset=0",
+                "https://pokeapi.co/api/v2/pokemon/?offset=100&limit=100",
+            ],
+        )
+        sleeper.assert_called_once_with(MODULE.REQUEST_INTERVAL)
+
+    def test_continues_when_catalog_count_lags_next_page(self):
+        first_page = page([pokemon(1), pokemon(2)], 2)
+        first_page["count"] = 2
+        final_page = page([pokemon(3)], None)
+        final_page["count"] = 3
+
+        result, opener, sleeper = self.fetch([first_page, final_page])
+
+        self.assertFalse(result.truncated)
+        self.assertEqual([record["id"] for record in result.records], [1, 2, 3])
+        self.assertEqual(len(opener.calls), 2)
+        sleeper.assert_called_once_with(MODULE.REQUEST_INTERVAL)
+
     def test_follows_valid_api_continuation_without_trailing_slash(self):
         continuation = "https://pokeapi.co/api/v2/pokemon?offset=2&limit=2"
         first_page = page([pokemon(1), pokemon(2)], 2)
@@ -155,12 +189,13 @@ class FetchPokeAPITests(unittest.TestCase):
         self.assertIn("offset=5", opener.calls[2][0].full_url)
 
 
-    def test_rejects_looping_and_out_of_catalog_next_links(self):
-        for offset in (0, 100):
+    def test_rejects_looping_and_backward_next_links(self):
+        for offset in (0, 2):
             with self.subTest(offset=offset):
-                document = page([pokemon(1), pokemon(2)], offset)
+                first_page = page([pokemon(1), pokemon(2)], 2)
+                second_page = page([pokemon(3)], offset)
                 with self.assertRaisesRegex(MODULE.PokeAPIError, "catalog pagination"):
-                    self.fetch([document])
+                    self.fetch([first_page, second_page])
 
     def test_empty_catalog_is_a_success_and_makes_one_request(self):
         result, opener, sleeper = self.fetch([page([], None)])
@@ -246,7 +281,118 @@ class FetchPokeAPITests(unittest.TestCase):
                 with self.assertRaisesRegex(MODULE.PokeAPIError, "catalog|pagination"):
                     self.fetch([document])
 
+    def test_rejected_next_reports_bounded_shape_without_url_contents(self):
+        cases = (
+            (
+                "http://user:password@pokeapi.co/api/v2/pokemon/"
+                "?limit=2&offset=2&token=secret#fragment",
+                "scheme=http hostname=pokeapi.co path=catalog-slash "
+                "query-keys=limit:one,offset:one,other:yes",
+            ),
+            (
+                "https://other.example/api/v2/ability/"
+                "?limit=2&offset=2",
+                "scheme=https hostname=other path=other "
+                "query-keys=limit:one,offset:one,other:no",
+            ),
+            (
+                "https://pokeapi.co/api/v2/pokemon?limit=secret&offset=2",
+                "scheme=https hostname=pokeapi.co path=catalog-no-slash "
+                "query-keys=limit:one,offset:one,other:no",
+            ),
+            (
+                "https://pokeapi.co/api/v2/pokemon/?limit=2&limit=secret&offset=2",
+                "scheme=https hostname=pokeapi.co path=catalog-slash "
+                "query-keys=limit:multiple,offset:one,other:no",
+            ),
+            (
+                "https://pokeapi.co/api/v2/pokemon/?limit=2&offset=0",
+                "scheme=https hostname=pokeapi.co path=catalog-slash "
+                "query-keys=limit:one,offset:one,other:no",
+            ),
+            (
+                "https://[secret/api/v2/pokemon/?limit=2&offset=2",
+                "scheme=invalid hostname=invalid path=invalid query-keys=invalid",
+            ),
+        )
+        for next_url, shape in cases:
+            with self.subTest(next_url=next_url):
+                document = page([pokemon(1), pokemon(2)], None)
+                document["next"] = next_url
+                opener = FixtureOpener([document])
+                stderr = io.StringIO()
+                stdout = io.StringIO()
+                with (
+                    mock.patch.object(MODULE.urllib.request, "build_opener", return_value=opener),
+                    contextlib.redirect_stderr(stderr),
+                    contextlib.redirect_stdout(stdout),
+                    self.assertRaises(SystemExit) as raised,
+                ):
+                    MODULE.main(["pokemon", "2"])
+                self.assertEqual(raised.exception.code, 1)
+                self.assertEqual(len(opener.calls), 1)
+                self.assertEqual(stdout.getvalue(), "")
+                diagnostic = stderr.getvalue()
+                self.assertIn(shape, diagnostic)
+                self.assertNotIn(next_url, diagnostic)
+                for private_part in ("user", "password", "secret", "fragment", "token=", "other.example"):
+                    self.assertNotIn(private_part, diagnostic)
 
+
+
+    def test_empty_page_with_next_reports_bounded_shape_without_following_link(self):
+        next_url = (
+            "http://user:password@pokeapi.co/api/v2/pokemon/"
+            "?limit=2&offset=2&token=secret#fragment"
+        )
+        document = page([], None)
+        document["next"] = next_url
+        opener = FixtureOpener([document])
+        stderr = io.StringIO()
+        stdout = io.StringIO()
+        with (
+            mock.patch.object(MODULE.urllib.request, "build_opener", return_value=opener),
+            contextlib.redirect_stderr(stderr),
+            contextlib.redirect_stdout(stdout),
+            self.assertRaises(SystemExit) as raised,
+        ):
+            MODULE.main(["pokemon", "2"])
+
+        self.assertEqual(raised.exception.code, 1)
+        self.assertEqual(len(opener.calls), 1)
+        self.assertEqual(stdout.getvalue(), "")
+        diagnostic = stderr.getvalue()
+        self.assertIn("empty page with further pagination", diagnostic)
+        self.assertIn(
+            "scheme=http hostname=pokeapi.co path=catalog-slash "
+            "query-keys=limit:one,offset:one,other:yes",
+            diagnostic,
+        )
+        self.assertNotIn(next_url, diagnostic)
+        for private_part in ("user", "password", "secret", "fragment", "token="):
+            self.assertNotIn(private_part, diagnostic)
+
+    def test_later_off_catalog_continuation_emits_no_partial_snapshot(self):
+        first_page = page([pokemon(1), pokemon(2)], 2)
+        second_page = page([pokemon(3)], None)
+        second_page["next"] = "https://pokeapi.co/api/v2/ability/?limit=2&offset=4"
+        opener = FixtureOpener([first_page, second_page])
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        with (
+            mock.patch.object(MODULE.urllib.request, "build_opener", return_value=opener),
+            mock.patch.object(MODULE.time, "sleep"),
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(stderr),
+            self.assertRaises(SystemExit) as raised,
+        ):
+            MODULE.main(["pokemon", "2", "--max-pages", "20"])
+
+        self.assertEqual(raised.exception.code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("PokéAPI next URL", stderr.getvalue())
+        self.assertEqual(len(opener.calls), 2)
 
     def test_redirect_handler_and_final_response_reject_off_origin_urls(self):
         handler = MODULE.CatalogRedirectHandler()

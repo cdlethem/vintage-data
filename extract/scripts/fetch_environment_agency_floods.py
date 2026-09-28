@@ -3,8 +3,9 @@
 
 Warnings are explicit transient objects with severity, message, raised time, and state
 change timestamps. Request JSON with an identifying User-Agent and language preference;
-HTTP errors remain visible to the runner. An empty items list is a valid no-warning
-state, but a nonpositive limit must not skip the request and appear successful.
+An empty items list is a valid no-warning state, but a nonpositive limit must
+not skip the request and appear successful. Retry HTTP 503 once after a short
+delay; persistent HTTP errors fail the task with a status-only diagnostic.
 Data is licensed under OGL 3.0; poll every 15 minutes during flood events and less
 often otherwise.
 
@@ -14,6 +15,9 @@ Stdlib only.
 import argparse
 import json
 import os
+import sys
+import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
@@ -25,6 +29,7 @@ REQUEST_HEADERS = {
     "Accept": "application/json",
     "Accept-Language": "en-GB,en;q=0.9",
 }
+SERVICE_RETRY_DELAY_SECONDS = 3
 
 
 def fetch_warnings(limit: int = 1000, timeout: int = 60):
@@ -32,8 +37,16 @@ def fetch_warnings(limit: int = 1000, timeout: int = 60):
         raise ValueError("limit must be positive")
     request = urllib.request.Request(URL, headers=REQUEST_HEADERS)
     fetched_at = datetime.now(timezone.utc).isoformat()
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        document = json.load(response)
+    for attempt in range(2):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                document = json.load(response)
+            break
+        except urllib.error.HTTPError as error:
+            if error.code != 503 or attempt == 1:
+                raise
+            error.close()
+            time.sleep(SERVICE_RETRY_DELAY_SECONDS)
     rows = document.get("items")
     if not isinstance(rows, list):
         raise TypeError("flood response is missing items")
@@ -51,9 +64,15 @@ def main():
     parser.add_argument("--limit", type=int, default=1000)
     parser.add_argument("--timeout", type=int, default=60)
     args = parser.parse_args()
-    for record in fetch_warnings(args.limit, args.timeout):
-        print(json.dumps(record, ensure_ascii=False))
+    try:
+        for record in fetch_warnings(args.limit, args.timeout):
+            print(json.dumps(record, ensure_ascii=False))
+    except urllib.error.HTTPError as error:
+        # Avoid echoing response reasons or URLs that might contain credentials.
+        print(f"Environment Agency flood warnings: HTTP {error.code}", file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

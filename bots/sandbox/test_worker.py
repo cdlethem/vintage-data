@@ -158,6 +158,15 @@ class WorkerTests(unittest.TestCase):
         self.assertEqual(report['verification'][0]['observed'], 'passed\n')
 
 
+    def test_existing_seed_patch_is_changed_work_without_additional_edits(self):
+        (self.work / 'validator.py').write_text('def check(): return True\n')
+        self.admission['seed_patch_sha256'] = 'a' * 64
+        with patch.object(worker, 'bounded_run', side_effect=[(0, 'reviewed existing patch'), (0, 'passed')]):
+            report = worker.execute(self.admission, self.work, self.root)['report']
+        self.assertEqual('ok', report['status'])
+        self.assertEqual([], report['changed_paths'])
+        self.assertEqual(0, report['verification'][0]['exit_code'])
+
     def test_model_or_verification_failure_blocks_publication(self):
         with patch.object(worker, 'bounded_run', side_effect=[(1, 'failed'), (0, 'passed')]):
             report = worker.execute(self.admission, self.work, self.root)['report']

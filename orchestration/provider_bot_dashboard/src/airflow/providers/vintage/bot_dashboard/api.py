@@ -69,8 +69,10 @@ from .api_models import (
     SyncRequest,
     Transition,
     ValidationGateCreate,
+    ValidationGateConversion,
     ValidationGateResult,
     ValidationClaimRequest,
+    ValidationRecheckRequest,
     ValidationStartRequest,
     ValidationFinishRequest,
 )
@@ -95,6 +97,7 @@ from .service import (
     task_dict,
     transition_task,
     create_validation_gate,
+    convert_manual_validation_gate,
     record_validation_gate,
     usage_summary,
 )
@@ -506,6 +509,15 @@ def add_validation_gate(task_id: str, body: ValidationGateCreate, session: Sessi
     value = body.model_dump(exclude={"version"})
     return create_validation_gate(
         session, task_id, version=body.version, actor_id=_identity(user)[0], value=value
+    )
+
+
+@auth.post("/validation-gates/{gate_id}/convert", dependencies=WRITE_DEPS)
+def convert_validation_gate(gate_id: str, body: ValidationGateConversion, session: SessionDep, user: GetUserDep):
+    return convert_manual_validation_gate(
+        session, gate_id, version=body.version, actor_id=_identity(user)[0],
+        recipe=body.recipe, required_capability=body.required_capability,
+        recipe_args=body.recipe_args,
     )
 
 
@@ -1089,6 +1101,26 @@ def validation_finish(gate_id: str, body: ValidationFinishRequest, session: Sess
         session, gate_id=gate_id, **body.model_dump(),
         autopilot_enabled=bool(autopilot.status(session)["enabled"]),
     )
+
+
+@internal.post("/validation-gates/{gate_id}/recheck")
+def validation_recheck(gate_id: str, body: ValidationRecheckRequest, session: SessionDep):
+    from . import validation_lane
+    _write_guard()
+    return validation_lane.recheck_new_candidate(
+        session, gate_id=gate_id, **body.model_dump(),
+        autopilot_enabled=bool(autopilot.status(session)["enabled"]),
+    )
+
+
+@internal.post("/validation-gates/poll-workflows")
+def validation_poll_workflows(body: MaintenanceRequest, session: SessionDep):
+    from . import validation_lane
+    _write_guard()
+    return {"items": validation_lane.poll_trusted_workflows(
+        session, limit=body.limit,
+        autopilot_enabled=bool(autopilot.status(session)["enabled"]),
+    )}
 
 
 @internal.post("/validation-gates/recover")

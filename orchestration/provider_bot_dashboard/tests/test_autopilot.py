@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 import uuid
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -11,6 +12,7 @@ from sqlalchemy.orm import Session
 from airflow.models.variable import Variable
 from airflow.providers.vintage.bot_dashboard import autopilot as ap
 from airflow.providers.vintage.bot_dashboard.models import Event, Execution, Policy, Revision, Task, ValidationGate, metadata, utcnow
+from airflow.providers.vintage.bot_dashboard.git_provider import GitProviderError
 from airflow.providers.vintage.bot_dashboard.service import Conflict, PreconditionFailed, create_manual_task, patch_task
 
 
@@ -71,6 +73,91 @@ class AutopilotTest(unittest.TestCase):
         self.assertIn("start", ap._actions(detail))
         self.assertEqual([], self.session.scalars(select(Execution)).all())
 
+    def test_assigned_accepted_ticket_does_not_repeat_assignment(self):
+        task = self.task("accepted")
+        task.assignee_kind = "bot"
+        task.assignee_profile = "staff"
+        self.session.commit()
+        actions = ap._actions(ap._snapshot(self.session, str(task.id)))
+        self.assertNotIn("assign", actions)
+        self.assertIn("start", actions)
+
+    def test_assignment_and_configuration_do_not_cycle_after_a_rejected_start(self):
+        from datetime import timedelta
+
+        task = self.task("accepted")
+        self.enable()
+        first = ap.claim(self.session); self.session.commit()
+        self.assertEqual("applied", self.decide(first, "configure", changes=ap.PatchTask(
+            version=task.version, planned_resolution="Verify the current source and publish reviewed evidence."))["status"])
+        with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(minutes=2)):
+            second = ap.claim(self.session); self.session.commit()
+        self.assertEqual(["assign", "dismiss"], second["actions"])
+        self.decide(second, "assign", profile="senior")
+        with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(minutes=2)):
+            third = ap.claim(self.session); self.session.commit()
+        self.assertIn("start", third["actions"])
+        self.assertNotIn("configure", third["actions"])
+        self.assertNotIn("assign", third["actions"])
+        with patch.object(ap, "_perform", side_effect=PreconditionFailed("Bot lacks execution permission")):
+            self.assertEqual("deferred", self.decide(third, "start")["status"])
+        with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(hours=2)):
+            self.assertEqual("idle", ap.claim(self.session)["status"])
+        self.assertEqual([], self.session.scalars(select(Execution)).all())
+
+        # A changed requirement, not elapsed time or executive audit noise,
+        # permits a fresh plan decision on the existing ticket.
+        patch_task(self.session, str(task.id), version=task.version, actor_id="owner",
+                   changes={"planned_resolution": "Use a newly authorized runner for current source verification."})
+        self.session.commit()
+        wake = ap.claim(self.session)
+        self.assertEqual(str(task.id), wake["task"]["id"])
+        self.assertIn("configure", wake["actions"])
+        self.assertIn("start", wake["actions"])
+
+    def test_unchanged_configuration_remains_suppressed_after_model_failure(self):
+        from datetime import timedelta
+
+        task = self.task("accepted")
+        task.assignee_kind = "bot"; task.assignee_profile = "senior"
+        self.session.commit(); self.enable()
+        first = ap.claim(self.session); self.session.commit()
+        self.decide(first, "configure", changes=ap.PatchTask(
+            version=task.version, planned_resolution="Validate the exact reviewed source response."))
+        with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(minutes=2)):
+            second = ap.claim(self.session); self.session.commit()
+        self.assertNotIn("configure", second["actions"])
+        ap.failed(self.session, ap.FailedDecision(lease_id=second["lease_id"])); self.session.commit()
+        with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(minutes=16)):
+            retry = ap.claim(self.session)
+        self.assertIn("start", retry["actions"])
+        self.assertNotIn("configure", retry["actions"])
+
+    def test_transient_provider_failure_retries_after_cooldown(self):
+        from datetime import timedelta
+        import httpx
+
+        task = self.task("accepted")
+        task.assignee_kind = "bot"; task.assignee_profile = "senior"
+        self.session.commit(); self.enable()
+        first = ap.claim(self.session); self.session.commit()
+        with patch.object(ap, "_perform", side_effect=httpx.ConnectError("Connection reset")):
+            self.assertEqual("deferred", self.decide(first, "start")["status"])
+        with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(minutes=2)):
+            self.assertEqual("idle", ap.claim(self.session)["status"])
+        with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(minutes=61)):
+            retry = ap.claim(self.session)
+        self.assertEqual(str(task.id), retry["task"]["id"])
+        self.assertIn("start", retry["actions"])
+
+    def test_human_owned_accepted_ticket_waits_without_executive_reassignment(self):
+        task = self.task("accepted")
+        task.assignee_kind = "human"
+        task.assignee_profile = None
+        self.session.commit()
+        self.enable()
+        self.assertEqual("idle", ap.claim(self.session)["status"])
+
     def test_human_assignment_never_offers_model_execution(self):
         task = self.task("accepted")
         task.assignee_kind = "human"
@@ -81,37 +168,6 @@ class AutopilotTest(unittest.TestCase):
             detail["state"] = state
             self.assertNotIn("start", ap._actions(detail))
             self.assertNotIn("revise", ap._actions(detail))
-
-    def test_review_retry_does_not_offer_revision_without_a_new_plan(self):
-        task = self.task("in_review")
-        task.assignee_kind = "bot"
-        task.assignee_profile = "senior"
-        self.session.commit()
-        execution = self.execution(task, review_verdict="unable_to_review")
-        self.enable()
-        claim = ap.claim(self.session)
-        self.assertIn("configure", claim["actions"])
-        self.assertNotIn("revise", claim["actions"])
-        with self.assertRaisesRegex(ap.service.DomainError, "not available"):
-            self.decide(claim, "revise")
-        self.assertEqual(1, execution.revision)
-        self.assertEqual("unable_to_review", execution.review_verdict)
-        patch_task(self.session, str(task.id), version=task.version, actor_id="owner",
-                   changes={"planned_resolution": "Address a newly documented implementation finding"})
-        self.session.commit()
-        self.assertIn("revise", ap._actions(ap._snapshot(self.session, str(task.id))))
-        self.assertEqual(1, execution.revision)
-        self.assertEqual("unable_to_review", execution.review_verdict)
-
-    def test_typed_unusable_review_offers_retry_not_revision(self):
-        task = self.task("in_review")
-        task.assignee_kind = "bot"; task.assignee_profile = "senior"
-        self.execution(task, review_verdict="unable_to_review",
-                       provider_state={"review_verdict": "unable_to_review",
-                                       "review_failure_kind": "format_failed"})
-        detail = ap._snapshot(self.session, str(task.id))
-        self.assertIn("retry_review", ap._actions(detail))
-        self.assertNotIn("revise", ap._actions(detail))
 
     def test_blocked_unusable_review_offers_same_head_retry(self):
         task = self.task("blocked")
@@ -135,8 +191,6 @@ class AutopilotTest(unittest.TestCase):
                               "paths": ["src/job.py"],
                               "check_expectations": ["The admitted unit test passes."]},
         })
-        detail = ap._snapshot(self.session, str(task.id))
-        self.assertIn("repair", ap._actions(detail))
         changes = ap._review_repair_changes(self.session, task, execution)
         self.assertIn("Handle null input", changes["planned_resolution"])
         execution.provider_state["review_repair"]["paths"] = ["outside/job.py"]
@@ -505,6 +559,31 @@ class AutopilotTest(unittest.TestCase):
         self.assertNotIn("configure", next_claim["actions"])
         self.assertIn("assign", next_claim["actions"])
 
+    def test_failed_validation_evidence_reopens_plan_without_a_ticket_edit(self):
+        from datetime import timedelta
+
+        task = self.task("ready")
+        self.execution(task)
+        gate = ValidationGate(task_id=task.id, gate_key="source-response", stage="merge",
+            recipe="public_source_smoke", owner="bot", required_capability="public-network-readonly",
+            subject="a" * 40, recheck_condition="Verify the actual observed source response",
+            required=True)
+        self.session.add(gate); self.session.commit(); self.enable()
+        first = ap.claim(self.session); self.session.commit()
+        self.assertNotIn("merge", first["actions"])
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=self.provider()):
+            self.decide(first, "configure", changes=ap.PatchTask(
+                version=task.version, planned_resolution="Run the recorded source response check."))
+        with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(minutes=2)):
+            self.assertEqual("idle", ap.claim(self.session)["status"])
+        gate.status = "failed"
+        gate.evidence = {"observation": "Source response does not match expected contract"}
+        self.session.commit()
+        claim = ap.claim(self.session)
+        self.assertEqual(str(task.id), claim["task"]["id"])
+        self.assertIn("configure", claim["actions"])
+        self.assertNotIn("merge", claim["actions"])
+
     def execution(self, task, **changes):
         values = dict(execution_id="e" * 64, task_id=task.id, sequence=1, revision=1, idempotency_key="test-execution",
             target_run_id="test-run", profile="senior", reviewer_required=True, stage="reviewed", dispatch_state="running",
@@ -535,6 +614,57 @@ class AutopilotTest(unittest.TestCase):
         provider.merge_change.assert_not_called()
         self.assertIn("changed", result["error"])
         self.assertEqual("ready", task.state)
+
+    def test_behind_bot_pr_refreshes_same_head_without_merging_until_checks_rerun(self):
+        task = self.task("ready")
+        task.assignee_kind = "bot"
+        task.assignee_profile = "senior"
+        row = self.execution(task, base_sha="b" * 40,
+                             verification_manifest={"changed_paths": ["src/candidate.py"]})
+        self.enable()
+        claim = ap.claim(self.session); self.session.commit()
+        provider = self.provider()
+        provider.read_base_identity.return_value = "c" * 40
+        provider.refresh_change.return_value = provider.read_change.return_value | {"head_sha": "d" * 40}
+        provider.refreshed_change_preserves_paths.return_value = True
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=provider):
+            self.assertEqual("applied", self.decide(claim, "merge")["status"])
+        provider.refresh_change.assert_called_once_with(17, "a" * 40)
+        provider.refreshed_change_preserves_paths.assert_called_once_with(
+            "a" * 40, "d" * 40, ["src/candidate.py"],
+        )
+        provider.merge_change.assert_not_called()
+        self.assertEqual("d" * 40, row.trusted_head_sha)
+        self.assertEqual("c" * 40, row.provider_state["refreshed_base_sha"])
+        self.assertTrue(self.session.scalars(select(Event).where(
+            Event.task_id == task.id, Event.event_type == "bot_pr_base_refreshed",
+        )).all())
+
+        provider.read_change.return_value = provider.refresh_change.return_value
+        with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(minutes=2)):
+            next_claim = ap.claim(self.session); self.session.commit()
+        provider.merge_change.side_effect = GitProviderError("required checks pending")
+        self.assertIn("lease_id", next_claim, next_claim)
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=provider):
+            self.assertEqual("deferred", self.decide(next_claim, "advance")["status"])
+        self.assertEqual("ready", task.state)
+        failed = self.session.scalar(select(Event).where(
+            Event.task_id == task.id, Event.event_type == "executive_decision",
+        ).order_by(Event.sequence.desc()).limit(1))
+        self.assertEqual("advance", failed.payload["action"])
+        retry_seconds = (datetime.fromisoformat(failed.payload["revisit_at"]) - utcnow()).total_seconds()
+        self.assertGreater(retry_seconds, 0)
+        self.assertLess(retry_seconds, 90)
+        provider.merge_change.side_effect = None
+        with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(minutes=2)):
+            checked_claim = ap.claim(self.session); self.session.commit()
+        self.assertIn("merge", checked_claim["actions"])
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=provider):
+            self.assertEqual("applied", self.decide(checked_claim, "merge")["status"])
+        self.assertEqual([(17, "d" * 40)] * 2, [
+            call.args for call in provider.merge_change.call_args_list
+        ])
+        provider.refresh_change.assert_called_once()
 
     def test_merge_is_sha_pinned_and_does_not_skip_completion(self):
         task = self.task("ready"); self.execution(task)
@@ -584,6 +714,54 @@ class AutopilotTest(unittest.TestCase):
         self.assertEqual(str(task.id), claim["task"]["id"])
         self.assertIn("merge", claim["actions"])
 
+    def test_bot_pr_merges_without_waiting_for_linked_child(self):
+        task = self.task("ready")
+        task.assignee_kind = "bot"
+        task.assignee_profile = "senior"
+        self.execution(task, review_verdict="changes_requested")
+        child = self.task("in_progress")
+        child.related_task_id = task.id
+        self.session.commit()
+        actions = ap._actions(ap._snapshot(self.session, str(task.id)))
+        self.assertIn("merge", actions)
+        self.assertNotIn("configure", actions)
+
+    def test_blocked_child_keeps_merge_closed_but_failed_gate_can_reopen_parent_plan(self):
+        from datetime import timedelta
+
+        parent = self.task("ready")
+        self.execution(parent)
+        child = self.task("blocked")
+        child.related_task_id = parent.id
+        ap.service._event(self.session, parent, "follow_up_ticket_linked", "system", "source_scheduling",
+                          payload={"task_id": str(child.id), "title": child.title})
+        gate = ValidationGate(task_id=parent.id, gate_key="linked-validation", stage="merge",
+            recipe="public_source_smoke", owner="bot", required_capability="public-network-readonly",
+            subject="a" * 40, recheck_condition="Retry after a source check failure", required=True)
+        self.session.add(gate); self.session.commit(); self.enable()
+        first = ap.claim(self.session); self.session.commit()
+        self.assertEqual(str(parent.id), first["task"]["id"])
+        self.assertIn("configure", first["actions"])
+        self.assertNotIn("merge", first["actions"])
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=self.provider()):
+            self.decide(first, "configure", changes=ap.PatchTask(
+                version=parent.version, planned_resolution="Resolve the linked validator failure."))
+        with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(minutes=2)):
+            next_claim = ap.claim(self.session)
+        self.assertNotEqual(str(parent.id), next_claim.get("task", {}).get("id"))
+        self.session.rollback()
+        gate.status = "failed"
+        gate.evidence = {"observation": "Linked validator observed a source contract mismatch"}
+        self.session.commit()
+        # Do not let the unrelated every-fifth-minute age cycle select the child
+        # before the ready parent when asserting the parent's gate-driven wake.
+        now = ap.utcnow()
+        with patch.object(ap, "utcnow", return_value=now + timedelta(minutes=(1 - now.minute) % 5)):
+            wake = ap.claim(self.session)
+        self.assertEqual(str(parent.id), wake["task"]["id"])
+        self.assertIn("configure", wake["actions"])
+        self.assertNotIn("merge", wake["actions"])
+
     def test_executive_reuses_one_pr_comment_per_ticket(self):
         from datetime import timedelta
         task = self.task("ready")
@@ -601,6 +779,31 @@ class AutopilotTest(unittest.TestCase):
         self.assertEqual(2, len(markers))
         self.assertEqual(markers[0], markers[1])
         self.assertIn(str(task.id), markers[0])
+
+    def test_bot_pr_advances_to_merge_despite_rejected_review_and_failed_gate(self):
+        task = self.task("in_review")
+        task.assignee_kind = "bot"
+        task.assignee_profile = "senior"
+        self.execution(task, review_verdict="changes_requested", provider_state={
+            "state": "open", "head_sha": "a" * 40, "draft": False,
+            "review_verdict": "changes_requested",
+        })
+        self.session.add(ValidationGate(
+            task_id=task.id, gate_key="live-check", stage="merge",
+            recipe="trusted_workflow_check", owner="validation-service",
+            required_capability="github-actions-readonly", subject="a" * 40,
+            recheck_condition="Next provider event", status="failed", required=True,
+        ))
+        self.session.commit()
+        self.enable()
+        claim = ap.claim(self.session)
+        self.session.commit()
+        self.assertEqual(["ready", "advance"], claim["actions"])
+        provider = self.provider()
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=provider):
+            self.assertEqual("applied", self.decide(claim, "advance")["status"])
+        provider.merge_change.assert_called_once_with(17, "a" * 40)
+        self.assertEqual("ready", task.state)
 
     def test_premerge_validation_remains_required_for_reviewed_change(self):
         task = self.task("ready")

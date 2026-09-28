@@ -124,6 +124,36 @@ class ValidationRunnerTest(unittest.TestCase):
         self.assertEqual([], executor.calls)
         self.assertIn("capability", client.finished[0]["evidence"]["reason_code"])
 
+    def test_public_source_failure_is_parked_with_typed_evidence(self):
+        source = "https://celestrak.org/SOCRATES/sort-maxProb.csv"
+        catalog = runner.CommandCatalog.parse({
+            "reconcile-public-csv": {
+                "recipe": "public_source_reconciliation", "capability": "public-network-readonly",
+                "argv": ["/usr/bin/true"], "timeout_seconds": 30,
+                "network_profile": "public-egress-proxy-v1", "source_url": source,
+                "expected_status": 200, "baseline_count": 2,
+            },
+        })
+        gate = _gate(
+            recipe="public_source_reconciliation", required_capability="public-network-readonly",
+            recipe_args={"command_id": "reconcile-public-csv", "source_url": source,
+                         "expected_status": 200, "required_record_types": ["events"]},
+        )
+
+        class FailedSource(_Executor):
+            def run(self, command, candidate, environment):
+                return runner.CommandResult(1, b"", False, 3, b"candidate coverage differs from reference")
+
+        worker = runner.ValidationRunner(
+            catalog=catalog, candidates=_Candidates(),
+            executor=FailedSource(b"", {"public-network-readonly"}), credentials=_Credentials(),
+        )
+        client = _Client(gate)
+        worker.run_once(client, runner_id="validation-worker")
+        self.assertEqual("failed", client.finished[0]["status"])
+        self.assertEqual("validation_source_check_failed", client.finished[0]["evidence"]["reason_code"])
+        self.assertIn("coverage differs", client.finished[0]["evidence"]["diagnostic_tail"])
+
     def test_required_summary_retains_failure_accounting_without_raw_samples(self):
         payload = {
             "health": "degraded", "completeness": "partial",
