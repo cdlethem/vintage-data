@@ -84,7 +84,10 @@ jobs:
                   parsed_table = list(candidate.fetch_conjunctions("maxProb", 100, "table"))
               with mock.patch.object(candidate, "_get", return_value=(csv_text, 200, 1, len(csv_text), 0.0)):
                   parsed_csv = list(candidate.fetch_conjunctions("maxProb", 100, "csv"))
-              identity = lambda row: (row["norad_id_1"], row["norad_id_2"], row["tca"])
+              # The extractor preserves the production CSV's source timestamp and ID;
+              # compare UTC instants rather than requiring the validator's display format.
+              identity = lambda row: (row["norad_id_1"], row["norad_id_2"],
+                                      validator._utc_time(row["tca"], "candidate parser"))
               if ([identity(row) for row in parsed_table] != table
                       or [identity(row) for row in parsed_csv] != baseline):
                   raise validator.ValidationError("reviewed candidate parser differs from official top-100 event coverage")

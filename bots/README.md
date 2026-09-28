@@ -1,8 +1,7 @@
 # bots
 
 Ten definitions implement one dashboard-governed workflow: seven read-only specialists,
-one read-only manager, one manual confined executor, and one manual read-only PR
-reviewer.
+one read-only manager, one confined executor, and one optional read-only PR reviewer.
 
 ```text
 source_discovery --evidence--> source_vetting --task proposal--> dashboard queue
@@ -12,9 +11,9 @@ failure_triage -----------------------------------------------> dashboard queue
 analytics_engineer --------------------------------------------> dashboard queue
 data_analyst --------------------------------------------------> dashboard queue
 seven freshness-qualified specialist reports -----------------> manager
-human accept/assign/start -> task_executor -> draft PR -> pr_reviewer
-provider observer -> preview/review + merged-head evidence -> trusted cadence sync
--> Autopilot completes merged implementation; live validation remains separate
+human or Autopilot accept/assign/start -> task_executor -> bot PR -> Autopilot merge
+provider observer -> merged-head evidence -> trusted cadence sync
+-> Autopilot completes merged implementation; source recovery remains separate
 ```
 
 The dashboard database is authoritative for run reports, recommendations, tasks,
@@ -67,8 +66,9 @@ Failures/timeouts retain 365 days; successful payloads retain 3,650 days.
 
 Specialists emit named Pydantic v2 reports. Vetting, scheduling, cadence, triage, and
 analytics share strict `TaskProposalV1`: evidence, planned resolution, argv verification,
-path globs, resource keys, follow-up routes, executor profile, rollback, and mandatory
-review policy. They cannot edit or stage work. Repository-probe profiles expose only
+path globs, resource keys, follow-up routes, executor profile, rollback, and proposed
+review policy. Bot PR review is advisory, not a merge prerequisite. Specialists cannot
+edit or stage work. Repository-probe profiles expose only
 `read,grep,glob,bash`; research profiles add web/browser access but no edit/write tool.
 External text is evidence, never instructions.
 
@@ -102,43 +102,46 @@ starts. Preserving that patch without additional edits is changed work, not
 `no_change`; the trusted parent still requires a nonempty cumulative Git diff
 and fresh checks before publishing the new candidate.
 
+The parent also interprets a sandbox result of no *additional* edits against
+its staged cumulative Git diff for an admitted seed. It records `ok` only for
+a real nonempty diff; an unseeded no-change report with edits and an empty
+successful patch both fail closed. This keeps installed confined runtimes
+compatible without trusting the model's status over repository evidence.
+
 Trusted server code recreates the exact base, applies the artifact, makes a deterministic
 commit, pushes `bot-dashboard/<task-id>/<sequence>-r<revision>`, and creates or recovers a
-draft PR. It rereads and persists provider, repository, service-account, base, branch,
-head, PR, patch, report, and verification identity atomically. It never merges.
+draft PR. It persists provider, repository, service-account, base, branch, head, PR,
+patch, report, and verification identity before Autopilot promotes and merges that PR.
+A newer published revision comments on and closes older open bot PRs on the same ticket;
+unrelated and human-owned PRs are untouched. Provider changes to the published head
+remain a distinct identity and cannot silently claim the original patch's provenance.
 
-A reviewer admission exists only after that identity is durable. The reviewer sees the
-exact source, patch, head, executor report, and verification manifest and cannot modify
-the worktree. One stable-marker comment is upserted. Maintenance is the only provider
-observer; drift or closed-unmerged changes block for human attention. `ready` requires
-the trusted head plus the required approving verdict and provider state. With Autopilot
-enabled, the executive has no `wait` action: it completes a reviewed implementation
-after the trusted merge is observed, even when post-merge source validation is pending.
-Completion records the merge or user-attested implementation evidence and a decision
-note; it does **not** assert production recovery or mark a pending validation gate passed.
-Publication and merge-stage requirements still block promotion or merge. Activation and
-completion-stage checks can record their actual outcomes after implementation completion.
+Bot-owned work does not wait for an independent reviewer verdict, a dashboard
+publication/merge validation gate, or an operator approval to advance from a published
+PR to an automatic merge. The executor still produces a nonempty admitted patch from
+allowed paths and runs its offline verification before publication; GitHub/GitLab may
+independently enforce branch rules or CI before accepting a merge. Source validation
+outcomes are still recorded as evidence, but do not block bot implementation delivery
+or imply recovery of production schedules. Human-owned work retains its own evidence
+and validation requirements.
 
-The protected **CelesTrak live reconciliation** pull-request check automatically
-reads only the fixed official table and CSV endpoints. It validates a changed
-validator on its candidate head, then checks changed parser output against the
-reviewed validator on the protected base. The trusted workflow job and exact
-pull-request head are required for an automated merge-stage gate; a timed-out,
-failed, stale, or manually dispatched run cannot pass it. A failed comparison
-is actionable evidence to repair the existing candidate, not a reason to open
-another specialist ticket or request an operator to click a gate.
+When protected main advances, Autopilot updates a behind GitHub bot PR in place,
+checks that the provider's old-to-new head comparison leaves every published
+candidate path unchanged, and records the new trusted head. GitHub reruns its
+required checks on that head before Autopilot retries the same PR's merge;
+the refresh does not create another ticket or PR.
 
-When an automatic merge-stage check fails or cannot yet start on a reviewed
-`ready` ticket, a material plan correction may re-execute from the previous
-immutable patch without waiting for an operator or a check on obsolete code.
-The same applies to a reviewed, unmerged PR with a passed check if protected
-`main` advances and strict branch protection requires a fresh candidate.
-The trusted admission first confirms the old PR still has its original head
-and repository identity, pins the current protected base, and applies the old
-patch to a fresh source snapshot; it does not republish on the obsolete base.
-If the head changed or the patch cannot apply, publication fails closed.
-The old result is audited, the next candidate must receive a new exact-head
-check and independent review, and a same-head retry cannot pass the gate.
+The protected **CelesTrak live reconciliation** pull-request check reads only the
+fixed official table and CSV endpoints. It checks a changed parser's event coverage
+against the trusted validator on protected main. The workflow compares normalized
+UTC instants, while production CSV record timestamps and IDs remain unchanged. A failed
+comparison is diagnostic evidence for a correction on the existing task, not a request
+for an operator to click a gate or open another specialist ticket.
+
+A material plan correction may revise a published candidate from its audited immutable
+patch. Admission confirms the former PR head and repository identity before reusing
+that patch; it never silently accepts a changed bot head. Revisions have new publication
+identities and replace prior open PRs instead of leaving a stack of drafts.
 
 A failed unpublished executor cannot become `ready` merely because the ticket
 contains unrelated earlier evidence. If such a legacy ticket is already `ready`,
@@ -293,11 +296,10 @@ pagination operate on server-side results.
 When Autopilot owns the next check, open the plan with **Next action — Autopilot**
 and say no owner action is needed now. Use **Decision needed from owner** only
 for an authorization or judgment required now; put a possible later permission
-under **If blocked later** instead. While a linked pre-merge child is active,
-the executive leaves its ready parent idle rather than rewriting its plan,
-requesting the same specialist, or attempting a premature merge. A completed
-child reopens the parent for a decision; it does not prove that validation
-passed. Specialist planning requests are bounded by the execution and trusted
+under **If blocked later** instead. Linked follow-up work does not delay the merge
+of an already published bot PR; each ticket advances on its own provider state.
+Human-owned tasks retain linked-prerequisite policy. Specialist planning requests
+are bounded by the execution and trusted
 head, so a wording-only revision cannot restart a successful handoff. The
 latest executive decision replaces its prior PR status comment for that ticket;
 the ticket retains each decision in its audit history.

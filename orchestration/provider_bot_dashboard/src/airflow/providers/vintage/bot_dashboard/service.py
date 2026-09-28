@@ -618,14 +618,13 @@ def transition_task(session: Session, task_id: str, *, version: int, actor_id: s
                 or not provider_state.get("draft")
             )
             and (
-                not execution.reviewer_required
+                task.assignee_kind == "bot"
+                or not execution.reviewer_required
                 or provider_state.get("review_verdict") == "approved"
             )
         )
         if not trusted:
-            raise PreconditionFailed(
-                "ready requires a trusted provider head and reviewer policy"
-            )
+            raise PreconditionFailed("ready requires the trusted published provider head")
     if previous == "in_progress" and to_state == "ready":
         latest = session.scalar(select(Execution).where(
             Execution.task_id == task.id,
@@ -757,21 +756,14 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
             .order_by(Execution.sequence.desc(), Execution.revision.desc()).limit(1)
             .with_for_update()
         )
-        # A newer plan may repair a reviewed, unmerged candidate even after its
-        # exact-head check passed: a protected base can advance before merge.
-        # Admission still captures the immutable seed and resets head-bound gates.
-        ready_candidate = bool(previous and previous.pr_number and previous.trusted_head_sha
-                               and not previous.merged_at and (
-            previous.review_verdict == "approved" or not previous.reviewer_required
-            or session.scalar(select(ValidationGate.id).where(
-                ValidationGate.task_id == task.id,
-                ValidationGate.required.is_(True),
-                ValidationGate.stage == "merge",
-                ValidationGate.status.in_(("pending", "failed")),
-                ValidationGate.owner == "validation-service",
-                ValidationGate.subject == previous.trusted_head_sha,
-            ).limit(1))
-        ))
+        # A newer plan can revise an unmerged bot candidate without waiting for
+        # a separate review or a validation status that may arrive after review.
+        ready_candidate = bool(
+            previous and previous.pr_number and previous.trusted_head_sha
+            and not previous.merged_at
+            and (task.assignee_kind == "bot" or previous.review_verdict == "approved"
+                 or not previous.reviewer_required)
+        )
     permitted_states = {"in_review", "ready"} if ready_candidate else {"in_review"} if revision else {"accepted"}
     if retry_previous is None and task.state not in permitted_states:
         raise PreconditionFailed("task state cannot start this execution")
@@ -809,19 +801,13 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
     elif retry_previous is not None:
         seed = get_seed(session, retry_previous)
     if seed and seed.get("trusted_head_sha") and (
-        (revision and task.state == "ready" and ready_candidate
-         and previous.review_verdict == "approved")
+        (revision and task.state == "ready" and ready_candidate)
         or (retry_previous and retry_previous.terminal_reason_code == "no_change_contains_diff")
     ):
-        # A reviewed seed is historical code. Recheck its exact published
-        # identity and pin a new protected base before applying its patch;
-        # restoring the old source would produce another strictly-behind PR.
-        source = session.scalar(select(Execution).where(
-            Execution.task_id == task.id,
-            Execution.execution_id == seed["execution_id"],
-        ).limit(1).with_for_update())
-        if source is None or source.review_verdict != "approved":
-            raise PreconditionFailed("base refresh requires the approved immutable candidate")
+        # An in-place revision reuses the execution row and clears its former
+        # review verdict and execution ID. The immutable seed retains the old
+        # candidate identity; the provider rechecks its exact head, repository,
+        # branch, and service account before pinning a fresh protected base.
         from .conflict_recovery import _observe_seed_candidate
         observation, current_base = _observe_seed_candidate(session, task, seed, require_conflict=False)
         if current_base != seed.get("repair_base_sha", seed["base_sha"]):
@@ -859,7 +845,7 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
             idempotency_key=idempotency_key,
             target_run_id=f"task__{task.id}__{sequence}__r{revision_number}",
             profile=task.assignee_profile,
-            reviewer_required=task.reviewer_required,
+            reviewer_required=False if task.assignee_kind == "bot" else task.reviewer_required,
         )
         session.add(row)
     else:
@@ -874,7 +860,7 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
         row.lease_expires_at = None
         row.stage = "admitted"
         row.profile = task.assignee_profile
-        row.reviewer_required = task.reviewer_required
+        row.reviewer_required = False if task.assignee_kind == "bot" else task.reviewer_required
         row.executor_deadline_at = None
         row.review_deadline_at = None
         row.base_sha = None
@@ -901,8 +887,8 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
         row.provider_fingerprint = None
         row.synced_at = None
         row.terminal_at = None
-    # Start from the previous candidate, but require new checks and independent
-    # review of the complete cumulative patch against its immutable base.
+    # Preserve the previous candidate's immutable patch while refreshing its
+    # trusted source on revision; no separate reviewer is queued for bot work.
     restore_source(row, seed)
     _event(
         session,

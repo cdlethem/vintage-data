@@ -371,6 +371,18 @@ def _validate_paths(admission: dict, paths: list[str], diff_size: int, error_typ
             raise exc
 
 
+def _cumulative_executor_status(payload: dict, admission: dict, current_diff: bytes, error_type) -> None:
+    # The sandbox snapshots after the admitted seed is applied; its "no_change"
+    # can mean no *additional* edits. Only the trusted cumulative Git diff and
+    # a pinned, verified seed can establish changed work for publication.
+    if payload["status"] == "no_change" and current_diff:
+        if not admission.get("seed_patch_sha256"):
+            raise error_type("no_change_contains_diff", "terminal")
+        payload["status"] = "ok"
+    if payload["status"] == "ok" and not current_diff:
+        raise error_type("successful_change_is_empty", "terminal")
+
+
 def _validated_checks(admission: dict, payload: dict, error_type) -> list[dict]:
     checks = payload.get("verification")
     expected = admission["task"]["verification_commands"]
@@ -677,14 +689,9 @@ def run(context: dict, cfg: dict, runner, dashboard_module):
                     raise dashboard_module.ControlPlaneError(
                         "executor_changed_paths_mismatch", "terminal"
                     )
-                if payload["status"] == "no_change" and current_diff:
-                    raise dashboard_module.ControlPlaneError(
-                        "no_change_contains_diff", "terminal"
-                    )
-                if payload["status"] == "ok" and not current_diff:
-                    raise dashboard_module.ControlPlaneError(
-                        "successful_change_is_empty", "terminal"
-                    )
+                _cumulative_executor_status(
+                    payload, admission, current_diff, dashboard_module.ControlPlaneError,
+                )
                 checks = _validated_checks(
                     admission, payload, dashboard_module.ControlPlaneError
                 )
