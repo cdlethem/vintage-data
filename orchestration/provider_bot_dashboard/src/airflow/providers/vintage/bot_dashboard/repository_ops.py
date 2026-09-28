@@ -10,6 +10,7 @@ import stat
 import subprocess
 import tarfile
 import tempfile
+import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -17,6 +18,7 @@ from .artifacts import put_artifact, read_artifact
 from .git_provider import GitProviderError, RepositoryConfig, get_provider, load_repository_config, validate_changed_paths
 from .models import Execution, Revision, Task, ValidationGate, utcnow
 from .service import _event
+from .validation_lane import rebind_candidate_gates
 
 
 def _git_environment(root: pathlib.Path, config: RepositoryConfig) -> dict[str, str]:
@@ -270,6 +272,9 @@ def publish_execution_change(
         gate.subject = head_sha
         gate.version += 1
         gate.updated_at = utcnow()
+    # A new attested head invalidates prior automatic results for this task.
+    # Do not reset manual or same-head failed gates into retry loops.
+    rebind_candidate_gates(session, task, head_sha)
     _event(
         session,
         task,
@@ -286,6 +291,46 @@ def publish_execution_change(
             "pr_number": number,
         },
     )
+    session.flush()
+    # A revision replaces its older PR; keep one live change per bot task.
+    # In-place revisions retain their predecessor only in the immutable seed.
+    superseded = [
+        {"pr_number": prior.pr_number, "branch": prior.branch,
+         "trusted_head_sha": prior.trusted_head_sha}
+        for prior in session.scalars(select(Execution).where(
+            Execution.task_id == task.id, Execution.id != execution.id,
+            Execution.pr_number.is_not(None), Execution.merged_at.is_(None),
+        )).all()
+    ]
+    if seed and seed.get("pr_number"):
+        superseded.append(seed)
+    retired = set()
+    for old in superseded:
+        old_number = old.get("pr_number")
+        if (not old_number or old_number == number or old_number in retired
+                or not str(old.get("branch") or "").startswith(f"bot-dashboard/{task.id}/")
+                or not old.get("trusted_head_sha")):
+            continue
+        retired.add(old_number)
+        try:
+            previous = provider.read_change(old_number)
+            if previous["state"] != "open":
+                continue
+            if (previous["provider"] != config.provider
+                    or previous["number"] != old_number
+                    or previous["head_ref"] != old["branch"]
+                    or previous["head_sha"] != old["trusted_head_sha"]
+                    or previous["base_ref"] != config.base_branch
+                    or previous["author_id"] != config.service_account_id):
+                continue
+            provider.post_comment(old_number, f"Superseded by bot revision PR #{number} on the same task; this older candidate is not the merged implementation.")
+            provider.close_change(old_number, old["trusted_head_sha"])
+            _event(session, task, "superseded_pr_closed", "provider", str(old_number),
+                   payload={"pr_number": old_number, "replacement_pr_number": number})
+        except (GitProviderError, httpx.TransportError, TimeoutError, OSError):
+            # Retirement cannot erase a successfully published replacement.
+            _event(session, task, "superseded_pr_close_failed", "provider", str(old_number),
+                   payload={"pr_number": old_number, "replacement_pr_number": number})
     session.flush()
     return {
         "status": "published",

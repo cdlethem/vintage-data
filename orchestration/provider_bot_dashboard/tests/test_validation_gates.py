@@ -1,14 +1,16 @@
 import unittest
+from unittest.mock import patch
 import uuid
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from airflow.providers.vintage.bot_dashboard.models import Execution, Task, ValidationGate, metadata
+from airflow.providers.vintage.bot_dashboard.models import Event, Execution, Task, ValidationGate, metadata
 from airflow.providers.vintage.bot_dashboard.service import (
     PreconditionFailed,
     create_manual_task,
+    convert_manual_validation_gate,
     create_validation_gate,
     record_validation_gate,
     require_validation_gates,
@@ -56,15 +58,18 @@ class ValidationGateTest(unittest.TestCase):
         self.assertEqual("passed", passed["status"])
         require_validation_gates(self.session, uuid.UUID(self.task["id"]), "merge")
 
-    def test_executive_can_add_requirement_but_cannot_weaken_existing_gate(self):
+    def test_executive_cannot_add_manual_only_gate_or_weaken_existing_requirement(self):
         gate = {
             "gate_key": "live-smoke", "stage": "merge", "recipe": "manual",
             "owner": "operator", "required_capability": "public-network",
             "subject": "a" * 40, "dependencies": [], "recheck_condition": "head changes",
             "required": True,
         }
+        with self.assertRaisesRegex(PreconditionFailed, "executable bot-owned"):
+            patch_task(self.session, self.task["id"], version=self.task["version"],
+                       actor_id="executive", actor_kind="system", changes={"acceptance_gates": [gate]})
         task = patch_task(self.session, self.task["id"], version=self.task["version"],
-                          actor_id="executive", actor_kind="system", changes={"acceptance_gates": [gate]})
+                          actor_id="owner", changes={"acceptance_gates": [gate]})
         with self.assertRaises(PreconditionFailed):
             patch_task(self.session, self.task["id"], version=task["version"],
                        actor_id="executive", actor_kind="system",
@@ -77,6 +82,63 @@ class ValidationGateTest(unittest.TestCase):
         with self.assertRaises(PreconditionFailed):
             require_validation_gates(self.session, uuid.UUID(self.task["id"]), "merge")
 
+    def test_failed_manual_gate_can_be_converted_only_to_installed_executable_recipe(self):
+        manual = {
+            "gate_key": "live-smoke", "stage": "merge", "recipe": "manual",
+            "owner": "operator", "required_capability": "public-network",
+            "subject": "a" * 40, "dependencies": [], "recheck_condition": "head changes",
+            "required": True,
+        }
+        gate = create_validation_gate(
+            self.session, self.task["id"], version=self.task["version"],
+            actor_id="owner", value=manual,
+        )
+        failed = record_validation_gate(
+            self.session, gate["id"], version=gate["version"], actor_id="operator",
+            status="failed", subject=manual["subject"],
+            evidence={"label": "Observed failure", "observation": "Source did not reconcile"},
+        )
+        recipe_args = {
+            "command_id": "reconcile-public-csv",
+            "source_url": "https://celestrak.org/SOCRATES/sort-maxProb.csv",
+            "expected_status": 200, "required_record_types": ["celestrak_socrates"],
+        }
+        with patch("airflow.providers.vintage.bot_dashboard.validation_recipes.available_capabilities",
+                   return_value=set()):
+            with self.assertRaisesRegex(PreconditionFailed, "capability"):
+                convert_manual_validation_gate(
+                    self.session, gate["id"], version=failed["version"],
+                    actor_id="owner", recipe="public_source_reconciliation",
+                    required_capability="public-network-readonly", recipe_args=recipe_args,
+                )
+        self.assertEqual("failed", self.session.get(ValidationGate, uuid.UUID(gate["id"])).status)
+        with patch("airflow.providers.vintage.bot_dashboard.validation_recipes.available_capabilities",
+                   return_value={"public-network-readonly"}):
+            with self.assertRaisesRegex(PreconditionFailed, "public source assertions"):
+                convert_manual_validation_gate(
+                    self.session, gate["id"], version=failed["version"],
+                    actor_id="owner", recipe="public_source_reconciliation",
+                    required_capability="public-network-readonly",
+                    recipe_args={**recipe_args, "source_url": "https://different.example/source.csv"},
+                )
+            converted = convert_manual_validation_gate(
+                self.session, gate["id"], version=failed["version"], actor_id="owner",
+                recipe="public_source_reconciliation",
+                required_capability="public-network-readonly", recipe_args=recipe_args,
+            )
+        self.assertEqual(("pending", "validation-service", True),
+                         (converted["status"], converted["owner"], converted["required"]))
+        self.assertEqual("Source did not reconcile", converted["evidence"]["observation"])
+        event = self.session.scalar(select(Event).where(Event.event_type == "validation_gate_converted"))
+        self.assertEqual("failed", event.payload["before"]["status"])
+        with self.assertRaisesRegex(PreconditionFailed, "automatic validation lane"):
+            record_validation_gate(
+                self.session, gate["id"], version=converted["version"], actor_id="operator",
+                status="passed", subject=manual["subject"],
+                evidence={"label": "Forged pass", "observation": "clicked"},
+            )
+        with self.assertRaisesRegex(PreconditionFailed, "incomplete"):
+            require_validation_gates(self.session, uuid.UUID(self.task["id"]), "merge")
     def test_passed_evidence_for_old_head_cannot_authorize_new_candidate(self):
         identity = uuid.UUID(self.task["id"])
         self.session.add(ValidationGate(task_id=identity, gate_key="live-smoke", stage="merge",

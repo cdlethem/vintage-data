@@ -42,6 +42,7 @@ requests/minute for anonymous use; self-impose well under that for routine polli
 
 Stdlib only.
 """
+import argparse
 import json
 import os
 import sys
@@ -65,6 +66,11 @@ def _is_timeout(error):
     return isinstance(error, TimeoutError) or (
         isinstance(error, urllib.error.URLError)
         and isinstance(error.reason, TimeoutError)
+    )
+
+def _is_retryable(error):
+    return _is_timeout(error) or (
+        isinstance(error, urllib.error.HTTPError) and error.code == 504
     )
 
 
@@ -105,8 +111,9 @@ def _get(**params):
             with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as resp:
                 return _validate_response(json.load(resp))
         except Exception as error:
-            if _is_timeout(error) and attempt_count < MAX_ATTEMPTS:
-                time.sleep(RETRY_DELAYS_SECONDS[min(attempt_count - 1, len(RETRY_DELAYS_SECONDS) - 1)])
+            if _is_retryable(error) and attempt_count < MAX_ATTEMPTS:
+                delay_index = min(attempt_count - 1, len(RETRY_DELAYS_SECONDS) - 1)
+                time.sleep(RETRY_DELAYS_SECONDS[delay_index])
                 continue
             _report_request_failure(params, error, attempt_count)
             raise
@@ -141,9 +148,16 @@ def fetch_recent(size: int = 25, query: str | None = None):
 
 
 def main(argv=None):
-    args = sys.argv[1:] if argv is None else argv
-    size = int(args[0]) if args else 25
-    for rec in fetch_recent(size=size):
+    parser = argparse.ArgumentParser(description="Fetch recent Zenodo records as NDJSON.")
+    parser.add_argument(
+        "size",
+        nargs="?",
+        type=int,
+        default=25,
+        help="maximum number of recent records to fetch (default: 25)",
+    )
+    args = parser.parse_args(argv)
+    for rec in fetch_recent(size=args.size):
         print(json.dumps(rec, ensure_ascii=False))
 
 

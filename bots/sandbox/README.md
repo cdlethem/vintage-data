@@ -120,6 +120,13 @@ evidence, bounded attempts, and independent review. Warehouse-backed builds,
 Lightdash previews, migrations, and production activation are not authorized by
 enabling this public capability.
 
+Trusted GitHub Actions validation is a separate read-only provider capability:
+`github-actions-readonly`. Configure it alongside the public lane only after
+installing the pinned protected workflow and verifying the provider token has
+Actions, Checks, Pull requests, and Contents read permissions. The validation
+DAG polls the trusted workflow job for the exact open PR head; no confined worker
+executes an arbitrary workflow command, and dispatch runs cannot pass a gate.
+
 Failed model tests expose status codes without upstream response bodies or keys.
 Unpublished terminal failures can use **Retry bot work** after their prerequisite is
 fixed; the previous attempt remains in history. If reporting fails after a PR was

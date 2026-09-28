@@ -10,6 +10,13 @@ resolution=proposal with exactly one {item,steps,task_proposal} only for a disti
 deliverable. Otherwise return no plan and choose already_satisfied, attach_evidence,
 revise_existing, request_validation, or blocked. A correction to the selected
 parent belongs on that ticket; do not create a child proposal for it.
+A live check exposing a mismatch between the source's actual response and an
+already-reviewed parser is a repair of that existing implementation, not a new
+deliverable. Return revise_existing with the observed schema and the required
+recheck; do not propose a child for access, gate administration, rewording, or
+duplicating a linked validator. A bot-owned pre-merge check must be executable
+by an installed, advertised capability. Do not propose a manual/operator gate
+or a policy-amendment ticket to stand in for missing executable validation.
 
 ## Context
 {{SCHEDULING_CONTEXT}}

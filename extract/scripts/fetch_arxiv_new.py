@@ -18,9 +18,12 @@ Quirks:
   * date filter format: submittedDate:[YYYYMMDDHHMM TO YYYYMMDDHHMM] (GMT).
   * HTTP 429 retries are limited to three total attempts; each retry sleeps at
     least three seconds, at most 30 seconds, and no more than 60 seconds total.
+  * HTTP 406 is not retried; diagnostics retain only allowlisted content type
+    and a bounded response-body shape, never raw headers or response text.
 
 Stdlib only.
 """
+import argparse
 import json
 import os
 import sys
@@ -69,6 +72,22 @@ def _close_http_error(error):
     except OSError:
         pass
 
+def _rejection_summary(error):
+    """Retain response shape without logging untrusted headers or body text."""
+    content_type = error.headers.get("Content-Type") if error.headers else None
+    media_type = content_type.split(";", 1)[0].strip().lower() if content_type else None
+    if media_type not in ("text/html", "text/plain", "application/xml", "application/atom+xml"):
+        media_type = "other" if media_type else "missing"
+    try:
+        prefix = error.read(513)
+    except (OSError, ValueError):
+        return f"content_type={media_type}, body=unavailable"
+    body = prefix[:512].lstrip().lower()
+    kind = ("empty" if not prefix else "html" if body.startswith((b"<!doctype html", b"<html"))
+            else "xml" if body.startswith((b"<?xml", b"<feed")) else "other")
+    return (f"content_type={media_type}, body={kind}, "
+            f"body_prefix_bytes={min(len(prefix), 512)}, body_truncated={len(prefix) > 512}")
+
 
 
 
@@ -95,6 +114,8 @@ def fetch_new_papers(category: str = "cs.AI", hours_back: int = 24,
             break
         except urllib.error.HTTPError as error:
             status, headers = error.code, error.headers
+            if status == 406:
+                error.arxiv_response_summary = _rejection_summary(error)
             _close_http_error(error)
             if status != 429 or attempt == MAX_ATTEMPTS:
                 raise
@@ -139,14 +160,17 @@ def _terminal_failure(message):
 
 
 def main(argv=None):
-    argv = sys.argv[1:] if argv is None else argv
-    category = argv[0] if argv else "cs.AI"
+    parser = argparse.ArgumentParser(description="Fetch arXiv new submissions as JSON lines.")
+    parser.add_argument("category", nargs="?", default="cs.AI",
+                        help="arXiv category (default: cs.AI)")
+    category = parser.parse_args(argv).category
     try:
         for record in fetch_new_papers(category=category):
             print(json.dumps(record, ensure_ascii=False))
     except urllib.error.HTTPError as error:
         attempts = MAX_ATTEMPTS if error.code == 429 else 1
-        _terminal_failure(f"HTTP {error.code} after {attempts} attempt(s)")
+        summary = f"; {error.arxiv_response_summary}" if error.code == 406 else ""
+        _terminal_failure(f"HTTP {error.code} after {attempts} attempt(s){summary}")
         return 1
     except (urllib.error.URLError, TimeoutError, OSError):
         _terminal_failure("transport failure")

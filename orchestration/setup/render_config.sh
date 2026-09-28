@@ -59,8 +59,8 @@ set +a
 : "${BOT_DASHBOARD_NETWORK_POLICY_ASSERTION:=}"
 : "${BOT_DASHBOARD_VALIDATION_CAPABILITIES:=[]}"
 case "$BOT_DASHBOARD_VALIDATION_CAPABILITIES" in
-    '[]'|'["public-network-readonly"]') ;;
-    *) echo "validation capabilities must name only the installed public-network recipe lane" >&2; exit 1 ;;
+    '[]'|'["public-network-readonly"]'|'["github-actions-readonly"]'|'["public-network-readonly","github-actions-readonly"]'|'["github-actions-readonly","public-network-readonly"]') ;;
+    *) echo "validation capabilities must name only installed public-network and GitHub Actions read-only lanes" >&2; exit 1 ;;
 esac
 case ",${AIRFLOW_ADMIN_USERS}," in
     *",${BOT_DASHBOARD_API_USERNAME}:"*) AIRFLOW_SIMPLE_AUTH_USERS="$AIRFLOW_ADMIN_USERS" ;;

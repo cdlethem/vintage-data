@@ -316,6 +316,9 @@ class DashboardClient:
     def finish_validation_gate(self, gate_id: str, **body) -> dict:
         return self._request("POST", f"validation-gates/{gate_id}/finish", body=body)
 
+    def poll_validation_workflows(self, limit: int = 20) -> list[dict]:
+        return self._request("POST", "validation-gates/poll-workflows", body={"limit": limit})["items"]
+
     def recover_validation_gates(self, limit: int = 100) -> dict:
         return self._request("POST", "validation-gates/recover", body={"limit": limit})
 

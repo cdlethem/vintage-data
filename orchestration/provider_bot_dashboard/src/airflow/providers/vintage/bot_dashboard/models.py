@@ -82,7 +82,7 @@ class ValidationGate(Base):
         CheckConstraint("stage in ('publication','merge','activation','completion')", name="stage"),
         CheckConstraint("status in ('pending','leased','running','passed','failed')", name="status"),
         CheckConstraint(
-            "recipe in ('public_source_smoke','disposable_schema_migration','warehouse_check','dag_inspection','lightdash_preview','manual')",
+            "recipe in ('public_source_smoke','public_source_reconciliation','trusted_workflow_check','disposable_schema_migration','warehouse_check','dag_inspection','lightdash_preview','manual')",
             name="recipe",
         ),
         Index("ix_bot_dashboard_validation_gate_queue", "status", "stage", "updated_at"),

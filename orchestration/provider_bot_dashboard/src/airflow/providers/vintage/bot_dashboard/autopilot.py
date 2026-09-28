@@ -156,6 +156,7 @@ def failed(session: Session, body: FailedDecision) -> dict:
     task = service._locked_task(session, lease["task_id"])
     service._event(session, task, "executive_error", "system", "executive", payload={
         "reason": state["last_error"], "result_version": task.version,
+        "external_context_sha256": lease.get("external_digest"),
         "revisit_at": (utcnow() + timedelta(minutes=delay)).isoformat(), "lease_id": body.lease_id,
         "reason_code": body.reason_code})
     _save(session, row, state)
@@ -244,6 +245,52 @@ def _digest(detail):
                 detail.get("validation_capability_error"), detail.get("user_implementation_evidence")]
     return hashlib.sha256(json.dumps(evidence, sort_keys=True, default=str).encode()).hexdigest()
 
+def _external_digest(detail):
+    """Evidence that can wake an administrative or deterministically blocked decision.
+
+    The executive's own assignment, plan edits and planning requests are not
+    new instructions to itself. Their effects are reflected in the ordinary
+    lease digest, but must not reset the per-evidence decision history.
+    """
+    executions = [{k: v for k, v in e.items() if k not in {"synced_at", "lifecycle_durations_ms"}}
+                  for e in detail["executions"]]
+    gates = [{k: gate.get(k) for k in (
+        "gate_key", "stage", "recipe", "owner", "required_capability", "subject",
+        "dependencies", "status", "evidence", "required", "recipe_args", "last_error",
+    )} for gate in detail.get("validation_gates", [])]
+    evidence = [
+        detail["state"], detail.get("blocked_from_state"),
+        [event for event in detail["events"]
+         if not (event["actor_kind"] == "system" and event["actor_id"] == "executive")],
+        executions, gates, detail.get("reports"), detail.get("linked_follow_ups"),
+        detail.get("planning_requests"), detail.get("follow_up_options"),
+        detail.get("validation_recipes"), detail.get("validation_capabilities"),
+        detail.get("validation_capability_error"), detail.get("user_implementation_evidence"),
+    ]
+    return hashlib.sha256(json.dumps(evidence, sort_keys=True, default=str).encode()).hexdigest()
+
+
+_ADMIN_ACTIONS = {"assign", "configure", "request_follow_up"}
+
+
+def _remaining_actions(detail, latest, actions, external):
+    if not latest or latest.event_type != "executive_decision":
+        return actions
+    payload = latest.payload
+    if payload.get("external_context_sha256") == external:
+        if payload.get("retry_on_change") and payload.get("result") == "deferred":
+            return []
+        actions = [action for action in actions if action not in payload.get("suppressed_actions", [])]
+    # Do not repeat a submitted merge until the provider observes it. A refreshed
+    # branch is not merged yet and must be retried once its checks finish.
+    unchanged = (payload.get("result_version") == detail["version"]
+                 and payload.get("result_context_sha256") == _digest(detail))
+    if (unchanged and payload.get("result") == "applied" and payload.get("action") == "merge"
+            and not (detail["assignee_kind"] == "bot" and detail["executions"]
+                     and (detail["executions"][-1].get("provider_state") or {}).get("refresh_pending_merge"))):
+        actions = [action for action in actions if action not in {"merge", "advance"}]
+    return actions
+
 
 def _payload_uuid(value):
     try:
@@ -260,7 +307,12 @@ def _actions(detail):
         return []  # An admitted executor/reviewer owns this decision point.
     actions = []
     if state == "proposed": actions += ["accept", "dismiss"]
-    if state == "accepted": actions += ["assign", "configure", "start", "dismiss"]
+    if state == "accepted":
+        if detail.get("assignee_kind") == "human":
+            return []  # Human-owned implementation or authorization is not an executive decision.
+        actions += ["configure", "start", "dismiss"]
+        if detail.get("assignee_kind") != "bot" or detail.get("assignee_profile") not in {"junior", "senior", "staff"}:
+            actions.insert(0, "assign")
     if state == "blocked":
         actions += ["restore", "configure", "start", "dismiss"]
         review_state = (latest or {}).get("provider_state") or {}
@@ -273,12 +325,15 @@ def _actions(detail):
             }
         ):
             actions += ["retry_review"]
+    failed_unpublished = (latest and latest.get("terminal_at")
+                          and latest.get("admission_kind") == "executor"
+                          and latest.get("terminal_reason_code") not in {None, "no_change"}
+                          and not latest.get("pr_number") and not latest.get("pr_url"))
     if state == "in_progress":
-        actions += ["ready"]
-        if (latest and latest.get("terminal_at") and latest.get("admission_kind") == "executor"
-                and latest.get("terminal_reason_code") not in {None, "no_change"}
-                and not latest.get("pr_number") and not latest.get("pr_url")):
+        if failed_unpublished:
             actions += ["configure", "start"]
+        else:
+            actions += ["ready"]
     if state == "in_review":
         actions += ["configure"]
         review_state = (latest or {}).get("provider_state") or {}
@@ -297,7 +352,7 @@ def _actions(detail):
         if not latest or latest["terminal_at"] or current_revision > latest["revision"]:
             actions += ["revise"]
     if state in {"in_review", "ready"} and latest and latest["pr_number"]:
-        if latest["review_verdict"] == "approved" or not latest["reviewer_required"]:
+        if detail.get("assignee_kind") == "bot" or latest["review_verdict"] == "approved" or not latest["reviewer_required"]:
             if state == "in_review":
                 actions += ["ready", "advance"]
             elif latest.get("merged_at") and (latest.get("provider_state") or {}).get("state") == "merged":
@@ -311,6 +366,21 @@ def _actions(detail):
             actions += ["complete"]
     if state == "ready":
         actions += ["configure"]
+        if failed_unpublished:
+            # Older unrelated evidence may have promoted a failed run to ready.
+            # Keep its real unfinished executor work retryable on this ticket.
+            actions += ["start"]
+        if (latest and latest.get("pr_number") and latest.get("trusted_head_sha")
+                and not latest.get("merged_at") and current_revision > latest["revision"]
+                and ((latest.get("review_verdict") == "approved" or not latest.get("reviewer_required"))
+                     or any(gate.get("required") and gate.get("stage") == "merge"
+                            and gate.get("status") in {"pending", "failed"}
+                            and gate.get("owner") == "validation-service"
+                            and gate.get("subject") == latest["trusted_head_sha"]
+                            for gate in detail.get("validation_gates", [])))):
+            # Even a passed head-bound gate can become unmergeable when a strict
+            # protected base advances; a new plan gets a new review and gate.
+            actions += ["revise"]
     if detail.get("follow_up_options"):
         actions += ["request_follow_up"]
     if detail.get("new_review_evidence") and state in {"blocked", "in_review"} and "retry_review" not in actions:
@@ -342,20 +412,25 @@ def _actions(detail):
     elif state == "accepted" and "start" in actions:
         actions += ["advance"]
     pending_stages = {gate["stage"] for gate in detail.get("validation_gates", [])
-                      if gate["required"] and gate["status"] != "passed"}
+                      if detail.get("assignee_kind") != "bot" and gate["required"] and gate["status"] != "passed"}
     if "publication" in pending_stages:
         actions = [action for action in actions if action not in {"ready", "merge", "complete", "advance"}]
     elif "merge" in pending_stages:
         actions = [action for action in actions if action not in {"merge", "complete", "advance"}]
-    if (state == "ready" and latest and latest.get("pr_number")
-            and not latest.get("merged_at")
-            and any(child["state"] not in {"completed", "dismissed", "missing"}
-                    for child in detail.get("linked_follow_ups", []))
-            and "repair_conflict" not in actions):
-        # Linked follow-ups are premerge prerequisites. While their assigned
-        # worker is active, another executive plan edit or merge decision adds
-        # no evidence and must not replace the worker's actual validation.
-        return []
+    if detail.get("assignee_kind") == "bot" and latest and latest.get("pr_number") and state in {"in_review", "ready"}:
+        actions = [action for action in actions if action in {"ready", "merge", "complete", "advance", "repair_conflict"}]
+    if (detail.get("assignee_kind") != "bot" and state == "ready" and latest and latest.get("pr_number")
+            and not latest.get("merged_at") and "repair_conflict" not in actions):
+        unresolved = [child for child in detail.get("linked_follow_ups", [])
+                      if child["state"] not in {"completed", "dismissed", "missing"}]
+        if any(child["state"] != "blocked" for child in unresolved):
+            # A worker or approval is still advancing the linked prerequisite.
+            return []
+        if unresolved:
+            # A blocked child cannot satisfy the merge gate; its failure is
+            # material evidence for a bounded parent plan correction, never a
+            # reason to bypass the child and merge anyway.
+            actions = [action for action in actions if action not in {"merge", "advance", "complete"}]
     if state == "ready" and "complete" in actions:
         return ["complete"]  # A finished implementation needs closure, not another plan edit.
     return actions
@@ -501,24 +576,24 @@ def claim(session: Session, identity: dict | None = None) -> dict:
         if not actions:
             continue
         latest = session.scalar(select(Event).where(Event.task_id == task.id, Event.event_type.in_(["executive_decision", "executive_error"])).order_by(Event.sequence.desc()).limit(1))
+        prior_decision = latest if latest and latest.event_type == "executive_decision" else session.scalar(
+            select(Event).where(Event.task_id == task.id, Event.event_type == "executive_decision")
+            .order_by(Event.sequence.desc()).limit(1))
+        external = _external_digest(detail)
+        actions = _remaining_actions(detail, prior_decision, actions, external)
+        if not actions:
+            continue
         if latest:
-            # A plan edit or guarded merge does not justify another decision
-            # about the same evidence. Historical wait decisions do not park.
-            unchanged = (latest.event_type == "executive_decision"
-                         and latest.payload.get("result_version") == task.version
-                         and latest.payload.get("result_context_sha256") == _digest(detail))
-            if unchanged and latest.payload.get("result") == "applied":
-                if latest.payload.get("action") == "configure":
-                    actions = [action for action in actions if action != "configure"]
-                if latest.payload.get("action") == "merge":
-                    actions = [action for action in actions if action not in {"merge", "advance"}]
-            if not actions:
-                continue
             retry = latest.payload.get("revisit_at")
-            if retry and retry > now.isoformat() and latest.payload.get("result_version") == task.version:
+            if (retry and retry > now.isoformat()
+                    and (latest.payload.get("external_context_sha256") or external) == external
+                    and latest.payload.get("result_version") == task.version):
                 continue
+        suppressed = (prior_decision.payload.get("suppressed_actions", [])
+                      if prior_decision and prior_decision.payload.get("external_context_sha256") == external else [])
         lease = {"id": secrets.token_hex(32), "task_id": str(task.id), "version": task.version,
-                 "digest": _digest(detail), "model": model, "actions": actions,
+                 "digest": _digest(detail), "external_digest": external,
+                 "suppressed_actions": suppressed, "model": model, "actions": actions,
                  "owner": identity,
                  "expires_at": (now + timedelta(minutes=5)).isoformat()}
         _leases(state).append(lease)
@@ -534,7 +609,7 @@ def _latest_execution(session, task):
     return session.scalar(select(Execution).where(Execution.task_id == task.id).order_by(Execution.sequence.desc()).limit(1).with_for_update())
 
 
-def _trusted_change(provider, execution):
+def _trusted_change(provider, execution, task):
     if not execution or not execution.pr_number or not execution.trusted_head_sha:
         raise service.PreconditionFailed("A published, trusted PR is required")
     if provider.config.project != execution.repository or provider.config.provider != execution.provider:
@@ -543,10 +618,48 @@ def _trusted_change(provider, execution):
     expected = {"provider": execution.provider, "number": execution.pr_number, "head_sha": execution.trusted_head_sha,
                 "head_ref": execution.branch, "base_ref": execution.target_branch, "author_id": execution.service_account_id}
     if any(value.get(k) != v for k, v in expected.items()) or value.get("state") not in {"open", "merged"}:
-        raise service.PreconditionFailed("PR identity or reviewed head changed; a new review is required")
-    if execution.reviewer_required and execution.review_verdict != "approved":
-        raise service.PreconditionFailed("Independent reviewer approval is required")
+        raise service.PreconditionFailed("PR identity or trusted head changed")
+    if task.assignee_kind != "bot" and execution.reviewer_required and execution.review_verdict != "approved":
+        raise service.PreconditionFailed("Independent reviewer approval is required for human-owned work")
     return value
+
+
+def _refresh_behind_bot_pr(session, task, execution, provider):
+    if task.assignee_kind != "bot" or execution.provider != "github" or not execution.base_sha:
+        return False
+    current_base = provider.read_base_identity()
+    if current_base in {execution.base_sha, (execution.provider_state or {}).get("refreshed_base_sha")}:
+        return False
+    old_head = execution.trusted_head_sha
+    updated = provider.refresh_change(execution.pr_number, old_head)
+    expected = {
+        "provider": execution.provider, "number": execution.pr_number,
+        "head_ref": execution.branch, "base_ref": execution.target_branch,
+        "author_id": execution.service_account_id, "state": "open",
+    }
+    changed_paths = (execution.verification_manifest or {}).get("changed_paths")
+    if (any(updated.get(key) != value for key, value in expected.items())
+            or not isinstance(changed_paths, list)
+            or not provider.refreshed_change_preserves_paths(
+                old_head, updated.get("head_sha"), changed_paths,
+            )):
+        raise service.PreconditionFailed("Updated bot PR changed the published candidate files")
+    execution.trusted_head_sha = updated["head_sha"]
+    execution.provider_state = {
+        **updated, "refreshed_base_sha": current_base, "refresh_pending_merge": True,
+        "review_verdict": execution.review_verdict,
+    }
+    execution.provider_fingerprint = hashlib.sha256(
+        json.dumps(updated, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    execution.synced_at = utcnow()
+    service._event(
+        session, task, "bot_pr_base_refreshed", "provider", str(execution.pr_number),
+        payload={"pr_number": execution.pr_number, "old_head": old_head,
+                 "new_head": updated["head_sha"], "base_sha": current_base},
+    )
+    session.flush()
+    return True
 
 
 _REPAIR_EXCLUDED_WORDS = {
@@ -625,7 +738,7 @@ def _perform(session, task, decision, lease):
     # No no-op decision is available: active work is owned by its worker and
     # other tickets become eligible only when their material evidence changes.
     if action == "assign":
-        service.assign_task(session, **kwargs, actor_name="Executive", kind="bot", profile=decision.profile, reviewer_required=True)
+        service.assign_task(session, **kwargs, actor_name="Executive", kind="bot", profile=decision.profile, reviewer_required=False)
     elif action == "request_follow_up":
         from . import planning
         planning.request(session, task, decision.specialist, decision.rationale)
@@ -668,7 +781,7 @@ def _perform(session, task, decision, lease):
             raise service.PreconditionFailed("Assign an allowed bot profile before starting execution")
         require_executor_preconditions()
         model_for_role(session, f"executor_{task.assignee_profile}")
-        if task.reviewer_required: model_for_role(session, "pr_reviewer")
+        # Bot-owned changes publish without a blocking reviewer.
         # Bound repeated retries; new evidence/scope should resolve a recurring failure.
         current_revision = session.scalar(select(func.max(Revision.revision_number)).where(Revision.task_id == task.id))
         failures = session.scalar(select(func.count()).select_from(Execution).where(Execution.task_id == task.id, Execution.revision == current_revision, Execution.terminal_at.is_not(None)))
@@ -684,19 +797,28 @@ def _perform(session, task, decision, lease):
             # production activation or a live source check has passed.
             "complete": ("publication", "merge"),
         }[action]
-        service.require_validation_gates(session, task.id, *stages)
+        if task.assignee_kind != "bot":
+            service.require_validation_gates(session, task.id, *stages)
         execution = _latest_execution(session, task)
         if execution and execution.pr_number:
             provider = get_provider()
-            observation = _trusted_change(provider, execution)
+            observation = _trusted_change(provider, execution, task)
             if action == "ready" and observation["draft"]:
                 provider.mark_ready(execution.pr_number, execution.trusted_head_sha)
-                observation = _trusted_change(provider, execution)
+                observation = _trusted_change(provider, execution, task)
             if action == "merge":
                 if observation["draft"]:
                     raise service.PreconditionFailed("PR must be ready for review before merging")
                 if observation["state"] != "merged":
+                    if _refresh_behind_bot_pr(session, task, execution, provider):
+                        # GitHub reruns required checks on this same refreshed PR.
+                        return
                     provider.merge_change(execution.pr_number, execution.trusted_head_sha)
+                    if (execution.provider_state or {}).get("refresh_pending_merge"):
+                        execution.provider_state = {
+                            key: value for key, value in execution.provider_state.items()
+                            if key != "refresh_pending_merge"
+                        }
                 # Maintenance observes the merge and schedules existing follow-ups.
                 execution.synced_at = None
                 return
@@ -763,7 +885,7 @@ def decide(session: Session, decision: Decision) -> dict:
         raise service.Conflict("Ticket evidence changed while the executive was deciding")
     if decision.action not in lease["actions"]:
         raise service.DomainError("This action is not available at the current decision point")
-    result, error = "applied", None
+    result, error, retry_on_change = "applied", None, False
     try:
         with session.begin_nested():
             _perform(session, task, decision, lease)
@@ -771,13 +893,32 @@ def decide(session: Session, decision: Decision) -> dict:
     except (service.DomainError, GitProviderError, httpx.HTTPError) as exc:
         result = "deferred"
         error = str(exc)[:500] if isinstance(exc, service.DomainError) else "Git provider could not apply this decision; existing checks remain in force"
-    delay = 60 if result == "deferred" else 1
+        # Admission capacity and provider transport recover independently of
+        # this ticket; other rejected preconditions need new material evidence.
+        retry_on_change = isinstance(exc, service.DomainError) and str(exc) != "execution admission queue is full"
+    pending_execution = (
+        _latest_execution(session, task)
+        if result == "deferred" and decision.action == "merge" and task.assignee_kind == "bot"
+        else None
+    )
+    refresh_waiting = bool(pending_execution and
+                           (pending_execution.provider_state or {}).get("refresh_pending_merge"))
+    delay = 1 if result == "applied" or refresh_waiting else 60
     now = utcnow()
     session.expire(task, ["events", "revisions"])
-    result_digest = _digest(_snapshot(session, str(task.id)))
+    detail = _snapshot(session, str(task.id))
+    result_digest = _digest(detail)
+    external_digest = _external_digest(detail)
+    suppressed = set(lease.get("suppressed_actions", []))
+    if result == "applied" and decision.action in _ADMIN_ACTIONS:
+        suppressed.add(decision.action)
+    elif external_digest != lease.get("external_digest"):
+        suppressed.clear()
     payload = {"action": decision.action, "rationale": decision.rationale, "model": lease["model"]["model"],
                "result": result, "error": error, "lease_id": lease["id"], "context_sha256": lease["digest"],
                "result_context_sha256": result_digest, "result_version": task.version,
+               "external_context_sha256": external_digest, "suppressed_actions": sorted(suppressed),
+               "retry_on_change": retry_on_change,
                "revisit_at": (now + timedelta(minutes=delay)).isoformat()}
     event = service._event(session, task, "executive_decision", "system", "executive", payload=payload)
     session.flush()

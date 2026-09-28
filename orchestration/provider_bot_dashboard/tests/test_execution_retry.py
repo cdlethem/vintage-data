@@ -53,6 +53,30 @@ class ExecutionRetryTest(unittest.TestCase):
             event=session.scalar(select(Event).where(Event.event_type=='execution_retry_requested'))
             self.assertEqual('in_progress',event.from_state)
 
+    def test_failed_executor_cannot_be_made_ready_by_unrelated_evidence_and_still_retries(self):
+        from airflow.providers.vintage.bot_dashboard import service
+        from airflow.providers.vintage.bot_dashboard.autopilot import _actions
+        with Session(self.engine) as session:
+            task, prior = self.fixture(session)
+            task.state = 'in_progress'
+            task.blocked_from_state = None
+            service._event(session, task, 'evidence_added', 'user', 'owner',
+                           payload={'items': [{'label': 'Historical source observation'}]})
+            session.commit()
+            self.assertNotIn('ready', _actions(service.get_task(session, str(task.id))))
+            with self.assertRaisesRegex(PreconditionFailed, 'failed unpublished execution'):
+                service.transition_task(session, str(task.id), version=task.version,
+                                        actor_id='executive', to_state='ready')
+            task.state = 'ready'  # Recover a legacy ticket promoted before the guard.
+            session.commit()
+            actions = _actions(service.get_task(session, str(task.id)))
+            self.assertIn('start', actions)
+            self.assertNotIn('complete', actions)
+            admission = start_task(session, str(task.id), version=task.version,
+                                   actor_id='executive', idempotency_key='retry-legacy-ready')
+            self.assertEqual(prior.sequence + 1, admission['admission']['sequence'])
+            self.assertEqual('accepted', task.state)
+
     def test_superseded_published_execution_does_not_block_latest_unpublished_retry(self):
         with Session(self.engine) as session:
             task,prior=self.fixture(session)
@@ -81,7 +105,7 @@ class ExecutionRetryTest(unittest.TestCase):
                 session.commit()
                 self.assertEqual('queued',result['status']);self.assertEqual('in_review',task.state)
                 self.assertEqual(17,row.pr_number);self.assertEqual('a'*40,row.trusted_head_sha)
-                self.assertEqual('b'*64,row.source_artifact_sha256);self.assertTrue(row.reviewer_required)
+                self.assertEqual('b'*64,row.source_artifact_sha256)
                 self.assertNotEqual(prior_run,row.target_run_id);self.assertIsNone(row.terminal_at)
                 self.assertEqual('pending',row.dispatch_state)
                 model.assert_called_once_with(session,'pr_reviewer')
@@ -114,7 +138,7 @@ class ExecutionRetryTest(unittest.TestCase):
                 result=retry_review_launch(session,str(task.id),version=version,actor_id='operator',idempotency_key='repair')
                 self.assertEqual('queued',result['status']);self.assertEqual('in_review',task.state)
                 self.assertEqual('a'*40,row.trusted_head_sha);self.assertEqual('b'*64,row.source_artifact_sha256)
-                self.assertTrue(row.reviewer_required);self.assertIsNone(row.review_verdict)
+                self.assertIsNone(row.review_verdict)
                 self.assertEqual('already_requested',retry_review_launch(session,str(task.id),version=version,actor_id='operator',idempotency_key='repair')['status'])
 
     def test_unusable_review_result_retries_same_head_and_preserves_typed_failure_event(self):

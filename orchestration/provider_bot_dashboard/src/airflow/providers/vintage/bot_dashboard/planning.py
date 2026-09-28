@@ -1,5 +1,6 @@
 """Audited, read-only specialist handoffs before a blocked PR can merge."""
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from airflow.models.dagrun import DagRun
 from .models import Event, Execution, Revision, Task, RunReport, utcnow
 from . import service
@@ -39,8 +40,21 @@ def options(session, task, execution, revision):
     requested = {}
     for event in _requests(session, task, execution):
         requested.setdefault(event.payload.get("bot"), []).append(event)
+    # A linked child owning the same declared resources already covers this
+    # specialist's prerequisite. Do not hide work on a distinct resource.
+    resources = set(revision.resource_keys or [])
+    children = session.scalars(select(Task).where(
+        Task.related_task_id == task.id,
+        Task.source_bot.in_(BOTS),
+        Task.state.not_in(("completed", "dismissed")),
+    ).options(selectinload(Task.revisions))).all()
+    active_children = {child.source_bot for child in children
+                       if not resources or (child.revisions and
+                                            resources.intersection(child.revisions[-1].resource_keys or []))}
     available = []
     for bot in sorted(set(revision.follow_up_bots or []) & BOTS):
+        if bot in active_children:
+            continue
         attempts = requested.get(bot, [])
         if not attempts:
             available.append(bot)

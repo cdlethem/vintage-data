@@ -60,6 +60,8 @@ Actions:
   only with concrete evidence. Do not dismiss a ticket merely because it failed.
 - assign: choose junior for a small local change, senior for several components,
   staff for complex architecture. Supply profile. Independent review stays on.
+  Assign only if the ticket has no valid assignee; reassigning the same bot or
+  profile does not make progress and must not replace execution.
 - configure: improve planned_resolution, verification_commands (arrays of argv,
   never shell strings), allowed_path_globs (narrow repo-relative files), resource_keys,
   follow_up_bots, or acceptance_gates. Supply changes including the task's current
@@ -76,6 +78,11 @@ Actions:
   specifies the observation that will change this gate. Use only advertised
   validation recipes and fixed command IDs. Never invent a capability, weaken
   an existing gate, or move a pre-merge requirement after merge.
+  A bot-owned pre-merge check must have an advertised executable recipe and
+  installed capability. Do not create a manual/operator merge gate or a new
+  policy-permission ticket to make an unexecutable check appear assigned.
+  Record the actual failed capability on the existing ticket and resume only
+  after an authorized execution route exists.
   Verification must check real behavior; never replace failing tests with trivial
   success. Do not add a shell wrapper to gain execution permissions. Read-only
   analysis should use the existing executor's no-change path and actual checks.
@@ -110,6 +117,10 @@ Actions:
   credentials or validation.
   Any proposed child ticket needs separate approval and independent review. Do not
   request irrelevant analysis or use this to waive the parent's missing evidence.
+  A failed live schema or coverage check on this ticket's PR is a defect in
+  that candidate: repair or revise the existing work using observed response
+  evidence. Do not request a specialist merely to restate its missing proof,
+  ask for operator access, or plan a duplicate implementation.
 - merge: merge only when independent review, verification and current evidence
   support the change. Provider checks and expected-head matching still apply.
 - complete: close implementation work after a trusted observed merge or verified
@@ -142,9 +153,10 @@ and linked. An empty follow_up_options list only means no new planning request i
 currently available; it does not prove that no prior request or child exists.
 planning_requests distinguishes reported outcomes from unreported requests.
 A skipped or failed request is not an active worker or a satisfied dependency.
-Use an offered bounded retry after correcting the cause. Validation gates with
-failed or unavailable capabilities need a concrete repair or named operator
-requirement; they must never be described as running or passed.
+Use an offered bounded retry only after correcting its actual failure.
+Failed validation or unavailable capabilities require a concrete repair on the
+existing ticket; never describe them as running or passed, or manufacture an
+operator gate as progress.
 For a ready ticket with an observed trusted merge, complete the implementation
 even if post-merge live validation is pending. Identify pending activation or
 production checks and their capable owner; do not report production recovery

@@ -132,7 +132,7 @@ class ValidationGateCreate(StrictBody):
     version: int = Field(ge=1)
     gate_key: str = Field(min_length=1, max_length=100, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
     stage: Literal["publication", "merge", "activation", "completion"]
-    recipe: Literal["public_source_smoke", "disposable_schema_migration", "warehouse_check", "dag_inspection", "lightdash_preview", "manual"]
+    recipe: Literal["public_source_smoke", "public_source_reconciliation", "trusted_workflow_check", "disposable_schema_migration", "warehouse_check", "dag_inspection", "lightdash_preview", "manual"]
     owner: str = Field(min_length=1, max_length=250)
     required_capability: str = Field(min_length=1, max_length=250)
     subject: str = Field(min_length=1, max_length=512)
@@ -140,6 +140,14 @@ class ValidationGateCreate(StrictBody):
     recheck_condition: str = Field(min_length=1, max_length=2000)
     required: bool = True
     recipe_args: dict[str, Any] = Field(default_factory=dict)
+
+
+class ValidationGateConversion(StrictBody):
+    version: int = Field(ge=1)
+    recipe: Literal["public_source_smoke", "public_source_reconciliation", "trusted_workflow_check",
+                    "disposable_schema_migration", "warehouse_check", "dag_inspection", "lightdash_preview"]
+    required_capability: str = Field(min_length=1, max_length=250)
+    recipe_args: dict[str, Any]
 
 
 class ValidationGateResult(StrictBody):
@@ -152,6 +160,11 @@ class ValidationGateResult(StrictBody):
 class ValidationClaimRequest(StrictBody):
     limit: int = Field(default=20, ge=1, le=100)
     runner_id: str = Field(min_length=1, max_length=250, pattern=r"^[A-Za-z0-9._:-]+$")
+
+
+class ValidationRecheckRequest(StrictBody):
+    version: int = Field(ge=1)
+    new_head: str = Field(pattern=r"^(?:[a-f0-9]{40}|[a-f0-9]{64})$")
 
 
 class ValidationStartRequest(StrictBody):
