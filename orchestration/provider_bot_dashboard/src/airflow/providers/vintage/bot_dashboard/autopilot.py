@@ -898,7 +898,7 @@ def decide(session: Session, decision: Decision) -> dict:
         retry_on_change = isinstance(exc, service.DomainError) and str(exc) != "execution admission queue is full"
     pending_execution = (
         _latest_execution(session, task)
-        if result == "deferred" and decision.action == "merge" and task.assignee_kind == "bot"
+        if result == "deferred" and decision.action in {"merge", "advance"} and task.assignee_kind == "bot"
         else None
     )
     refresh_waiting = bool(pending_execution and

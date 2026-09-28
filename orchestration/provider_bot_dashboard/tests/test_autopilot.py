@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 import uuid
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -640,13 +641,20 @@ class AutopilotTest(unittest.TestCase):
         )).all())
 
         provider.read_change.return_value = provider.refresh_change.return_value
-        from datetime import timedelta
         with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(minutes=2)):
             next_claim = ap.claim(self.session); self.session.commit()
         provider.merge_change.side_effect = GitProviderError("required checks pending")
         self.assertIn("lease_id", next_claim, next_claim)
         with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=provider):
-            self.assertEqual("deferred", self.decide(next_claim, "merge")["status"])
+            self.assertEqual("deferred", self.decide(next_claim, "advance")["status"])
+        self.assertEqual("ready", task.state)
+        failed = self.session.scalar(select(Event).where(
+            Event.task_id == task.id, Event.event_type == "executive_decision",
+        ).order_by(Event.sequence.desc()).limit(1))
+        self.assertEqual("advance", failed.payload["action"])
+        retry_seconds = (datetime.fromisoformat(failed.payload["revisit_at"]) - utcnow()).total_seconds()
+        self.assertGreater(retry_seconds, 0)
+        self.assertLess(retry_seconds, 90)
         provider.merge_change.side_effect = None
         with patch.object(ap, "utcnow", return_value=ap.utcnow() + timedelta(minutes=2)):
             checked_claim = ap.claim(self.session); self.session.commit()
