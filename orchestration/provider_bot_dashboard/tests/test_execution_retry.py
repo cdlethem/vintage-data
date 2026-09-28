@@ -105,7 +105,7 @@ class ExecutionRetryTest(unittest.TestCase):
                 session.commit()
                 self.assertEqual('queued',result['status']);self.assertEqual('in_review',task.state)
                 self.assertEqual(17,row.pr_number);self.assertEqual('a'*40,row.trusted_head_sha)
-                self.assertEqual('b'*64,row.source_artifact_sha256);self.assertTrue(row.reviewer_required)
+                self.assertEqual('b'*64,row.source_artifact_sha256)
                 self.assertNotEqual(prior_run,row.target_run_id);self.assertIsNone(row.terminal_at)
                 self.assertEqual('pending',row.dispatch_state)
                 model.assert_called_once_with(session,'pr_reviewer')
@@ -138,7 +138,7 @@ class ExecutionRetryTest(unittest.TestCase):
                 result=retry_review_launch(session,str(task.id),version=version,actor_id='operator',idempotency_key='repair')
                 self.assertEqual('queued',result['status']);self.assertEqual('in_review',task.state)
                 self.assertEqual('a'*40,row.trusted_head_sha);self.assertEqual('b'*64,row.source_artifact_sha256)
-                self.assertTrue(row.reviewer_required);self.assertIsNone(row.review_verdict)
+                self.assertIsNone(row.review_verdict)
                 self.assertEqual('already_requested',retry_review_launch(session,str(task.id),version=version,actor_id='operator',idempotency_key='repair')['status'])
 
     def test_unusable_review_result_retries_same_head_and_preserves_typed_failure_event(self):

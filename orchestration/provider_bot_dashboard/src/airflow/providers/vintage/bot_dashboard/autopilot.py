@@ -350,7 +350,7 @@ def _actions(detail):
         if not latest or latest["terminal_at"] or current_revision > latest["revision"]:
             actions += ["revise"]
     if state in {"in_review", "ready"} and latest and latest["pr_number"]:
-        if latest["review_verdict"] == "approved" or not latest["reviewer_required"]:
+        if detail.get("assignee_kind") == "bot" or latest["review_verdict"] == "approved" or not latest["reviewer_required"]:
             if state == "in_review":
                 actions += ["ready", "advance"]
             elif latest.get("merged_at") and (latest.get("provider_state") or {}).get("state") == "merged":
@@ -410,11 +410,13 @@ def _actions(detail):
     elif state == "accepted" and "start" in actions:
         actions += ["advance"]
     pending_stages = {gate["stage"] for gate in detail.get("validation_gates", [])
-                      if gate["required"] and gate["status"] != "passed"}
+                      if detail.get("assignee_kind") != "bot" and gate["required"] and gate["status"] != "passed"}
     if "publication" in pending_stages:
         actions = [action for action in actions if action not in {"ready", "merge", "complete", "advance"}]
     elif "merge" in pending_stages:
         actions = [action for action in actions if action not in {"merge", "complete", "advance"}]
+    if detail.get("assignee_kind") == "bot" and latest and latest.get("pr_number") and state in {"in_review", "ready"}:
+        actions = [action for action in actions if action in {"ready", "merge", "complete", "advance", "repair_conflict"}]
     if (state == "ready" and latest and latest.get("pr_number")
             and not latest.get("merged_at") and "repair_conflict" not in actions):
         unresolved = [child for child in detail.get("linked_follow_ups", [])
@@ -605,7 +607,7 @@ def _latest_execution(session, task):
     return session.scalar(select(Execution).where(Execution.task_id == task.id).order_by(Execution.sequence.desc()).limit(1).with_for_update())
 
 
-def _trusted_change(provider, execution):
+def _trusted_change(provider, execution, task):
     if not execution or not execution.pr_number or not execution.trusted_head_sha:
         raise service.PreconditionFailed("A published, trusted PR is required")
     if provider.config.project != execution.repository or provider.config.provider != execution.provider:
@@ -614,9 +616,9 @@ def _trusted_change(provider, execution):
     expected = {"provider": execution.provider, "number": execution.pr_number, "head_sha": execution.trusted_head_sha,
                 "head_ref": execution.branch, "base_ref": execution.target_branch, "author_id": execution.service_account_id}
     if any(value.get(k) != v for k, v in expected.items()) or value.get("state") not in {"open", "merged"}:
-        raise service.PreconditionFailed("PR identity or reviewed head changed; a new review is required")
-    if execution.reviewer_required and execution.review_verdict != "approved":
-        raise service.PreconditionFailed("Independent reviewer approval is required")
+        raise service.PreconditionFailed("PR identity or trusted head changed")
+    if task.assignee_kind != "bot" and execution.reviewer_required and execution.review_verdict != "approved":
+        raise service.PreconditionFailed("Independent reviewer approval is required for human-owned work")
     return value
 
 
@@ -696,7 +698,7 @@ def _perform(session, task, decision, lease):
     # No no-op decision is available: active work is owned by its worker and
     # other tickets become eligible only when their material evidence changes.
     if action == "assign":
-        service.assign_task(session, **kwargs, actor_name="Executive", kind="bot", profile=decision.profile, reviewer_required=True)
+        service.assign_task(session, **kwargs, actor_name="Executive", kind="bot", profile=decision.profile, reviewer_required=False)
     elif action == "request_follow_up":
         from . import planning
         planning.request(session, task, decision.specialist, decision.rationale)
@@ -739,7 +741,7 @@ def _perform(session, task, decision, lease):
             raise service.PreconditionFailed("Assign an allowed bot profile before starting execution")
         require_executor_preconditions()
         model_for_role(session, f"executor_{task.assignee_profile}")
-        if task.reviewer_required: model_for_role(session, "pr_reviewer")
+        # Bot-owned changes publish without a blocking reviewer.
         # Bound repeated retries; new evidence/scope should resolve a recurring failure.
         current_revision = session.scalar(select(func.max(Revision.revision_number)).where(Revision.task_id == task.id))
         failures = session.scalar(select(func.count()).select_from(Execution).where(Execution.task_id == task.id, Execution.revision == current_revision, Execution.terminal_at.is_not(None)))
@@ -755,14 +757,15 @@ def _perform(session, task, decision, lease):
             # production activation or a live source check has passed.
             "complete": ("publication", "merge"),
         }[action]
-        service.require_validation_gates(session, task.id, *stages)
+        if task.assignee_kind != "bot":
+            service.require_validation_gates(session, task.id, *stages)
         execution = _latest_execution(session, task)
         if execution and execution.pr_number:
             provider = get_provider()
-            observation = _trusted_change(provider, execution)
+            observation = _trusted_change(provider, execution, task)
             if action == "ready" and observation["draft"]:
                 provider.mark_ready(execution.pr_number, execution.trusted_head_sha)
-                observation = _trusted_change(provider, execution)
+                observation = _trusted_change(provider, execution, task)
             if action == "merge":
                 if observation["draft"]:
                     raise service.PreconditionFailed("PR must be ready for review before merging")

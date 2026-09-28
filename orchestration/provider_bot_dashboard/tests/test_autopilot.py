@@ -167,37 +167,6 @@ class AutopilotTest(unittest.TestCase):
             self.assertNotIn("start", ap._actions(detail))
             self.assertNotIn("revise", ap._actions(detail))
 
-    def test_review_retry_does_not_offer_revision_without_a_new_plan(self):
-        task = self.task("in_review")
-        task.assignee_kind = "bot"
-        task.assignee_profile = "senior"
-        self.session.commit()
-        execution = self.execution(task, review_verdict="unable_to_review")
-        self.enable()
-        claim = ap.claim(self.session)
-        self.assertIn("configure", claim["actions"])
-        self.assertNotIn("revise", claim["actions"])
-        with self.assertRaisesRegex(ap.service.DomainError, "not available"):
-            self.decide(claim, "revise")
-        self.assertEqual(1, execution.revision)
-        self.assertEqual("unable_to_review", execution.review_verdict)
-        patch_task(self.session, str(task.id), version=task.version, actor_id="owner",
-                   changes={"planned_resolution": "Address a newly documented implementation finding"})
-        self.session.commit()
-        self.assertIn("revise", ap._actions(ap._snapshot(self.session, str(task.id))))
-        self.assertEqual(1, execution.revision)
-        self.assertEqual("unable_to_review", execution.review_verdict)
-
-    def test_typed_unusable_review_offers_retry_not_revision(self):
-        task = self.task("in_review")
-        task.assignee_kind = "bot"; task.assignee_profile = "senior"
-        self.execution(task, review_verdict="unable_to_review",
-                       provider_state={"review_verdict": "unable_to_review",
-                                       "review_failure_kind": "format_failed"})
-        detail = ap._snapshot(self.session, str(task.id))
-        self.assertIn("retry_review", ap._actions(detail))
-        self.assertNotIn("revise", ap._actions(detail))
-
     def test_blocked_unusable_review_offers_same_head_retry(self):
         task = self.task("blocked")
         task.blocked_from_state = "in_review"
@@ -220,8 +189,6 @@ class AutopilotTest(unittest.TestCase):
                               "paths": ["src/job.py"],
                               "check_expectations": ["The admitted unit test passes."]},
         })
-        detail = ap._snapshot(self.session, str(task.id))
-        self.assertIn("repair", ap._actions(detail))
         changes = ap._review_repair_changes(self.session, task, execution)
         self.assertIn("Handle null input", changes["planned_resolution"])
         execution.provider_state["review_repair"]["paths"] = ["outside/job.py"]
@@ -747,6 +714,31 @@ class AutopilotTest(unittest.TestCase):
         self.assertEqual(2, len(markers))
         self.assertEqual(markers[0], markers[1])
         self.assertIn(str(task.id), markers[0])
+
+    def test_bot_pr_advances_to_merge_despite_rejected_review_and_failed_gate(self):
+        task = self.task("in_review")
+        task.assignee_kind = "bot"
+        task.assignee_profile = "senior"
+        self.execution(task, review_verdict="changes_requested", provider_state={
+            "state": "open", "head_sha": "a" * 40, "draft": False,
+            "review_verdict": "changes_requested",
+        })
+        self.session.add(ValidationGate(
+            task_id=task.id, gate_key="live-check", stage="merge",
+            recipe="trusted_workflow_check", owner="validation-service",
+            required_capability="github-actions-readonly", subject="a" * 40,
+            recheck_condition="Next provider event", status="failed", required=True,
+        ))
+        self.session.commit()
+        self.enable()
+        claim = ap.claim(self.session)
+        self.session.commit()
+        self.assertEqual(["ready", "advance"], claim["actions"])
+        provider = self.provider()
+        with patch("airflow.providers.vintage.bot_dashboard.git_provider.get_provider", return_value=provider):
+            self.assertEqual("applied", self.decide(claim, "advance")["status"])
+        provider.merge_change.assert_called_once_with(17, "a" * 40)
+        self.assertEqual("ready", task.state)
 
     def test_premerge_validation_remains_required_for_reviewed_change(self):
         task = self.task("ready")

@@ -149,6 +149,7 @@ class GitProvider:
     def find_change(self, branch: str) -> dict | None: raise NotImplementedError
     def mark_ready(self, number: int, head_sha: str) -> None: raise NotImplementedError
     def merge_change(self, number: int, head_sha: str) -> None: raise NotImplementedError
+    def close_change(self, number: int, head_sha: str) -> None: raise NotImplementedError
 
 
 class GitHubProvider(GitProvider):
@@ -408,6 +409,13 @@ class GitHubProvider(GitProvider):
         result = self._request("PUT", f"repos/{self.config.project}/pulls/{number}/merge", payload={"sha": head_sha, "merge_method": "squash"})
         if result.get("merged") is not True:
             raise GitProviderError("Provider did not merge the reviewed head")
+    def close_change(self, number, head_sha):
+        current = self.read_change(number)
+        if current["state"] == "closed":
+            return
+        if current["state"] != "open" or current["head_sha"] != head_sha:
+            raise GitProviderError("Superseded PR identity changed before retirement")
+        self._request("PATCH", f"repos/{self.config.project}/pulls/{number}", payload={"state": "closed"})
 
 class GitLabProvider(GitProvider):
     def _headers(self): return {"PRIVATE-TOKEN": self.config.token}
@@ -451,6 +459,13 @@ class GitLabProvider(GitProvider):
         result = self._request("PUT", f"projects/{self.project_path}/merge_requests/{number}/merge", payload={"sha": head_sha, "squash": True})
         if result.get("state") != "merged":
             raise GitProviderError("Provider did not merge the reviewed head")
+    def close_change(self, number, head_sha):
+        current = self.read_change(number)
+        if current["state"] == "closed":
+            return
+        if current["state"] != "open" or current["head_sha"] != head_sha:
+            raise GitProviderError("Superseded MR identity changed before retirement")
+        self._request("PUT", f"projects/{self.project_path}/merge_requests/{number}", payload={"state_event": "close"})
 
 def normalize_github(value: dict) -> dict:
     mergeable = value.get("mergeable")
