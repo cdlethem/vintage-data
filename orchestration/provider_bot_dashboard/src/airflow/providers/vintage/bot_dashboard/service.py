@@ -627,6 +627,12 @@ def transition_task(session: Session, task_id: str, *, version: int, actor_id: s
                 "ready requires a trusted provider head and reviewer policy"
             )
     if previous == "in_progress" and to_state == "ready":
+        latest = session.scalar(select(Execution).where(
+            Execution.task_id == task.id,
+        ).order_by(Execution.sequence.desc()).limit(1))
+        if (latest and latest.terminal_at and latest.terminal_reason_code
+                and latest.terminal_reason_code != "no_change"):
+            raise PreconditionFailed("ready cannot promote a failed unpublished execution")
         verified = session.scalar(
             select(func.count())
             .select_from(Event)
@@ -729,7 +735,7 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
     ):
         raise PreconditionFailed("task must be assigned to an allowed bot profile")
     retry_previous = None
-    if task.state in {"blocked", "in_progress"} and not revision:
+    if task.state in {"blocked", "in_progress", "ready"} and not revision:
         retry_previous = session.scalar(
             select(Execution).where(Execution.task_id == task.id)
             .order_by(Execution.sequence.desc()).limit(1).with_for_update()
@@ -802,6 +808,27 @@ def start_task(session: Session, task_id: str, *, version: int, actor_id: str, i
         seed = capture_seed(session, active)
     elif retry_previous is not None:
         seed = get_seed(session, retry_previous)
+    if seed and seed.get("trusted_head_sha") and (
+        (revision and task.state == "ready" and ready_candidate
+         and previous.review_verdict == "approved")
+        or (retry_previous and retry_previous.terminal_reason_code == "no_change_contains_diff")
+    ):
+        # A reviewed seed is historical code. Recheck its exact published
+        # identity and pin a new protected base before applying its patch;
+        # restoring the old source would produce another strictly-behind PR.
+        source = session.scalar(select(Execution).where(
+            Execution.task_id == task.id,
+            Execution.execution_id == seed["execution_id"],
+        ).limit(1).with_for_update())
+        if source is None or source.review_verdict != "approved":
+            raise PreconditionFailed("base refresh requires the approved immutable candidate")
+        from .conflict_recovery import _observe_seed_candidate
+        observation, current_base = _observe_seed_candidate(session, task, seed, require_conflict=False)
+        if current_base != seed.get("repair_base_sha", seed["base_sha"]):
+            seed = {**seed, "repair_base_sha": current_base, "repair_observation": {
+                "number": observation["number"], "head_sha": observation["head_sha"],
+                "base_sha": current_base, "mergeability": observation.get("mergeability"),
+            }}
     gate_history = []
     if seed and seed.get("trusted_head_sha"):
         from .conflict_recovery import _rebind_candidate_gates

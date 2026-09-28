@@ -206,6 +206,7 @@ class RevisionSeedTest(unittest.TestCase):
             row.pr_number = 37
             row.pr_url = "https://example.test/pull/37"
             row.trusted_head_sha = "d" * 40
+            row.branch = "bot-dashboard/reviewed-candidate"
             row.review_verdict = "approved"
             gate = ValidationGate(
                 task_id=task.id, gate_key="live", stage="merge",
@@ -221,13 +222,88 @@ class RevisionSeedTest(unittest.TestCase):
                                changes={"planned_resolution": "Reapply the reviewed patch to the updated protected base"})
             session.commit()
             self.assertIn("revise", _actions(service.get_task(session, str(task.id))))
-            with patch("airflow.providers.vintage.bot_dashboard.artifacts.read_artifact"):
+            config = SimpleNamespace(provider="github", project="org/repo",
+                                     base_branch="main", service_account_id="trusted-bot")
+            provider = Mock()
+            provider.read_change.return_value = {
+                "provider": "github", "number": 37, "head_ref": row.branch,
+                "base_ref": "main", "author_id": "trusted-bot",
+                "head_sha": "d" * 40, "state": "open", "draft": False,
+                "mergeability": "mergeable",
+            }
+            provider.read_base_identity.return_value = "e" * 40
+            with patch("airflow.providers.vintage.bot_dashboard.artifacts.read_artifact"), \
+                    patch("airflow.providers.vintage.bot_dashboard.conflict_recovery.load_repository_config",
+                          return_value=config), \
+                    patch("airflow.providers.vintage.bot_dashboard.conflict_recovery.get_provider",
+                          return_value=provider):
+                provider.read_change.return_value = {
+                    **provider.read_change.return_value, "head_sha": "f" * 40,
+                }
+                with self.assertRaisesRegex(service.PreconditionFailed, "trusted head changed"):
+                    service.start_task(session, str(task.id), version=task.version,
+                                       actor_id="executive", idempotency_key="stale-head", revision=True)
+                self.assertEqual("passed", gate.status)
+                provider.read_change.return_value = {
+                    **provider.read_change.return_value, "head_sha": "d" * 40,
+                }
                 service.start_task(session, str(task.id), version=task.version,
                                    actor_id="executive", idempotency_key="refresh-base", revision=True)
+            self.assertEqual("e" * 40, row.base_sha)
+            self.assertIsNone(row.source_artifact_sha256)
+            self.assertEqual("e" * 40, get_seed(session, row)["repair_base_sha"])
             self.assertEqual("pending_candidate", gate.subject)
             self.assertEqual("pending", gate.status)
             self.assertIsNone(row.trusted_head_sha)
             self.assertIsNone(row.review_verdict)
+
+    def test_terminal_seed_retry_moves_approved_patch_to_current_base(self):
+        with Session(self.engine) as session:
+            task, source = self.fixture(session)
+            source.base_sha = "a" * 40
+            source.source_artifact_sha256 = "b" * 64
+            source.patch_sha256 = "c" * 64
+            source.provider = "github"
+            source.repository = "org/repo"
+            source.target_branch = "main"
+            source.branch = "bot-dashboard/approved"
+            source.pr_number = 37
+            source.trusted_head_sha = "d" * 40
+            source.review_verdict = "approved"
+            failure = Execution(task_id=task.id, sequence=source.sequence + 1,
+                                revision=source.revision + 1, execution_id="f" * 64,
+                                idempotency_key="failed-refresh", target_run_id="failed-refresh",
+                                profile="senior", dispatch_state="terminal", stage="terminal",
+                                terminal_at=utcnow(), terminal_reason_code="no_change_contains_diff")
+            task.state = "in_progress"
+            session.add(failure)
+            with patch("airflow.providers.vintage.bot_dashboard.artifacts.read_artifact"):
+                seed = capture_seed(session, source)
+            service._event(session, task, "execution_admitted", "system", "executive",
+                           payload={"execution_id": failure.execution_id, "revision_seed": seed})
+            session.commit()
+            config = SimpleNamespace(provider="github", project="org/repo",
+                                     base_branch="main", service_account_id="trusted-bot")
+            provider = Mock()
+            provider.read_change.return_value = {
+                "provider": "github", "number": 37, "head_ref": source.branch,
+                "base_ref": "main", "author_id": "trusted-bot", "head_sha": "d" * 40,
+                "state": "open", "draft": False, "mergeability": "mergeable",
+            }
+            provider.read_base_identity.return_value = "e" * 40
+            with patch("airflow.providers.vintage.bot_dashboard.artifacts.read_artifact"), \
+                    patch("airflow.providers.vintage.bot_dashboard.conflict_recovery.load_repository_config",
+                          return_value=config), \
+                    patch("airflow.providers.vintage.bot_dashboard.conflict_recovery.get_provider",
+                          return_value=provider):
+                service.start_task(session, str(task.id), version=task.version,
+                                   actor_id="executive", idempotency_key="retry-current-base")
+            retry = session.scalar(select(Execution).where(
+                Execution.task_id == task.id).order_by(Execution.sequence.desc()).limit(1))
+            self.assertEqual("e" * 40, retry.base_sha)
+            self.assertIsNone(retry.source_artifact_sha256)
+            self.assertEqual("e" * 40, get_seed(session, retry)["repair_base_sha"])
+            self.assertEqual("accepted", task.state)
 
     def test_seed_retains_prior_tests_and_produces_cumulative_patch(self):
         with TemporaryDirectory() as tmp:

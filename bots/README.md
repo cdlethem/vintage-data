@@ -133,8 +133,17 @@ When an automatic merge-stage check fails or cannot yet start on a reviewed
 immutable patch without waiting for an operator or a check on obsolete code.
 The same applies to a reviewed, unmerged PR with a passed check if protected
 `main` advances and strict branch protection requires a fresh candidate.
+The trusted admission first confirms the old PR still has its original head
+and repository identity, pins the current protected base, and applies the old
+patch to a fresh source snapshot; it does not republish on the obsolete base.
+If the head changed or the patch cannot apply, publication fails closed.
 The old result is audited, the next candidate must receive a new exact-head
 check and independent review, and a same-head retry cannot pass the gate.
+
+A failed unpublished executor cannot become `ready` merely because the ticket
+contains unrelated earlier evidence. If such a legacy ticket is already `ready`,
+the same failed execution remains retryable by the executive; neither path
+silently treats a failed refresh as a verified no-change completion.
 
 For dbt/Lightdash work, the executor's admitted scope must include both the semantic
 or analysis specification and its exact generated chart/dashboard outputs. It may
