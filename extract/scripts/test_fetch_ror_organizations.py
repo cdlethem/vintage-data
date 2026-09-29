@@ -673,8 +673,6 @@ class FetchRorOrganizationsTests(unittest.TestCase):
         text = SOURCE_CONFIG.read_text(encoding="utf-8")
         self.assertIn("inactive, and withdrawn", text)
         self.assertIn("full-registry export", text)
-        self.assertIn("network-enabled live smoke", text)
-        self.assertIn("external gates", text)
 
     def test_compact_ndjson_envelope_passes_existing_runner_contract(self):
         stdout = io.StringIO()

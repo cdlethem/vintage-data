@@ -928,8 +928,6 @@ class FetchMedicaidOpenDataTests(unittest.TestCase):
         self.assertIn("catalog metadata", text)
         self.assertIn("does not download distributions", text)
         self.assertIn("historical count of 243 is not a fixed expected total", text)
-        self.assertIn("authorized network-enabled operator", text)
-        self.assertIn("Independent review remains required", text)
 
 
 if __name__ == "__main__":

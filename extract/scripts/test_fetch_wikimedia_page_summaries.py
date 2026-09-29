@@ -447,7 +447,6 @@ class FetchWikimediaPageSummariesTests(unittest.TestCase):
             MODULE.make_page_request(*page)
         text = " ".join(SOURCE_CONFIG.read_text(encoding="utf-8").split())
         for expected in (
-            "External acceptance is pending",
             "never changes requested identity",
             "exact replay copies",
             "not a crawl",

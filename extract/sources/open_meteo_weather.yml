@@ -2,8 +2,7 @@ name: open_meteo_weather
 script: fetch_open_meteo_weather.py
 args: ["--forecast-days", "7", "--batch-size", "10", "--timeout", "30", "--request-delay", "1"]
 schedule: "43 */6 * * *"  # UTC; forecasts change, but six-hour collection is conservative
-# Keep disabled until an operator completes the first approved live-source load and
-# warehouse synchronization through the analytics_engineer workflow.
+# Disabled until a first live run and its warehouse load have been checked.
 enabled: false
 retries: 1
 timeout_minutes: 5

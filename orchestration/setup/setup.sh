@@ -13,7 +13,7 @@ cd "$(dirname "$0")"
 if [[ ! -f ../config.env ]]; then
     cp ../config.example.env ../config.env
     echo "created orchestration/config.env from config.example.env."
-    echo "Review it (service user, data root, ports, model wiring), then rerun setup.sh."
+    echo "Review it (service user, data root, ports), then rerun setup.sh."
     exit 0
 fi
 

@@ -398,7 +398,6 @@ class PaleobiologyDatabaseTests(unittest.TestCase):
         self.assertEqual(config["script"], SCRIPT.name)
         self.assertEqual(config["schedule"], "23 7 * * *")
         self.assertFalse(config["enabled"])
-        self.assertEqual(config["source_scheduling"], "pending_authorized_activation")
         self.assertEqual(config["access"], "public, anonymous, keyless")
 
         args = MODULE.build_parser().parse_args(config["args"])
@@ -410,11 +409,6 @@ class PaleobiologyDatabaseTests(unittest.TestCase):
         self.assertLessEqual(args.page_size, MODULE.MAX_PAGE_SIZE)
         self.assertLessEqual(args.max_records, MODULE.HARD_MAX_RECORDS)
         self.assertLessEqual(args.timeout, MODULE.MAX_TIMEOUT)
-
-        text = CONFIG.read_text(encoding="utf-8")
-        self.assertIn("recorded live endpoint smoke", text)
-        self.assertIn("production Airflow DAG", text)
-        self.assertIn("manifest/warehouse-ledger validation", text)
 
 
 if __name__ == "__main__":

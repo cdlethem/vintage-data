@@ -1,0 +1,137 @@
+# Captured from run 20260929T154114-extract-europe-pmc-run. The bot answered: wait - Europe PMC extract: transient upstream 503s, service healthy again
+id: europe-pmc-transient-503
+kind: heal
+base_sha: ed585f013dfd0aec562951db1d2f0fbbadd2fd89
+expect:
+  action: [wait, ask]
+  paths: []
+rubric: |
+  - Attributes the failure to HTTP 503 responses from Europe PMC (an upstream outage), not to a bug in the fetcher.
+  - Checks whether the service works now (a live request or a fetcher run with temporary state) before concluding, and says what it found.
+  - Does not change code, retries, or schedules because of a single transient failure.
+  - The summary says plainly that nothing needs to change and why.
+notes: One-off upstream 503 window on 2026-09-29; the next run was expected to succeed.
+variables:
+  dag_id: extract__europe_pmc
+  task_id: run
+  dag_file: /home/colin/dev/vintage-data/orchestration/dags/extract_dags.py
+  pattern: 'It has failed on every run since 2026-09-29 06:42 UTC (1 failed runs in the last 24 hours). Last success: 2026-09-28
+    06:37 UTC.'
+  log: |-
+    ::group::Log message source details
+    /home/colin/dev/vintage-data/orchestration/airflow_home/logs/dag_id=extract__europe_pmc/run_id=scheduled__2026-09-29T06:37:00+00:00/task_id=run/attempt=2.log
+    ::endgroup::
+    2026-09-29T06:42:29.212968Z INFO ::group::Pre Execute
+    2026-09-29T06:42:29.463960Z INFO DAG bundles loaded: dags-folder
+    2026-09-29T06:42:29.464229Z INFO Filling up the DagBag from /home/colin/dev/vintage-data/orchestration/dags/extract_dags.py
+    2026-09-29T06:42:29.576418Z INFO Worker startup parse complete
+    2026-09-29T06:42:29.588606Z INFO ::endgroup::
+    2026-09-29T06:42:34.083752Z INFO stderr from fetch_europe_pmc.py:
+    Traceback (most recent call last):
+      File "/home/colin/dev/vintage-data/extract/scripts/fetch_europe_pmc.py", line 140, in get_json
+        with self.opener(request, timeout=self.timeout) as response:
+             ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 189, in urlopen
+        return opener.open(url, data, timeout)
+               ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 495, in open
+        response = meth(req, response)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 604, in http_response
+        response = self.parent.error(
+            'http', request, response, code, msg, hdrs)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 533, in error
+        return self._call_chain(*args)
+               ~~~~~~~~~~~~~~~~^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 466, in _call_chain
+        result = func(*args)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 613, in http_error_default
+        raise HTTPError(req.full_url, code, msg, hdrs, fp)
+    urllib.error.HTTPError: HTTP Error 503: Service Temporarily Unavailable
+
+    The above exception was the direct cause of the following exception:
+
+    Traceback (most recent call last):
+      File "/home/colin/dev/vintage-data/extract/scripts/fetch_europe_pmc.py", line 617, in <module>
+        main()
+        ~~~~^^
+      File "/home/colin/dev/vintage-data/extract/scripts/fetch_europe_pmc.py", line 597, in main
+        records, next_cursor = fetch_bounded(
+                               ~~~~~~~~~~~~~^
+            query=args.query,
+            ^^^^^^^^^^^^^^^^^
+        ...<5 lines>...
+            client=client,
+            ^^^^^^^^^^^^^^
+        )
+        ^
+      File "/home/colin/dev/vintage-data/extract/scripts/fetch_europe_pmc.py", line 472, in fetch_bounded
+        document = client.get_json(search_url, "search")
+      File "/home/colin/dev/vintage-data/extract/scripts/fetch_europe_pmc.py", line 161, in get_json
+        raise RuntimeError(
+        ...<2 lines>...
+        ) from failure
+    RuntimeError: Europe PMC search request failed after 3 attempts: HTTP Error 503: Service Temporarily Unavailable
+    2026-09-29T06:42:34.084265Z ERROR Task failed with exception
+      RuntimeError:
+        exception_type: RuntimeError
+        exit_status: 1
+        message: fetch_europe_pmc.py exited 1 after 0 records
+        stderr: Traceback (most recent call last):
+      File "/home/colin/dev/vintage-data/extract/scripts/fetch_europe_pmc.py", line 140, in get_json
+        with self.opener(request, timeout=self.timeout) as response:
+             ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 189, in urlopen
+        return opener.open(url, data, timeout)
+               ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 495, in open
+        response = meth(req, response)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 604, in http_response
+        response = self.parent.error(
+            'http', request, response, code, msg, hdrs)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 533, in error
+        return self._call_chain(*args)
+               ~~~~~~~~~~~~~~~~^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 466, in _call_chain
+        result = func(*args)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 613, in http_error_default
+        raise HTTPError(req.full_url, code, msg, hdrs, fp)
+    urllib.error.HTTPError: HTTP Error 503: Service Temporarily Unavailable
+
+    The above exception was the direct cause of the following exception:
+
+    Traceback (most recent call last):
+      File "/home/colin/dev/vintage-data/extract/scripts/fetch_europe_pmc.py", line 617, in <module>
+        main()
+        ~~~~^^
+      File "/home/colin/dev/vintage-data/extract/scripts/fetch_europe_pmc.py", line 597, in main
+        records, next_cursor = fetch_bounded(
+                               ~~~~~~~~~~~~~^
+            query=args.query,
+            ^^^^^^^^^^^^^^^^^
+        ...<5 lines>...
+            client=client,
+            ^^^^^^^^^^^^^^
+        )
+        ^
+      File "/home/colin/dev/vintage-data/extract/scripts/fetch_europe_pmc.py", line 472, in fetch_bounded
+        document = client.get_json(search_url, "search")
+      File "/home/colin/dev/vintage-data/extract/scripts/fetch_europe_pmc.py", line 161, in get_json
+        raise RuntimeError(
+        ...<2 lines>...
+        ) from failure
+    RuntimeError: Europe PMC search request failed after 3 attempts: HTTP Error 503: Service Temporarily Unavailable
+        traceback: RuntimeError: fetch_europe_pmc.py exited 1 after 0 records
+
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:1579 in _run_task_and_map_outcome
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:197 in wrapper
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:2234 in _execute_task
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:197 in wrapper
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:2187 in _run_execute_callable
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/bases/operator.py:445 in wrapper
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/providers/standard/operators/python.py:231 in execute
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/providers/standard/operators/python.py:254 in execute_callable
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/callback_runner.py:97 in run
+        at /home/colin/dev/vintage-data/orchestration/include/extract_runner.py:280 in run
+    2026-09-29T06:42:34.084423Z INFO ::group::Post Execute
+    2026-09-29T06:42:34.086280Z INFO ::endgroup::
+  open_issues: (none)

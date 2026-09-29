@@ -6,9 +6,7 @@ script: fetch_wikimedia_page_summaries.py
 # Titles are encoded as one path segment; no discovered link is ever requested.
 args: ["--page", "en", "wikipedia", "Albert_Einstein", "--page", "de", "wikipedia", "Albert_Einstein", "--page", "en", "wiktionary", "Einstein", "--timeout", "15", "--retries", "2", "--retry-budget", "90"]
 schedule: "37 9 * * 1"  # UTC; proposed weekly refresh while disabled
-# External acceptance is pending. Do not enable until the authorized live configured-title
-# smoke, warehouse load/model evidence, source_scheduling and analytics_engineer follow-ups,
-# provider checks, independent review, and activation checks required by the ticket exist.
+# Disabled until a first live run and its warehouse load have been checked.
 enabled: false
 retries: 1
 timeout_minutes: 5

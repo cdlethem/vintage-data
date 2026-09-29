@@ -1,8 +1,7 @@
 # Machine-local configuration. Everything path-, host- or account-specific
 # lives in these two files; every other tracked file is portable.
-# (copy them from config.example.env / bots/models.example.yml)
+# (copy them from config.example.env)
 orchestration/config.env
-bots/models.yml
 
 # Generated from the files above by orchestration/setup/render_config.sh
 orchestration/airflow.env
@@ -15,9 +14,6 @@ orchestration/airflow.secrets.env
 orchestration/airflow_home/
 orchestration/.venv/
 load/.venv/
-
-# Bot run output
-bots/runs/
 
 # Source-discovery workbench: the vetting harness, its evidence trail, and the
 # raw candidate JSON it emits. discovery/staged_scripts/ IS tracked: those are
@@ -42,9 +38,7 @@ visualization/node_modules/
 **/.lightdash-metadata.json
 **/.lightdash/
 
-# Provider UI dependencies and local Python build outputs
+# Local dependency and build outputs
 node_modules/
-orchestration/provider_bot_dashboard/dist/
-orchestration/provider_bot_dashboard/build/
 *.egg-info/
 transform/.user.yml

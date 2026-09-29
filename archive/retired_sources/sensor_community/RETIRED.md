@@ -15,22 +15,5 @@ Removed alongside the archived files, to restore only on a human-approved resume
   }
   ```
 
-- `bots/validation_catalog.py` `COMMANDS`:
-
-  ```python
-  "smoke-sensor-community": _public_smoke(
-      "sensor_community", "sensor_community", "/work/extract/scripts/fetch_sensor_community.py", "--country", "DE",
-      source_url="https://data.sensor.community/airrohr/v1/filter/country=DE", expected_status=200,
-      timeout_seconds=240, required_equals_key="country", required_equals_value="DE", summary_required=True,
-  ),
-  ```
-
-- `orchestration/provider_bot_dashboard/.../validation_recipes.py` `DEFAULT_RECIPE_CATALOG`:
-
-  ```python
-  "smoke-sensor-community": {"recipe": "public_source_smoke", "capability": "public-network-readonly",
-                             "source_url": "https://data.sensor.community/airrohr/v1/filter/country=DE", "expected_status": 200},
-  ```
-
 - Generated Lightdash charts `fct-sensor-community-measurement*.yml` and the
   `sensor-community` dashboard, recreated by `viz content` once the mart is back.

@@ -1,0 +1,45 @@
+# airflow-bots configuration for vintage-data. Reference: bots/README.md.
+# Secrets come from orchestration/airflow.secrets.env: GITHUB_TOKEN, BOTS_API_PASSWORD.
+
+github:
+  repo: cdlethem/vintage-data
+  base: main
+
+airflow:
+  url: http://${AIRFLOW__API__HOST}:${AIRFLOW__API__PORT}
+  ui_url: ${AIRFLOW__API__BASE_URL}
+
+state_dir: ${EXTRACT_DATA_ROOT}/state/bots
+instructions: instructions.md
+
+agents:
+  default:
+    # omp resolves the LOCAL role to the llama.cpp server; swap the model or the
+    # whole command (claude, codex, aider, a container wrapper...) freely.
+    command: [omp, -p, --mode, text, --model, "@LOCAL", --max-time, 25m, --no-title, --auto-approve,
+              --session-dir, "{run_dir}/session", "{prompt}"]
+    timeout_minutes: 30
+    env: [HOME, PATH, USER, LANG, TERM, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME]
+    usage: omp
+
+limits:
+  daily_runs: 30
+  daily_usd: 5
+  concurrency: 2        # the local llama.cpp server serves two slots
+
+heal:
+  schedule: "*/15 * * * *"
+  lookback_hours: 24
+  max_new_per_sweep: 2
+  auto_merge:
+    enabled: true       # only when the bot says no review is needed and CI passes
+    paths: ["extract/scripts/*", "extract/sources/*", "extract/test_*.py", "extract/tests/*"]
+
+jobs:
+  new_source:
+    schedule: "30 5 * * *"
+    prompt: jobs/new_source.md
+
+evals:
+  cases: evals
+  judge: default

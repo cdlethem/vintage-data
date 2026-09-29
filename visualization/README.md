@@ -106,14 +106,12 @@ transfer failure retries the whole build; a sync failure retries only the
 metadata deployment. A failed source does not prevent another source publishing.
 Shared warehouse/service outages and real shared dependencies remain shared risks.
 
-Developer and confined-bot work is limited to preparing the reviewed candidate:
-parse/validate its semantic specification, run `viz content` to regenerate its
-admitted chart/dashboard files, and validate the generated diff offline. A
-preview-capable operator reviews the exact candidate before merge. Neither that
-preview nor offline dbt success is production delivery. After merge, the successful
-trusted family build/batch/release receipt is the metadata/content activation
-evidence; another family's failure is not a prerequisite for completing it.
-Direct deployment or Docker operation remains outside confined bot execution.
+Changes made in development (by a person or a bot) prepare a candidate: parse and
+validate the semantic specification, run `viz content` to regenerate its chart and
+dashboard files, and validate the generated diff offline; `viz preview` shows it in a
+non-production Lightdash before merge. Neither preview nor offline dbt success is
+production delivery. After merge, the family's successful scheduled build, batch
+and release is what publishes it; another family's failure is not a prerequisite.
 
 The serving bundle changes adapter and relation/type metadata only; it never rewrites
 or executes the DuckDB model SQL on Postgres. It retains the original manifest for
@@ -168,26 +166,17 @@ Hand-authored charts are supported, but generated files are overwritten by
 named chart. `viz export` downloads into an external scratch directory for
 review, never directly over tracked content.
 
-Two specialists share this contract. The analytics engineer owns mart grain,
-semantic metadata and contract issues. The data analyst (`bots/data_analyst`) owns
-the analysis layer: it profiles and queries the real serving data through
-`visualization/bin/eda`, decides what actually changes over time in a family, and
-proposes the `analysis` block and the metrics its trends need. Its deterministic
-context selects the next family with gaps, prefers families whose only deficit is
-missing analysis, suppresses active tasks by resource key, and reconsiders completed
-work if gaps remain. Both propose one coherent family at a time through the existing
-manager/admission/executor/reviewer lifecycle.
+Mart grain, semantic metadata and the `analysis` block are maintained together:
+profile and query the real serving data through `visualization/bin/eda`, decide
+what actually changes over time in a family, and add the metrics its trends need,
+one coherent family at a time.
 
-The admitted implementation changes the family specification and the exact generated
-chart/dashboard paths it affects. The executor may run the offline generation and
-validation loop, but never hand-edits generated YAML. `eda` is a capability, not a
-credential: it loads the reader password itself and admits one bounded read-only
-SELECT, so specialists and confined executors still receive no production credentials
-or Docker control. A preview-capable operator runs `viz preview` against a configured
-non-production identity for the merge-stage review; its evidence attaches to the
-candidate head. The trusted scheduled cadence, not an operator/bot sandbox, later
-deploys and query-checks the immutable post-merge batch. A trend that renders empty
-in the browser is not done, whatever static validation reports.
+Generated chart/dashboard YAML is never hand-edited: change the family
+specification and regenerate. `eda` loads the reader password itself and admits one
+bounded read-only SELECT, so anyone exploring data (including bots) never holds a
+warehouse credential. Deployment and query checks happen only in the scheduled
+post-merge batch. A trend that renders empty in the browser is not done, whatever
+static validation reports.
 
 ## Publication, recovery and monitoring
 

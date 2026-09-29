@@ -19,22 +19,7 @@ uv pip install --python .venv/bin/python \
     croniter \
     --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt"
 
-if [[ -z "${BOT_DASHBOARD_WHEEL:-}" ]]; then
-    shopt -s nullglob
-    dashboard_wheels=(provider_bot_dashboard/dist/*.whl)
-    shopt -u nullglob
-    if ((${#dashboard_wheels[@]} != 1)); then
-        printf 'expected exactly one provider_bot_dashboard/dist/*.whl; found %d\n' \
-            "${#dashboard_wheels[@]}" >&2
-        exit 1
-    fi
-    BOT_DASHBOARD_WHEEL="${dashboard_wheels[0]}"
-fi
-if [[ ! -f "$BOT_DASHBOARD_WHEEL" ]]; then
-    printf 'bot dashboard wheel not found: %s\n' "$BOT_DASHBOARD_WHEEL" >&2
-    exit 1
-fi
-uv pip install --python .venv/bin/python "$BOT_DASHBOARD_WHEEL"
+uv pip install --python .venv/bin/python -e ../bots
 
 # airflow.env is generated; render it first so a fresh checkout can migrate.
 ./setup/render_config.sh

@@ -1,0 +1,52 @@
+# Captured from run 20260929T154114-extract-pokeapi-pokemon-data-run. The bot answered: fix - PokéAPI extract fails: next-page links now clamp the limit
+id: pokeapi-clamped-page-limit
+kind: heal
+base_sha: ed585f013dfd0aec562951db1d2f0fbbadd2fd89
+expect:
+  action: fix
+  paths: ["extract/scripts/fetch_pokeapi.py", "extract/scripts/test_fetch_pokeapi.py", "extract/test_*pokeapi*.py", "extract/tests/*pokeapi*"]
+rubric: |
+  - Finds the actual cause: PokéAPI's next-page link on the last page carries a `limit` smaller than the requested page size, which the fetcher's pagination check rejects.
+  - The fix accepts a smaller `limit` without also accepting a larger one or removing the other pagination checks (origin, path, offset moving forward).
+  - Adds or updates a test that covers the shortened last page.
+  - Reports running the fetcher's tests and states their outcome.
+  - The summary is understandable without reading the code: names the PokéAPI extract, what broke, and what changed.
+notes: Real failure from 2026-09-22 onwards; the reviewed fix changed one comparison in fetch_pokeapi.py plus tests.
+variables:
+  dag_id: extract__pokeapi_pokemon_data
+  task_id: run
+  dag_file: /home/colin/dev/vintage-data/orchestration/dags/extract_dags.py
+  pattern: 'It has failed on every run since 2026-09-22 00:53 UTC (1 failed runs in the last 24 hours). Last success: none
+    in the last 9 runs.'
+  log: |-
+    ::group::Log message source details
+    /home/colin/dev/vintage-data/orchestration/airflow_home/logs/dag_id=extract__pokeapi_pokemon_data/run_id=scheduled__2026-09-29T11:23:00+00:00/task_id=run/attempt=2.log
+    ::endgroup::
+    2026-09-29T11:28:17.989974Z INFO ::group::Pre Execute
+    2026-09-29T11:28:18.200748Z INFO DAG bundles loaded: dags-folder
+    2026-09-29T11:28:18.201012Z INFO Filling up the DagBag from /home/colin/dev/vintage-data/orchestration/dags/extract_dags.py
+    2026-09-29T11:28:18.312500Z INFO Worker startup parse complete
+    2026-09-29T11:28:18.324642Z INFO ::endgroup::
+    2026-09-29T11:28:32.548254Z INFO stderr from fetch_pokeapi.py:
+    pokeapi_pokemon_data: PokéAPI next URL does not continue within the catalog pagination (scheme=https hostname=pokeapi.co path=catalog-slash query-keys=limit:one,offset:one,other:no)
+    2026-09-29T11:28:32.548643Z ERROR Task failed with exception
+      RuntimeError:
+        exception_type: RuntimeError
+        exit_status: 1
+        message: fetch_pokeapi.py exited 1 after 0 records
+        stderr: pokeapi_pokemon_data: PokéAPI next URL does not continue within the catalog pagination (scheme=https hostname=pokeapi.co path=catalog-slash query-keys=limit:one,offset:one,other:no)
+        traceback: RuntimeError: fetch_pokeapi.py exited 1 after 0 records
+
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:1579 in _run_task_and_map_outcome
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:197 in wrapper
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:2234 in _execute_task
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:197 in wrapper
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:2187 in _run_execute_callable
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/bases/operator.py:445 in wrapper
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/providers/standard/operators/python.py:231 in execute
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/providers/standard/operators/python.py:254 in execute_callable
+        at /home/colin/dev/vintage-data/orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/callback_runner.py:97 in run
+        at /home/colin/dev/vintage-data/orchestration/include/extract_runner.py:280 in run
+    2026-09-29T11:28:32.548780Z INFO ::group::Post Execute
+    2026-09-29T11:28:32.549967Z INFO ::endgroup::
+  open_issues: (none)

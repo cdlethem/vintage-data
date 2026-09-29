@@ -1,405 +1,194 @@
-# bots
+# airflow-bots
 
-Ten definitions implement one dashboard-governed workflow: seven read-only specialists,
-one read-only manager, one confined executor, and one optional read-only PR reviewer.
+Self-healing agents for Airflow pipelines. When a task keeps failing, a coding agent reads the log and the code, then either opens a pull request with a fix, or files a plain-language issue saying what's wrong and what it needs from you. Everything it does is a GitHub issue, pull request, label, or comment, so you manage it with the tools you already use.
 
-```text
-source_discovery --evidence--> source_vetting --task proposal--> dashboard queue
-source_scheduling ---------------------------------------------> dashboard queue
-cadence_review ------------------------------------------------> dashboard queue
-failure_triage -----------------------------------------------> dashboard queue
-analytics_engineer --------------------------------------------> dashboard queue
-data_analyst --------------------------------------------------> dashboard queue
-seven freshness-qualified specialist reports -----------------> manager
-human or Autopilot accept/assign/start -> task_executor -> bot PR -> Autopilot merge
-provider observer -> merged-head evidence -> trusted cadence sync
--> Autopilot completes merged implementation; source recovery remains separate
+It is a small Python package (`pyyaml` is the only dependency) plus a DAG file. It brings no database, web UI, or services of its own.
+
+## How it works
+
+```
+every 15 min, DAG bots_heal:
+  plan   ── close issues whose task recovered
+         ── merge bot PRs labelled bots:automerge once CI is green
+         ── find tasks that are failing now, or fail often, and have no issue yet
+         ── find unanswered "/bot ..." comments
+  work[] ── one agent run per item, in a fresh git worktree
+              fix  -> commit, push bots/<issue>-<slug>, open PR "Fixes #N"
+              wait -> issue that closes itself when the task succeeds again
+              ask  -> issue with one concrete question for you
+
+on a cron, DAG bots_job__<name>:
+  run    ── one agent run with your prompt (e.g. "add a new data source") -> PR or issue
 ```
 
-The dashboard database is authoritative for run reports, recommendations, tasks,
-execution admissions, artifacts, provider identities, and audit events. Scheduled task
-code reaches that state only through the bearer-authenticated bounded internal API.
-There is no task-side ORM, filesystem-report authority, review-package promotion, or
-shared-checkout mutation path.
+The agent is any command-line coding agent (omp, Claude Code, Codex, aider, or your own wrapper). The bot hands it a prompt and a checkout, then reads one JSON object from its final message:
 
-## Definitions and schedules
-
-| definition | UTC schedule | authority |
-|---|---:|---|
-| `source_discovery` | `17 */6 * * *` | web research; at most two novel source candidates |
-| `source_vetting` | `47 */6 * * *`, plus discovery evidence | vet exactly one candidate and propose work |
-| `source_scheduling` | `47 1-23/6 * * *` | plan exactly one scheduling implementation |
-| `cadence_review` | `37 */4 * * *` | audit flagged sources plus a bounded rotating sample |
-| `failure_triage` | `7 * * * *` | diagnose bounded non-bot failure groups |
-| `analytics_engineer` | `27 */4 * * *` | plan one governed model or visualization implementation |
-| `data_analyst` | `13 */3 * * *` | explore one family's real data and plan its missing time series |
-| `manager` | `57 9 * * *` | create a freshness-qualified human-approval portfolio plan |
-| `task_executor` | manual | modify only admitted paths in external confinement |
-| `pr_reviewer` | manual | review an immutable PR/head and post advisory comments |
-
-Discovery to vetting is the only specialist report trigger. Specialist report
-submission immediately reconciles `TaskProposalV1` records into the dashboard queue.
-Only `service.start_task()` can admit an executor. The minute dispatcher leases
-admissions deterministically; it does not invent work or carry model-controlled
-arguments.
-
-## Typed runs and budgets
-
-Every try persists `RunEnvelopeV1` under
-`(dag_id, run_id, task_id, map_index, try_number)`. Outcomes are exactly
-`succeeded`, `skipped`, `capacity_unavailable`, `timed_out`, or `failed`; retry
-classification is exactly `none`, `capacity`, `transient`, or `terminal`. XCom contains
-only projection identity, digests, sizes, outcome, retry class, and failure fingerprint.
-Full payloads, attempts, timing, token usage, bounded failure detail, and context digest
-remain in provider tables.
-
-The first task try claims an immutable logical deadline. Airflow retries reuse it.
-Context, model, publication, and cleanup caps are sub-budgets of that deadline; a retry
-or fallback cannot reset the clock. Capacity is green only for bots configured with
-`capacity_policy: skip`. Provider timeouts are terminal and are never reported as busy.
-
-Typed JSON gates produce green payload-free skips without calling a model. Skips and
-capacity outcomes expire after seven days and never replace the latest useful payload.
-Failures/timeouts retain 365 days; successful payloads retain 3,650 days.
-
-## Read-only specialists
-
-Specialists emit named Pydantic v2 reports. Vetting, scheduling, cadence, triage, and
-analytics share strict `TaskProposalV1`: evidence, planned resolution, argv verification,
-path globs, resource keys, follow-up routes, executor profile, rollback, and proposed
-review policy. Bot PR review is advisory, not a merge prerequisite. Specialists cannot
-edit or stage work. Repository-probe profiles expose only
-`read,grep,glob,bash`; research profiles add web/browser access but no edit/write tool.
-External text is evidence, never instructions.
-
-The manager consumes provider-side compact summaries with explicit freshness status.
-Missing, stale, or failed required evidence forces `manager_v3.status` to
-`degraded_evidence`. It never delegates itself. Category policy remains server-owned:
-`manual` is the default; `auto_accept` changes state only; `auto_delegate` still passes
-through the same admission preconditions and queue limit.
-
-## Confined execution and review
-
-Executor enablement is fail-closed. The root-owned launcher must pass owner, mode,
-confinement, and network-policy checks before `executor_enabled=True` is safe. At claim,
-trusted provider code resolves a base SHA and stores a clean content-addressed source
-tar. The task parent downloads it in bounded chunks, validates the digest and safe
-extraction, keeps Git metadata outside the plain worktree, writes mode-0400 admission,
-and invokes exactly:
-
-```text
-<launcher> --protocol v2 --workdir <dir> --admission <dir>/admission.json --result <dir>/result.json
+```json
+{"action": "fix | wait | ask | none", "title": "...", "summary": "...", "details": "...",
+ "question": "...", "review": true, "duplicate_of": null}
 ```
 
-The launcher receives no Airflow, service, or Git credentials. Its mode-0600 result must
-match `ExecutorResultV2`. Verification argv comes only from the human-admitted revision.
-The trusted parent computes the binary patch, checks task/repository path-policy
-intersection, file count, diff bytes, result digests, and `VerificationManifestV1` before
-upload.
+The bot itself commits and pushes. The agent never receives the GitHub token.
 
-For a revision, the trusted seed is already in the sandbox before the model
-starts. Preserving that patch without additional edits is changed work, not
-`no_change`; the trusted parent still requires a nonempty cumulative Git diff
-and fresh checks before publishing the new candidate.
+## Working with the bot on GitHub
 
-The parent also interprets a sandbox result of no *additional* edits against
-its staged cumulative Git diff for an admitted seed. It records `ok` only for
-a real nonempty diff; an unseeded no-change report with edits and an empty
-successful patch both fail closed. This keeps installed confined runtimes
-compatible without trusting the model's status over repository evidence.
+| You see | Meaning | What you can do |
+|---|---|---|
+| issue `bots:waiting` | Nothing to change in code (e.g. upstream outage). | Nothing. It closes itself once the task is healthy again. |
+| issue `bots:question` | The bot needs a decision. | Reply `/bot <answer>`. |
+| issue `bots:review` + PR | A fix that should be reviewed. | Review and merge, or comment `/bot <change request>` on the PR. |
+| issue `bots:fixing` + PR `bots:automerge` | A low-risk fix that merges once all checks pass. | Remove `bots:automerge` to stop it. |
+| any issue | | Close it when it's handled. Add `bots:mute` to make the bot ignore that task for good. |
 
-Trusted server code recreates the exact base, applies the artifact, makes a deterministic
-commit, pushes `bot-dashboard/<task-id>/<sequence>-r<revision>`, and creates or recovers a
-draft PR. It persists provider, repository, service-account, base, branch, head, PR,
-patch, report, and verification identity before Autopilot promotes and merges that PR.
-A newer published revision comments on and closes older open bot PRs on the same ticket;
-unrelated and human-owned PRs are untouched. Provider changes to the published head
-remain a distinct identity and cannot silently claim the original patch's provenance.
+- `/bot <request>` works on any issue and on the bot's own PRs, from people with write access (owner, member, collaborator). The bot replies once per request.
+- A task is tracked by a hidden `<!-- bots:key=failure:<dag_id>/<task_id> -->` marker in the issue body (`flaky:` for a task that fails intermittently). A `failure:` issue counts as healthy once the latest run succeeds; a `flaky:` issue once the task has gone a full lookback window without failing. If the bot decides two failures share a root cause, the second task's marker is added to the first issue.
+- After an issue closes, failures within the next hour are treated as the old problem (a merged fix needs time to deploy). A later failure gets a new issue.
+- Auto-merge requires at least one CI check on the PR; with no CI configured the bot never merges.
 
-Bot-owned work does not wait for an independent reviewer verdict, a dashboard
-publication/merge validation gate, or an operator approval to advance from a published
-PR to an automatic merge. The executor still produces a nonempty admitted patch from
-allowed paths and runs its offline verification before publication; GitHub/GitLab may
-independently enforce branch rules or CI before accepting a merge. Source validation
-outcomes are still recorded as evidence, but do not block bot implementation delivery
-or imply recovery of production schedules. Human-owned work retains its own evidence
-and validation requirements.
+## Setup
 
-When protected main advances, Autopilot updates a behind GitHub bot PR in place,
-checks that the provider's old-to-new head comparison leaves every published
-candidate path unchanged, and records the new trusted head. GitHub reruns its
-required checks on that head before Autopilot retries the same PR's merge;
-the refresh does not create another ticket or PR.
+1. Install into the Airflow environment: `pip install airflow-bots` (or `pip install -e path/to/bots`).
+2. Write a config file (below) and point `BOTS_CONFIG` at it for the scheduler, DAG processor and workers.
+3. Add a DAG file:
 
-The protected **CelesTrak live reconciliation** pull-request check reads only the
-fixed official table and CSV endpoints. It checks a changed parser's event coverage
-against the trusted validator on protected main. The workflow compares normalized
-UTC instants, while production CSV record timestamps and IDs remain unchanged. A failed
-comparison is diagnostic evidence for a correction on the existing task, not a request
-for an operator to click a gate or open another specialist ticket.
+   ```python
+   from airflow_bots.dags import build
+   globals().update(build())
+   ```
 
-A material plan correction may revise a published candidate from its audited immutable
-patch. Admission confirms the former PR head and repository identity before reusing
-that patch; it never silently accepts a changed bot head. Revisions have new publication
-identities and replace prior open PRs instead of leaving a stack of drafts.
+4. Provide secrets as environment variables on the workers:
+   - `GITHUB_TOKEN`: a token that can read/write contents, issues and pull requests of the repository.
+   - Airflow API access to read failed task instances and their logs: `BOTS_API_USERNAME` and `BOTS_API_PASSWORD` for a user that can obtain a token from `/auth/token` (for Simple Auth, role `op` is enough), or a pre-issued token via `airflow.token_env`.
+5. Try it by hand before unpausing the DAG:
 
-A failed unpublished executor cannot become `ready` merely because the ticket
-contains unrelated earlier evidence. If such a legacy ticket is already `ready`,
-the same failed execution remains retryable by the executive; neither path
-silently treats a failed refresh as a verified no-change completion.
+   ```bash
+   airflow-bots sweep --dry-run                        # what would the bot do right now?
+   airflow-bots heal <dag_id> <task_id> --dry-run      # run the agent, print the issue/PR instead of creating it
+   ```
 
-For dbt/Lightdash work, the executor's admitted scope must include both the semantic
-or analysis specification and its exact generated chart/dashboard outputs. It may
-generate and validate those files only with admitted credential-free offline commands.
-Its successful report proves a candidate, not merge or production delivery. A
-merge-stage `lightdash_preview` gate records review of the exact candidate; an
-activation-stage `manual` gate records the affected
-`transform__<family>__<cadence>` build, streamed publication, and
-`sync_lightdash` receipt after merge. Unrelated family failures are separate work;
-runtime validation and delivery are dependency-scoped, and healthy partial releases
-retain unrelated last-good definitions. A completed implementation with this gate
-still pending is not a delivered visualization.
-Use the supported `lightdash_preview` and `manual` recipes rather than inventing a
-production-sync gate. PR review/merge evidence and release evidence are never
-interchangeable.
-
-## Models and concurrency
-
-`models.yml` is operator-owned and gitignored; `models.example.yml` documents the
-contract. Global `concurrency.max_active` is 2 and every endpoint/command alias has
-`max_concurrency: 1`. Ordered fallbacks are permitted only when every alias has the
-required capability. An optional credentialed fallback is removed from the active chain
-when its key is unavailable; the required primary may not silently degrade.
-
-The active manager uses `plan_cli`. Configure `manager: [plan_cli, openrouter]` only when
-`OPENROUTER_API_KEY` is actually provisioned. Never add a tool-less fallback to a web or
-repository role.
-
-Manual commands are explicit:
-
-```bash
-bots/bin/run_bot --list
-bots/bin/run_bot source_discovery --dry-run       # no model, no persistence
-bots/bin/run_bot source_discovery --ephemeral     # model, no provider authority
-```
-
-A normal manual run authenticates to the same provider API and persists the same typed
-envelope as Airflow.
-
-## Token usage and spend
-
-Usage accounting is provider-agnostic: nothing in it assumes `omp`. Every model attempt
-normalizes into one `usage.v1` record — `input_tokens`, `output_tokens`,
-`cached_input_tokens`, `cache_write_tokens`, `reasoning_tokens`, `total_tokens`,
-`requests`, `cost_micro_usd`, `cost_source`, `pricing_id` — which the runner attaches to
-each attempt and rolls up into the envelope's `usage_total`. `bots/usage.py` owns the
-normalization and imports neither Airflow nor the provider package, so any deployment can
-reuse it.
-
-Four input dialects are accepted, covering the popular shapes:
-
-| `format` | Source shape |
-| --- | --- |
-| `openai` | `prompt_tokens`, `completion_tokens`, `total_tokens`, `prompt_tokens_details.cached_tokens`, `completion_tokens_details.reasoning_tokens` |
-| `anthropic` | `input_tokens`, `output_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens` |
-| `normalized` | already `usage.v1` |
-| `omp_session` | session JSONL whose records carry `usage` (top level or nested under `message`) |
-
-HTTP providers (`openai_chat`, `anthropic_messages`) normalize their own response `usage`
-automatically. A command provider declares where its usage lands; the runner creates the
-destination, substitutes it into argv, reads it after the child exits, and deletes it:
+## Configuration
 
 ```yaml
-# Any CLI that can write an OpenAI-shaped usage document:
-usage: {source: file, format: openai, path: "{usage_file}"}
-argv: ["my-agent", "--usage-json", "{usage_file}", "--prompt", "{prompt}"]
+github:
+  repo: acme/pipelines          # owner/name
+  base: main                    # branch fixes are based on and merged into
+  token_env: GITHUB_TOKEN       # default
+  api_url: https://api.github.com   # GitHub Enterprise: https://ghe.example.com/api/v3
+  author: "airflow-bots <airflow-bots@users.noreply.github.com>"   # commit author
 
-# Any CLI that can be told where to keep per-run telemetry:
-usage: {source: session_dir, format: omp_session, dir: "{usage_dir}"}
-argv: ["omp", "-p", "--session-dir", "{usage_dir}", "--model", "{model}", "{prompt}"]
+airflow:
+  url: http://localhost:8080    # REST API base used by the workers
+  ui_url: https://airflow.example.com   # for links in issues (default: url)
+  username_env: BOTS_API_USERNAME       # defaults; or token_env: AIRFLOW_TOKEN
+  password_env: BOTS_API_PASSWORD
 
-# Any CLI that prints a machine-readable trailer:
-usage: {source: stdout_trailer, format: openai, marker: "USAGE:"}
+state_dir: /var/lib/airflow-bots  # git clone, worktrees, run records, spend ledger
+instructions: bots-notes.md       # optional project notes appended to every prompt
+
+agents:                           # one or more; "default" is used unless you say otherwise
+  default:
+    command: [claude, -p, --output-format, json, --permission-mode, acceptEdits]   # prompt on stdin
+    timeout_minutes: 30
+    env: [HOME, PATH, ANTHROPIC_API_KEY]   # only these variables reach the agent
+    usage: claude                          # read cost from the output: claude | omp | none
+
+limits:
+  daily_runs: 30                  # agent runs per UTC day, across all bots
+  daily_usd: 10                   # stop starting runs once reported spend reaches this
+  concurrency: 2                  # parallel agent runs in one sweep
+
+heal:
+  schedule: "*/15 * * * *"
+  lookback_hours: 24              # failures older than this are ignored
+  max_new_per_sweep: 3            # new failures investigated per sweep (busiest first)
+  flaky_streaks: 3                # also investigate a task whose latest run passed but which failed
+                                  # this many separate times in the window (null: current failures only)
+  ignore: ["*.sensor_*"]          # fnmatch on dag_id or dag_id.task_id; the bot's own DAGs are always ignored
+  agent: default
+  prompt: my_heal_prompt.md       # optional replacement for the built-in prompt
+  auto_merge:
+    enabled: false                # merge only if the agent says review isn't needed,
+    paths: ["dags/sources/*"]     # every changed file matches, and CI is green
+
+jobs:                             # optional scheduled agents
+  new_source:
+    schedule: "0 6 * * 1"
+    prompt: jobs/new_source.md
+    agent: default
+    enabled: true                 # initial pause state of the DAG
+    auto_merge: {enabled: false}
+
+evals:
+  cases: evals/                   # eval case files
+  judge: default                  # agent that grades eval runs
+  db: evals.sqlite                # default: <state_dir>/evals.sqlite
 ```
 
-`{usage_dir}` is a private mode-0700 directory per run, so discovery is deterministic and
-never reads another run's telemetry; a literal shared path is also accepted and then only
-files written at or after the child started are considered. Missing or malformed usage
-never fails a run — it records `cost_source: "unavailable"`.
+Relative paths resolve against the config file. `$VAR`/`${VAR}` are expanded; an unset variable is an error.
 
-Cost is `provider-reported → price book → unavailable`. The price book lives beside the
-models and is stamped onto every attempt by `pricing.id`, so re-pricing never rewrites
-history:
+### Agent commands
+
+Placeholders in `command`: `{prompt}` (prompt text as an argument), `{prompt_file}` (path to it), `{workdir}` (the checkout, also the working directory), `{run_dir}` (a private directory for this run). Without `{prompt}`/`{prompt_file}` the prompt goes to stdin.
 
 ```yaml
-pricing:
-  id: "2026-09-08"          # recorded on every attempt
-  currency: USD
-  models:                   # USD per 1,000,000 tokens
-    gpt-5.6-luna: {input: 0.202, output: 1.195, cached_input: 0.0199, cache_write: 0.25}
+# omp with any model or role it knows; usage is read from the session files
+command: [omp, -p, --model, "@default", --auto-approve, --session-dir, "{run_dir}/session", "{prompt}"]
+usage: omp
+
+# Claude Code
+command: [claude, -p, --output-format, json, --permission-mode, acceptEdits]
+usage: claude
+
+# Codex (usage not read; limits.daily_runs still applies)
+command: [codex, exec, --full-auto, "{prompt}"]
+usage: none
 ```
 
-The dashboard persists the counters per run and exposes `GET /bot-dashboard/api/usage?days=N`
-with totals plus per-model, per-bot and per-day rollups; the UI renders them under
-**Bot activity → Usage**. Rows whose runs were never priced read "not priced" rather than
-`$0.00`, and partially priced groups say so explicitly. Cached input dominates volume
-(80-90% of tokens in practice), which is why it is accounted separately.
+To use your own inference provider, configure the agent CLI for it (e.g. an OpenAI-compatible base URL, a local llama.cpp or vLLM server) and pass its credentials through `env`.
 
-Set `AIRFLOW__BOT_DASHBOARD__DAILY_SPEND_CAP_USD` to a positive value to cap spend: the
-provider refuses **new** run-budget claims once today's UTC spend reaches the cap, which
-the runner records as a `capacity_unavailable` / `spend_cap_reached` envelope honouring the
-bot's `capacity_policy`. A run that already holds a claim is never interrupted. `0.0`
-(the default) disables the cap.
+The agent runs as the Airflow worker's user with the listed environment variables only. It can run commands in its checkout and reach the network. If that's more trust than you want, wrap the command in a container or sandbox (`[docker, run, --rm, -v, "{workdir}:/work", ...]`, `bwrap ...`) and keep credentials the agent doesn't need out of `env` and out of `HOME`.
 
-Changing the envelope shape is a server-first deployment: install the provider wheel and
-restart the API server **before** the next bot run, otherwise the strict `/runs/report`
-schema rejects the newer envelope with HTTP 422 and every run fails.
+## Spend and monitoring
 
-## Bot activity and action queue
+- Every agent run is appended to `<state_dir>/ledger.jsonl` (subject, action, cost, tokens, duration, issue/PR). Limits are checked before each run; once reached, work tasks are skipped (visible as skipped in Airflow) until midnight UTC.
+- `airflow-bots status` prints today's runs and spend against the limits and the recent run list.
+- Airflow shows each agent run as one mapped `work` task instance named after the failing task, with its log.
+- Each run's prompt, raw output, result, and diff are kept in `<state_dir>/runs/<run-id>/`.
 
-Airflow's home page shows a compact attention count and a link to **Bot Activity**.
-The plugin uses Airflow's shared Chakra/Emotion runtime and theme. Bundle URLs and
-API links respect the Airflow base path and current origin, including local and
-Tailscale access. Rebuild the two bundles before packaging the provider:
+Multiple Airflow hosts: the ledger and git clone live in `state_dir`, so put it on shared storage or route the bot DAGs to one worker queue.
 
-```bash
-cd orchestration/provider_bot_dashboard/ui
-corepack pnpm install --frozen-lockfile
-corepack pnpm exec tsc --noEmit
-corepack pnpm test
-corepack pnpm build
-```
+## Improving prompts with evals
 
-The action queue defaults to **Needs attention**: proposed recommendations,
-blocked work, pull requests under review, and work marked ready for completion.
-These states do not all require a human decision. A ready, merged code change
-is completed even when live-source recovery remains unverified; the completion
-evidence distinguishes those claims and retains pending post-merge checks. A later
-failed source run after that merge is a new repair: failure triage creates a
-related proposal only after confirming the cited post-merge failed DAG run in
-Airflow. Both `failure_occurrence` and `airflow_failure_log` evidence labels
-are accepted; neither can create a repair without the matching failed run.
-Admitted or completed implementation scope is never rewritten. Failure groups
-rotate through ten-at-a-time hourly batches instead of leaving later groups
-permanently unreviewed. Invalid triage report envelopes receive one bounded
-schema correction attempt; if both attempts fail, no proposal is invented.
-Each ticket should identify the affected dataset, source, service, or DAG; the
-observed problem and impact; what is confirmed versus unknown; and the next
-action and its owner. Keep run IDs, paths, and validation commands as supporting
-evidence rather than the opening explanation. Open the ticket for evidence and
-remaining requirements. For an owner-only authorization, name the decision,
-recommend a bounded option and its conditions, and keep the existing restriction
-until approval. **All active** includes accepted and ongoing work, while
-**History** retains completed and archived implementation tickets. Search and
-pagination operate on server-side results.
+Prompts are meant to be replaced and compared, not hand-tuned case by case. The loop:
 
-When Autopilot owns the next check, open the plan with **Next action — Autopilot**
-and say no owner action is needed now. Use **Decision needed from owner** only
-for an authorization or judgment required now; put a possible later permission
-under **If blocked later** instead. Linked follow-up work does not delay the merge
-of an already published bot PR; each ticket advances on its own provider state.
-Human-owned tasks retain linked-prerequisite policy. Specialist planning requests
-are bounded by the execution and trusted
-head, so a wording-only revision cannot restart a successful handoff. The
-latest executive decision replaces its prior PR status comment for that ticket;
-the ticket retains each decision in its audit history.
+1. **Capture.** Any production run can become a test case: `airflow-bots eval capture <run-id>` writes `evals/<id>.yml` with the exact input the agent saw and the commit it ran on.
+2. **Describe good.** Fill in the case: deterministic `expect` checks and a short rubric for the judge.
 
-An accepted ticket assigned to a human is left for that owner; Autopilot cannot
-reassign it or spend repeated decisions rewording the same request. A bot
-assignment is offered only when an accepted ticket lacks a valid bot assignee.
+   ```yaml
+   id: pokeapi-pagination
+   kind: heal                     # heal | request | job:<name>
+   base_sha: 3f2a...              # the repository state to replay against
+   expect:
+     action: fix                  # or a list: [fix, ask]
+     paths: ["extract/scripts/*", "extract/test_*.py"]   # changed files must match
+     forbid: ["extract/sources/*"]
+   rubric: |
+     - Identifies that the API's `next` link format changed.
+     - Updates the pagination check instead of disabling it.
+     - Runs the fetcher's tests and reports the result.
+   variables: {...}               # recorded input; normally left as captured
+   ```
 
-Bot health shows actual bot definitions, paused status, latest outcomes, and drill-down
-run evidence; infrastructure DAGs are excluded.
-Empty results and failed requests have distinct states.
+3. **Run.** `airflow-bots eval run --label "shorter heal prompt"` replays every case at its commit with the current prompts, applies the checks, and has the judge agent grade each rubric line. `--prompt candidate.md` tries a different template, `--agent <name>` a different model, `--repeat 3` measures consistency, `--parallel 2` runs cases side by side.
+4. **Compare.** `airflow-bots eval report` lists runs with pass rates and a hash of the prompt text they used; `eval show <run>` shows unmet rubric lines; `eval compare <a> <b>` puts two runs side by side per case.
 
-Set `BOT_DASHBOARD_WRITE_ENABLED=True` in ignored `orchestration/config.env` to
-allow authenticated human task management. Simple Auth installations also require
-`BOT_DASHBOARD_ALLOW_SIMPLE_AUTH_WRITES=True`. Render configuration and restart
-`airflow-api-server` after installation/configuration changes. Use the configured
-canonical HTTPS origin for writes; CSRF, authorization, and the executor's separate
-admission/confinement gates remain enforced.
+Results are stored in SQLite (`runs` and `results` tables) for your own queries. Eval runs are not counted against production limits.
 
-Recommendations from the same specialist on the same category and resource scope
-revise existing open work even when the generated recommendation key changes. A
-single proposed model may change names when all source/family and other resource
-keys agree; multi-model plans and different scopes remain separate.
-Different specialists' work is kept separate unless its category and normalized
-title match. Accepted/admitted scopes are not overwritten by later reports.
-Titles name the source and intended action; run identities belong in evidence.
+## Design notes
 
-An operator can start a new assessment without deleting history:
-
-```bash
-# Run with the rendered deployment environment loaded.
-bot-dashboard reset-queue --actor YOUR_NAME --reason "Reassess current issues"
-# Review the preview, then repeat with --apply.
-```
-
-Reset archives pending tasks with audit events. It refuses in-flight execution or
-review work, ignores delayed reports that started before the reset, and permits
-new proposals from fresh evidence. It does not unpause bots or mark old issues fixed.
-
-## Operations
-
-The service identity comes from `BOT_DASHBOARD_API_USERNAME` and
-`BOT_DASHBOARD_API_PASSWORD`; task/model/sandbox environments do not inherit it. Local
-Simple Auth may use `bot-worker:op`. Other auth managers need an equivalent
-least-privilege identity capable of obtaining `/auth/token`; otherwise leave dashboard
-and bot DAGs disabled.
-
-One-time quarantine import is explicit and no-follow:
-
-```bash
-bot-dashboard import-legacy --runs-root "$EXTRACT_DATA_ROOT/state/bots/runs" \
-  --reviews-root "$EXTRACT_DATA_ROOT/state/bots/reviews" --check
-bot-dashboard import-legacy --runs-root "$EXTRACT_DATA_ROOT/state/bots/runs" \
-  --reviews-root "$EXTRACT_DATA_ROOT/state/bots/reviews"
-bot-dashboard inspect-run --dag-id bot__source_scheduling --run-id RUN --task-id run
-```
-
-The reader rejects anything it cannot prove safe: it walks the supplied roots through
-directory descriptors with `O_NOFOLLOW`, and skips entries that are not regular files
-owned by the invoking user, that live on another device, or that are group/other
-writable. The legacy writer ran under a `002` umask, so tighten the snapshotted
-quarantine once before importing:
-
-```bash
-chmod -R g-w,o-w "$EXTRACT_DATA_ROOT/state/bots/runs" \
-  "$EXTRACT_DATA_ROOT/state/bots/reviews/packages"
-```
-
-Legacy manifests carry absolute `worktree`/`patch_path` references, which the importer
-refuses to honour; those packages are recorded with
-`attention_code="manifest-provided roots are forbidden"`, their patches are stored as
-content-addressed artifacts, and each becomes one blocked human-attention task.
-
-The importer records counts and SHA-256 values, never reapplies a package, and creates
-human-attention tasks for malformed or unresolved quarantine entries. Preserve the
-read-only snapshot until every imported task is dismissed or re-executed through the
-new admission path.
-
-## Visualization ownership
-
-Two specialists share the analytics contract. The analytics engineer owns dbt mart
-grain, Lightdash metrics and chart coverage; its context follows source ancestry
-through staging, distinguishes modeling from visualization gaps, and deduplicates
-against active provider tasks. The data analyst owns the analysis layer that makes
-each dashboard a view of change over time: it profiles and queries the real serving
-marts through `visualization/bin/eda`, then proposes the
-`config.meta.vintage.visualization.analysis` block and the metrics its trends need,
-against the standard in [visualization/TRENDS.md](../visualization/TRENDS.md). Its
-context selects the next family whose dashboard still has analysis gaps and prefers
-families whose only deficit is missing analysis. One family is proposed per pass by
-each.
-
-Each admitted implementation includes the selected family specification and the exact
-generated `transform/lightdash` chart/dashboard files it changes. It may prepare,
-generate, and validate them offline; generated files are never hand-authored. `eda` is
-a capability, not a credential: it holds the read-only reader password itself and
-admits one bounded SELECT, so no specialist receives a warehouse password. A
-preview-capable operator supplies the real merge-stage preview against a non-production
-identity. After the candidate is merged, the trusted scheduled production workflow
-automatically builds, publishes reviewed immutable content, streams marts into serving, and syncs
-Lightdash with deploy/validation/query-check evidence. Bots never receive production
-credentials or Docker access and never run that production workflow. See
-[the visualization workflow](../visualization/README.md).
+- **GitHub is the tracker.** Issues, PRs, labels, and comments already provide state, history, search, notifications, permissions, and a UI. The bot stores no ticket state of its own; hidden markers in bodies tie issues to tasks.
+- **Airflow's REST API is the failure feed**, so any deployment and log backend works without changes to your DAGs.
+- **One agent run per problem, one contract.** Diagnosis and fixing are the same run; the result format is the same for healing, `/bot` requests, and jobs.
+- **Merge safety comes from CI and branch protection**, plus an explicit path allow-list for automatic merges. Anything else waits for a person.
+- **Budgets are coarse on purpose**: a daily run count and a daily reported spend. Per-run limits belong to the agent command (`--max-time`, `--max-turns`) and `timeout_minutes`.
+- Only GitHub is supported. Other trackers would replace `github.py`; nothing else talks to GitHub.

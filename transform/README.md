@@ -117,23 +117,3 @@ transform/bin/dbt docs generate --target dev
 transform/bin/dbt docs serve --target dev
 ```
 
-## Analytics-engineer bot
-
-`bots/analytics_engineer` is a scheduled read-only planner in the dashboard-governed
-workflow. It owns model grain, semantic metrics and Lightdash visualization coverage,
-and proposes one source family at a time. Missing visualizations remain work after
-modeling is complete. Active admitted tasks suppress duplicate proposals; completed
-reports do not hide unresolved coverage gaps. The admitted candidate changes
-metadata/specification and its matching generated `transform/lightdash` chart and
-dashboard files, using only offline checks. Review retains a real candidate preview
-gate before merge. After the trusted head is merged, scheduled production automation
-must record the successful build, streamed publication, and Lightdash sync
-receipt before the family is considered delivered; dbt success alone is insufficient.
-Bots never run those production operations or receive their credentials/Docker access.
-See [Lightdash operations](../visualization/README.md) and
-[bot lifecycle](../bots/README.md).
-
-```bash
-orchestration/.venv/bin/python bots/agent_context.py analytics
-orchestration/.venv/bin/python bots/bin/run_bot analytics_engineer --dry-run
-```

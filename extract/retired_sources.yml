@@ -10,8 +10,8 @@
 # here, under this name or any alias of the same upstream. Only a human may
 # resume one, by following archive/retired_sources/README.md. Guards that read
 # this file: orchestration/dags/extract_dags.py, load/config/load.yml
-# (explicit overrides), transform/scripts/sync_raw_sources.py,
-# transform/scripts/validate_project.py and bots/agent_context.py.
+# (explicit overrides), transform/scripts/sync_raw_sources.py and
+# transform/scripts/validate_project.py.
 sources:
   sensor_community:
     retired_on: 2026-09-22
