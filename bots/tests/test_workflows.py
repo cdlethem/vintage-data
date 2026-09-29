@@ -138,16 +138,28 @@ def test_plan_picks_persistent_untracked_failures_most_frequent_first(cfg, monke
     assert [(i["dag_id"], i["failed_count"]) for i in items] == [("c", 3), ("b", 2)]
 
 
-def test_recently_closed_issue_suppresses_the_old_failure_but_not_a_later_one(cfg, monkeypatch):
+def test_a_failure_soon_after_closing_reopens_the_issue_instead_of_starting_over(cfg, monkeypatch):
     key = workflows.failure_key("x", "run")
     closed = issue(3, key, closed_hours_ago=3)
     before = FakeAirflow([ti("x", hours_ago=3.5)], {("x", "run"): [ti("x", hours_ago=3.5)]})
-
-    assert run_plan(cfg, before, FakeGitHub(closed=[closed]), monkeypatch) == []
     within_grace = FakeAirflow([ti("x", hours_ago=2.5)], {("x", "run"): [ti("x", hours_ago=2.5)]})
-    assert run_plan(cfg, within_grace, FakeGitHub(closed=[closed]), monkeypatch) == []
+    for af in (before, within_grace):
+        gh = FakeGitHub(closed=[closed])
+        assert run_plan(cfg, af, gh, monkeypatch) == [] and gh.writes == []
+
     after = FakeAirflow([ti("x", hours_ago=1)], {("x", "run"): [ti("x", hours_ago=1)]})
-    assert [i["dag_id"] for i in run_plan(cfg, after, FakeGitHub(closed=[closed]), monkeypatch)] == ["x"]
+    gh = FakeGitHub(closed=[closed])
+    assert run_plan(cfg, after, gh, monkeypatch) == []  # no new agent run, no new issue
+    assert ("update_issue", (3,), {"state": "open"}) in gh.writes
+
+    fixed = issue(4, key, status="review", closed_hours_ago=3)
+    gh = FakeGitHub(closed=[fixed])
+    run_plan(cfg, after, gh, monkeypatch)
+    assert ("set_status", (4, "question", ["bots", "bots:review"]), {}) in gh.writes
+
+    declined = dict(closed, state_reason="not_planned")
+    gh = FakeGitHub(closed=[declined])
+    assert run_plan(cfg, after, gh, monkeypatch) == [] and gh.writes == []
 
 
 def test_intermittent_failures_are_investigated_and_closed_after_a_clean_window(cfg, monkeypatch):
