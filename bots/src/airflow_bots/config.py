@@ -23,7 +23,7 @@ class ConfigError(ValueError):
 
 @dataclass(frozen=True)
 class Agent:
-    """A coding-agent CLI invocation. Placeholders: {prompt}, {prompt_file}, {workdir}, {run_dir}."""
+    """A coding-agent CLI invocation. Placeholders: {prompt}, {prompt_file}, {workdir}, {run_dir}, {config_dir}."""
 
     command: tuple[str, ...]
     timeout_minutes: int = 30
@@ -66,6 +66,7 @@ class Limits:
     daily_usd: float | None = None
     daily_runs: int | None = None
     concurrency: int = 1
+    pool: str | None = None  # Airflow pool shared by every bot task (create it yourself)
 
 
 @dataclass(frozen=True)
@@ -162,7 +163,7 @@ def load(path: str | os.PathLike | None = None) -> Config:
         if usage not in ("omp", "claude", "none"):
             raise ConfigError(f"agents.{name}.usage must be omp, claude or none")
         agents[name] = Agent(
-            command=tuple(str(part) for part in spec["command"]),
+            command=tuple(str(part).replace("{config_dir}", str(here)) for part in spec["command"]),
             timeout_minutes=int(spec.get("timeout_minutes", 30)),
             env=tuple(spec.get("env", Agent.env)),
             usage=usage,
@@ -170,11 +171,12 @@ def load(path: str | os.PathLike | None = None) -> Config:
     if not agents:
         raise ConfigError("define at least one agent under agents:")
 
-    lim = _take(raw.get("limits"), "limits", {"daily_usd", "daily_runs", "concurrency"})
+    lim = _take(raw.get("limits"), "limits", {"daily_usd", "daily_runs", "concurrency", "pool"})
     limits = Limits(
         daily_usd=None if lim.get("daily_usd") is None else float(lim["daily_usd"]),
         daily_runs=None if lim.get("daily_runs") is None else int(lim["daily_runs"]),
         concurrency=int(lim.get("concurrency", 1)),
+        pool=lim.get("pool"),
     )
 
     hl = _take(raw.get("heal"), "heal", {

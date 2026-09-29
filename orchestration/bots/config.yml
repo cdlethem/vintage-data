@@ -15,17 +15,19 @@ instructions: instructions.md
 agents:
   default:
     # omp resolves the LOCAL role to the llama.cpp server; swap the model or the
-    # whole command (claude, codex, aider, a container wrapper...) freely.
-    command: [omp, -p, --mode, text, --model, "@LOCAL", --max-time, 25m, --no-title, --auto-approve,
+    # whole command (claude, codex, aider...) freely. agent.sh keeps this
+    # deployment's checkout read-only while the agent runs.
+    command: ["{config_dir}/agent.sh", omp, -p, --mode, text, --model, "@LOCAL", --max-time, 40m, --no-title, --auto-approve,
               --session-dir, "{run_dir}/session", "{prompt}"]
-    timeout_minutes: 30
+    timeout_minutes: 45
     env: [HOME, PATH, USER, LANG, TERM, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME]
     usage: omp
 
 limits:
   daily_runs: 30
   daily_usd: 5
-  concurrency: 2        # the local llama.cpp server serves two slots
+  concurrency: 2
+  pool: bots            # shared by healing and jobs: the local llama.cpp server has two slots
 
 heal:
   schedule: "*/15 * * * *"

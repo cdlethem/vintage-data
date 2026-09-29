@@ -8,6 +8,7 @@ fetch/push, through environment config, so it never lands on disk.
 from __future__ import annotations
 
 import base64
+import fcntl
 import os
 import re
 import shutil
@@ -42,41 +43,56 @@ class Workspace:
             raise RuntimeError(f"git {' '.join(args[:3])} failed: {result.stderr.strip()[-500:]}")
         return result.stdout.strip()
 
+    @contextmanager
+    def _lock(self):
+        """Parallel agent runs share one clone; ref updates and worktree bookkeeping take turns."""
+        self.git_dir.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.git_dir.parent / "repo.lock", "w") as handle:
+            fcntl.flock(handle, fcntl.LOCK_EX)
+            yield
+
     def _ensure_repo(self) -> None:
         if not self.git_dir.exists():
-            self.git_dir.parent.mkdir(parents=True, exist_ok=True)
             subprocess.run(["git", "init", "--quiet", "--bare", str(self.git_dir)], check=True)
             self._git("remote", "add", "origin", self.url)
 
     def fetch(self, branch: str) -> str:
         """Fetch one branch and return its commit sha."""
-        self._ensure_repo()
-        self._git("fetch", "--quiet", "--no-tags", "origin",
-                  f"+refs/heads/{branch}:refs/remotes/origin/{branch}", auth=True)
-        return self._git("rev-parse", f"refs/remotes/origin/{branch}")
+        with self._lock():
+            self._ensure_repo()
+            self._git("fetch", "--quiet", "--no-tags", "origin",
+                      f"+refs/heads/{branch}:refs/remotes/origin/{branch}", auth=True)
+            return self._git("rev-parse", f"refs/remotes/origin/{branch}")
 
     def ensure_commit(self, sha: str) -> None:
         """Make sure an exact commit (e.g. from an eval case) is available locally."""
-        self._ensure_repo()
-        try:
-            self._git("cat-file", "-e", f"{sha}^{{commit}}")
-        except RuntimeError:
-            self._git("fetch", "--quiet", "--no-tags", "origin", sha, auth=True)
+        with self._lock():
+            self._ensure_repo()
+            try:
+                self._git("cat-file", "-e", f"{sha}^{{commit}}")
+            except RuntimeError:
+                self._git("fetch", "--quiet", "--no-tags", "origin", sha, auth=True)
+
+    def files(self, sha: str) -> set[str]:
+        """Every tracked path at ``sha``."""
+        return set(self._git("ls-tree", "-r", "--name-only", sha).splitlines())
 
     @contextmanager
     def checkout(self, sha: str, name: str):
         """A detached worktree at ``sha``; removed afterwards."""
         path = self.work_root / name
-        if path.exists():
-            shutil.rmtree(path)
-            self._git("worktree", "prune")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        self._git("worktree", "add", "--quiet", "--detach", str(path), sha)
+        with self._lock():
+            if path.exists():
+                shutil.rmtree(path)
+                self._git("worktree", "prune")
+            path.parent.mkdir(parents=True, exist_ok=True)
+            self._git("worktree", "add", "--quiet", "--detach", str(path), sha)
         try:
             yield path
         finally:
             shutil.rmtree(path, ignore_errors=True)
-            self._git("worktree", "prune")
+            with self._lock():
+                self._git("worktree", "prune")
 
     def changes(self, worktree: Path, base_sha: str) -> tuple[list[str], str]:
         """(changed paths, unified diff) of everything in the worktree relative to ``base_sha``."""
@@ -95,5 +111,6 @@ class Workspace:
         if self.dry_run:
             print(f"[dry-run] git push {sha[:10]} -> {branch}")
         else:
-            self._git("push", "--quiet", "origin", f"HEAD:refs/heads/{branch}", cwd=worktree, auth=True)
+            with self._lock():
+                self._git("push", "--quiet", "origin", f"HEAD:refs/heads/{branch}", cwd=worktree, auth=True)
         return sha

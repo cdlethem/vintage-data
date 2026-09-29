@@ -44,6 +44,8 @@ The bot itself commits and pushes. The agent never receives the GitHub token.
 - A task is tracked by a hidden `<!-- bots:key=failure:<dag_id>/<task_id> -->` marker in the issue body (`flaky:` for a task that fails intermittently). A `failure:` issue counts as healthy once the latest run succeeds; a `flaky:` issue once the task has gone a full lookback window without failing. If the bot decides two failures share a root cause, the second task's marker is added to the first issue.
 - After an issue closes, failures within the next hour are treated as the old problem (a merged fix needs time to deploy). A later failure gets a new issue.
 - Auto-merge requires at least one CI check on the PR; with no CI configured the bot never merges.
+- A bot issue always shows the bot's current understanding at the top: after a `/bot` exchange the title and body are rewritten, and the conversation keeps the history.
+- If the agent crashes or times out, the `work` task fails in Airflow and the next sweep tries again; only a second failed attempt opens an issue asking a person to look.
 
 ## Setup
 
@@ -96,6 +98,8 @@ limits:
   daily_runs: 30                  # agent runs per UTC day, across all bots
   daily_usd: 10                   # stop starting runs once reported spend reaches this
   concurrency: 2                  # parallel agent runs in one sweep
+  pool: bots                      # optional Airflow pool for every bot task, so heal and jobs share
+                                  # a limit (create it: airflow pools set bots 2 "bot agents")
 
 heal:
   schedule: "*/15 * * * *"
@@ -128,7 +132,7 @@ Relative paths resolve against the config file. `$VAR`/`${VAR}` are expanded; an
 
 ### Agent commands
 
-Placeholders in `command`: `{prompt}` (prompt text as an argument), `{prompt_file}` (path to it), `{workdir}` (the checkout, also the working directory), `{run_dir}` (a private directory for this run). Without `{prompt}`/`{prompt_file}` the prompt goes to stdin.
+Placeholders in `command`: `{prompt}` (prompt text as an argument), `{prompt_file}` (path to it), `{workdir}` (the checkout, also the working directory), `{run_dir}` (a private directory for this run), `{config_dir}` (the config file's directory, for wrapper scripts). Without `{prompt}`/`{prompt_file}` the prompt goes to stdin.
 
 ```yaml
 # omp with any model or role it knows; usage is read from the session files
@@ -146,7 +150,7 @@ usage: none
 
 To use your own inference provider, configure the agent CLI for it (e.g. an OpenAI-compatible base URL, a local llama.cpp or vLLM server) and pass its credentials through `env`.
 
-The agent runs as the Airflow worker's user with the listed environment variables only. It can run commands in its checkout and reach the network. If that's more trust than you want, wrap the command in a container or sandbox (`[docker, run, --rm, -v, "{workdir}:/work", ...]`, `bwrap ...`) and keep credentials the agent doesn't need out of `env` and out of `HOME`.
+The agent runs as the Airflow worker's user with the listed environment variables only. It can run commands in its checkout and reach the network. Task logs contain paths on the Airflow host; the bot rewrites paths inside your repository to checkout-relative ones and tells the agent to stay in its checkout, but only a sandbox enforces it. If Airflow runs from a git checkout, at least mount that read-only (e.g. `bwrap --dev-bind / / --ro-bind /srv/deploy /srv/deploy -- <agent>`). For more isolation, wrap the command in a container or sandbox (`[docker, run, --rm, -v, "{workdir}:/work", ...]`, `bwrap ...`) and keep credentials the agent doesn't need out of `env` and out of `HOME`.
 
 ## Spend and monitoring
 

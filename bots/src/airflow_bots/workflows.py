@@ -33,6 +33,10 @@ class OverBudget(Exception):
     pass
 
 
+class AgentFailed(RuntimeError):
+    """The agent crashed, timed out, or returned no usable result (already recorded and published)."""
+
+
 @dataclass
 class Env:
     cfg: Config
@@ -240,8 +244,7 @@ def work(env: Env, item: dict) -> dict:
     raise ValueError(f"unknown work item {item!r}")
 
 
-def open_issue_list(env: Env) -> str:
-    issues = env.github.issues(state="open")
+def open_issue_list(issues: list[dict]) -> str:
     if not issues:
         return "(none)"
     return "\n".join(f"- #{issue['number']} {issue['title']}" for issue in issues[:50])
@@ -277,10 +280,13 @@ def _run_agent(env: Env, kind: str, agent_name: str, template: Path, variables: 
             outcome = publish(run, files, worktree)
     finally:
         if run is not None:  # spend is recorded even when publishing fails
-            ledger.record(cfg.state_dir, run_id=run_id, kind=kind, subject=subject, ok=run.ok, error=run.error,
-                          action=run.result.action if run.result else None, cost_usd=run.cost_usd,
-                          tokens=run.tokens, seconds=round(run.seconds), **outcome)
-    return {"run_id": run_id, "ok": run.ok, "error": run.error, **outcome}
+            ledger.record(cfg.state_dir, **{
+                "run_id": run_id, "kind": kind, "subject": subject, "ok": run.ok, "error": run.error,
+                "action": run.result.action if run.result else None, "cost_usd": run.cost_usd,
+                "tokens": run.tokens, "seconds": round(run.seconds), **outcome})
+    if not run.ok:  # after publishing any fallback: a failed agent run shows as a failed Airflow task
+        raise AgentFailed(f"{run.error} (run {run_id}, outcome {outcome})")
+    return {"run_id": run_id, **outcome}
 
 
 def heal_failure(env: Env, item: dict) -> dict:
@@ -305,22 +311,43 @@ def heal_failure(env: Env, item: dict) -> dict:
                    f"in {streaks} separate episodes, and its latest run succeeded. Find out why some runs fail.")
         key, failing_line = flaky_key(dag_id, task_id), f"fails intermittently ({count} of {len(window)} runs in {hours}h)"
     latest = item["latest_failure"]
-    variables = {"dag_id": dag_id, "task_id": task_id, "dag_file": af.dag_file(dag_id), "pattern": pattern,
-                 "log": af.log(latest), "open_issues": open_issue_list(env)}
-    facts = {"key": key, "dag_id": dag_id, "task_id": task_id, "failing": failing_line, "log_url": af.link(latest)}
+    open_issues = env.github.issues(state="open")
+    if key in {k for issue in open_issues for k in keys(issue.get("body"))}:
+        return {"skipped": "already tracked by an open issue"}
     sha = env.workspace.fetch(cfg.base_branch)
+    dag_file, deploy_root = locate(af.dag_file(dag_id), env.workspace.files(sha))
+    log = af.log(latest)
+    if deploy_root:  # show repository paths, so the agent edits its checkout and not the live deployment
+        log = log.replace(deploy_root + "/", "")
+    variables = {"dag_id": dag_id, "task_id": task_id, "dag_file": dag_file, "pattern": pattern,
+                 "log": log, "open_issues": open_issue_list(open_issues)}
+    facts = {"key": key, "dag_id": dag_id, "task_id": task_id, "failing": failing_line, "log_url": af.link(latest)}
+    subject = f"{dag_id}.{task_id}"
 
     def publish(run: agent.Run, files: list[str], worktree: Path) -> dict:
+        if not run.ok:
+            since = now() - timedelta(hours=hours)
+            if not any(e.get("subject") == subject and not e.get("ok") for e in ledger.entries(cfg.state_dir, since)):
+                return {"retry": "the next sweep tries again before involving a person"}
         result = run.result or Result(
             action="ask", title=f"{dag_id} › {task_id} is failing",
-            summary=f"`{dag_id}` › `{task_id}` keeps failing and the bot could not finish a diagnosis "
-                    f"({run.error}). Someone needs to look at the log.",
+            summary=f"`{dag_id}` › `{task_id}` keeps failing and the bot could not finish a diagnosis in two "
+                    f"attempts (last error: {run.error}). Someone needs to look at the log.",
             details=f"```text\n{variables['log'][-3000:]}\n```",
             question="Can you take a look at this failure?")
         return _publish(env, result, files, worktree, cfg.heal.auto_merge, facts=facts)
 
-    return _run_agent(env, "heal", cfg.heal.agent, cfg.heal.prompt, variables, sha,
-                      f"{dag_id}.{task_id}", publish)
+    return _run_agent(env, "heal", cfg.heal.agent, cfg.heal.prompt, variables, sha, subject, publish)
+
+
+def locate(fileloc: str, repo_files: set[str]) -> tuple[str, str | None]:
+    """Map a path on the Airflow host to (path in the repository, deployment root), if it is in the repo."""
+    parts = Path(fileloc).parts
+    for i in range(1, len(parts)):
+        candidate = "/".join(parts[i:])
+        if candidate in repo_files:
+            return candidate, str(Path(*parts[:i]))
+    return fileloc, None
 
 
 def answer_request(env: Env, item: dict) -> dict:
@@ -346,14 +373,15 @@ def answer_request(env: Env, item: dict) -> dict:
                      "them to the same pull request." if is_pr else
                      "You are on the latest main branch. If you change files, the bot opens a pull request "
                      "that closes this issue."),
-        "open_issues": open_issue_list(env),
+        "open_issues": open_issue_list(gh.issues(state="open")),
     }
 
     def publish(run: agent.Run, files: list[str], worktree: Path) -> dict:
         reply = f"<!-- bots:reply-to={item['comment_id']} -->"
         if not run.ok:
-            gh.comment(number, f"Sorry, I couldn't finish that: {run.error}\n\n{reply}")
-            return {"error": run.error}
+            gh.comment(number, f"Sorry, I couldn't finish that ({run.error}). Comment `/bot` again to retry."
+                               f"\n\n{reply}")
+            return {"replied": True}
         result = run.result
         labels = [label["name"] for label in issue.get("labels", [])]
         if is_pr:
@@ -383,11 +411,11 @@ def run_job(env: Env, name: str) -> dict:
         raise OverBudget(reason)
     job = cfg.jobs[name]
     sha = env.workspace.fetch(cfg.base_branch)
-    variables = {"job_prompt": job.prompt.read_text(), "open_issues": open_issue_list(env)}
+    variables = {"job_prompt": job.prompt.read_text(), "open_issues": open_issue_list(env.github.issues(state="open"))}
 
     def publish(run: agent.Run, files: list[str], worktree: Path) -> dict:
         if not run.ok:
-            return {"error": run.error}
+            return {}
         result = run.result
         if result.action == "fix" and files:
             return _open_pull(env, result, files, worktree, job.auto_merge, issue_number=None)
@@ -395,10 +423,7 @@ def run_job(env: Env, name: str) -> dict:
             return _publish(env, result, [], worktree, job.auto_merge, facts={"key": f"job:{name}:{slug(result.title)}"})
         return {"outcome": result.action}
 
-    outcome = _run_agent(env, f"job:{name}", job.agent, PACKAGE_PROMPTS / "job.md", variables, sha, name, publish)
-    if not outcome["ok"]:
-        raise RuntimeError(outcome["error"])
-    return outcome
+    return _run_agent(env, f"job:{name}", job.agent, PACKAGE_PROMPTS / "job.md", variables, sha, name, publish)
 
 
 # --------------------------------------------------------------------------- publishing
@@ -425,10 +450,12 @@ def _publish(env: Env, result: Result, files: list[str], worktree: Path, policy:
     if result.action == "none" and issue is not None:
         return {"issue": issue["number"]}  # a plain answer; the reply comment carries it
     status = {"fix": "review", "wait": "waiting", "ask": "question", "none": "waiting"}[result.action]
-    failure = "dag_id" in facts or any(k.startswith(("failure:", "flaky:")) for k in keys((issue or {}).get("body")))
 
+    task = _task_line(facts) if "dag_id" in facts else None
     if issue is None:
-        issue = gh.create_issue(result.title, issue_body(result, status, facts), [LABEL, STATUS_LABELS[status]])
+        issue = gh.create_issue(result.title, issue_body(result, status, task, [key] if key else []),
+                                [LABEL, STATUS_LABELS[status]])
+        issue.setdefault("title", result.title)
     number = issue["number"]
     outcome: dict = {"issue": number}
     pr = None
@@ -437,13 +464,11 @@ def _publish(env: Env, result: Result, files: list[str], worktree: Path, policy:
         pr = outcome["pull"]
         status = "fixing" if outcome["automerge"] else "review"
     body = issue.get("body") or ""
-    if facts and pr:
-        gh.update_issue(number, body=issue_body(result, status, facts, pr=pr))
-    elif "**Status:**" in body:  # keep an existing bot issue's status line truthful
-        new_line = f"**Status:** {status_line(status, pr, failure)}"
-        new_body = re.sub(r"^\*\*Status:\*\*.*$", lambda _: new_line, body, count=1, flags=re.M)
-        if new_body != body:
-            gh.update_issue(number, body=new_body)
+    issue_keys = keys(body) or ([key] if key else [])
+    if issue_keys:  # a bot issue always shows the current state on top; the history lives in comments
+        new_body = issue_body(result, status, task or _existing_task_line(body), issue_keys, pr)
+        if new_body != body or result.title != issue.get("title"):
+            gh.update_issue(number, title=result.title, body=new_body)
     gh.set_status(number, status, labels or [LABEL])
     outcome["status"] = status
     return outcome
@@ -475,19 +500,27 @@ def status_line(status: str, pr: int | None, failure: bool) -> str:
     }[status]
 
 
-def issue_body(result: Result, status: str, facts: dict, pr: int | None = None) -> str:
-    lines = [result.summary, "", f"**Status:** {status_line(status, pr, 'dag_id' in facts)}"]
-    if facts.get("dag_id"):
-        lines.append(f"**Task:** `{facts['dag_id']}` › `{facts['task_id']}`, {facts['failing']} "
-                     f"([latest failed log]({facts['log_url']}))")
+def issue_body(result: Result, status: str, task: str | None, issue_keys: list[str], pr: int | None = None) -> str:
+    lines = [result.summary, "", f"**Status:** {status_line(status, pr, task is not None)}"]
+    if task:
+        lines.append(task)
     if result.action == "ask" and result.question:
         lines += ["", f"**Decision needed:** {result.question}",
                   "", "Reply with `/bot <your answer>` and I'll carry on."]
     if result.details:
         lines += ["", "<details><summary>Details</summary>", "", result.details, "", "</details>"]
-    if facts.get("key"):
-        lines += ["", key_marker(facts["key"])]
-    return "\n".join(lines)
+    lines += ["", *(key_marker(key) for key in issue_keys)]
+    return "\n".join(lines).rstrip()
+
+
+def _task_line(facts: dict) -> str:
+    return (f"**Task:** `{facts['dag_id']}` › `{facts['task_id']}`, {facts['failing']} "
+            f"([latest failed log]({facts['log_url']}))")
+
+
+def _existing_task_line(body: str) -> str | None:
+    match = re.search(r"^\*\*Task:\*\*.*$", body, flags=re.M)
+    return match.group(0) if match else None
 
 
 def _reply_text(result: Result) -> str:
