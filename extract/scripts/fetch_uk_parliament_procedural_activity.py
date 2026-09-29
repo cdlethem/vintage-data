@@ -15,7 +15,7 @@ walked. Later runs restart at the inclusive watermark, so items sharing the boun
 cannot be skipped. A complete weekly reconciliation detects revisions to older items;
 use --since for an explicit historical reconciliation window.
 
-Stdlib only. Verified live 2026-09-06.
+Stdlib only. Verified live 2026-09-29.
 """
 
 import argparse
@@ -43,7 +43,8 @@ STATE_VERSION = 1
 RECONCILIATION_INTERVAL_DAYS = 7
 SELECT = "LocalId,LayingDate,WithdrawalDate,BusinessItemDate"
 EXPECTED_FIELDS = frozenset(SELECT.split(","))
-MAX_502_ATTEMPTS = 4
+TRANSIENT_STATUS = frozenset({408, 425, 429, 500, 502, 503, 504})
+MAX_TRANSIENT_ATTEMPTS = 4
 DEFAULT_RETRY_DELAY_SECONDS = 1
 MAX_RETRY_DELAY_SECONDS = 30
 MAX_RETRY_CUMULATIVE_DELAY_SECONDS = 60
@@ -97,14 +98,15 @@ def request_json(url, timeout):
         headers={"Accept": "application/json", "User-Agent": USER_AGENT},
     )
     cumulative_delay = 0
-    for attempt in range(1, MAX_502_ATTEMPTS + 1):
+    for attempt in range(1, MAX_TRANSIENT_ATTEMPTS + 1):
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 status = response.status
                 headers = response.headers
                 body = response.read()
+            transient = False
         except urllib.error.HTTPError as error:
-            if error.code != 502:
+            if error.code not in TRANSIENT_STATUS:
                 try:
                     body = error.read(1000)
                 finally:
@@ -113,9 +115,18 @@ def request_json(url, timeout):
             error.close()
             status = error.code
             headers = error.headers
-        except urllib.error.URLError as error:
-            raise RuntimeError(f"GET {url} failed: {error.reason}") from error
-        if status == 200:
+            transient = True
+        except (urllib.error.URLError, TimeoutError) as error:
+            if attempt == MAX_TRANSIENT_ATTEMPTS:
+                raise RuntimeError(
+                    f"GET {url} failed after {attempt} attempts: {getattr(error, 'reason', error)}"
+                ) from error
+            status = None
+            headers = None
+            transient = True
+        if not transient:
+            if status != 200:
+                raise RuntimeError(http_error_message(url, status, body))
             try:
                 document = json.loads(body)
             except json.JSONDecodeError as error:
@@ -125,14 +136,13 @@ def request_json(url, timeout):
             if not isinstance(document, dict):
                 raise RuntimeError(f"GET {url} returned {type(document).__name__}, expected object")
             return document
-        if status != 502:
-            raise RuntimeError(http_error_message(url, status, body))
-        if attempt == MAX_502_ATTEMPTS:
-            raise RuntimeError(f"GET {url} returned HTTP 502 after {attempt} attempts; retry limit exhausted")
+        if status is not None and attempt == MAX_TRANSIENT_ATTEMPTS:
+            raise RuntimeError(f"GET {url} returned HTTP {status} after {attempt} attempts; retry limit exhausted")
+        label = "failed" if status is None else f"returned HTTP {status}"
         delay = retry_after_delay(headers)
         if cumulative_delay + delay > MAX_RETRY_CUMULATIVE_DELAY_SECONDS:
             raise RuntimeError(
-                f"GET {url} returned HTTP 502; retry delay budget exhausted after "
+                f"GET {url} {label}; retry delay budget exhausted after "
                 f"{attempt} attempts and {cumulative_delay} seconds"
             )
         time.sleep(delay)

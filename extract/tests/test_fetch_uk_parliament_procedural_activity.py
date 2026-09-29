@@ -35,9 +35,9 @@ def response(document):
     return Response(json.dumps(document).encode("utf-8"))
 
 
-def http_502(retry_after=None):
+def http_transient(code, retry_after=None):
     headers = {} if retry_after is None else {"Retry-After": retry_after}
-    return urllib.error.HTTPError(MODULE.ENDPOINT, 502, "Bad Gateway", headers, io.BytesIO(b"origin failure"))
+    return urllib.error.HTTPError(MODULE.ENDPOINT, code, "error", headers, io.BytesIO(b"origin failure"))
 
 
 def row(local_id="item-1", laying_date="2026-09-16T00:00:00Z"):
@@ -60,7 +60,7 @@ class FetchUkParliamentProceduralActivityTests(unittest.TestCase):
         cases = ((None, 1), ("not-a-delay", 1), ("900", 30))
         for retry_after, expected_delay in cases:
             with self.subTest(retry_after=retry_after), mock.patch.object(
-                MODULE.urllib.request, "urlopen", side_effect=[http_502(retry_after), response({"value": []})]
+                MODULE.urllib.request, "urlopen", side_effect=[http_transient(502, retry_after), response({"value": []})]
             ) as urlopen, mock.patch.object(MODULE.time, "sleep") as sleep:
                 self.assertEqual(MODULE.collect(None, 17), [])
                 self.assertEqual(sleep.call_args_list, [mock.call(expected_delay)])
@@ -68,7 +68,7 @@ class FetchUkParliamentProceduralActivityTests(unittest.TestCase):
 
     def test_retries_the_identical_page_after_502(self):
         with mock.patch.object(
-            MODULE.urllib.request, "urlopen", side_effect=[http_502("2"), response({"value": [row()]})]
+            MODULE.urllib.request, "urlopen", side_effect=[http_transient(502, "2"), response({"value": [row()]})]
         ) as urlopen, mock.patch.object(MODULE.time, "sleep") as sleep:
             self.assertEqual(MODULE.collect(None, 23), [row()])
         requests = [call.args[0].full_url for call in urlopen.call_args_list]
@@ -77,16 +77,55 @@ class FetchUkParliamentProceduralActivityTests(unittest.TestCase):
 
     def test_stops_after_finite_502_attempts(self):
         with mock.patch.object(
-            MODULE.urllib.request, "urlopen", side_effect=[http_502("1")] * MODULE.MAX_502_ATTEMPTS
+            MODULE.urllib.request, "urlopen", side_effect=[http_transient(502, "1")] * MODULE.MAX_TRANSIENT_ATTEMPTS
         ) as urlopen, mock.patch.object(MODULE.time, "sleep") as sleep:
             with self.assertRaisesRegex(RuntimeError, "retry limit exhausted"):
                 MODULE.collect(None, 9)
-        self.assertEqual(urlopen.call_count, MODULE.MAX_502_ATTEMPTS)
-        self.assertEqual(sleep.call_count, MODULE.MAX_502_ATTEMPTS - 1)
+        self.assertEqual(urlopen.call_count, MODULE.MAX_TRANSIENT_ATTEMPTS)
+        self.assertEqual(sleep.call_count, MODULE.MAX_TRANSIENT_ATTEMPTS - 1)
+
+    def test_recovers_from_transient_server_errors(self):
+        for code in (500, 503, 504):
+            with self.subTest(code=code), mock.patch.object(
+                MODULE.urllib.request, "urlopen", side_effect=[http_transient(code, "2"), response({"value": [row()]})]
+            ) as urlopen, mock.patch.object(MODULE.time, "sleep") as sleep:
+                self.assertEqual(MODULE.collect(None, 17), [row()])
+                self.assertEqual(sleep.call_args_list, [mock.call(2)])
+                self.assertEqual(urlopen.call_count, 2)
+
+    def test_stops_after_finite_500_attempts(self):
+        with mock.patch.object(
+            MODULE.urllib.request, "urlopen", side_effect=[http_transient(500, "1")] * MODULE.MAX_TRANSIENT_ATTEMPTS
+        ) as urlopen, mock.patch.object(MODULE.time, "sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError, "HTTP 500 after 4 attempts; retry limit exhausted"):
+                MODULE.collect(None, 9)
+        self.assertEqual(urlopen.call_count, MODULE.MAX_TRANSIENT_ATTEMPTS)
+        self.assertEqual(sleep.call_count, MODULE.MAX_TRANSIENT_ATTEMPTS - 1)
+
+    def test_recovers_from_transient_connection_failures(self):
+        with mock.patch.object(
+            MODULE.urllib.request,
+            "urlopen",
+            side_effect=[TimeoutError("The read operation timed out"), response({"value": [row()]})],
+        ) as urlopen, mock.patch.object(MODULE.time, "sleep") as sleep:
+            self.assertEqual(MODULE.collect(None, 17), [row()])
+            self.assertEqual(sleep.call_args_list, [mock.call(MODULE.DEFAULT_RETRY_DELAY_SECONDS)])
+            self.assertEqual(urlopen.call_count, 2)
+
+    def test_stops_after_finite_connection_failures(self):
+        with mock.patch.object(
+            MODULE.urllib.request,
+            "urlopen",
+            side_effect=[urllib.error.URLError("connection reset")] * MODULE.MAX_TRANSIENT_ATTEMPTS,
+        ) as urlopen, mock.patch.object(MODULE.time, "sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError, "failed after 4 attempts: connection reset"):
+                MODULE.collect(None, 9)
+        self.assertEqual(urlopen.call_count, MODULE.MAX_TRANSIENT_ATTEMPTS)
+        self.assertEqual(sleep.call_count, MODULE.MAX_TRANSIENT_ATTEMPTS - 1)
 
     def test_stops_when_page_retry_delay_budget_is_exhausted(self):
         with mock.patch.object(MODULE, "MAX_RETRY_CUMULATIVE_DELAY_SECONDS", 40), mock.patch.object(
-            MODULE.urllib.request, "urlopen", side_effect=[http_502("30"), http_502("30")]
+            MODULE.urllib.request, "urlopen", side_effect=[http_transient(502, "30"), http_transient(502, "30")]
         ) as urlopen, mock.patch.object(MODULE.time, "sleep") as sleep:
             with self.assertRaisesRegex(RuntimeError, "retry delay budget exhausted"):
                 MODULE.collect(None, 9)
@@ -94,11 +133,11 @@ class FetchUkParliamentProceduralActivityTests(unittest.TestCase):
         self.assertEqual(sleep.call_args_list, [mock.call(30)])
 
     def test_fails_immediately_for_non_retryable_http_errors(self):
-        error = urllib.error.HTTPError(MODULE.ENDPOINT, 503, "Unavailable", {}, io.BytesIO(b"down"))
+        error = urllib.error.HTTPError(MODULE.ENDPOINT, 404, "Not Found", {}, io.BytesIO(b"down"))
         with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error) as urlopen, mock.patch.object(
             MODULE.time, "sleep"
         ) as sleep:
-            with self.assertRaisesRegex(RuntimeError, "HTTP 503"):
+            with self.assertRaisesRegex(RuntimeError, "HTTP 404"):
                 MODULE.collect(None, 9)
         self.assertEqual(urlopen.call_count, 1)
         sleep.assert_not_called()
@@ -135,7 +174,7 @@ class FetchUkParliamentProceduralActivityTests(unittest.TestCase):
             state_path = pathlib.Path(directory) / "state.json"
             state_path.write_text(json.dumps(original_state), encoding="utf-8")
             original_contents = state_path.read_bytes()
-            side_effect = [response({"value": first_page})] + [http_502("1")] * MODULE.MAX_502_ATTEMPTS
+            side_effect = [response({"value": first_page})] + [http_transient(502, "1")] * MODULE.MAX_TRANSIENT_ATTEMPTS
             with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=side_effect), mock.patch.object(
                 MODULE.time, "sleep"
             ), mock.patch.object(sys, "argv", [str(SCRIPT), "--state-file", str(state_path)]), contextlib.redirect_stdout(
