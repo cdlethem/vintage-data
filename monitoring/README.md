@@ -23,35 +23,12 @@ model from treating expected silence as an incident.
 ../orchestration/.venv/bin/python digest.py --triage
 ```
 
-`--triage` prints only `WATCH`/`PROBLEM` rows. `--json` provides the compact
-per-source objects used by `bots/agent_context.py cadence`.
+`--triage` prints only `WATCH`/`PROBLEM` rows. `--json` provides compact
+per-source objects for scripts and agents.
 
-## Consumers
-
-Monitoring judgment is split by responsibility rather than duplicated:
-
-1. **`bot__cadence_review`** runs at `37 */4 * * *`. Its compact context
-   contains every flagged source plus a bounded rotating sample. It is
-   read-only and emits cadence recommendations or strict task proposals; it
-   never changes source configuration.
-2. **`bot__failure_triage`** runs at minute 7 hourly and calls a model only for
-   bounded, normalized, previously unreviewed non-bot failure groups. Bot
-   workflow failures stay in deterministic dashboard health cards. Triage is
-   read-only and proposes admitted work instead of repairing the checkout.
-3. **`bot__manager`** reads the latest useful provider-stored reports daily.
-   Missing, stale, or failed specialist evidence is explicit and forces a
-   `degraded_evidence` plan whose actions remain human approval pending.
-
-Report submission stores typed outcomes, retry classes, durations, deadline
-consumption, token usage, and normalized failure fingerprints in the dashboard
-database. Payload-free skips do not replace useful evidence. The dashboard
-shows freshness and missing-evidence status, execution queue stages, and
-provider cache age without expanding model prompts or XCom.
-
-The former `bot__pipeline_check` and package-promoting `bot__reviewer` are
-removed. `task_executor` is the only writer and runs only after human
-admission in external confinement; `pr_reviewer` is the sole read-only
-reviewer. Neither monitoring consumer mutates the shared checkout.
+Task failures themselves are handled by the self-healing bots
+([`bots/README.md`](../bots/README.md)), which read them from Airflow directly;
+the digest covers what Airflow cannot see, such as stale or silently empty sources.
 
 ## Triage rules
 

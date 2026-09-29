@@ -16,7 +16,7 @@ cd "$(dirname "$0")/.."
 : "${POSTGRES_DB:=airflow}"
 : "${POSTGRES_ROLE:=airflow}"
 
-: "${BOT_DASHBOARD_API_USERNAME:=bot-worker}"
+: "${BOTS_API_USERNAME:=bot-worker}"
 SECRETS=airflow.secrets.env
 
 if [[ -f "$SECRETS" ]]; then
@@ -33,22 +33,27 @@ EOF
     echo "wrote $SECRETS"
 fi
 
-if ! grep -q '^BOT_DASHBOARD_API_PASSWORD=' "$SECRETS"; then
-    printf 'BOT_DASHBOARD_API_PASSWORD=%s\n' "$(openssl rand -hex 32)" >> "$SECRETS"
+if ! grep -q '^BOTS_API_PASSWORD=' "$SECRETS"; then
+    # Keep existing deployments' password across the old-name rename.
+    if grep -q '^BOT_DASHBOARD_API_PASSWORD=' "$SECRETS"; then
+        sed -i 's/^BOT_DASHBOARD_API_PASSWORD=/BOTS_API_PASSWORD=/' "$SECRETS"
+    else
+        printf 'BOTS_API_PASSWORD=%s\n' "$(openssl rand -hex 32)" >> "$SECRETS"
+    fi
     chmod 600 "$SECRETS"
 fi
-BOT_DASHBOARD_API_PASSWORD=$(
-    sed -n 's/^BOT_DASHBOARD_API_PASSWORD=//p' "$SECRETS"
+BOTS_API_PASSWORD=$(
+    sed -n 's/^BOTS_API_PASSWORD=//p' "$SECRETS"
 )
-[[ -n "$BOT_DASHBOARD_API_PASSWORD" ]] || {
-    echo "cannot read bot dashboard API password from $SECRETS" >&2
+[[ -n "$BOTS_API_PASSWORD" ]] || {
+    echo "cannot read bots API password from $SECRETS" >&2
     exit 1
 }
 
 PASSWORD_FILE=airflow_home/simple_auth_manager_passwords.json.generated
 mkdir -p airflow_home
-BOT_DASHBOARD_API_USERNAME="$BOT_DASHBOARD_API_USERNAME" \
-BOT_DASHBOARD_API_PASSWORD="$BOT_DASHBOARD_API_PASSWORD" \
+BOTS_API_USERNAME="$BOTS_API_USERNAME" \
+BOTS_API_PASSWORD="$BOTS_API_PASSWORD" \
 PASSWORD_FILE="$PASSWORD_FILE" python3 - <<'PY'
 import json
 import os
@@ -61,8 +66,8 @@ except (OSError, json.JSONDecodeError) as exc:
     raise SystemExit(f"cannot merge {path}: {exc}") from exc
 if not isinstance(passwords, dict):
     raise SystemExit(f"cannot merge {path}: root is not an object")
-passwords[os.environ["BOT_DASHBOARD_API_USERNAME"]] = os.environ[
-    "BOT_DASHBOARD_API_PASSWORD"
+passwords[os.environ["BOTS_API_USERNAME"]] = os.environ[
+    "BOTS_API_PASSWORD"
 ]
 temporary = path.with_suffix(path.suffix + ".tmp")
 temporary.write_text(json.dumps(passwords, sort_keys=True) + "\n")

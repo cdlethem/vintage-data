@@ -11,12 +11,7 @@ retries: 1
 timeout_minutes: 10
 sink: local
 
-# Keep disabled until an authorized operator records the network-enabled live smoke,
-# exact configured scheduled invocation/output validation, and scheduling/DAG
-# activation checks against the reviewed revision. Offline discovery and verification
-# use mocked HTTP only and must never contact ROR. Warehouse sync/check, development
-# dbt parse, pipeline build, preview, trusted review, provider checks, expected-head
-# matching, observed merge, deployment, and activation remain external gates.
+# Disabled until a first live run and its warehouse load have been checked.
 #
 # Scheduled use is at most five result pages and 100 organizations. HTTP retries are
 # additionally bounded by 15 attempts and a 120-second run-wide retry budget. Airflow's

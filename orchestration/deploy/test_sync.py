@@ -33,7 +33,7 @@ class DeploymentTest(unittest.TestCase):
         (self.root / ".gitignore").write_text(
             "orchestration/config.env\norchestration/airflow.env\n"
             "orchestration/airflow.secrets.env\norchestration/airflow_home/\n"
-            "orchestration/.venv/\norchestration/generated/\nbots/models.yml\n"
+            "orchestration/.venv/\norchestration/generated/\n"
         )
         (self.root / "revision.txt").write_text("old\n")
         git(self.root, "add", ".gitignore", "revision.txt")
@@ -170,7 +170,7 @@ class DeploymentTest(unittest.TestCase):
         original = self.sync.run
         observed = []
         def fake_build(args, *, cwd=None, env=None):
-            if args[0] in ("corepack", "uv"):
+            if args[0] == "uv":
                 observed.append((Path(cwd), env))
                 if args[:2] == ["uv", "build"]:
                     wheel_dir = Path(args[args.index("--out-dir") + 1])

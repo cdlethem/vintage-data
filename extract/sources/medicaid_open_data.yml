@@ -7,15 +7,10 @@ retries: 1
 timeout_minutes: 10
 sink: local
 
-# Keep disabled until an authorized network-enabled operator runs the exact --no-state
-# smoke against the official API, records revision/timestamp/exit status, reconciled
-# pagination totals, unique dataset count, and NDJSON envelope validation, then records
-# scheduled raw landing and stateful unchanged-record suppression through the approved
-# source-validation and source_scheduling workflows. Offline fixtures are not activation
-# evidence. Independent review remains required. Stateful candidates retain exact NDJSON
-# bytes locally and replay them only when payload IDs exactly represent every new or
-# changed candidate watermark. Legacy digest-only checkpoints require matching landed
-# bytes for the same semantic validation; unavailable historical bytes fail explicitly.
+# Disabled until a first live run and its warehouse load have been checked.
+# Stateful runs retain exact NDJSON bytes locally and replay them only when payload
+# IDs exactly represent every new or changed candidate watermark; unavailable
+# historical bytes fail explicitly.
 #
 # Vetting metadata (documentation only, not read by the DAG factory)
 cadence_note: "daily complete catalog metadata snapshot; unchanged UUID/modified pairs are suppressed only after the next run verifies the exact prior stdout artifact by digest under the local raw landing path; missing evidence replays the retained byte-identical payload before newer catalog state"

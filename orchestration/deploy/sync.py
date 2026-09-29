@@ -81,7 +81,7 @@ class Sync:
         private = (
             "orchestration/config.env", "orchestration/airflow.env",
             "orchestration/airflow.secrets.env", "orchestration/airflow_home/",
-            "orchestration/.venv/", "orchestration/generated/", "bots/models.yml",
+            "orchestration/.venv/", "orchestration/generated/",
         )
         if self.git("ls-tree", "-r", "--name-only", target, "--", *(path.rstrip("/") for path in private)):
             raise DeploymentError("origin/main tracks private runtime paths")
@@ -143,10 +143,9 @@ class Sync:
         if not validate and len(existing) == 1:
             return existing[0]
         if len(existing) > 1:
-            raise DeploymentError("ambiguous cached provider wheels")
-        # Reuse only dependency caches, never the candidate checkout or its
-        # credentials. Otherwise each release redownloads Corepack and 300 UI
-        # packages before the verified build can begin.
+            raise DeploymentError("ambiguous cached bots wheels")
+        # Reuse only the dependency cache, never the candidate checkout or
+        # its credentials.
         tool_cache = self.state_dir / "tool-cache"
         tool_cache.mkdir(parents=True, exist_ok=True, mode=0o700)
         with tempfile.TemporaryDirectory(prefix="vintage-stage-") as temporary:
@@ -164,34 +163,20 @@ class Sync:
                 isolated.update({
                     "HOME": str(scratch / "home"), "XDG_CACHE_HOME": str(tool_cache / "xdg"),
                     "XDG_DATA_HOME": str(tool_cache / "data"),
-                    "COREPACK_HOME": str(tool_cache / "corepack"),
                     "UV_CACHE_DIR": str(tool_cache / "uv"),
                     "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1",
                     "AIRFLOW_HOME": str(scratch / "airflow"), "AIRFLOW__CORE__LOAD_EXAMPLES": "False",
                     "PYTHONNOUSERSITE": "1",
                 })
                 (scratch / "home").mkdir()
-                ui = source / "orchestration/provider_bot_dashboard/ui"
-                provider = source / "orchestration/provider_bot_dashboard"
+                bots = source / "bots"
                 if validate:
                     self.validate(source, scratch, isolated)
-                self.run(["corepack", "pnpm", "install", "--frozen-lockfile",
-                          "--store-dir", str(tool_cache / "pnpm-store")], cwd=ui, env=isolated)
-                if validate:
-                    self.run(["corepack", "pnpm", "test"], cwd=ui, env=isolated)
-                    self.run(["corepack", "pnpm", "exec", "tsc", "--noEmit"], cwd=ui, env=isolated)
-                self.run(["corepack", "pnpm", "build"], cwd=ui, env=isolated)
-                if validate and self.run(
-                    ["git", "status", "--porcelain", "--untracked-files=all", "--",
-                     "orchestration/provider_bot_dashboard/src/airflow/providers/vintage/bot_dashboard/static"],
-                    cwd=source, env=isolated,
-                ):
-                    raise DeploymentError("staged UI bundles differ from committed assets")
                 wheels = scratch / "wheels"
-                self.run(["uv", "build", "--wheel", "--out-dir", str(wheels), str(provider)], cwd=source, env=isolated)
+                self.run(["uv", "build", "--wheel", "--out-dir", str(wheels), str(bots)], cwd=source, env=isolated)
                 produced = list(wheels.glob("*.whl"))
                 if len(produced) != 1:
-                    raise DeploymentError("expected exactly one staged provider wheel")
+                    raise DeploymentError("expected exactly one staged bots wheel")
                 cached.mkdir(parents=True, exist_ok=True, mode=0o700)
                 destination = cached / produced[0].name
                 shutil.copy2(produced[0], destination)
@@ -200,19 +185,21 @@ class Sync:
                         stale.unlink()
                 return destination
             finally:
-                # Only the disposable generated worktree is force-removed (UI builds create files).
+                # Only the disposable worktree is force-removed.
                 self.git("worktree", "remove", "--force", "--", str(source))
 
     def validate(self, source: Path, scratch: Path, env: dict[str, str]) -> None:
         # CI's Python test lane, installed only into the disposable staging venv.
         python = scratch / "venv/bin/python"
         self.run(["uv", "venv", "--python", "3.13", str(python.parent.parent)], cwd=source, env=env)
+        # Same lane as CI. Airflow is listed because the bots package does not depend on it; no
+        # constraints file, since Airflow's pins conflict with the dbt requirements.
         self.run([
-            "uv", "pip", "install", "--python", str(python), "-r", "load/requirements.txt",
-            "-r", "transform/requirements.txt", "pytest",
+            "uv", "pip", "install", "--python", str(python), "apache-airflow==3.3.1",
+            "-r", "load/requirements.txt", "-r", "transform/requirements.txt", "pytest",
         ], cwd=source, env=env)
         self.run(["uv", "pip", "install", "--python", str(python),
-                  "-e", "orchestration/provider_bot_dashboard"], cwd=source, env=env)
+                  "-e", "bots"], cwd=source, env=env)
         env["PATH"] = f"{python.parent}:{env.get('PATH', os.defpath)}"
         self.run([str(python), "-m", "pytest", "-q", "bots", "orchestration",
                   "extract"], cwd=source, env=env)

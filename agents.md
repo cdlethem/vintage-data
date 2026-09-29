@@ -14,8 +14,8 @@ belong in `orchestration/`.
 - [visualization/README.md](visualization/README.md) and
   [visualization/TRENDS.md](visualization/TRENDS.md): Lightdash operations and
   required dashboard analysis standards.
-- [bots/README.md](bots/README.md): provider dashboard authority, task admission,
-  confined execution, review, and model configuration.
+- [bots/README.md](bots/README.md): the `airflow-bots` package (self-healing agents,
+  GitHub tickets, limits, evals); this repo's settings are in `orchestration/bots/`.
 - [monitoring/README.md](monitoring/README.md): source health and run evidence.
 
 Treat current code/configuration as evidence of behavior. Recompute source counts,
@@ -104,9 +104,7 @@ scheduling backlogs, and operational status; do not preserve snapshots here.
   replaying a retained export. Serving schema changes need
   explicit migration. Follow the visualization docs and `TRENDS.md` for content
   validation and query checks.
-- For the bot runtime, provider dashboard state is authoritative. Preserve task
-  admission, credential-free confined execution, trusted artifact/PR publication,
-  advisory review, merge evidence, and the post-merge trusted-cadence sync evidence
-  as separate boundaries. Bots do not receive production Lightdash credentials or
-  Docker access. These runtime roles do not restrict ordinary user-authorized
-  development in this checkout.
+- `bots/` is a portable package: keep it free of vintage-data specifics. Anything
+  about this repository belongs in `orchestration/bots/` (config, instructions, job
+  prompts, eval cases). Change bot prompts by running `airflow-bots eval run` before
+  and after and comparing, not by tuning against a single ticket.
