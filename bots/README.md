@@ -44,6 +44,8 @@ The bot itself commits and pushes. The agent never receives the GitHub token.
 - A task is tracked by a hidden `<!-- bots:key=failure:<dag_id>/<task_id> -->` marker in the issue body (`flaky:` for a task that fails intermittently). A `failure:` issue counts as healthy once the latest run succeeds; a `flaky:` issue once the task has gone a full lookback window without failing. If the bot decides two failures share a root cause, the second task's marker is added to the first issue.
 - After an issue closes, failures within the next hour are treated as the old problem (a merged fix needs time to deploy). A later failure gets a new issue.
 - Auto-merge requires at least one CI check on the PR; with no CI configured the bot never merges.
+- A bot issue always shows the bot's current understanding at the top: after a `/bot` exchange the title and body are rewritten, and the conversation keeps the history.
+- If the agent crashes or times out, the `work` task fails in Airflow and the next sweep tries again; only a second failed attempt opens an issue asking a person to look.
 
 ## Setup
 
@@ -96,6 +98,8 @@ limits:
   daily_runs: 30                  # agent runs per UTC day, across all bots
   daily_usd: 10                   # stop starting runs once reported spend reaches this
   concurrency: 2                  # parallel agent runs in one sweep
+  pool: bots                      # optional Airflow pool for every bot task, so heal and jobs share
+                                  # a limit (create it: airflow pools set bots 2 "bot agents")
 
 heal:
   schedule: "*/15 * * * *"

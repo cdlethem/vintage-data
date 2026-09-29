@@ -1,3 +1,5 @@
+import sys
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -29,6 +31,30 @@ class FakeAirflow:
     def history(self, dag_id, task_id, limit=20, since=None):
         rows = self._history.get((dag_id, task_id), [])
         return [row for row in rows if not since or row["end_date"] >= since.isoformat()[:19]][:limit]
+
+    def log(self, ti):
+        return "ERROR boom"
+
+    def dag_file(self, dag_id):
+        return "dags/x.py"
+
+    def link(self, ti):
+        return "http://airflow/log"
+
+
+class FakeWorkspace:
+    def __init__(self, root):
+        self.root = root
+
+    def fetch(self, branch):
+        return "base"
+
+    @contextmanager
+    def checkout(self, sha, name):
+        yield self.root
+
+    def changes(self, worktree, sha):
+        return [], ""
 
 
 class FakeGitHub:
@@ -236,3 +262,52 @@ def test_daily_limits_stop_new_runs(cfg):
     assert "run limit" in ledger.over_limit(cfg.state_dir, cfg.limits)
     with pytest.raises(workflows.OverBudget):
         workflows.work(workflows.Env(cfg, FakeGitHub(), None), {"kind": "failure"})
+
+
+def failing_agent(monkeypatch, script):
+    agent_cfg = config.Agent(command=(sys.executable, "-c", script), timeout_minutes=1, env=("PATH",))
+    monkeypatch.setattr(config.Config, "agent", lambda self, name: agent_cfg)
+
+
+def heal_item(dag="x"):
+    return {"kind": "failure", "dag_id": dag, "task_id": "run", "pattern": "persistent", "failed_count": 2,
+            "latest_failure": ti(dag)}
+
+
+def test_a_crashed_agent_is_retried_once_before_asking_a_person(cfg, monkeypatch, tmp_path):
+    af = FakeAirflow(history={("x", "run"): [ti("x"), ti("x", hours_ago=2)]})
+    monkeypatch.setattr(workflows.Env, "airflow", property(lambda self: af))
+    failing_agent(monkeypatch, "import sys; sys.exit(3)")
+    gh = FakeGitHub()
+    env = workflows.Env(cfg, gh, FakeWorkspace(tmp_path))
+    with pytest.raises(workflows.AgentFailed):
+        workflows.heal_failure(env, heal_item())
+    assert not any(name == "create_issue" for name, _, _ in gh.writes)
+    with pytest.raises(workflows.AgentFailed):
+        workflows.heal_failure(env, heal_item())
+    created = [args for name, args, _ in gh.writes if name == "create_issue"]
+    assert len(created) == 1 and github.keys(created[0][1]) == [workflows.failure_key("x", "run")]
+    assert [row["ok"] for row in ledger.entries(cfg.state_dir)] == [False, False]
+
+
+def test_a_failure_tracked_since_planning_is_not_worked_twice(cfg, monkeypatch, tmp_path):
+    af = FakeAirflow(history={("x", "run"): [ti("x")]})
+    monkeypatch.setattr(workflows.Env, "airflow", property(lambda self: af))
+    gh = FakeGitHub(open_issues=[issue(4, workflows.failure_key("x", "run"), status="question")])
+    env = workflows.Env(cfg, gh, FakeWorkspace(tmp_path))
+    assert "skipped" in workflows.heal_failure(env, heal_item())
+    assert ledger.entries(cfg.state_dir) == []
+
+
+def test_answering_on_a_bot_issue_rewrites_it_to_the_current_understanding(cfg):
+    key = workflows.failure_key("x", "run")
+    old = issue(6, key, status="question")
+    old["body"] = f"old summary\n\n**Status:** ❓ Needs a decision\n**Task:** `x` › `run`, failing\n\n{github.key_marker(key)}"
+    gh = FakeGitHub(open_issues=[old])
+    result = Result(action="wait", title="X feed is down upstream", summary="The upstream API returns 503.")
+    workflows._publish(workflows.Env(cfg, gh, None), result, [], Path("."), cfg.heal.auto_merge, issue=old,
+                       labels=["bots", "bots:question"])
+    (_, (number,), fields), = [w for w in gh.writes if w[0] == "update_issue"]
+    assert number == 6 and fields["title"] == "X feed is down upstream"
+    assert fields["body"].startswith("The upstream API returns 503.")
+    assert "**Task:** `x` › `run`, failing" in fields["body"] and github.keys(fields["body"]) == [key]

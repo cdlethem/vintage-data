@@ -22,6 +22,7 @@ def build(path: str | os.PathLike | None = None) -> dict:
     cfg = config.load(path)
     config_path = str(cfg.path)
     start = datetime(2026, 1, 1)
+    pool = {"pool": cfg.limits.pool} if cfg.limits.pool else {}
     dags = {}
 
     def env():
@@ -40,7 +41,7 @@ def build(path: str | os.PathLike | None = None) -> dict:
                 return plan(env())
 
             @task(task_id="work", max_active_tis_per_dagrun=cfg.limits.concurrency, execution_timeout=timeout,
-                  map_index_template="{{ bots_label }}")
+                  map_index_template="{{ bots_label }}", **pool)
             def work_task(item: dict) -> dict:
                 from .workflows import OverBudget, work
                 label = f"{item['dag_id']}.{item['task_id']}" if item["kind"] == "failure" else f"#{item['number']}"
@@ -59,7 +60,7 @@ def build(path: str | os.PathLike | None = None) -> dict:
                  tags=["bots"], is_paused_upon_creation=not job.enabled, default_args={"retries": 0},
                  doc_md=f"Scheduled bot job `{name}`; prompt: `{job.prompt}`.") as dag:
 
-            @task(task_id="run", execution_timeout=timeout)
+            @task(task_id="run", execution_timeout=timeout, **pool)
             def run_task(job_name: str = name) -> dict:
                 from .workflows import OverBudget, run_job
                 try:

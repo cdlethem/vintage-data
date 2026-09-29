@@ -188,6 +188,30 @@ class FetchPokeAPITests(unittest.TestCase):
         self.assertEqual(opener.calls[1][0].full_url, continuation)
         self.assertIn("offset=5", opener.calls[2][0].full_url)
 
+    def test_follows_clamped_limit_on_final_partial_page(self):
+        # Since 2026-09 PokéAPI clamps the next link's limit to the remaining
+        # record count (e.g. limit=51 at offset=1300 of a 1351-entry catalog).
+        clamped_continuation = "https://pokeapi.co/api/v2/pokemon/?offset=4&limit=3"
+        first_page = page([pokemon(identifier) for identifier in range(1, 5)], 4)
+        first_page["count"] = 7
+        first_page["next"] = clamped_continuation
+        last_page = page([pokemon(identifier) for identifier in range(5, 8)], None)
+        last_page["count"] = 7
+
+        result, opener, sleeper = self.fetch([first_page, last_page], page_size=4)
+
+        self.assertFalse(result.truncated)
+        self.assertEqual([record["id"] for record in result.records], [1, 2, 3, 4, 5, 6, 7])
+        self.assertEqual(opener.calls[1][0].full_url, clamped_continuation)
+        sleeper.assert_called_once_with(MODULE.REQUEST_INTERVAL)
+
+    def test_rejects_next_link_that_grows_page_size(self):
+        first_page = page([pokemon(1), pokemon(2)], 2)
+        first_page["next"] = "https://pokeapi.co/api/v2/pokemon/?offset=2&limit=4"
+        with self.assertRaisesRegex(MODULE.PokeAPIError, "catalog pagination"):
+            self.fetch([first_page, page([pokemon(3)], None)])
+
+
 
     def test_rejects_looping_and_backward_next_links(self):
         for offset in (0, 2):

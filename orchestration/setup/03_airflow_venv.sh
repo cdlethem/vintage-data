@@ -30,3 +30,6 @@ source airflow.env
 source airflow.secrets.env
 set +a
 .venv/bin/airflow db migrate
+# Every bot task shares this pool (limits.pool in orchestration/bots/config.yml):
+# two slots, matching the local model server.
+.venv/bin/airflow pools set bots 2 "airflow-bots agent runs" >/dev/null
