@@ -56,6 +56,9 @@ class FakeWorkspace:
     def changes(self, worktree, sha):
         return [], ""
 
+    def files(self, sha):
+        return {"dags/x.py"}
+
 
 class FakeGitHub:
     def __init__(self, open_issues=(), closed=(), muted=(), pulls=(), comments=(), threads=None, prs=None,
@@ -311,3 +314,10 @@ def test_answering_on_a_bot_issue_rewrites_it_to_the_current_understanding(cfg):
     assert number == 6 and fields["title"] == "X feed is down upstream"
     assert fields["body"].startswith("The upstream API returns 503.")
     assert "**Task:** `x` › `run`, failing" in fields["body"] and github.keys(fields["body"]) == [key]
+
+
+def test_host_paths_are_mapped_into_the_repository():
+    files = {"orchestration/dags/extract_dags.py", "extract/scripts/fetch.py"}
+    assert workflows.locate("/srv/deploy/orchestration/dags/extract_dags.py", files) == (
+        "orchestration/dags/extract_dags.py", "/srv/deploy")
+    assert workflows.locate("/opt/airflow/dags/other.py", files) == ("/opt/airflow/dags/other.py", None)

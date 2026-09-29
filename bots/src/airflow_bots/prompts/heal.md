@@ -17,7 +17,7 @@ You are on call for this data pipeline. An Airflow task has a failure problem th
 
 ## How to work
 
-- You are in a fresh checkout of the latest main branch. Read the code that ran and find the root cause before changing anything.
+- You are in a fresh checkout of the latest main branch; paths in the log are relative to it. Change files only inside this checkout (your working directory), never anywhere else on the machine. Read the code that ran and find the root cause before changing anything.
 - Reproduce the failure when it is safe to do so. Read-only requests to public endpoints are fine; never write to production data, queues, or services.
 - Prefer the smallest change that fixes the root cause. Do not weaken validation, skip data, or edit tests just to make an error disappear. A bounded retry is a fine fix for a transient network error; it is not a fix for a bug.
 - Run the relevant tests or checks for anything you change.

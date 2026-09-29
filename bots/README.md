@@ -132,7 +132,7 @@ Relative paths resolve against the config file. `$VAR`/`${VAR}` are expanded; an
 
 ### Agent commands
 
-Placeholders in `command`: `{prompt}` (prompt text as an argument), `{prompt_file}` (path to it), `{workdir}` (the checkout, also the working directory), `{run_dir}` (a private directory for this run). Without `{prompt}`/`{prompt_file}` the prompt goes to stdin.
+Placeholders in `command`: `{prompt}` (prompt text as an argument), `{prompt_file}` (path to it), `{workdir}` (the checkout, also the working directory), `{run_dir}` (a private directory for this run), `{config_dir}` (the config file's directory, for wrapper scripts). Without `{prompt}`/`{prompt_file}` the prompt goes to stdin.
 
 ```yaml
 # omp with any model or role it knows; usage is read from the session files
@@ -150,7 +150,7 @@ usage: none
 
 To use your own inference provider, configure the agent CLI for it (e.g. an OpenAI-compatible base URL, a local llama.cpp or vLLM server) and pass its credentials through `env`.
 
-The agent runs as the Airflow worker's user with the listed environment variables only. It can run commands in its checkout and reach the network. If that's more trust than you want, wrap the command in a container or sandbox (`[docker, run, --rm, -v, "{workdir}:/work", ...]`, `bwrap ...`) and keep credentials the agent doesn't need out of `env` and out of `HOME`.
+The agent runs as the Airflow worker's user with the listed environment variables only. It can run commands in its checkout and reach the network. Task logs contain paths on the Airflow host; the bot rewrites paths inside your repository to checkout-relative ones and tells the agent to stay in its checkout, but only a sandbox enforces it. If Airflow runs from a git checkout, at least mount that read-only (e.g. `bwrap --dev-bind / / --ro-bind /srv/deploy /srv/deploy -- <agent>`). For more isolation, wrap the command in a container or sandbox (`[docker, run, --rm, -v, "{workdir}:/work", ...]`, `bwrap ...`) and keep credentials the agent doesn't need out of `env` and out of `HOME`.
 
 ## Spend and monitoring
 

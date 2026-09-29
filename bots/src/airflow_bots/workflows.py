@@ -314,11 +314,15 @@ def heal_failure(env: Env, item: dict) -> dict:
     open_issues = env.github.issues(state="open")
     if key in {k for issue in open_issues for k in keys(issue.get("body"))}:
         return {"skipped": "already tracked by an open issue"}
-    variables = {"dag_id": dag_id, "task_id": task_id, "dag_file": af.dag_file(dag_id), "pattern": pattern,
-                 "log": af.log(latest), "open_issues": open_issue_list(open_issues)}
+    sha = env.workspace.fetch(cfg.base_branch)
+    dag_file, deploy_root = locate(af.dag_file(dag_id), env.workspace.files(sha))
+    log = af.log(latest)
+    if deploy_root:  # show repository paths, so the agent edits its checkout and not the live deployment
+        log = log.replace(deploy_root + "/", "")
+    variables = {"dag_id": dag_id, "task_id": task_id, "dag_file": dag_file, "pattern": pattern,
+                 "log": log, "open_issues": open_issue_list(open_issues)}
     facts = {"key": key, "dag_id": dag_id, "task_id": task_id, "failing": failing_line, "log_url": af.link(latest)}
     subject = f"{dag_id}.{task_id}"
-    sha = env.workspace.fetch(cfg.base_branch)
 
     def publish(run: agent.Run, files: list[str], worktree: Path) -> dict:
         if not run.ok:
@@ -334,6 +338,16 @@ def heal_failure(env: Env, item: dict) -> dict:
         return _publish(env, result, files, worktree, cfg.heal.auto_merge, facts=facts)
 
     return _run_agent(env, "heal", cfg.heal.agent, cfg.heal.prompt, variables, sha, subject, publish)
+
+
+def locate(fileloc: str, repo_files: set[str]) -> tuple[str, str | None]:
+    """Map a path on the Airflow host to (path in the repository, deployment root), if it is in the repo."""
+    parts = Path(fileloc).parts
+    for i in range(1, len(parts)):
+        candidate = "/".join(parts[i:])
+        if candidate in repo_files:
+            return candidate, str(Path(*parts[:i]))
+    return fileloc, None
 
 
 def answer_request(env: Env, item: dict) -> dict:

@@ -271,10 +271,7 @@ def _parse_page(
 
     if next_url is not None:
         next_limit, next_offset = _catalog_parameters(next_url, "PokéAPI next URL")
-        # Since 2026-09 PokéAPI clamps the next link's limit to the remaining
-        # record count on the final partial page; a smaller limit still
-        # continues the walk, a larger one would break the page-size contract.
-        if next_limit > page_size or next_offset <= current_offset:
+        if next_limit != page_size or next_offset <= current_offset:
             raise PokeAPIError(
                 "PokéAPI next URL does not continue within the catalog pagination "
                 f"({_catalog_url_shape(next_url)})"

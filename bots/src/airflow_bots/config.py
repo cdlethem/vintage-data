@@ -23,7 +23,7 @@ class ConfigError(ValueError):
 
 @dataclass(frozen=True)
 class Agent:
-    """A coding-agent CLI invocation. Placeholders: {prompt}, {prompt_file}, {workdir}, {run_dir}."""
+    """A coding-agent CLI invocation. Placeholders: {prompt}, {prompt_file}, {workdir}, {run_dir}, {config_dir}."""
 
     command: tuple[str, ...]
     timeout_minutes: int = 30
@@ -163,7 +163,7 @@ def load(path: str | os.PathLike | None = None) -> Config:
         if usage not in ("omp", "claude", "none"):
             raise ConfigError(f"agents.{name}.usage must be omp, claude or none")
         agents[name] = Agent(
-            command=tuple(str(part) for part in spec["command"]),
+            command=tuple(str(part).replace("{config_dir}", str(here)) for part in spec["command"]),
             timeout_minutes=int(spec.get("timeout_minutes", 30)),
             env=tuple(spec.get("env", Agent.env)),
             usage=usage,

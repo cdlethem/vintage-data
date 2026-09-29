@@ -10,7 +10,7 @@ On {{thread_kind}} #{{number}} "{{title}}", {{author}} wrote:
 
 ## Your checkout
 
-{{checkout}}
+{{checkout}} Change files only inside this checkout (your working directory), never anywhere else on the machine.
 
 ## Open issues the bot is already tracking
 

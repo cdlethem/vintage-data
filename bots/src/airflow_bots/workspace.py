@@ -73,6 +73,10 @@ class Workspace:
             except RuntimeError:
                 self._git("fetch", "--quiet", "--no-tags", "origin", sha, auth=True)
 
+    def files(self, sha: str) -> set[str]:
+        """Every tracked path at ``sha``."""
+        return set(self._git("ls-tree", "-r", "--name-only", sha).splitlines())
+
     @contextmanager
     def checkout(self, sha: str, name: str):
         """A detached worktree at ``sha``; removed afterwards."""
