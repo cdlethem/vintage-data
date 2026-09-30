@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ status }}{% endblock %}
+{% block content %}
+<div class="card card-body" style="max-width: 560px; margin: 48px auto; text-align: center">
+  <h1>{% if status == 401 %}Sign in to Airflow first{% elif status == 403 %}Not allowed{% elif status == 404 %}Not found{% else %}Something went wrong{% endif %}</h1>
+  <p class="muted" data-error style="margin-top: 8px">{{ detail }}</p>
+  <p style="margin-top: 20px">
+    {% if status == 401 %}<a class="btn primary" href="{{ airflow }}/" target="_top">Open Airflow</a>
+    {% else %}<a class="btn" href="{{ base }}/">Back to the overview</a>{% endif %}
+  </p>
+</div>
+{% endblock %}

@@ -1,9 +1,9 @@
 """A page inside the Airflow UI: what the bots are doing, what they cost, and their settings.
 
-Server-rendered HTML (FastAPI + Jinja), mounted in Airflow's API server at ``/bots`` and
-linked from Airflow's navigation. It reads the same config file, spend ledger and run
-records the bots write, and edits the config file in place, so the page, the CLI and a
-text editor stay interchangeable.
+Server-rendered HTML (FastAPI + Jinja) with one small stylesheet and script, mounted in
+Airflow's API server at ``/bots`` and linked from Airflow's navigation. It reads the same
+config file, spend ledger and run records the bots write, and edits the config file in
+place, so the page, the CLI and a text editor stay interchangeable.
 
 Permissions follow Airflow's auth manager:
 - viewing needs read access to the ``bots_heal`` DAG,
@@ -14,18 +14,22 @@ Permissions follow Airflow's auth manager:
 from __future__ import annotations
 
 import difflib
+import hashlib
 import json
 import os
 import re
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import quote, urlencode
 
 import yaml
-from urllib.parse import quote
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup, escape
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from airflow.api_fastapi.app import get_auth_manager
 from airflow.api_fastapi.auth.managers.models.resource_details import DagDetails
@@ -39,10 +43,110 @@ HEAL_DAG = "bots_heal"
 FILE_HEADER = ("# airflow-bots configuration. Also edited from the Bots page in the Airflow UI, which rewrites\n"
                "# this file (comments are not kept). Reference: bots/README.md in the airflow-bots package.\n")
 RUN_ID = re.compile(r"^[0-9]{8}T[0-9]{6}-[a-z0-9-]+$")
-
-templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
+HERE = Path(__file__).parent
+
 app = FastAPI(title="airflow-bots", docs_url=None, redoc_url=None, openapi_url=None)
+app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
+templates = Jinja2Templates(directory=HERE / "templates")
+
+
+# --------------------------------------------------------------------------- display
+# Plain-language names for what the bots record, with the colour of their badge.
+ACTIONS = {"fix": ("Fix", "blue"), "ask": ("Question", "amber"), "wait": ("Wait", "gray"), "none": ("No action", "gray")}
+STATUSES = {"question": ("Needs decision", "red"), "review": ("Needs review", "amber"),
+            "fixing": ("Auto-merging", "green"), "waiting": ("Waiting for recovery", "gray")}
+NEEDS = {"decision": ("Needs your decision", "red"), "review": ("Needs your review", "amber"),
+         "automerge": ("Merges when checks pass", "green"), "waiting": ("Closes on recovery", "gray")}
+
+
+def _when(value) -> datetime | None:
+    if not value:
+        return None
+    moment = value if isinstance(value, datetime) else datetime.fromisoformat(str(value))
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+
+
+def _utc(value) -> str:
+    """Server-side text for a time; the page script replaces it with a relative local time."""
+    moment = _when(value)
+    return f"{moment.astimezone(timezone.utc):%b} {moment.day}, {moment.astimezone(timezone.utc):%H:%M} UTC" if moment else "—"
+
+
+def _money(value) -> str:
+    if value is None:
+        return "—"
+    value = float(value)
+    return "<$0.01" if 0 < value < 0.01 else f"${value:,.2f}"
+
+
+def _duration(seconds) -> str:
+    if not seconds:
+        return "—"
+    minutes = round(float(seconds) / 60)
+    if minutes < 1:
+        return "<1 min"
+    return f"{minutes} min" if minutes < 60 else f"{minutes // 60} h {minutes % 60} min"
+
+
+def _compact(number) -> str:
+    if not number:
+        return "—"
+    for size, suffix in ((1e9, "B"), (1e6, "M"), (1e3, "k")):
+        if number >= size:
+            return f"{number / size:.1f}{suffix}"
+    return str(number)
+
+
+def _kind(kind: str | None) -> str:
+    kind = kind or ""
+    if kind.startswith("job:"):
+        return f"Job · {kind[4:]}"
+    return {"heal": "Healing", "request": "/bot request"}.get(kind, kind)
+
+
+def _cron(expression) -> str:
+    """A cron expression in words, e.g. "Every 15 minutes" (cron-descriptor ships with Airflow)."""
+    try:
+        from cron_descriptor import get_description
+
+        return get_description(str(expression))
+    except Exception:
+        return ""
+
+
+def _diff(text: str | None) -> Markup:
+    lines = []
+    for line in (text or "").splitlines():
+        kind = ("file" if line.startswith(("diff --git", "+++ ", "--- ")) else "hunk" if line.startswith("@@")
+                else "add" if line.startswith("+") else "del" if line.startswith("-") else "")
+        lines.append(f'<span class="{kind}">{escape(line) or " "}</span>')
+    return Markup("".join(lines))
+
+
+def _sentence(text) -> str:
+    text = str(text or "")
+    return text[:1].upper() + text[1:]
+
+
+def _query(request: Request, **changes) -> str:
+    """The current page's query string with some parameters changed (None or "" removes one)."""
+    params = {**request.query_params, **changes}
+    return "?" + urlencode({key: value for key, value in params.items() if value not in (None, "")})
+
+
+def _asset_version() -> str:
+    digest = hashlib.sha256()
+    for path in sorted((HERE / "static").iterdir()):
+        digest.update(path.read_bytes())
+    return digest.hexdigest()[:10]
+
+
+templates.env.filters.update(iso=lambda value: _when(value).isoformat() if _when(value) else "", utc=_utc,
+                             money=_money, duration=_duration, compact=_compact, kind=_kind, cron=_cron,
+                             diff=_diff, sentence=_sentence)
+templates.env.globals.update(actions=ACTIONS, statuses=STATUSES, needs=NEEDS, query=_query,
+                             asset_version=_asset_version())
 
 
 # --------------------------------------------------------------------------- access
@@ -67,9 +171,21 @@ def _same_origin(request: Request) -> None:
         raise HTTPException(403, "Cross-site request refused.")
 
 
-def _page(request: Request, name: str, user, **context) -> HTMLResponse:
-    return templates.TemplateResponse(request, name, {"user": user, "base": request.scope.get("root_path", ""),
-                                                      **context})
+def _root(request: Request) -> str:
+    return request.scope.get("root_path", "")
+
+
+def _page(request: Request, name: str, user, active: str | None, **context) -> HTMLResponse:
+    base = _root(request)
+    return templates.TemplateResponse(request, name, {
+        "user": user, "base": base, "airflow": base.removesuffix("/bots"), "active": active, **context})
+
+
+@app.exception_handler(StarletteHTTPException)
+async def _error_page(request: Request, exc: StarletteHTTPException) -> HTMLResponse:
+    response = _page(request, "error.html", None, None, status=exc.status_code, detail=exc.detail)
+    response.status_code = exc.status_code
+    return response
 
 
 # --------------------------------------------------------------------------- data
@@ -85,23 +201,27 @@ def _load() -> tuple[config.Config | None, str | None]:
 
 
 def _dag_status(cfg: config.Config) -> list[dict]:
-    """Paused state and latest run of each bot DAG, straight from Airflow's database."""
+    """On/off state, schedule and latest run of each bot DAG, straight from Airflow's database."""
     from sqlalchemy import select
 
     from airflow.models.dag import DagModel
     from airflow.models.dagrun import DagRun
     from airflow.utils.session import create_session
 
-    dag_ids = ([HEAL_DAG] if cfg.heal.enabled else []) + [f"bots_job__{name}" for name in cfg.jobs]
+    wanted = ([(HEAL_DAG, "Healing", cfg.heal.schedule)] if cfg.heal.enabled else [])
+    wanted += [(f"bots_job__{name}", f"Job · {name}", job.schedule) for name, job in cfg.jobs.items()]
     rows = []
     with create_session() as session:
-        models = {m.dag_id: m for m in session.scalars(select(DagModel).where(DagModel.dag_id.in_(dag_ids)))}
-        for dag_id in dag_ids:
+        models = {m.dag_id: m for m in session.scalars(
+            select(DagModel).where(DagModel.dag_id.in_([dag_id for dag_id, _, _ in wanted])))}
+        for dag_id, label, schedule in wanted:
             last = session.scalars(select(DagRun).where(DagRun.dag_id == dag_id)
                                    .order_by(DagRun.run_after.desc()).limit(1)).first()
             model = models.get(dag_id)
-            rows.append({"dag_id": dag_id, "found": model is not None,
+            rows.append({"dag_id": dag_id, "label": label, "found": model is not None,
                          "paused": model.is_paused if model else None,
+                         "schedule": schedule, "description": _cron(schedule),
+                         "next_run": model.next_dagrun_create_after if model and not model.is_paused else None,
                          "last_state": str(last.state) if last else None,
                          "last_run": last.run_after if last else None})
     return rows
@@ -128,13 +248,22 @@ def _open_work(cfg: config.Config) -> dict:
         labels = {label["name"] for label in row.get("labels", [])}
         body = row.get("body") or ""
         decision = re.search(r"^\*\*(?:The decision|Decision needed):\*\* (.+)$", body, flags=re.M)
-        items.append({"number": row["number"], "title": row["title"], "url": row["html_url"],
-                      "kind": "PR" if "pull_request" in row else "issue",
-                      "status": next((status_by_label[l] for l in labels if l in status_by_label), None),
-                      "automerge": "bots:automerge" in labels,
-                      "decision": decision.group(1) if decision else None})
-    order = {"question": 0, "review": 1, "fixing": 2, "waiting": 3, None: 4}
-    items.sort(key=lambda item: (order.get(item["status"], 4), item["kind"] != "PR", -item["number"]))
+        kind = "PR" if "pull_request" in row else "Issue"
+        status = next((status_by_label[label] for label in labels if label in status_by_label), None)
+        automerge = "bots:automerge" in labels
+        if status == "question":
+            needs = "decision"
+        elif status == "review" or (kind == "PR" and not automerge):
+            needs = "review"
+        elif automerge or status == "fixing":
+            needs = "automerge"
+        else:
+            needs = "waiting" if status == "waiting" else None
+        items.append({"number": row["number"], "title": row["title"], "url": row["html_url"], "kind": kind,
+                      "needs": needs, "decision": decision.group(1) if decision else None,
+                      "updated": row.get("updated_at")})
+    order = {"decision": 0, "review": 1, "automerge": 2, "waiting": 3, None: 4}
+    items.sort(key=lambda item: (order[item["needs"]], item["kind"] != "PR", -item["number"]))
     data = {"items": items, "repo_url": f"https://github.com/{cfg.github_repo}"}
     _github_cache.update(at=time.monotonic(), data=data)
     return data
@@ -145,37 +274,55 @@ def _runs(cfg: config.Config, days: int) -> list[dict]:
     return list(reversed(rows))
 
 
+def _config_problem(request: Request, user, active: str, error: str) -> HTMLResponse:
+    return _page(request, "overview.html", user, active, config_error=error, config_path=_config_path())
+
+
 # --------------------------------------------------------------------------- pages
 @app.get("/", response_class=HTMLResponse)
-def overview(request: Request, user=Depends(viewer)):
+def overview(request: Request, flash: str | None = None, user=Depends(viewer)):
     cfg, error = _load()
     if cfg is None:
-        return _page(request, "overview.html", user, config_error=error, config_path=_config_path())
+        return _config_problem(request, user, "overview", error)
     runs_today, spent_today = ledger.today(cfg.state_dir)
-    return _page(request, "overview.html", user, cfg=cfg, config_error=None,
+    work = _open_work(cfg)
+    recent = _runs(cfg, 30)
+    latest_run = {}  # issue or PR number -> the latest agent run that touched it
+    for row in reversed(recent):
+        for number in (row.get("issue"), row.get("pull")):
+            if number:
+                latest_run[number] = row.get("run_id")
+    return _page(request, "overview.html", user, "overview", cfg=cfg, config_error=None, flash=flash,
                  runs_today=runs_today, spent_today=spent_today,
                  paused_reason=ledger.over_limit(cfg.state_dir, cfg.limits),
-                 dags=_dag_status(cfg), work=_open_work(cfg), recent=_runs(cfg, 7)[:10])
+                 dags=_dag_status(cfg), work=work, latest_run=latest_run, recent=recent[:8],
+                 can_switch=_can(user, "PUT"))
 
 
 @app.get("/runs", response_class=HTMLResponse)
-def runs(request: Request, days: int = 7, user=Depends(viewer)):
+def runs(request: Request, days: int = 7, kind: str = "", failed: str = "", user=Depends(viewer)):
     cfg, error = _load()
     if cfg is None:
-        return _page(request, "overview.html", user, config_error=error, config_path=_config_path())
-    rows = _runs(cfg, min(max(days, 1), 90))
-    return _page(request, "runs.html", user, cfg=cfg, rows=rows, days=days,
-                 spent=sum(float(r.get("cost_usd") or 0) for r in rows))
+        return _config_problem(request, user, "runs", error)
+    days = min(max(days, 1), 90)
+    rows = _runs(cfg, days)
+    if kind:
+        rows = [row for row in rows if (row.get("kind") or "").split(":")[0] == kind]
+    if failed:
+        rows = [row for row in rows if not row.get("ok")]
+    return _page(request, "runs.html", user, "runs", cfg=cfg, rows=rows, days=days, kind=kind, failed=failed,
+                 spent=sum(float(row.get("cost_usd") or 0) for row in rows),
+                 failures=sum(1 for row in rows if not row.get("ok")))
 
 
 @app.get("/runs/{run_id}", response_class=HTMLResponse)
 def run_detail(request: Request, run_id: str, user=Depends(viewer)):
     cfg, error = _load()
     if cfg is None or not RUN_ID.match(run_id):
-        raise HTTPException(404, error or "No such run.")
+        raise HTTPException(404, error or "There is no agent run with that id.")
     run_dir = cfg.state_dir / "runs" / run_id
     if not run_dir.is_dir():
-        raise HTTPException(404, "No such run.")
+        raise HTTPException(404, "There is no agent run with that id.")
 
     def read(name: str, limit: int = 200_000) -> str | None:
         path = run_dir / name
@@ -188,55 +335,28 @@ def run_detail(request: Request, run_id: str, user=Depends(viewer)):
             decision = parse_decision(result["decision"])
         except ValueError:
             decision = None
-    entry = next((row for row in ledger.entries(cfg.state_dir) if row.get("run_id") == run_id), {})
-    return _page(request, "run.html", user, cfg=cfg, run_id=run_id, entry=entry, result=result, decision=decision,
-                 meta=json.loads(read("meta.json") or "{}"), prompt=read("prompt.md"), diff=read("diff.patch"),
+    entry = next((row for row in ledger.entries(cfg.state_dir) if row.get("run_id") == run_id), None) or {
+        "ok": result is not None, "action": (result or {}).get("action"), "subject": run_id}
+    diff = read("diff.patch")
+    return _page(request, "run.html", user, "runs", cfg=cfg, run_id=run_id, entry=entry, result=result,
+                 decision=decision, meta=json.loads(read("meta.json") or "{}"), prompt=read("prompt.md"), diff=diff,
+                 files=re.findall(r"^diff --git a/(\S+)", diff or "", flags=re.M),
                  output=read("stdout.txt", 60_000), stderr=read("stderr.txt", 20_000))
-
-
-@app.get("/settings", response_class=HTMLResponse)
-def settings(request: Request, saved: str | None = None, user=Depends(viewer)):
-    return _settings_page(request, user, saved=saved)
-
-
-def _settings_page(request: Request, user, *, saved: str | None = None, error: str | None = None,
-                   raw: dict | None = None) -> HTMLResponse:
-    cfg, config_error = _load()
-    path = _config_path()
-    raw = raw if raw is not None else (yaml.safe_load(path.read_text()) if path.is_file() else {}) or {}
-    prompts = _prompt_suggestions(path, raw)
-    history = []
-    if cfg:
-        history_file = cfg.state_dir / "config_history.jsonl"
-        if history_file.exists():
-            history = [json.loads(line) for line in history_file.read_text().splitlines()[-10:]][::-1]
-    return _page(request, "settings.html", user, raw=raw, cfg=cfg, config_error=config_error, config_path=path,
-                 saved=saved, error=error, prompts=prompts, history=history,
-                 can_edit=_can(user, "PUT"), can_edit_agents=_can_edit_agents(user))
-
-
-def _prompt_suggestions(path: Path, raw: dict) -> list[str]:
-    """Markdown files beside the config and beside each job's prompt, written the way the config writes paths."""
-    folders = {""} | {os.path.dirname(str((job or {}).get("prompt") or "")) for job in (raw.get("jobs") or {}).values()}
-    found = set()
-    for folder in folders:
-        try:
-            directory = path.parent / os.path.expandvars(folder)
-            found.update(os.path.join(folder, p.name) for p in directory.glob("*.md"))
-        except OSError:
-            continue
-    return sorted(found)
 
 
 @app.get("/evals", response_class=HTMLResponse)
 def eval_runs(request: Request, user=Depends(viewer)):
     cfg, error = _load()
     if cfg is None:
-        return _page(request, "overview.html", user, config_error=error, config_path=_config_path())
+        return _config_problem(request, user, "evals", error)
+    return _page(request, "evals.html", user, "evals", cfg=cfg, rows=_eval_runs(cfg))
 
+
+def _eval_runs(cfg: config.Config, limit: int = 50) -> list[dict]:
+    if not evals.db_path(cfg).exists():
+        return []
     keys = ("id", "started_at", "label", "prompt_hash", "agent", "passed", "cases", "cost_usd")
-    rows = [dict(zip(keys, row)) for row in evals.report(cfg, 50)] if evals.db_path(cfg).exists() else []
-    return _page(request, "evals.html", user, cfg=cfg, rows=rows)
+    return [dict(zip(keys, row)) for row in evals.report(cfg, limit)]
 
 
 @app.get("/evals/{run_id}", response_class=HTMLResponse)
@@ -244,17 +364,18 @@ def eval_detail(request: Request, run_id: str, user=Depends(viewer)):
     cfg, error = _load()
     if cfg is None or not evals.db_path(cfg).exists():
         raise HTTPException(404, error or "No eval results yet.")
-
     keys = ("case_id", "attempt", "passed", "action", "score", "checks", "criteria", "error")
     rows = [dict(zip(keys, row)) for row in evals.results(cfg, run_id)]
     if not rows:
-        raise HTTPException(404, "No such eval run.")
+        raise HTTPException(404, "There is no eval run with that id.")
     for row in rows:
         row["checks"] = json.loads(row["checks"] or "{}")
         row["criteria"] = json.loads(row["criteria"] or "[]")
         seen = cfg.state_dir / "evals" / run_id / f"{row['case_id']}-{row['attempt']}" / "seen.md"
         row["seen"] = seen.read_text() if seen.is_file() else None
-    return _page(request, "eval.html", user, cfg=cfg, run_id=run_id, rows=rows)
+    rows.sort(key=lambda row: (bool(row["passed"]), row["case_id"], row["attempt"]))
+    summary = next((run for run in _eval_runs(cfg, 1000) if run["id"] == run_id), {"id": run_id})
+    return _page(request, "eval.html", user, "evals", cfg=cfg, run=summary, rows=rows)
 
 
 @app.post("/dags/{dag_id}/pause")
@@ -274,7 +395,53 @@ async def pause(request: Request, dag_id: str, user=Depends(viewer)):
         if model is None:
             raise HTTPException(404, "Airflow has not parsed this DAG yet.")
         model.is_paused = paused
-    return RedirectResponse(f"{request.scope.get('root_path', '')}/", status_code=303)
+    note = f"{dag_id} switched {'off' if paused else 'on'}"
+    return RedirectResponse(f"{_root(request)}/?flash={quote(note)}", status_code=303)
+
+
+@app.get("/settings", response_class=HTMLResponse)
+def settings(request: Request, saved: str | None = None, at: str | None = None, user=Depends(viewer)):
+    return _settings_page(request, user, saved=saved, at=at)
+
+
+def _settings_page(request: Request, user, *, saved: str | None = None, error: str | None = None,
+                   at: str | None = None, raw: dict | None = None, draft: dict | None = None) -> HTMLResponse:
+    """``at`` names the section a message belongs to; ``raw`` is the unsaved state to show after an error."""
+    cfg, config_error = _load()
+    path = _config_path()
+    raw = raw if raw is not None else (yaml.safe_load(path.read_text()) if path.is_file() else {}) or {}
+    history = []
+    if cfg:
+        history_file = cfg.state_dir / "config_history.jsonl"
+        if history_file.exists():
+            history = [json.loads(line) for line in history_file.read_text().splitlines()[-10:]][::-1]
+    return _page(request, "settings.html", user, "settings", raw=raw, cfg=cfg, config_error=config_error,
+                 config_path=path, saved=saved, error=error, at=at, draft=draft or {},
+                 prompts=_prompt_suggestions(path, raw), history=history,
+                 can_edit=_can(user, "PUT"), can_edit_agents=_can_edit_agents(user))
+
+
+def _prompt_suggestions(path: Path, raw: dict) -> list[str]:
+    """Markdown files beside the config and beside each job's prompt, written the way the config writes paths."""
+    folders = {""} | {os.path.dirname(str((job or {}).get("prompt") or "")) for job in (raw.get("jobs") or {}).values()}
+    found = set()
+    for folder in folders:
+        try:
+            directory = path.parent / os.path.expandvars(folder)
+            found.update(os.path.join(folder, p.name) for p in directory.glob("*.md"))
+        except OSError:
+            continue
+    return sorted(found)
+
+
+def _anchor(raw: dict, section: str, form) -> str:
+    """Where on the settings page the result of saving this form belongs."""
+    if section not in ("job", "agent"):
+        return section
+    name = str(form.get("name") or "").strip()
+    if form.get("delete") == "yes":
+        return f"{section}s"
+    return f"{section}-{name}" if name in (raw.get(f"{section}s") or {}) else f"{section}-new"
 
 
 @app.post("/settings", response_class=HTMLResponse)
@@ -286,15 +453,18 @@ async def save_settings(request: Request, user=Depends(viewer)):
         raise HTTPException(403, "You are not allowed to change this setting.")
     path = _config_path()
     raw = yaml.safe_load(path.read_text()) or {}
+    message = None
     try:
         message = apply_form(raw, section, form)
         validate_schedules(raw)
         error = write_config(path, raw, user.get_name())
     except ValueError as exc:
         error = str(exc)
-    if error:
-        return _settings_page(request, user, error=error, raw=raw)
-    return RedirectResponse(f"{request.scope.get('root_path', '')}/settings?saved={quote(message)}", status_code=303)
+    at = _anchor(raw, section, form)
+    if error:  # show the unsaved edit with the reason, except a refused removal: that item is still there
+        return _settings_page(request, user, error=error, at=at, draft=dict(form),
+                              raw=None if form.get("delete") == "yes" else raw)
+    return RedirectResponse(f"{_root(request)}/settings?saved={quote(message)}&at={quote(at)}#{at}", status_code=303)
 
 
 # --------------------------------------------------------------------------- editing

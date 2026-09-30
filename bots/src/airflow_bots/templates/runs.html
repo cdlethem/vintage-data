@@ -1,7 +1,30 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Runs{% endblock %}
 {% block content %}
-<h1>Agent runs, last {{ days }} days</h1>
-<p>{{ rows|length }} runs · ${{ "%.2f"|format(spent) }} reported ·
-  show <a href="?days=1">1</a> · <a href="?days=7">7</a> · <a href="?days=30">30</a> days</p>
-{% include "runs_table.html" %}
+<div class="page-head">
+  <div>
+    <h1>Agent runs</h1>
+    <p>{{ rows|length }} run{{ '' if rows|length == 1 else 's' }} · {{ spent|money }} reported{% if failures %} · <span style="color: var(--red)">{{ failures }} failed</span>{% endif %}</p>
+  </div>
+</div>
+<div class="row" style="margin-bottom: 16px; gap: 12px">
+  <nav class="seg" aria-label="Period">
+    {% for value, label in [(1, "Today"), (7, "7 days"), (30, "30 days"), (90, "90 days")] %}
+    <a href="{{ query(request, days=value) }}"{% if days == value %} aria-current="true"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+  <nav class="seg" aria-label="Kind">
+    {% for value, label in [("", "All"), ("heal", "Healing"), ("request", "/bot requests"), ("job", "Jobs")] %}
+    <a href="{{ query(request, kind=value) }}"{% if kind == value %} aria-current="true"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+  <nav class="seg" aria-label="Outcome">
+    <a href="{{ query(request, failed='') }}"{% if not failed %} aria-current="true"{% endif %}>Any outcome</a>
+    <a href="{{ query(request, failed='1') }}"{% if failed %} aria-current="true"{% endif %}>Failed</a>
+  </nav>
+</div>
+<section class="card">
+  {% if rows %}{{ ui.runs_table(rows) }}{% else %}<div class="empty">No runs match these filters.</div>{% endif %}
+</section>
 {% endblock %}

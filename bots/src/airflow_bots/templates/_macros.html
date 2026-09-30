@@ -1,0 +1,136 @@
+{# Shared pieces. Import with context: {% import "_macros.html" as ui with context %} #}
+
+{% macro time(value, absolute=false) -%}
+{%- if value -%}<time datetime="{{ value|iso }}"{% if absolute %} data-absolute{% endif %}>{{ value|utc }}</time>
+{%- else -%}<span class="muted">—</span>{%- endif -%}
+{%- endmacro %}
+
+{% macro pill(text, color="gray") -%}<span class="pill {{ color }}">{{ text }}</span>{%- endmacro %}
+
+{% macro outcome(row) -%}
+{%- if not row.ok -%}{{ pill("Failed", "red") }}
+{%- elif row.action in actions -%}{{ pill(actions[row.action][0], actions[row.action][1]) }}
+{%- elif row.skipped -%}{{ pill("Skipped") }}
+{%- else -%}{{ pill((row.outcome or "Done")|sentence) }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro outcome_note(row) -%}
+{%- if not row.ok -%}{{ (row.error or "")|truncate(160) }}{% if row.retry %} · will retry{% endif %}
+{%- elif row.status in statuses -%}{{ statuses[row.status][0] }}{% if row.automerge %} · merges when checks pass{% endif %}
+{%- elif row.duplicate -%}Same problem as an open issue
+{%- elif row.skipped -%}{{ row.skipped|sentence }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro github(row) -%}
+<span class="row">
+  {%- if row.issue %}<a class="chip" href="https://github.com/{{ cfg.github_repo }}/issues/{{ row.issue }}" target="_blank" rel="noopener">#{{ row.issue }}</a>{% endif %}
+  {%- if row.pull %}<a class="chip" href="https://github.com/{{ cfg.github_repo }}/pull/{{ row.pull }}" target="_blank" rel="noopener">PR #{{ row.pull }}</a>{% endif -%}
+</span>
+{%- endmacro %}
+
+{% macro runs_table(rows) %}
+<div class="table-wrap">
+<table>
+  <thead><tr><th class="fit">When</th><th style="width: 38%">What</th><th style="width: 30%">Outcome</th><th class="fit right">Cost</th><th class="fit right">Time</th><th class="fit">GitHub</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+  <tr{% if row.run_id %} data-href="{{ base }}/runs/{{ row.run_id }}"{% endif %}>
+    <td class="fit num muted">{{ time(row.at) }}</td>
+    <td>{% if row.run_id %}<a class="title" href="{{ base }}/runs/{{ row.run_id }}">{{ row.subject }}</a>{% else %}<span class="title">{{ row.subject }}</span>{% endif %}
+      <div class="sub">{{ row.kind|kind }}</div></td>
+    <td>{{ outcome(row) }}{% set note = outcome_note(row) %}{% if note %}<div class="sub clamp" title="{{ note }}">{{ note }}</div>{% endif %}</td>
+    <td class="fit right num">{{ row.cost_usd|money }}</td>
+    <td class="fit right num muted">{{ row.seconds|duration }}</td>
+    <td class="fit">{{ github(row) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endmacro %}
+
+{% macro stat(label, value, of="", used=0, limit=none, note="") %}
+<div class="card stat">
+  <div class="stat-label">{{ label }}</div>
+  <div class="stat-value">{{ value }}{% if of %} <small>of {{ of }}</small>{% endif %}</div>
+  {% if limit %}{% set pct = [100, (used / limit * 100)|round|int]|min %}
+  <div class="meter{{ ' full' if pct >= 100 else ' warn' if pct >= 80 else '' }}" role="meter" aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100"><span style="width: {{ pct }}%"></span></div>
+  {% endif %}
+  {% if note %}<div class="sub">{{ note }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{# ------------------------------------------------------------ settings forms #}
+
+{% macro status(anchor) -%}
+{%- if at == anchor -%}
+  {%- if error %}<span class="form-status error" role="alert">Not saved: {{ error|sentence }}</span>
+  {%- elif saved %}<span class="form-status ok" data-toast>{{ saved }}</span>{% endif -%}
+{%- endif -%}
+{%- endmacro %}
+
+{# A form re-rendered with an unsaved edit after a refused save: class "dirty" and data-draft (Discard reloads it). #}
+{% macro dirty(anchor) %}{% if error and at == anchor %} dirty" data-draft="1{% endif %}{% endmacro %}
+
+{% macro input(id, name, label, value, hint="", type="text", unit="", placeholder="", min=none, step=none, required=false, pattern="", list="", wide=false) %}
+<div class="field{{ ' wide' if wide }}">
+  <label for="{{ id }}">{{ label }}</label>
+  {% if unit %}<div class="affix">{% endif %}
+  <input id="{{ id }}" name="{{ name }}" type="{{ type }}" value="{{ value if value is not none else '' }}"
+    {%- if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if min is not none %} min="{{ min }}"{% endif %}
+    {%- if step %} step="{{ step }}"{% endif %}{% if required %} required{% endif %}{% if pattern %} pattern="{{ pattern }}"{% endif %}
+    {%- if list %} list="{{ list }}"{% endif %}>
+  {% if unit %}<span>{{ unit }}</span></div>{% endif %}
+  {% if hint %}<p class="hint">{{ hint }}</p>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro textarea(id, name, label, lines, hint="", placeholder="", required=false) %}
+<div class="field wide">
+  <label for="{{ id }}">{{ label }}</label>
+  <textarea id="{{ id }}" name="{{ name }}" rows="{{ [3, (lines or [])|length + 1]|max }}"
+    {%- if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if required %} required{% endif %}>{{ (lines or [])|join("\n") }}</textarea>
+  {% if hint %}<p class="hint">{{ hint }}</p>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro select(id, name, label, options, selected, hint="") %}
+<div class="field">
+  <label for="{{ id }}">{{ label }}</label>
+  <select id="{{ id }}" name="{{ name }}">
+    {% for option in options %}{% set value, text = option if option is not string else (option, option) %}
+    <option value="{{ value }}"{% if value == selected %} selected{% endif %}>{{ text }}</option>
+    {% endfor %}
+  </select>
+  {% if hint %}<p class="hint">{{ hint }}</p>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro toggle(id, name, label, checked, hint="") %}
+<div class="toggle wide">
+  <input type="checkbox" class="switch" id="{{ id }}" name="{{ name }}"{% if checked %} checked{% endif %}>
+  <div><label for="{{ id }}">{{ label }}</label>{% if hint %}<p class="hint">{{ hint }}</p>{% endif %}</div>
+</div>
+{% endmacro %}
+
+{% macro footer(anchor, save="Save", remove="") %}
+<footer class="card-foot">
+  <button class="btn primary save">{{ save }}</button>
+  <button type="reset" class="btn ghost discard">Discard</button>
+  <span class="unsaved">Unsaved changes</span>
+  <span class="spacer"></span>
+  {{ status(anchor) }}
+  {% if remove %}<button class="btn danger" name="delete" value="yes" formnovalidate data-confirm="{{ remove }}" data-confirm-action="Remove">Remove</button>{% endif %}
+</footer>
+{% endmacro %}
+
+{% macro auto_merge(prefix, am) %}
+<div class="subsection fields">
+  {{ toggle(prefix ~ "-am", "auto_merge_enabled", "Merge routine fixes automatically", am and am.enabled,
+            "Only when the agent calls the fix routine, every changed file matches a pattern below, and CI passes. Anything else waits for your review.") }}
+  {{ textarea(prefix ~ "-am-paths", "auto_merge_paths", "Files an automatic merge may touch", am.paths if am else [],
+              "One pattern per line, e.g. extract/scripts/*. Blank: any file.") }}
+</div>
+{% endmacro %}
