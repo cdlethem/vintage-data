@@ -17,6 +17,10 @@ sink commit failure there discards output although state advanced.  That page is
 retried immediately; later replay depends on completing the traversal and the record
 still being in the rolling query window.  Delivery therefore is not exactly-once.
 
+Europe PMC emits empty keyword, publication-type, and full-text-id slots as ``null``
+array entries (roughly one in ~1,700 records, observed in production 2026-09-30).  Such
+nulls mean "no value" and are dropped; any other non-string entry still fails the run.
+
 Only metadata, abstracts, links, and text-mined annotations are requested.  Full-text
 links are emitted when advertised, but full text is never downloaded.  Stdlib only.
 """
@@ -268,9 +272,11 @@ def _nested_list(
 
 
 def _string_list(values: list[Any], context: str) -> list[str]:
-    if not all(isinstance(value, str) for value in values):
+    """Return the string entries, dropping upstream null slots."""
+    filtered = [value for value in values if value is not None]
+    if not all(isinstance(value, str) for value in filtered):
         raise ValueError(f"Europe PMC {context} must contain only strings")
-    return values
+    return filtered
 
 
 def _clean_text(value: Any, context: str) -> str | None:
