@@ -147,6 +147,23 @@
     }
   });
 
+  // Airflow embeds the page in a sandboxed iframe (no popups, no top navigation), so links
+  // to GitHub open from the parent window, and links to Airflow's own pages go through the
+  // parent's client-side router, like a click in Airflow's sidebar.
+  document.addEventListener("click", (event) => {
+    const link = event.target.closest("a[target]");
+    if (!host || !link || event.defaultPrevented) return;
+    if (link.target === "_blank") {
+      event.preventDefault();
+      window.parent.open(link.href, "_blank", "noopener");
+    } else if (link.target === "_top") {
+      event.preventDefault();
+      const parent = window.parent;
+      parent.history.pushState({}, "", link.href);
+      parent.dispatchEvent(new parent.PopStateEvent("popstate", { state: {} }));
+    }
+  });
+
   // Whole table rows open their detail page; links and controls inside keep working.
   document.addEventListener("click", (event) => {
     const row = event.target.closest("tr[data-href]");
