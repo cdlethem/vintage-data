@@ -8,7 +8,13 @@ A bot that maintains a data pipeline was given the task below. Grade what it did
 {{task}}
 ````
 
-## Its answer
+## What a person sees (the pull request or issue the bot would publish)
+
+````markdown
+{{seen}}
+````
+
+## Its structured answer
 
 ```json
 {{output}}
@@ -26,7 +32,7 @@ A bot that maintains a data pipeline was given the task below. Grade what it did
 
 ## How to grade
 
-Check each rubric item separately. Judge only what the answer and the diff actually show: a claim in the answer is not evidence that the code does it, and a check the bot says it ran is not proof unless the details show its outcome. Be strict and specific.
+Check each rubric item separately. Judge only what the published text, the answer and the diff actually show: a claim is not evidence that the code does it, and a check the bot says it ran is not proof unless the details show its outcome. Judge the published text as the reviewer would read it. Be strict and specific.
 
 End with one JSON object and nothing after it:
 

@@ -25,19 +25,44 @@ The agent is any command-line coding agent (omp, Claude Code, Codex, aider, or y
 
 ```json
 {"action": "fix | wait | ask | none", "title": "...", "summary": "...", "details": "...",
- "question": "...", "review": true, "duplicate_of": null}
+ "decision": {"question": "...", "why": "...", "routine": false,
+              "options": [{"choice": "...", "pros": "...", "cons": "...", "chosen": true},
+                          {"choice": "...", "pros": "...", "cons": "..."}]},
+ "duplicate_of": null}
 ```
 
+Every `fix` and every `ask` must lay out its **decision**: the one judgement the outcome depends on (`question`), why a person should make it (`why`), and at least two real options with their pros and cons, one of them marked `chosen` (what the PR does, or what the bot recommends). A result without a complete decision counts as a failed run. `routine: true` claims the fix involves no judgement at all; only then may it merge by itself.
+
 The bot itself commits and pushes. The agent never receives the GitHub token.
+
+### What a review PR looks like
+
+A PR that waits for a person opens with its summary and then:
+
+> **Why this can't merge on its own:**
+> - The bot judged this a judgement call, not a routine fix: accepting a shorter last page loosens a check that guards against silently skipping records.
+> - It changes files outside the auto-merge allow-list (`extract/scripts/*`, ...): `orchestration/dags/x.py`
+>
+> **The decision:** Should the fetcher accept a smaller page size on the last page of results?
+>
+> | | Option | Pros | Cons |
+> |---|---|---|---|
+> | ✅ this PR | Accept a smaller limit on the last page only | ... | ... |
+> | | Stop paginating at the reported total | ... | ... |
+> | | Leave the check as it is | ... | ... |
+>
+> Merge this PR to go with ✅. To go another way, comment `/bot` with the option you want.
+
+The reasons come from two places: the agent's own judgement (`routine`, `why`) and the bot's policy (auto-merge turned off, files outside the allow-list). Questions on issues use the same layout, with ✅ marking the recommendation.
 
 ## Working with the bot on GitHub
 
 | You see | Meaning | What you can do |
 |---|---|---|
 | issue `bots:waiting` | Nothing to change in code (e.g. upstream outage). | Nothing. It closes itself once the task is healthy again. |
-| issue `bots:question` | The bot needs a decision. | Reply `/bot <answer>`. |
-| issue `bots:review` + PR | A fix that should be reviewed. | Review and merge, or comment `/bot <change request>` on the PR. |
-| issue `bots:fixing` + PR `bots:automerge` | A low-risk fix that merges once all checks pass. | Remove `bots:automerge` to stop it. |
+| issue `bots:question` | The bot needs a decision; the issue lays out the question, why, and the options. | Reply `/bot <your choice>`. |
+| issue `bots:review` + PR | A fix that involves a judgement call or touches files outside the allow-list; the PR says which and lays out the options. | Merge to accept the ✅ option, or comment `/bot <other option>` on the PR. |
+| issue `bots:fixing` + PR `bots:automerge` | A routine fix that merges once all checks pass. | Remove `bots:automerge` to stop it. |
 | any issue | | Close it when it's handled. Add `bots:mute` to make the bot ignore that task for good. |
 
 - `/bot <request>` works on any issue and on the bot's own PRs, from people with write access (owner, member, collaborator). The bot replies once per request.
@@ -174,6 +199,7 @@ Prompts are meant to be replaced and compared, not hand-tuned case by case. The 
    base_sha: 3f2a...              # the repository state to replay against
    expect:
      action: fix                  # or a list: [fix, ask]
+     routine: false               # whether the agent may call it routine (auto-mergeable)
      paths: ["extract/scripts/*", "extract/test_*.py"]   # changed files must match
      forbid: ["extract/sources/*"]
    rubric: |
@@ -183,7 +209,7 @@ Prompts are meant to be replaced and compared, not hand-tuned case by case. The 
    variables: {...}               # recorded input; normally left as captured
    ```
 
-3. **Run.** `airflow-bots eval run --label "shorter heal prompt"` replays every case at its commit with the current prompts, applies the checks, and has the judge agent grade each rubric line. `--prompt candidate.md` tries a different template, `--agent <name>` a different model, `--repeat 3` measures consistency, `--parallel 2` runs cases side by side.
+3. **Run.** `airflow-bots eval run --label "shorter heal prompt"` replays every case at its commit with the current prompts, applies the checks, renders the PR or issue exactly as a person would see it, and has the judge agent grade each rubric line against that text. Whenever the answer contains a decision, the judge also applies the standing criteria in `prompts/decision_rubric.md` (a specific reason it needs a person, a real question, genuine options with specific pros and cons, the chosen option matching the diff, and a correct routine call), so every case measures how well the bot hands decisions to people. `--prompt candidate.md` tries a different template, `--agent <name>` a different model, `--repeat 3` measures consistency, `--parallel 2` runs cases side by side.
 4. **Compare.** `airflow-bots eval report` lists runs with pass rates and a hash of the prompt text they used; `eval show <run>` shows unmet rubric lines; `eval compare <a> <b>` puts two runs side by side per case.
 
 Results are stored in SQLite (`runs` and `results` tables) for your own queries. Eval runs are not counted against production limits.

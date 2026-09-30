@@ -8,20 +8,31 @@ End your final message with one JSON object (a ```json block is fine) and nothin
   "title": "PokéAPI extract fails: pagination links changed",
   "summary": "2-4 plain sentences",
   "details": "markdown for a reviewer",
-  "question": "",
-  "review": true,
+  "decision": {
+    "question": "Should the fetcher accept a smaller page size on the last page of results?",
+    "why": "Accepting it loosens a check that guards against silently skipping records; a person should confirm that trade.",
+    "routine": false,
+    "options": [
+      {"choice": "Accept a smaller limit on the last page only (this PR)", "pros": "...", "cons": "...", "chosen": true},
+      {"choice": "Stop paginating once the reported total is reached", "pros": "...", "cons": "..."},
+      {"choice": "Leave the check as it is", "pros": "...", "cons": "..."}
+    ]
+  },
   "duplicate_of": null
 }
 ```
 
 - **action**
   - `fix`: you changed files in this checkout and the change solves the problem. The bot commits your changes and opens a pull request. Do not commit or push yourself.
-  - `wait`: nothing in this repository should change (for example the upstream service is down or rate-limiting). The issue closes by itself once the task succeeds again.
-  - `ask`: a person has to decide or act (credentials, paid access, a judgement call, or a fix you are not confident in). Put the decision in `question`.
+  - `wait`: nothing in this repository should change (for example the upstream service is down or rate-limiting). The issue closes by itself once the task is healthy again.
+  - `ask`: a person has to decide or act before anything can change (credentials, paid access, a judgement call you should not make alone).
   - `none`: there is nothing worth reporting.
 - **title**: under 80 characters. Name the affected thing and the problem in everyday words. No run IDs, hashes, or internal jargon.
 - **summary**: written for someone seeing this for the first time: what is broken, what it affects, the cause (say "likely" when unsure), and what you did about it.
 - **details**: the evidence (quote the key log lines), what you changed and why, and the commands you actually ran to check it with their outcome. Never claim a check passed unless you ran it.
-- **question**: only for `ask`: one concrete question, with the answer you recommend.
-- **review**: for `fix`, `false` only when the change is small, low-risk and verified; otherwise `true` so a person looks before it merges.
+- **decision**: required for `fix` and `ask`, `null` otherwise. It is what the reviewer reads first, so make it stand on its own for someone who has not read the code.
+  - `question`: the one judgement the outcome depends on, asked so that a person can answer it without reading the diff.
+  - `why`: why this needs a person: which risk, behaviour change, or unknown you cannot settle yourself. For a routine fix, say why no judgement is involved.
+  - `routine` (`fix` only): `true` only when the change is small, verified, and involves no judgement (no weakened checks, no change to what data is collected or how it is interpreted, no new retries that could hide real failures). Routine fixes may merge automatically; everything else waits for a person.
+  - `options`: at least two real alternatives a sensible engineer would consider, including leaving things as they are when that is viable. For each, concrete `pros` and `cons` for this pipeline (data completeness, correctness, load on the source, maintenance). Mark exactly one `"chosen": true`: for `fix`, the option your change implements; for `ask`, the one you recommend.
 - **duplicate_of**: the number of an open issue listed above that already covers the same root cause, otherwise `null`.

@@ -1,12 +1,13 @@
 import sys
 from contextlib import contextmanager
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
 
 from airflow_bots import config, github, ledger, workflows
-from airflow_bots.agent import Result
+from airflow_bots.agent import Decision, Option, Result
 
 NOW = datetime.now(timezone.utc)
 
@@ -259,15 +260,36 @@ def test_fix_without_changes_becomes_a_question(cfg):
     assert not any(name == "create_pull" for name, _, _ in gh.writes)
 
 
-@pytest.mark.parametrize("review, files, allowed", [
-    (False, ["extract/fetch.py"], True),
-    (True, ["extract/fetch.py"], False),
-    (False, ["extract/fetch.py", "orchestration/dags/x.py"], False),
-    (False, [], False),
+def decision(routine=False):
+    return Decision(question="Should the fetcher accept a shorter last page?", why="It loosens a guard.",
+                    routine=routine, options=[Option("Accept it", "keeps data flowing", "looser check", chosen=True),
+                                              Option("Leave the check", "strict", "task stays broken")])
+
+
+@pytest.mark.parametrize("routine, files, reasons", [
+    (True, ["extract/fetch.py"], []),
+    (False, ["extract/fetch.py"], ["judgement call"]),
+    (True, ["extract/fetch.py", "orchestration/dags/x.py"], ["outside the auto-merge allow-list"]),
+    (False, ["orchestration/dags/x.py"], ["judgement call", "outside the auto-merge allow-list"]),
 ])
-def test_automerge_policy(cfg, review, files, allowed):
-    result = Result(action="fix", title="t", summary="s", review=review)
-    assert workflows.automerge_allowed(cfg.heal.auto_merge, result, files) is allowed
+def test_a_fix_merges_by_itself_only_when_routine_and_on_the_allow_list(cfg, routine, files, reasons):
+    result = Result(action="fix", title="t", summary="s", decision=decision(routine))
+    blockers = workflows.merge_blockers(cfg.heal.auto_merge, result, files)
+    assert len(blockers) == len(reasons) and all(r in b for r, b in zip(reasons, blockers))
+    disabled = config.AutoMerge(enabled=False, paths=("**",))
+    assert "turned off" in workflows.merge_blockers(disabled, result, files)[0]
+
+
+def test_a_pr_that_needs_review_says_why_what_to_decide_and_the_trade_offs(cfg):
+    result = Result(action="fix", title="t", summary="PokéAPI fails.", details="evidence", decision=decision())
+    body = workflows.pr_body(result, workflows.merge_blockers(cfg.heal.auto_merge, result, ["dags/x.py"]), 7)
+    why, question, table = body.index("It loosens a guard."), body.index("Should the fetcher"), body.index("| Option |")
+    assert body.index("Fixes #7") < why < question < table < body.index("## Details")
+    assert "`dags/x.py`" in body
+    assert "| ✅ this PR | Accept it | keeps data flowing | looser check |" in body
+    assert "|  | Leave the check | strict | task stays broken |" in body
+    routine = replace(result, decision=decision(routine=True))
+    assert "Merges automatically" in workflows.pr_body(routine, [], 7)
 
 
 def test_daily_limits_stop_new_runs(cfg):

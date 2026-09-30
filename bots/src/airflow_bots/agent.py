@@ -22,13 +22,33 @@ ACTIONS = ("fix", "wait", "ask", "none")
 
 
 @dataclass
+class Option:
+    choice: str
+    pros: str
+    cons: str
+    chosen: bool = False
+
+
+@dataclass
+class Decision:
+    """The judgement call behind a fix or a question, laid out for a person."""
+    question: str               # the one thing a person has to decide
+    why: str                    # why the bot should not decide it alone (or, if routine, why no judgement is involved)
+    options: list[Option]       # real alternatives; exactly one is chosen (what the PR does / what the bot recommends)
+    routine: bool = False       # fix only: no judgement involved, may merge automatically
+
+    @property
+    def chosen(self) -> Option:
+        return next(option for option in self.options if option.chosen)
+
+
+@dataclass
 class Result:
     action: str
     title: str
     summary: str
     details: str = ""
-    question: str = ""
-    review: bool = True
+    decision: Decision | None = None
     duplicate_of: int | None = None
 
 
@@ -73,15 +93,38 @@ def parse_result(text: str) -> Result:
     if not title or not summary:
         raise ValueError("result needs a title and a summary")
     duplicate = data.get("duplicate_of")
+    decision = parse_decision(data.get("decision")) if action in ("fix", "ask") else None
     return Result(
         action=action,
         title=title[:120],
         summary=summary,
         details=str(data.get("details") or "").strip(),
-        question=str(data.get("question") or "").strip(),
-        review=bool(data.get("review", True)),
+        decision=decision,
         duplicate_of=int(duplicate) if isinstance(duplicate, (int, str)) and str(duplicate).isdigit() else None,
     )
+
+
+def parse_decision(data: object) -> Decision:
+    """A fix or a question must lay out its decision completely; anything less is an unusable result."""
+    if not isinstance(data, dict):
+        raise ValueError("fix and ask need a decision object")
+    question, why = str(data.get("question") or "").strip(), str(data.get("why") or "").strip()
+    if not question or not why:
+        raise ValueError("decision needs a question and a why")
+    options = []
+    for item in data.get("options") or []:
+        if not isinstance(item, dict):
+            raise ValueError("each decision option must be an object")
+        option = Option(*(str(item.get(k) or "").strip() for k in ("choice", "pros", "cons")),
+                        chosen=item.get("chosen") is True)
+        if not (option.choice and option.pros and option.cons):
+            raise ValueError("each option needs a choice, pros and cons")
+        options.append(option)
+    if len(options) < 2:
+        raise ValueError("decision needs at least two options")
+    if sum(option.chosen for option in options) != 1:
+        raise ValueError("exactly one option must be chosen")
+    return Decision(question=question, why=why, options=options, routine=data.get("routine") is True)
 
 
 def last_json_object(text: str) -> dict | None:
