@@ -385,3 +385,15 @@ def test_a_bot_change_on_a_pr_rewrites_its_description_to_the_new_decision(cfg, 
     assert "Merges automatically" in fields["body"] and "Stop at the total" in fields["body"]
     assert ("set_status", (8, None, ["bots", "bots:review", "bots:automerge"]), {}) in gh.writes
     assert any(name == "comment" and "bots:reply-to=77" in args[1] for name, args, _ in gh.writes)
+
+
+def test_a_waiting_diagnosis_is_rechecked_once_the_task_keeps_failing_for_a_day(cfg, monkeypatch):
+    key = workflows.failure_key
+    stale = issue(1, key("old", "run"), created_hours_ago=30)
+    fresh = issue(2, key("new", "run"), created_hours_ago=30)
+    fresh["body"] += "\n" + github.diagnosed_marker(iso(-5))  # re-diagnosed five hours ago
+    asked = issue(3, key("asked", "run"), status="question", created_hours_ago=30)
+    af = FakeAirflow(failures=[ti("old", hours_ago=1), ti("new", hours_ago=1), ti("asked", hours_ago=1)],
+                     history={(d, "run"): [ti(d, hours_ago=1)] for d in ("old", "new", "asked")})
+    items = run_plan(cfg, af, FakeGitHub(open_issues=[stale, fresh, asked]), monkeypatch)
+    assert [(i["kind"], i["number"], i["dag_id"]) for i in items] == [("recheck", 1, "old")]

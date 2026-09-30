@@ -59,7 +59,7 @@ The reasons come from two places: the agent's own judgement (`routine`, `why`) a
 
 | You see | Meaning | What you can do |
 |---|---|---|
-| issue `bots:waiting` | Nothing to change in code (e.g. upstream outage). | Nothing. It closes itself once the task is healthy again. |
+| issue `bots:waiting` | Nothing to change in code (e.g. upstream outage). | Nothing. It closes itself once the task is healthy again. If the task is still failing a day after the diagnosis, the bot takes another look (the cause may have changed) and updates the issue. |
 | issue `bots:question` | The bot needs a decision; the issue lays out the question, why, and the options. | Reply `/bot <your choice>`. |
 | issue `bots:review` + PR | A fix that involves a judgement call or touches files outside the allow-list; the PR says which and lays out the options. | Merge to accept the ✅ option, or comment `/bot <other option>` on the PR. |
 | issue `bots:fixing` + PR `bots:automerge` | A routine fix that merges once all checks pass. | Remove `bots:automerge` to stop it. |

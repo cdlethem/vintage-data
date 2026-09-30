@@ -18,7 +18,8 @@ from . import agent, ledger
 from .agent import Result
 from .airflow_api import Airflow
 from .config import PACKAGE_PROMPTS, AutoMerge, Config
-from .github import (AUTOMERGE_LABEL, LABEL, MUTE_LABEL, REPLY_RE, STATUS_LABELS, GitHub, key_marker, keys)
+from .github import (AUTOMERGE_LABEL, LABEL, MUTE_LABEL, REPLY_RE, STATUS_LABELS, GitHub, diagnosed_at,
+                     diagnosed_marker, key_marker, keys)
 from .workspace import Workspace
 
 # A merged fix needs time to deploy and for the task to run again. Failures that
@@ -132,7 +133,7 @@ def plan(env: Env) -> list[dict]:
     _close_recovered(env, af, open_issues, failing)
     _automerge(env)
 
-    items: list[dict] = []
+    items: list[dict] = _rechecks(cfg, open_issues, failing)[:cfg.heal.max_new_per_sweep]
     for (dag_id, task_id), tis in sorted(failing.items(), key=lambda kv: -len(kv[1])):
         if len(items) >= cfg.heal.max_new_per_sweep:
             break
@@ -151,6 +152,31 @@ def plan(env: Env) -> list[dict]:
         items.append(item)
     items += _requests(env)
     return items
+
+
+def _rechecks(cfg: Config, open_issues: list[dict], failing: dict) -> list[dict]:
+    """Issues marked "waiting" whose task still fails a whole lookback window after the diagnosis.
+
+    A diagnosis of "outage, nothing to change" can be wrong or go stale (the task may now fail for a
+    different reason), so it gets a fresh look once a day while the task keeps failing.
+    """
+    items = []
+    for issue in open_issues:
+        if status_of(issue) != "waiting":
+            continue
+        diagnosed = _time(diagnosed_at(issue.get("body")) or issue["created_at"])
+        for key in keys(issue.get("body")):
+            dag_id, _, task_id = key.partition(":")[2].partition("/")
+            tis = failing.get((dag_id, task_id))
+            if tis and _time(tis[0]["end_date"]) > diagnosed + timedelta(hours=cfg.heal.lookback_hours):
+                items.append({"kind": "recheck", "number": issue["number"], "dag_id": dag_id, "task_id": task_id,
+                              "diagnosed": diagnosed.isoformat(), "latest_failure": _ti_ref(tis[0])})
+                break
+    return items
+
+
+def _ti_ref(ti: dict) -> dict:
+    return {k: ti[k] for k in ("dag_id", "task_id", "dag_run_id", "try_number", "map_index", "end_date")}
 
 
 def _reopen(env: Env, issue: dict, latest: dict, af: Airflow) -> None:
@@ -186,9 +212,8 @@ def classify(cfg: Config, af: Airflow, dag_id: str, task_id: str, failures: list
         pattern = "intermittent"
     else:
         return None
-    latest = {k: failures[0][k] for k in ("dag_id", "task_id", "dag_run_id", "try_number", "map_index", "end_date")}
     return {"kind": "failure", "dag_id": dag_id, "task_id": task_id, "pattern": pattern,
-            "failed_count": len(failures), "latest_failure": latest}
+            "failed_count": len(failures), "latest_failure": _ti_ref(failures[0])}
 
 
 def _close_recovered(env: Env, af: Airflow, open_issues: list[dict], failing: dict) -> None:
@@ -274,7 +299,24 @@ def work(env: Env, item: dict) -> dict:
         return heal_failure(env, item)
     if item["kind"] == "request":
         return answer_request(env, item)
+    if item["kind"] == "recheck":
+        return recheck(env, item)
     raise ValueError(f"unknown work item {item!r}")
+
+
+def recheck(env: Env, item: dict) -> dict:
+    """Take another look at a "waiting" issue whose task is still failing: answer it like a `/bot` request."""
+    af, latest = env.airflow, item["latest_failure"]
+    hours = int((_time(latest["end_date"]) - _time(item["diagnosed"])).total_seconds() // 3600)
+    note = env.github.comment(item["number"], (
+        f"🔁 `{item['dag_id']}` › `{item['task_id']}` is still failing {hours} hours after the diagnosis above "
+        f"(latest failure {_fmt(latest['end_date'])}, [log]({af.link(latest)})). Taking another look."))
+    request = ("The task is still failing well after the diagnosis in this issue. Check whether the cause is still "
+               "the same. If it is, say so briefly and keep waiting; if it changed or the diagnosis was wrong, "
+               "diagnose the new cause and fix it or ask, as for a new failure. Latest failed try:\n\n"
+               f"```text\n{af.log(latest)[-8000:]}\n```")
+    return answer_request(env, {"kind": "request", "number": item["number"], "comment_id": note["id"],
+                                "author": "the bot's daily recheck", "request": request})
 
 
 def open_issue_list(issues: list[dict], pulls: list[dict]) -> str:
@@ -491,8 +533,9 @@ def _publish(env: Env, result: Result, files: list[str], worktree: Path, policy:
     status = {"fix": "review", "wait": "waiting", "ask": "question", "none": "waiting"}[result.action]
 
     task = _task_line(facts) if "dag_id" in facts else None
+    diagnosed = now().isoformat(timespec="seconds")
     if issue is None:
-        issue = gh.create_issue(result.title, issue_body(result, status, task, [key] if key else []),
+        issue = gh.create_issue(result.title, issue_body(result, status, task, [key] if key else [], diagnosed=diagnosed),
                                 [LABEL, STATUS_LABELS[status]])
         issue.setdefault("title", result.title)
     number = issue["number"]
@@ -505,7 +548,7 @@ def _publish(env: Env, result: Result, files: list[str], worktree: Path, policy:
     body = issue.get("body") or ""
     issue_keys = keys(body) or ([key] if key else [])
     if issue_keys:  # a bot issue always shows the current state on top; the history lives in comments
-        new_body = issue_body(result, status, task or _existing_task_line(body), issue_keys, pr)
+        new_body = issue_body(result, status, task or _existing_task_line(body), issue_keys, pr, diagnosed)
         if new_body != body or result.title != issue.get("title"):
             gh.update_issue(number, title=result.title, body=new_body)
     gh.set_status(number, status, labels or [LABEL])
@@ -580,7 +623,8 @@ def status_line(status: str, pr: int | None, failure: bool, question: str | None
     }[status]
 
 
-def issue_body(result: Result, status: str, task: str | None, issue_keys: list[str], pr: int | None = None) -> str:
+def issue_body(result: Result, status: str, task: str | None, issue_keys: list[str], pr: int | None = None,
+               diagnosed: str | None = None) -> str:
     question = result.decision.question if result.decision else None
     lines = [result.summary, "", f"**Status:** {status_line(status, pr, task is not None, question)}"]
     if task:
@@ -589,7 +633,7 @@ def issue_body(result: Result, status: str, task: str | None, issue_keys: list[s
         lines += decision_block(result.decision)
     if result.details:
         lines += ["", "<details><summary>Details</summary>", "", result.details, "", "</details>"]
-    lines += ["", *(key_marker(key) for key in issue_keys)]
+    lines += ["", *(key_marker(key) for key in issue_keys), *([diagnosed_marker(diagnosed)] if diagnosed else [])]
     return "\n".join(lines).rstrip()
 
 

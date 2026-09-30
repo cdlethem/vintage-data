@@ -28,6 +28,7 @@ MUTE_LABEL = "bots:mute"
 
 KEY_RE = re.compile(r"<!-- bots:key=(\S+) -->")
 REPLY_RE = re.compile(r"<!-- bots:reply-to=(\d+) -->")
+DIAGNOSED_RE = re.compile(r"<!-- bots:diagnosed=(\S+) -->")
 
 
 def keys(body: str | None) -> list[str]:
@@ -36,6 +37,16 @@ def keys(body: str | None) -> list[str]:
 
 def key_marker(key: str) -> str:
     return f"<!-- bots:key={key} -->"
+
+
+def diagnosed_at(body: str | None) -> str | None:
+    """When the bot last wrote its diagnosis into this issue (ISO time), if it recorded it."""
+    found = DIAGNOSED_RE.findall(body or "")
+    return found[-1] if found else None
+
+
+def diagnosed_marker(when: str) -> str:
+    return f"<!-- bots:diagnosed={when} -->"
 
 
 class GitHub:
