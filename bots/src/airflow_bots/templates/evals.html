@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Prompt evals</h1>
+<p class="muted">Each eval run replays recorded cases against the current prompts and has a judge grade the result the way a person would read it.
+  Run one with <code>airflow-bots eval run --label "what changed"</code> before and after changing a prompt, then compare.</p>
+{% if not rows %}
+  <p class="muted">No eval runs yet.</p>
+{% else %}
+<table>
+  <tr><th>Started (UTC)</th><th>Label</th><th>Passed</th><th>Prompt version</th><th>Agent</th><th>Cost</th></tr>
+  {% for row in rows %}
+  <tr>
+    <td><a href="{{ base }}/evals/{{ row.id }}">{{ row.started_at[:16].replace("T", " ") }}</a></td>
+    <td>{{ row.label or "—" }}</td>
+    <td class="{{ 'good' if row.passed == row.cases else 'bad' }}">{{ row.passed }} / {{ row.cases }}</td>
+    <td><code>{{ row.prompt_hash }}</code></td>
+    <td>{{ row.agent }}</td>
+    <td>${{ "%.2f"|format(row.cost_usd or 0) }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

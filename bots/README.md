@@ -75,7 +75,7 @@ The reasons come from two places: the agent's own judgement (`routine`, `why`) a
 ## Setup
 
 1. Install into the Airflow environment: `pip install airflow-bots` (or `pip install -e path/to/bots`).
-2. Write a config file (below) and point `BOTS_CONFIG` at it for the scheduler, DAG processor and workers.
+2. Write a config file (below) and point `BOTS_CONFIG` at it for the API server, scheduler, DAG processor and workers. Keep it somewhere writable and outside any checkout you deploy from if you want to edit it from the Bots page.
 3. Add a DAG file:
 
    ```python
@@ -92,6 +92,17 @@ The reasons come from two places: the agent's own judgement (`routine`, `why`) a
    airflow-bots sweep --dry-run                        # what would the bot do right now?
    airflow-bots heal <dag_id> <task_id> --dry-run      # run the agent, print the issue/PR instead of creating it
    ```
+
+## The Bots page in Airflow
+
+Installing the package adds **Bots** to Airflow's navigation (an Airflow plugin, registered through the `airflow.plugins` entry point; restart the API server after installing). It serves plain HTML from the API server at `/bots/`, with no front-end build.
+
+- **Overview**: runs and reported spend today against the limits, each bot DAG with an on/off switch (pausing it in Airflow), open bot issues and PRs with what each needs from you, and recent agent runs.
+- **Runs**: every agent run with its outcome and cost; a run page shows the result, the decision and its options, the diff, the prompt the agent got, and its raw output.
+- **Evals**: eval runs with each case's checks and the judge's verdict per criterion.
+- **Settings**: limits, healing, scheduled jobs and agents. Each save rewrites `BOTS_CONFIG` only if the result loads cleanly and every schedule is a valid cron expression; otherwise the page explains what is wrong and the file stays as it was. Comments in the file are not kept. The last changes, with who made them, are listed on the page (from `<state_dir>/config_history.jsonl`). Airflow picks up the change on its next DAG parse. Prompt files are not edited here: change them through pull requests and compare them with evals.
+
+Access follows Airflow's auth manager: reading needs read access to the `bots_heal` DAG, saving settings needs edit access to it, switching a DAG needs edit access to that DAG, and changing agents needs edit access to Airflow's configuration, because an agent command runs on the workers. Open issues are read with the API server's `GITHUB_TOKEN` (cached for a minute).
 
 ## Configuration
 

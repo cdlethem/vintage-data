@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a href="{{ base }}/runs">← All runs</a></p>
+<h1>{{ result.title if result else entry.subject or run_id }}</h1>
+<p class="muted">{{ meta.kind or entry.kind }} · agent <code>{{ meta.agent }}</code> · {{ entry.at or "" }}
+  {% if entry.cost_usd is not none and entry.cost_usd is defined %} · ${{ "%.3f"|format(entry.cost_usd) }}{% endif %}
+  {% if entry.tokens %} · {{ entry.tokens }} tokens{% endif %}
+  {% if entry.seconds %} · {{ (entry.seconds // 60)|int }} min{% endif %}
+  {% if entry.issue %} · <a href="https://github.com/{{ cfg.github_repo }}/issues/{{ entry.issue }}" target="_blank">issue #{{ entry.issue }}</a>{% endif %}
+  {% if entry.pull %} · <a href="https://github.com/{{ cfg.github_repo }}/pull/{{ entry.pull }}" target="_blank">PR #{{ entry.pull }}</a>{% endif %}</p>
+
+{% if not result %}
+  <div class="error">No usable result{% if entry.error %}: {{ entry.error }}{% endif %}</div>
+{% else %}
+  <p><b>{{ result.action }}</b> — {{ result.summary }}</p>
+  {% if decision %}
+    <h2>Decision</h2>
+    <p><b>{{ decision.question }}</b></p>
+    <p>{{ decision.why }}{% if decision.routine %} <span class="good">(routine)</span>{% endif %}</p>
+    <table>
+      <tr><th></th><th>Option</th><th>Pros</th><th>Cons</th></tr>
+      {% for option in decision.options %}
+      <tr><td>{% if loop.first %}✅{% endif %}</td><td>{{ option.choice }}</td><td>{{ option.pros }}</td><td>{{ option.cons }}</td></tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+  {% if result.details %}<h2>Details</h2><pre>{{ result.details }}</pre>{% endif %}
+{% endif %}
+
+{% if diff %}<h2>Changes</h2><pre>{{ diff }}</pre>{% endif %}
+<details><summary>Prompt the agent was given</summary><pre>{{ prompt or "(missing)" }}</pre></details>
+<details><summary>Agent output</summary><pre>{{ output or "(empty)" }}</pre>
+  {% if stderr %}<pre>{{ stderr }}</pre>{% endif %}</details>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a href="{{ base }}/evals">← All eval runs</a></p>
+<h1>Eval run {{ run_id }}</h1>
+{% for row in rows %}
+<div class="box">
+  <b>{{ row.case_id }}</b>{% if row.attempt > 1 %} <span class="muted">attempt {{ row.attempt }}</span>{% endif %}
+  · <span class="{{ 'good' if row.passed else 'bad' }}">{{ "passed" if row.passed else "failed" }}</span>
+  · the bot chose <code>{{ row.action or "nothing" }}</code>
+  {% if row.error %}<div class="error">{{ row.error }}</div>{% endif %}
+  <table>
+    {% for name, check in row.checks.items() %}
+    <tr><td>{{ "✅" if check[0] else "❌" }}</td><td>{{ name }}</td><td class="muted">{{ check[1] }}</td></tr>
+    {% endfor %}
+    {% for c in row.criteria %}
+    <tr><td>{{ "✅" if c.met else "❌" }}</td><td>{{ c.criterion }}</td><td class="muted">{{ c.note }}</td></tr>
+    {% endfor %}
+  </table>
+  {% if row.seen %}<details><summary>What a person would have read</summary><pre>{{ row.seen }}</pre></details>{% endif %}
+</div>
+{% endfor %}
+{% endblock %}

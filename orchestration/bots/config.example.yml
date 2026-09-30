@@ -1,4 +1,7 @@
-# airflow-bots configuration for vintage-data. Reference: bots/README.md.
+# Example airflow-bots configuration for vintage-data. Reference: bots/README.md.
+# The live copy is $BOTS_CONFIG ($EXTRACT_DATA_ROOT/state/bots/config.yml), outside git,
+# because the Bots page in the Airflow UI edits it in place; setup copies this file
+# there on first install. Paths use $VINTAGE_BOTS_DIR (this directory).
 # Secrets come from orchestration/airflow.secrets.env: GITHUB_TOKEN, BOTS_API_PASSWORD.
 
 github:
@@ -10,14 +13,14 @@ airflow:
   ui_url: ${AIRFLOW__API__BASE_URL}
 
 state_dir: ${EXTRACT_DATA_ROOT}/state/bots
-instructions: instructions.md
+instructions: ${VINTAGE_BOTS_DIR}/instructions.md
 
 agents:
   default:
     # omp resolves the LOCAL role to the llama.cpp server; swap the model or the
     # whole command (claude, codex, aider...) freely. agent.sh keeps this
-    # deployment's checkout read-only while the agent runs.
-    command: &omp ["{config_dir}/agent.sh", omp, -p, --mode, text, --model, "@LOCAL", --no-title, --auto-approve,
+    # deployment's checkout and this config read-only while the agent runs.
+    command: &omp ["${VINTAGE_BOTS_DIR}/agent.sh", "${BOTS_CONFIG}", omp, -p, --mode, text, --model, "@LOCAL", --no-title, --auto-approve,
                    --session-dir, "{run_dir}/session", "{prompt}"]
     timeout_minutes: 45
     env: &env [HOME, PATH, USER, LANG, TERM, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME]
@@ -55,9 +58,9 @@ heal:
 jobs:
   new_source:
     schedule: "30 5 * * *"
-    prompt: jobs/new_source.md
+    prompt: ${VINTAGE_BOTS_DIR}/jobs/new_source.md
     agent: long
 
 evals:
-  cases: evals
+  cases: ${VINTAGE_BOTS_DIR}/evals
   judge: judge

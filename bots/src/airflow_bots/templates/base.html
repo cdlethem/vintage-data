@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bots</title>
+<style>
+  :root { color-scheme: light dark; --muted: #6b7280; --line: #d1d5db; --bad: #b91c1c; --good: #15803d; --warn: #b45309; }
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 0; padding: 0 24px 48px; max-width: 1200px; }
+  nav { display: flex; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+  nav a { text-decoration: none; font-weight: 600; }
+  nav .who { margin-left: auto; color: var(--muted); font-weight: normal; }
+  h1 { font-size: 20px; } h2 { font-size: 16px; margin-top: 28px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  pre { white-space: pre-wrap; word-break: break-word; background: color-mix(in srgb, currentColor 6%, transparent);
+        padding: 10px; border-radius: 6px; max-height: 480px; overflow: auto; }
+  .muted { color: var(--muted); } .bad { color: var(--bad); } .good { color: var(--good); } .warn { color: var(--warn); }
+  .box { border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; margin: 12px 0; }
+  .note { border-left: 4px solid var(--warn); padding: 8px 12px; margin: 12px 0; }
+  .error { border-left: 4px solid var(--bad); padding: 8px 12px; margin: 12px 0; }
+  .ok { border-left: 4px solid var(--good); padding: 8px 12px; margin: 12px 0; }
+  label { display: block; margin: 8px 0 2px; font-weight: 600; }
+  label small { font-weight: normal; color: var(--muted); }
+  input[type=text], input[type=number], select, textarea { width: 100%; max-width: 640px; box-sizing: border-box; padding: 5px; font: inherit; }
+  textarea { font-family: ui-monospace, monospace; min-height: 5em; }
+  input[type=checkbox] { margin-right: 6px; }
+  button { margin-top: 10px; padding: 5px 14px; font: inherit; cursor: pointer; }
+  .row { display: flex; gap: 32px; flex-wrap: wrap; } .row > div { flex: 1; min-width: 220px; }
+  .big { font-size: 22px; font-weight: 700; }
+</style>
+</head>
+<body>
+<nav>
+  <a href="{{ base }}/">Overview</a>
+  <a href="{{ base }}/runs">Runs</a>
+  <a href="{{ base }}/settings">Settings</a>
+  <a href="{{ base }}/evals">Evals</a>
+  <span class="who">{{ user.get_name() }}</span>
+</nav>
+{% block content %}{% endblock %}
+</body>
+</html>

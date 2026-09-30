@@ -17,6 +17,9 @@ airflow = ["apache-airflow>=3.0"]
 [project.scripts]
 airflow-bots = "airflow_bots.cli:main"
 
+[project.entry-points."airflow.plugins"]
+airflow_bots = "airflow_bots.plugin:BotsPlugin"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/airflow_bots"]
 
