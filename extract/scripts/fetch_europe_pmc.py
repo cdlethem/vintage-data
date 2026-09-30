@@ -20,6 +20,8 @@ still being in the rolling query window.  Delivery therefore is not exactly-once
 Europe PMC emits empty keyword, publication-type, and full-text-id slots as ``null``
 array entries (roughly one in ~1,700 records, observed in production 2026-09-30).  Such
 nulls mean "no value" and are dropped; any other non-string entry still fails the run.
+The ``VINTAGE_RUN_SUMMARY`` stderr line reports how many null slots were dropped, so a
+growth in the upstream artifact shows up in the task log.
 
 Only metadata, abstracts, links, and text-mined annotations are requested.  Full-text
 links are emitted when advertised, but full text is never downloaded.  Stdlib only.
@@ -53,6 +55,7 @@ DEFAULT_QUERY = "FIRST_PDATE:[NOW-14DAY TO NOW]"
 STATE_VERSION = 1
 MAX_PAGE_SIZE = 1000
 MAX_ANNOTATION_IDS_PER_REQUEST = 8
+SUMMARY_PREFIX = "VINTAGE_RUN_SUMMARY\t"
 
 
 def state_path(explicit: str | None = None) -> pathlib.Path:
@@ -271,9 +274,10 @@ def _nested_list(
     return value
 
 
-def _string_list(values: list[Any], context: str) -> list[str]:
-    """Return the string entries, dropping upstream null slots."""
+def _string_list(values: list[Any], context: str, null_drops: list[int]) -> list[str]:
+    """Return the string entries, dropping upstream null slots and counting them."""
     filtered = [value for value in values if value is not None]
+    null_drops[0] += len(values) - len(filtered)
     if not all(isinstance(value, str) for value in filtered):
         raise ValueError(f"Europe PMC {context} must contain only strings")
     return filtered
@@ -314,7 +318,7 @@ def _yes_no(value: Any, context: str) -> bool | None:
 
 def normalize_result(
     result: dict[str, Any], fetched_at: str, query: str, cursor_mark: str,
-    page: int, requested_size: int
+    page: int, requested_size: int, null_drops: list[int]
 ) -> dict[str, Any]:
     source = result.get("source")
     external_id = result.get("id")
@@ -364,6 +368,7 @@ def normalize_result(
     full_text_ids = _string_list(
         _nested_list(result, "fullTextIdList", "fullTextId", "result"),
         "result.fullTextIdList.fullTextId",
+        null_drops,
     )
     links: list[dict[str, Any]] = []
     seen_urls: set[str] = set()
@@ -383,10 +388,12 @@ def normalize_result(
     publication_types = _string_list(
         _nested_list(result, "pubTypeList", "pubType", "result"),
         "result.pubTypeList.pubType",
+        null_drops,
     )
     keywords = _string_list(
         _nested_list(result, "keywordList", "keyword", "result"),
         "result.keywordList.keyword",
+        null_drops,
     )
     mesh_headings = _nested_list(result, "meshHeadingList", "meshHeading", "result")
     grants = _nested_list(result, "grantsList", "grant", "result")
@@ -462,6 +469,7 @@ def fetch_bounded(
     max_records: int,
     fetched_at: str,
     client: HttpClient,
+    null_drops: list[int],
 ) -> tuple[list[dict[str, Any]], str]:
     """Fetch a bounded traversal and return records plus the uncommitted next cursor."""
     records: list[dict[str, Any]] = []
@@ -482,7 +490,7 @@ def fetch_bounded(
                 f"Europe PMC search returned {len(results)} results for pageSize={requested_size}"
             )
         page_records = [
-            normalize_result(result, fetched_at, query, cursor, page, requested_size)
+            normalize_result(result, fetched_at, query, cursor, page, requested_size, null_drops)
             for result in results
         ]
         page_ids = [record["id"] for record in page_records]
@@ -600,6 +608,7 @@ def main(argv: Sequence[str] | None = None, *, out=None) -> None:
     starting_cursor = args.cursor or saved_cursor
     fetched_at = datetime.now(timezone.utc).isoformat()
     client = HttpClient(args.timeout, args.retries, args.request_interval)
+    null_drops: list[int] = [0]
     records, next_cursor = fetch_bounded(
         query=args.query,
         cursor_mark=starting_cursor,
@@ -608,6 +617,7 @@ def main(argv: Sequence[str] | None = None, *, out=None) -> None:
         max_records=args.max_records,
         fetched_at=fetched_at,
         client=client,
+        null_drops=null_drops,
     )
     lines = serialize_records(records)
     candidate_state = {
@@ -617,7 +627,13 @@ def main(argv: Sequence[str] | None = None, *, out=None) -> None:
         "cursor_mark": next_cursor,
     }
     publish(lines, sys.stdout if out is None else out, path, candidate_state)
-
+    summary = {
+        "health": "healthy",
+        "completeness": "complete" if next_cursor == "*" else "partial",
+        "records": len(records),
+        "dropped_null_entries": null_drops[0],
+    }
+    print(SUMMARY_PREFIX + json.dumps(summary, separators=(",", ":")), file=sys.stderr)
 
 if __name__ == "__main__":
     main()
