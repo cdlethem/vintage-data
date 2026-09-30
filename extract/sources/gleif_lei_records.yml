@@ -1,0 +1,20 @@
+name: gleif_lei_records
+script: fetch_gleif_lei_records.py
+args: []
+schedule: "16 1 * * *"  # UTC; daily after the 00:00Z Golden Copy publication
+enabled: true
+retries: 1
+timeout_minutes: 45
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+# The lei-records API's registration.lastUpdateDate filter returns one UTC
+# calendar day's batch (the daily Golden Copy; verified 2026-09-30: the
+# 2026-09-29 batch held 8143 records, 2026-09-28 held 10737, and the
+# still-growing current day only a handful). The fetcher therefore collects
+# completed days only and is scheduled daily; batches of 3k-11k records take
+# ~40-55 requests at 200/page and ~2 minutes at the self-imposed 1 request/s.
+cadence_note: "one complete daily batch per UTC day of LEI registration updates (new LEIs, renewals, name/address/status changes); daily is the honest cadence because the day's batch only finalizes at the next 00:00Z"
+rate_limit: "keyless public API, no published limit; script self-imposes 1 request/second"
+licence: "CC0 1.0 Universal per GLEIF LEI Data Terms of Use (https://www.gleif.org/en/meta/lei-data-terms-of-use)"
+attribution_required: false
