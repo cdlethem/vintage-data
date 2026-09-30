@@ -150,7 +150,7 @@ def run(agent: Agent, prompt: str, workdir: Path, run_dir: Path, parse=None) -> 
     prompt_file = run_dir / "prompt.md"
     prompt_file.write_text(prompt)
     values = {"prompt": prompt, "prompt_file": str(prompt_file), "workdir": str(workdir), "run_dir": str(run_dir)}
-    argv = [part.format(**values) for part in agent.command]
+    argv = [_fill(part, values) for part in agent.command]
     uses_stdin = not any("{prompt" in part for part in agent.command)
     env = {name: os.environ[name] for name in agent.env if name in os.environ}
 
@@ -186,6 +186,13 @@ def run(agent: Agent, prompt: str, workdir: Path, run_dir: Path, parse=None) -> 
         data = asdict(outcome.result) if hasattr(outcome.result, "__dataclass_fields__") else outcome.result
         (run_dir / "result.json").write_text(json.dumps(data, indent=2))
     return outcome
+
+
+def _fill(part: str, values: dict) -> str:
+    """Replace the known {placeholders}; any other braces in a command stay literal."""
+    for name, value in values.items():
+        part = part.replace("{" + name + "}", value)
+    return part
 
 
 def _usage(kind: str, stdout: str, run_dir: Path) -> tuple[str, float | None, int]:

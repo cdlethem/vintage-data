@@ -1,3 +1,4 @@
+import json
 import sys
 from contextlib import contextmanager
 from dataclasses import replace
@@ -44,8 +45,8 @@ class FakeAirflow:
 
 
 class FakeWorkspace:
-    def __init__(self, root):
-        self.root = root
+    def __init__(self, root, changed=()):
+        self.root, self.changed, self.pushed = root, list(changed), []
 
     def fetch(self, branch):
         return "base"
@@ -55,7 +56,11 @@ class FakeWorkspace:
         yield self.root
 
     def changes(self, worktree, sha):
-        return [], ""
+        return self.changed, "diff" if self.changed else ""
+
+    def push(self, worktree, branch, message):
+        self.pushed.append(branch)
+        return "newsha"
 
     def files(self, sha):
         return {"dags/x.py"}
@@ -91,6 +96,9 @@ class FakeGitHub:
 
     def issue(self, number):
         return next(i for i in self.open_issues + self.closed if i["number"] == number)
+
+    def pull_files(self, number):
+        return []
 
     def __getattr__(self, name):  # every write is recorded
         return lambda *args, **kwargs: self.writes.append((name, args, kwargs)) or {"number": 99}
@@ -355,3 +363,25 @@ def test_host_paths_are_mapped_into_the_repository():
     assert workflows.locate("/srv/deploy/orchestration/dags/extract_dags.py", files) == (
         "orchestration/dags/extract_dags.py", "/srv/deploy")
     assert workflows.locate("/opt/airflow/dags/other.py", files) == ("/opt/airflow/dags/other.py", None)
+
+
+def test_a_bot_change_on_a_pr_rewrites_its_description_to_the_new_decision(cfg, monkeypatch, tmp_path):
+    answer = {"action": "fix", "title": "Keep the strict check, stop at the reported total", "summary": "Reworked.",
+              "decision": {"question": "Stop at the reported total instead?", "why": "Small, verified, same data.",
+                           "routine": True, "options": [
+                               {"choice": "Stop at the total", "pros": "strict", "cons": "trusts count", "chosen": True},
+                               {"choice": "Accept a short page", "pros": "simple", "cons": "looser"}]}}
+    failing_agent(monkeypatch, f"print({json.dumps(json.dumps(answer))})")
+    pr_issue = {"number": 8, "title": "old", "body": "old summary\n\nFixes #5\n\n## Your decision", "user": {"login": "bot"},
+                "labels": [{"name": "bots"}, {"name": "bots:review"}], "pull_request": {}}
+    gh = FakeGitHub(open_issues=[pr_issue], prs={8: {"head": {"ref": "bots/5-pokeapi"}}})
+    workspace = FakeWorkspace(tmp_path, changed=["extract/fetch.py"])
+    env = workflows.Env(cfg, gh, workspace)
+    item = {"kind": "request", "number": 8, "comment_id": 77, "author": "sam", "request": "go with the total"}
+    assert workflows.answer_request(env, item)["automerge"] is True
+    assert workspace.pushed == ["bots/5-pokeapi"]
+    fields = next(kwargs for name, args, kwargs in gh.writes if name == "update_issue" and args == (8,))
+    assert fields["title"] == answer["title"] and "Fixes #5" in fields["body"]
+    assert "Merges automatically" in fields["body"] and "Stop at the total" in fields["body"]
+    assert ("set_status", (8, None, ["bots", "bots:review", "bots:automerge"]), {}) in gh.writes
+    assert any(name == "comment" and "bots:reply-to=77" in args[1] for name, args, _ in gh.writes)
