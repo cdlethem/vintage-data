@@ -1,6 +1,6 @@
 {{job_prompt}}
 
-## Open issues the bot is already tracking
+## Open issues and pull requests the bot is already tracking
 
 {{open_issues}}
 
