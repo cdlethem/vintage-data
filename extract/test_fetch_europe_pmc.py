@@ -1,3 +1,4 @@
+import contextlib
 import importlib.util
 import io
 import json
@@ -215,6 +216,7 @@ class EuropePmcTests(unittest.TestCase):
             max_records=3,
             fetched_at=fetched_at,
             client=client,
+            null_drops=[0],
         )
 
         self.assertEqual("*", cursor)
@@ -544,6 +546,7 @@ class EuropePmcTests(unittest.TestCase):
             max_records=9,
             fetched_at="now",
             client=client,
+            null_drops=[0],
         )
 
         self.assertEqual("*", cursor)
@@ -578,6 +581,7 @@ class EuropePmcTests(unittest.TestCase):
             max_records=3,
             fetched_at="now",
             client=client,
+            null_drops=[0],
         )
         self.assertEqual(["MED:1", "MED:2", "MED:3"], [row["id"] for row in rows])
         self.assertEqual("C3", cursor)
@@ -586,6 +590,61 @@ class EuropePmcTests(unittest.TestCase):
         )
         self.assertEqual(["1"], second_search_query["pageSize"])
 
+    def test_null_keyword_slots_are_dropped_and_record_is_emitted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state_file = Path(directory) / "state.json"
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                output, _ = self.run_main(
+                    state_file,
+                    [
+                        search(
+                            [
+                                result("1", keywordList={"keyword": ["biomedicine", None, "genetics"]}),
+                                result("2", keywordList={"keyword": [None]}),
+                            ],
+                            None,
+                            2,
+                        ),
+                        [annotation_article("1"), annotation_article("2", [])],
+                    ],
+                    extra_args=["--page-size", "2"],
+                )
+            rows = records(output)
+            self.assertEqual(["MED:1", "MED:2"], [row["id"] for row in rows])
+            self.assertEqual(["biomedicine", "genetics"], rows[0]["keywords"])
+            self.assertEqual([], rows[1]["keywords"])
+            self.assertEqual("*", read_state(state_file)["cursor_mark"])
+            summary_lines = [
+                line
+                for line in stderr.getvalue().splitlines()
+                if line.startswith(europe_pmc.SUMMARY_PREFIX)
+            ]
+            self.assertEqual(1, len(summary_lines))
+            summary = json.loads(summary_lines[0][len(europe_pmc.SUMMARY_PREFIX):])
+            self.assertEqual(2, summary["records"])
+            self.assertEqual(2, summary["dropped_null_entries"])
+
+    def test_non_string_non_null_list_entries_still_fail(self):
+        for value in (42, 3.5, True, {"name": "x"}, ["nested"]):
+            with self.subTest(value=value):
+                opener = QueueOpener(
+                    [search([result("1", keywordList={"keyword": ["ok", value]})], None, 1)]
+                )
+                client = europe_pmc.HttpClient(3, 0, 0, opener=opener)
+                with self.assertRaisesRegex(
+                    ValueError, "keywordList.keyword must contain only strings"
+                ):
+                    europe_pmc.fetch_bounded(
+                        query="query",
+                        cursor_mark="*",
+                        page_size=1,
+                        max_pages=1,
+                        max_records=1,
+                        fetched_at="now",
+                        client=client,
+                        null_drops=[0],
+                    )
 
 if __name__ == "__main__":
     unittest.main()
