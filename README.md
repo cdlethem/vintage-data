@@ -57,8 +57,8 @@ failing on and off), has a coding agent diagnose each one in a fresh checkout, a
 records the outcome on GitHub: a PR with the fix, or an issue that explains the
 problem in plain words and either waits for recovery or asks one question. The
 scheduled `bots_job__new_source` job proposes one new data source a day as a PR.
-Configuration, prompts and eval cases for this repository are in
-[`orchestration/bots/`](orchestration/bots/config.yml).
+Prompts and eval cases for this repository are in [`orchestration/bots/`](orchestration/bots/);
+limits, agents, healing and jobs are edited on the **Bots** page in the Airflow UI.
 
 ## The extract contract
 
@@ -195,7 +195,7 @@ fails if a generated file is stale. Editing a rendered file by hand is pointless
 ```bash
 cp orchestration/config.example.env orchestration/config.env
 $EDITOR orchestration/config.env          # service user, data root, ports
-$EDITOR orchestration/bots/config.yml     # bot agent command and limits (tracked)
+# bot agent command and limits: the Bots page in the Airflow UI, after setup
 orchestration/setup/setup.sh              # idempotent; rerun any time
 ```
 
@@ -226,7 +226,7 @@ api-server start into
 ### Merged-code release
 
 Bot PRs merge on their own only when the bot marked the fix low-risk, every file is on
-the auto-merge allow-list in `orchestration/bots/config.yml`, and the read-only GitHub
+the auto-merge allow-list (Bots page › Settings › Healing), and the read-only GitHub
 Actions checks pass (`.github/workflows/verify.yml`); everything else merges by a
 human. The local `vintage-data-sync.timer` polls
 `origin/main` every five minutes. It does nothing when the revision is unchanged;
@@ -317,9 +317,11 @@ The bots live in [`bots/`](bots/README.md) as the standalone `airflow-bots`
 package, deliberately free of anything specific to this repository. This
 repository supplies only:
 
-- [`orchestration/bots/config.yml`](orchestration/bots/config.yml): GitHub repo,
-  agent command (omp on the local model by default), daily limits, and the
-  auto-merge allow-list (fetcher scripts, source YAML and their tests);
+- the live config, `$EXTRACT_DATA_ROOT/state/bots/config.yml` (`BOTS_CONFIG`), outside
+  git because the Bots page in the Airflow UI edits it: GitHub repo, agent command (omp
+  on the local model by default), daily limits, and the auto-merge allow-list (fetcher
+  scripts, source YAML and their tests). Setup seeds it once from
+  [`orchestration/bots/config.example.yml`](orchestration/bots/config.example.yml);
 - `orchestration/bots/instructions.md`: project notes appended to every prompt;
 - `orchestration/bots/jobs/`: prompts for scheduled jobs;
 - `orchestration/bots/evals/`: eval cases for prompt changes;
@@ -348,7 +350,7 @@ behind a seam, and this is honestly what each swap costs:
 | choice | seam | cost of swapping |
 |---|---|---|
 | **warehouse** (DuckDB → BigQuery/Snowflake/Postgres) | `load/loader/destinations/` — `Destination` ABC + `REGISTRY`, selected by `destination:` in `load/config/load.yml` | one subclass (type mapping, "NDJSON file → relation of JSON records", and a single-transaction `load_file`) plus one registry entry. Nothing above the destination layer — discovery, inference, queue, service loop, ledger semantics — changes. `load/config/load.yml` already carries sketch configs for both. |
-| **model provider** (local → OpenRouter/OpenAI/Anthropic/CLI) | `agents.default.command` in `orchestration/bots/config.yml` | zero-code: point the agent CLI at another model, or swap the CLI. |
+| **model provider** (local → OpenRouter/OpenAI/Anthropic/CLI) | the agent command on the Bots page (`agents.default.command` in `$BOTS_CONFIG`) | zero-code: point the agent CLI at another model, or swap the CLI. |
 | **sink** (local files → S3/GCS/Azure) | `orchestration/include/sinks.py` — `Sink` ABC + `REGISTRY`, selected by `EXTRACT_SINK` or a source's `sink:` key | **two changes, not one.** The write path is a `Sink` subclass whose `commit()` publishes a staged object. The read path is the honest gap: `load/loader/discovery.py` lists a local directory and `SinkFile.path` is a `pathlib.Path` that `duckdb_dest` hands to `read_json_auto`. Object storage needs discovery to become a listing interface (prefix listing) and file identity to become a URI. Both are contained — one module each — but neither exists yet, and the sink registry alone will not get you there. |
 | **metadata DB / broker** | `POSTGRES_*` and `CELERY_BROKER_URL` in `config.env`; the connection string in `airflow.secrets.env` | point them at a managed Postgres/Redis and skip `setup/02_database.sh`; nothing else reads those values. |
 | **secrets** | `orchestration/airflow.secrets.env`, loaded by every unit | replace with Airflow's secrets backend or a systemd credential drop-in; no code reads secrets directly, only env vars. |

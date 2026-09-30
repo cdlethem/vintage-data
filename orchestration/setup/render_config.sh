@@ -127,6 +127,16 @@ for template in systemd/*.template; do
     render "$template" "generated/systemd/$(basename "$template" .template)"
 done
 
+# The live bots config is edited from the Airflow UI, so it lives with the data rather
+# than in git (BOTS_CONFIG in airflow.env.template); a first install starts from the
+# tracked example. Never overwritten afterwards.
+BOTS_CONFIG="$EXTRACT_DATA_ROOT/state/bots/config.yml"
+if ((!CHECK)) && [[ ! -f "$BOTS_CONFIG" ]]; then
+    mkdir -p "$(dirname "$BOTS_CONFIG")"
+    cp bots/config.example.yml "$BOTS_CONFIG"
+    echo "created $BOTS_CONFIG from bots/config.example.yml"
+fi
+
 if ((CHECK)); then
     ((changed)) && exit 1
     echo "generated files are up to date"

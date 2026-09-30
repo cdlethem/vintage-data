@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+{% if config_error %}
+  <h1>The bots are not configured correctly</h1>
+  <div class="error">{{ config_error }}</div>
+  <p>Config file: <code>{{ config_path }}</code>. Fix it on the <a href="{{ base }}/settings">Settings</a> page or in the file itself.</p>
+{% else %}
+  <h1>Bots for {{ cfg.github_repo }}</h1>
+
+  <div class="row">
+    <div class="box">
+      <div class="muted">Agent runs today</div>
+      <div class="big">{{ runs_today }}{% if cfg.limits.daily_runs %} <span class="muted">/ {{ cfg.limits.daily_runs }}</span>{% endif %}</div>
+    </div>
+    <div class="box">
+      <div class="muted">Spent today (reported)</div>
+      <div class="big">${{ "%.2f"|format(spent_today) }}{% if cfg.limits.daily_usd %} <span class="muted">/ ${{ "%.2f"|format(cfg.limits.daily_usd) }}</span>{% endif %}</div>
+    </div>
+  </div>
+  {% if paused_reason %}<div class="note">New agent runs are paused until midnight UTC: {{ paused_reason }}. Raise the limit on the <a href="{{ base }}/settings">Settings</a> page to resume now.</div>{% endif %}
+
+  <h2>Schedules</h2>
+  <table>
+    <tr><th>DAG</th><th>State</th><th>Latest run</th><th></th></tr>
+    {% for dag in dags %}
+    <tr>
+      <td><a href="/dags/{{ dag.dag_id }}" target="_top">{{ dag.dag_id }}</a></td>
+      <td>{% if not dag.found %}<span class="warn">not parsed yet</span>{% elif dag.paused %}<span class="warn">off (paused)</span>{% else %}<span class="good">on</span>{% endif %}</td>
+      <td>{% if dag.last_run %}{{ dag.last_run.strftime("%Y-%m-%d %H:%M") }} UTC · {{ dag.last_state }}{% else %}<span class="muted">never</span>{% endif %}</td>
+      <td>{% if dag.found %}<form method="post" action="{{ base }}/dags/{{ dag.dag_id }}/pause" style="margin:0">
+        <input type="hidden" name="paused" value="{{ 'no' if dag.paused else 'yes' }}">
+        <button style="margin:0">{{ "Switch on" if dag.paused else "Switch off" }}</button></form>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="muted">Switching off pauses the DAG in Airflow: nothing new starts, running work finishes. Run one now from its Airflow page.</p>
+
+  <h2>Open work on GitHub</h2>
+  {% if work.error %}
+    <div class="note">{{ work.error }}</div>
+  {% elif not work["items"] %}
+    <p class="muted">Nothing open. Everything the bot tracks is labelled <code>bots</code> in <a href="{{ work.repo_url }}/issues?q=label%3Abots" target="_blank">{{ cfg.github_repo }}</a>.</p>
+  {% else %}
+  <table>
+    <tr><th></th><th>What</th><th>Needs</th></tr>
+    {% for item in work["items"] %}
+    <tr>
+      <td class="muted">{{ item.kind }} #{{ item.number }}</td>
+      <td><a href="{{ item.url }}" target="_blank">{{ item.title }}</a>
+        {% if item.decision %}<div class="muted">Decision: {{ item.decision }}</div>{% endif %}</td>
+      <td>
+        {% if item.status == "question" %}<span class="bad">your decision</span>
+        {% elif item.status == "review" or (item.kind == "PR" and not item.automerge) %}<span class="bad">your review</span>
+        {% elif item.automerge or item.status == "fixing" %}<span class="good">merges when checks pass</span>
+        {% elif item.status == "waiting" %}<span class="muted">nothing; closes on recovery</span>
+        {% else %}<span class="muted">—</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  <h2>Recent agent runs</h2>
+  {% include "runs_table.html" %}
+  <p><a href="{{ base }}/runs">All runs</a></p>
+{% endif %}
+{% endblock %}

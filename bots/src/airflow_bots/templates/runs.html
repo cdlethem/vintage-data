@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Agent runs, last {{ days }} days</h1>
+<p>{{ rows|length }} runs · ${{ "%.2f"|format(spent) }} reported ·
+  show <a href="?days=1">1</a> · <a href="?days=7">7</a> · <a href="?days=30">30</a> days</p>
+{% include "runs_table.html" %}
+{% endblock %}

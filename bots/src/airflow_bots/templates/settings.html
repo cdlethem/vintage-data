@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% macro lines(values) %}{{ (values or [])|join("\n") }}{% endmacro %}
+{% macro auto_merge_fields(am) %}
+  <label><input type="checkbox" name="auto_merge_enabled" {% if am and am.enabled %}checked{% endif %}>Merge routine fixes automatically once CI passes</label>
+  <label>Files an automatic merge may touch <small>one pattern per line, e.g. extract/scripts/*; blank: any file</small></label>
+  <textarea name="auto_merge_paths" rows="{{ ((am.paths if am else [])|length) + 2 }}">{{ lines(am.paths if am else []) }}</textarea>
+{% endmacro %}
+{% block content %}
+<h1>Settings</h1>
+<p class="muted">Saved to <code>{{ config_path }}</code>. Changes reach Airflow when it next reads the DAG files, usually within a minute; runs already in progress keep their old settings.</p>
+{% if saved %}<div class="ok">{{ saved }}.</div>{% endif %}
+{% if error %}<div class="error">Not saved: {{ error }}</div>{% endif %}
+{% if config_error and not error %}<div class="error">The current file has a problem: {{ config_error }}</div>{% endif %}
+{% if not can_edit %}<div class="note">You can look but not change: editing needs edit access to the <code>bots_heal</code> DAG.</div>{% endif %}
+
+{% set limits = raw.limits or {} %}
+<h2>Limits</h2>
+<form method="post" class="box"><fieldset {% if not can_edit %}disabled{% endif %} style="border:0;padding:0">
+  <input type="hidden" name="section" value="limits">
+  <div class="row">
+    <div><label>Agent runs per day <small>blank: no limit</small></label><input type="number" name="daily_runs" min="0" value="{{ limits.daily_runs if limits.daily_runs is not none else '' }}"></div>
+    <div><label>Spend per day, USD <small>reported by the agent; blank: no limit</small></label><input type="number" step="0.01" min="0" name="daily_usd" value="{{ limits.daily_usd if limits.daily_usd is not none else '' }}"></div>
+  </div>
+  <div class="row">
+    <div><label>Agents at once in one sweep</label><input type="number" min="1" name="concurrency" value="{{ limits.concurrency or '' }}"></div>
+    <div><label>Airflow pool for all bot tasks <small>optional; the pool must exist</small></label><input type="text" name="pool" value="{{ limits.pool or '' }}"></div>
+  </div>
+  <button>Save limits</button>
+</fieldset></form>
+
+{% set heal = raw.heal or {} %}
+<h2>Healing failed tasks</h2>
+<form method="post" class="box"><fieldset {% if not can_edit %}disabled{% endif %} style="border:0;padding:0">
+  <input type="hidden" name="section" value="heal">
+  <label><input type="checkbox" name="enabled" {% if heal.enabled is not defined or heal.enabled %}checked{% endif %}>Keep the <code>bots_heal</code> DAG <small>it fixes or reports failing tasks and answers <code>/bot</code> comments; unticked, the DAG disappears from Airflow</small></label>
+  <div class="row">
+    <div><label>How often to look <small>cron, UTC</small></label><input type="text" name="schedule" value="{{ heal.schedule or '*/15 * * * *' }}"></div>
+    <div><label>Agent</label><select name="agent">{% for name in (raw.agents or {}) %}<option {% if name == (heal.agent or 'default') %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></div>
+  </div>
+  <div class="row">
+    <div><label>Look back, hours</label><input type="number" min="1" name="lookback_hours" value="{{ heal.lookback_hours or '' }}" placeholder="24"></div>
+    <div><label>New problems per sweep</label><input type="number" min="0" name="max_new_per_sweep" value="{{ heal.max_new_per_sweep if heal.max_new_per_sweep is not none else '' }}" placeholder="3"></div>
+    <div><label>Flaky after this many separate failures <small>blank: default 3</small></label><input type="number" min="1" name="flaky_streaks" value="{{ heal.flaky_streaks or '' }}" placeholder="3"></div>
+  </div>
+  <label>Ignore these DAGs or tasks <small>one pattern per line, e.g. test_* or my_dag.sensor_*</small></label>
+  <textarea name="ignore" rows="{{ (heal.ignore or [])|length + 2 }}">{{ lines(heal.ignore) }}</textarea>
+  {{ auto_merge_fields(heal.auto_merge) }}
+  <button>Save healing</button>
+</fieldset></form>
+
+<h2>Scheduled jobs</h2>
+<p class="muted">A job runs an agent on a schedule with a prompt file; its result becomes a pull request or an issue. Prompts are files next to the config, changed through pull requests and measured with evals.</p>
+{% for name, job in (raw.jobs or {}).items() %}
+<form method="post" class="box"><fieldset {% if not can_edit %}disabled{% endif %} style="border:0;padding:0">
+  <input type="hidden" name="section" value="job"><input type="hidden" name="name" value="{{ name }}">
+  <b>{{ name }}</b> <span class="muted">(DAG bots_job__{{ name }})</span>
+  {% set job = job or {} %}
+  <div class="row">
+    <div><label>Schedule <small>cron, UTC</small></label><input type="text" name="schedule" value="{{ job.schedule or '' }}"></div>
+    <div><label>Prompt file <small>relative to the config file</small></label><input type="text" name="prompt" list="prompt-files" value="{{ job.prompt or '' }}"></div>
+    <div><label>Agent</label><select name="agent">{% for a in (raw.agents or {}) %}<option {% if a == (job.agent or 'default') %}selected{% endif %}>{{ a }}</option>{% endfor %}</select></div>
+  </div>
+  {{ auto_merge_fields(job.auto_merge) }}
+  <button>Save {{ name }}</button>
+  <button name="delete" value="yes" onclick="return confirm('Remove this job?')">Remove</button>
+</fieldset></form>
+{% endfor %}
+<form method="post" class="box"><fieldset {% if not can_edit %}disabled{% endif %} style="border:0;padding:0">
+  <input type="hidden" name="section" value="job"><input type="hidden" name="new" value="1">
+  <b>Add a job</b>
+  <div class="row">
+    <div><label>Name <small>letters, digits, _ . -</small></label><input type="text" name="name" required pattern="[A-Za-z0-9_.\-]+"></div>
+    <div><label>Schedule <small>cron, UTC</small></label><input type="text" name="schedule" required placeholder="0 6 * * 1"></div>
+    <div><label>Prompt file <small>relative to the config file</small></label><input type="text" name="prompt" required list="prompt-files"></div>
+    <div><label>Agent</label><select name="agent">{% for a in (raw.agents or {}) %}<option>{{ a }}</option>{% endfor %}</select></div>
+  </div>
+  <label><input type="checkbox" name="enabled">Switch on right away <small>otherwise it starts off; switch it on from the Overview</small></label>
+  <button>Add job</button>
+</fieldset></form>
+<datalist id="prompt-files">{% for p in prompts %}<option value="{{ p }}">{% endfor %}</datalist>
+
+<h2>Agents</h2>
+<p class="muted">An agent is the command-line coding tool the bot runs, with its model and provider. {% if not can_edit_agents %}Changing agents needs edit access to Airflow's configuration, because the command runs on the workers.{% endif %}</p>
+{% for name, agent in (raw.agents or {}).items() %}
+<form method="post" class="box"><fieldset {% if not can_edit_agents %}disabled{% endif %} style="border:0;padding:0">
+  <input type="hidden" name="section" value="agent"><input type="hidden" name="name" value="{{ name }}">
+  <b>{{ name }}</b>
+  <label>Command <small>one argument per line; placeholders {prompt}, {prompt_file}, {workdir}, {run_dir}, {config_dir}; ${VARIABLES} come from the worker's environment</small></label>
+  <textarea name="command" rows="{{ (agent.command or [])|length + 1 }}">{{ lines(agent.command) }}</textarea>
+  <div class="row">
+    <div><label>Time limit, minutes</label><input type="number" min="1" name="timeout_minutes" value="{{ agent.timeout_minutes or '' }}" placeholder="30"></div>
+    <div><label>Read usage and cost from</label><select name="usage">{% for u in ["none", "omp", "claude"] %}<option {% if u == (agent.usage or 'none') %}selected{% endif %}>{{ u }}</option>{% endfor %}</select></div>
+  </div>
+  <label>Environment variables passed to the agent <small>one name per line; nothing else reaches it; blank: HOME, PATH, LANG, USER</small></label>
+  <textarea name="env" rows="{{ (agent.env or [])|length + 1 }}">{{ lines(agent.env) }}</textarea>
+  <button>Save {{ name }}</button>
+  <button name="delete" value="yes" onclick="return confirm('Remove this agent?')">Remove</button>
+</fieldset></form>
+{% endfor %}
+<form method="post" class="box"><fieldset {% if not can_edit_agents %}disabled{% endif %} style="border:0;padding:0">
+  <input type="hidden" name="section" value="agent"><input type="hidden" name="new" value="1">
+  <b>Add an agent</b>
+  <label>Name <small>letters, digits, _ . -</small></label><input type="text" name="name" required pattern="[A-Za-z0-9_.\-]+">
+  <label>Command <small>one argument per line</small></label><textarea name="command" required placeholder="claude&#10;-p&#10;--output-format&#10;json"></textarea>
+  <div class="row">
+    <div><label>Time limit, minutes</label><input type="number" min="1" name="timeout_minutes" placeholder="30"></div>
+    <div><label>Read usage and cost from</label><select name="usage"><option>none</option><option>omp</option><option>claude</option></select></div>
+  </div>
+  <label>Environment variables passed to the agent <small>one name per line; blank: HOME, PATH, LANG, USER</small></label><textarea name="env"></textarea>
+  <button>Add agent</button>
+</fieldset></form>
+
+<h2>Installation</h2>
+<p class="muted">Set in the config file by whoever installs the bots.</p>
+{% set gh = raw.github or {} %}{% set af = raw.airflow or {} %}{% set ev = raw.evals or {} %}
+<table>
+  <tr><th>GitHub repository</th><td>{{ gh.repo }} · base branch {{ gh.base or "main" }} · token from ${{ gh.token_env or "GITHUB_TOKEN" }}</td></tr>
+  <tr><th>Airflow API</th><td>{{ af.url }}</td></tr>
+  <tr><th>State directory</th><td>{{ cfg.state_dir if cfg else raw.state_dir }}</td></tr>
+  <tr><th>Project notes for every prompt</th><td>{{ raw.instructions or "—" }}</td></tr>
+  <tr><th>Eval cases, judge agent</th><td>{{ ev.cases or "—" }} · {{ ev.judge or "default" }}</td></tr>
+</table>
+
+{% if history %}
+<h2>Recent changes</h2>
+{% for change in history %}
+<details><summary>{{ change.at[:16].replace("T", " ") }} UTC · {{ change.who }}</summary><pre>{{ change.diff or "(no change)" }}</pre></details>
+{% endfor %}
+{% endif %}
+{% endblock %}
