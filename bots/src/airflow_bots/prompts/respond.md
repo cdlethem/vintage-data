@@ -12,7 +12,7 @@ On {{thread_kind}} #{{number}} "{{title}}", {{author}} wrote:
 
 {{checkout}} Change files only inside this checkout (your working directory), never anywhere else on the machine.
 
-## Open issues the bot is already tracking
+## Open issues and pull requests the bot is already tracking
 
 {{open_issues}}
 
