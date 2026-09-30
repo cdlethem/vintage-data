@@ -1,34 +1,89 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}{{ (result.title if result else entry.subject) or run_id }}{% endblock %}
 {% block content %}
-<p><a href="{{ base }}/runs">← All runs</a></p>
-<h1>{{ result.title if result else entry.subject or run_id }}</h1>
-<p class="muted">{{ meta.kind or entry.kind }} · agent <code>{{ meta.agent }}</code> · {{ entry.at or "" }}
-  {% if entry.cost_usd is not none and entry.cost_usd is defined %} · ${{ "%.3f"|format(entry.cost_usd) }}{% endif %}
-  {% if entry.tokens %} · {{ entry.tokens }} tokens{% endif %}
-  {% if entry.seconds %} · {{ (entry.seconds // 60)|int }} min{% endif %}
-  {% if entry.issue %} · <a href="https://github.com/{{ cfg.github_repo }}/issues/{{ entry.issue }}" target="_blank">issue #{{ entry.issue }}</a>{% endif %}
-  {% if entry.pull %} · <a href="https://github.com/{{ cfg.github_repo }}/pull/{{ entry.pull }}" target="_blank">PR #{{ entry.pull }}</a>{% endif %}</p>
+<a class="crumb" href="{{ base }}/runs">← Agent runs</a>
+<div class="page-head">
+  <div>
+    <h1>{{ (result.title if result else entry.subject) or run_id }}</h1>
+    <div class="row" style="margin-top: 8px">
+      {{ ui.outcome(entry) }}
+      {% if entry.status in statuses %}{{ ui.pill(statuses[entry.status][0], statuses[entry.status][1]) }}{% endif %}
+      {% if entry.automerge %}{{ ui.pill("Merges when checks pass", "green") }}{% endif %}
+      {% if decision and decision.routine %}{{ ui.pill("Routine") }}{% endif %}
+    </div>
+  </div>
+</div>
 
-{% if not result %}
-  <div class="error">No usable result{% if entry.error %}: {{ entry.error }}{% endif %}</div>
-{% else %}
-  <p><b>{{ result.action }}</b> — {{ result.summary }}</p>
-  {% if decision %}
-    <h2>Decision</h2>
-    <p><b>{{ decision.question }}</b></p>
-    <p>{{ decision.why }}{% if decision.routine %} <span class="good">(routine)</span>{% endif %}</p>
-    <table>
-      <tr><th></th><th>Option</th><th>Pros</th><th>Cons</th></tr>
-      {% for option in decision.options %}
-      <tr><td>{% if loop.first %}✅{% endif %}</td><td>{{ option.choice }}</td><td>{{ option.pros }}</td><td>{{ option.cons }}</td></tr>
-      {% endfor %}
-    </table>
+<div class="stack">
+  <section class="card card-body">
+    <dl class="meta">
+      <div><dt>Started</dt><dd>{{ ui.time(entry.at, absolute=true) }}</dd></div>
+      <div><dt>Kind</dt><dd>{{ (entry.kind or meta.kind)|kind }}</dd></div>
+      <div><dt>Agent</dt><dd><code>{{ meta.agent or "—" }}</code></dd></div>
+      <div><dt>Duration</dt><dd class="num">{{ entry.seconds|duration }}</dd></div>
+      <div><dt>Cost</dt><dd class="num">{{ entry.cost_usd|money }}</dd></div>
+      <div><dt>Tokens</dt><dd class="num">{{ entry.tokens|compact }}</dd></div>
+      {% if entry.issue or entry.pull %}<div><dt>On GitHub</dt><dd>{{ ui.github(entry) }}</dd></div>{% endif %}
+      {% if meta.base_sha %}<div><dt>Based on</dt><dd><a href="https://github.com/{{ cfg.github_repo }}/commit/{{ meta.base_sha }}" target="_blank" rel="noopener"><code>{{ meta.base_sha[:10] }}</code></a></dd></div>{% endif %}
+    </dl>
+  </section>
+
+  {% if not entry.ok %}
+  <div class="alert red" style="margin: 0">{{ entry.error or "The agent gave no usable result." }}{% if entry.retry %} The next sweep tries again.{% endif %}</div>
   {% endif %}
-  {% if result.details %}<h2>Details</h2><pre>{{ result.details }}</pre>{% endif %}
-{% endif %}
+  {% if result %}<p class="prose" style="font-size: 15px">{{ result.summary }}</p>{% endif %}
 
-{% if diff %}<h2>Changes</h2><pre>{{ diff }}</pre>{% endif %}
-<details><summary>Prompt the agent was given</summary><pre>{{ prompt or "(missing)" }}</pre></details>
-<details><summary>Agent output</summary><pre>{{ output or "(empty)" }}</pre>
-  {% if stderr %}<pre>{{ stderr }}</pre>{% endif %}</details>
+  {% if decision %}
+  <section class="card">
+    <div class="card-head"><div><p style="margin: 0 0 2px">The decision</p><h2>{{ decision.question }}</h2></div></div>
+    <div class="card-body"><p class="prose">{{ decision.why }}</p></div>
+    <div class="table-wrap">
+      <table class="options">
+        <thead><tr><th>Option</th><th>Pros</th><th>Cons</th></tr></thead>
+        <tbody>
+        {% for option in decision.options %}
+        <tr{% if loop.first %} class="chosen"{% endif %}>
+          <td><span class="strong">{{ option.choice }}</span>{% if loop.first %}<div style="margin-top: 4px">{{ ui.pill("What this run did", "green") }}</div>{% endif %}</td>
+          <td>{{ option.pros }}</td>
+          <td>{{ option.cons }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  <div data-tabs>
+    <div class="tablist" role="tablist">
+      {% if result and result.details %}<button type="button" role="tab" data-tab="details">Details</button>{% endif %}
+      <button type="button" role="tab" data-tab="changes">Changes<span class="count">{{ files|length }}</span></button>
+      <button type="button" role="tab" data-tab="prompt">Prompt</button>
+      <button type="button" role="tab" data-tab="output">Agent output</button>
+    </div>
+    {% if result and result.details %}
+    <section class="panel" data-panel="details">
+      <h2 class="panel-title">Details</h2>
+      <div class="card card-body prose">{{ result.details }}</div>
+    </section>
+    {% endif %}
+    <section class="panel" data-panel="changes">
+      <h2 class="panel-title">Changes</h2>
+      {% if files %}
+      <div class="row" style="margin-bottom: 10px">{% for file in files %}<span class="chip mono">{{ file }}</span>{% endfor %}</div>
+      <pre class="code diff">{{ diff|diff }}</pre>
+      {% else %}<div class="card empty">This run changed no files.</div>{% endif %}
+    </section>
+    <section class="panel" data-panel="prompt">
+      <h2 class="panel-title">Prompt</h2>
+      <pre class="code">{{ prompt or "(not recorded)" }}</pre>
+    </section>
+    <section class="panel" data-panel="output">
+      <h2 class="panel-title">Agent output</h2>
+      <pre class="code">{{ output or "(empty)" }}</pre>
+      {% if stderr %}<p class="small muted" style="margin: 12px 0 6px">Error output</p><pre class="code">{{ stderr }}</pre>{% endif %}
+    </section>
+  </div>
+</div>
 {% endblock %}

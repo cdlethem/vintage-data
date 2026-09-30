@@ -1,23 +1,38 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Evals{% endblock %}
 {% block content %}
-<h1>Prompt evals</h1>
-<p class="muted">Each eval run replays recorded cases against the current prompts and has a judge grade the result the way a person would read it.
-  Run one with <code>airflow-bots eval run --label "what changed"</code> before and after changing a prompt, then compare.</p>
-{% if not rows %}
-  <p class="muted">No eval runs yet.</p>
-{% else %}
-<table>
-  <tr><th>Started (UTC)</th><th>Label</th><th>Passed</th><th>Prompt version</th><th>Agent</th><th>Cost</th></tr>
-  {% for row in rows %}
-  <tr>
-    <td><a href="{{ base }}/evals/{{ row.id }}">{{ row.started_at[:16].replace("T", " ") }}</a></td>
-    <td>{{ row.label or "—" }}</td>
-    <td class="{{ 'good' if row.passed == row.cases else 'bad' }}">{{ row.passed }} / {{ row.cases }}</td>
-    <td><code>{{ row.prompt_hash }}</code></td>
-    <td>{{ row.agent }}</td>
-    <td>${{ "%.2f"|format(row.cost_usd or 0) }}</td>
-  </tr>
-  {% endfor %}
-</table>
-{% endif %}
+<div class="page-head">
+  <div>
+    <h1>Prompt evals</h1>
+    <p>An eval run replays recorded cases against the current prompts, and a judge grades each answer the way a person would read it.
+      Run <code>airflow-bots eval run --label "what changed"</code> before and after changing a prompt, then compare the two here.</p>
+  </div>
+</div>
+<section class="card">
+  {% if not rows %}
+  <div class="empty">No eval runs yet.</div>
+  {% else %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Started</th><th>Label</th><th>Result</th><th>Prompt version</th><th>Agent</th><th class="right">Cost</th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+    {% set ratio = (row.passed / row.cases) if row.cases else 0 %}
+    <tr data-href="{{ base }}/evals/{{ row.id }}">
+      <td class="num"><a class="title" href="{{ base }}/evals/{{ row.id }}">{{ ui.time(row.started_at) }}</a></td>
+      <td>{{ row.label or "—" }}</td>
+      <td style="min-width: 150px">
+        <div class="row">{{ ui.pill(row.passed ~ " of " ~ row.cases ~ " passed", "green" if ratio == 1 else "amber" if ratio >= 0.5 else "red") }}</div>
+      </td>
+      <td><code>{{ row.prompt_hash }}</code></td>
+      <td><code>{{ row.agent }}</code></td>
+      <td class="right num">{{ row.cost_usd|money }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+</section>
 {% endblock %}

@@ -95,10 +95,10 @@ The reasons come from two places: the agent's own judgement (`routine`, `why`) a
 
 ## The Bots page in Airflow
 
-Installing the package adds **Bots** to Airflow's navigation (an Airflow plugin, registered through the `airflow.plugins` entry point; restart the API server after installing). It serves plain HTML from the API server at `/bots/`, with no front-end build.
+Installing the package adds **Bots** to Airflow's navigation (an Airflow plugin, registered through the `airflow.plugins` entry point; restart the API server after installing). The pages are rendered by the API server at `/bots/` from HTML templates, one stylesheet and one small script, with no front-end build or dependencies. They follow Airflow's light or dark theme and its font. The script only adds comfort: saves without leaving the page, unsaved-change markers, confirmation before removing something, relative times, and a refresh of the overview every minute. With it off, everything still works as plain forms and links.
 
-- **Overview**: runs and reported spend today against the limits, each bot DAG with an on/off switch (pausing it in Airflow), open bot issues and PRs with what each needs from you, and recent agent runs.
-- **Runs**: every agent run with its outcome and cost; a run page shows the result, the decision and its options, the diff, the prompt the agent got, and its raw output.
+- **Overview**: runs and reported spend today against the limits, what is waiting on you, each bot DAG with its schedule in words, last and next run and an on/off switch (pausing it in Airflow), open bot issues and PRs with what each needs from you, and recent agent runs.
+- **Runs**: every agent run, filtered by period, kind and outcome; a run page shows the result, the decision with its options, the changed files and diff, the prompt the agent got, and its raw output.
 - **Evals**: eval runs with each case's checks and the judge's verdict per criterion.
 - **Settings**: limits, healing, scheduled jobs and agents. Each save rewrites `BOTS_CONFIG` only if the result loads cleanly and every schedule is a valid cron expression; otherwise the page explains what is wrong and the file stays as it was. Comments in the file are not kept. The last changes, with who made them, are listed on the page (from `<state_dir>/config_history.jsonl`). Airflow picks up the change on its next DAG parse. Prompt files are not edited here: change them through pull requests and compare them with evals.
 
