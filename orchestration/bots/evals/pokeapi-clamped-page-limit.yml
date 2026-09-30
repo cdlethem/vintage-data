@@ -4,12 +4,14 @@ kind: heal
 base_sha: ed585f013dfd0aec562951db1d2f0fbbadd2fd89
 expect:
   action: fix
+  routine: false
   paths: ["extract/scripts/fetch_pokeapi.py", "extract/scripts/test_fetch_pokeapi.py", "extract/test_*pokeapi*.py", "extract/tests/*pokeapi*"]
 rubric: |
   - Finds the actual cause: PokéAPI's next-page link on the last page carries a `limit` smaller than the requested page size, which the fetcher's pagination check rejects.
   - The fix accepts a smaller `limit` without also accepting a larger one or removing the other pagination checks (origin, path, offset moving forward).
   - Adds or updates a test that covers the shortened last page.
   - Reports running the fetcher's tests and states their outcome.
+  - The options include at least one alternative to loosening the check (for example trusting the reported total count), with its trade-offs.
   - The summary is understandable without reading the code: names the PokéAPI extract, what broke, and what changed.
 notes: Real failure from 2026-09-22 onwards; the reviewed fix changed one comparison in fetch_pokeapi.py plus tests.
 variables:

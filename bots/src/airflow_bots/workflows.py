@@ -91,9 +91,18 @@ def ignored(cfg: Config, dag_id: str, task_id: str) -> bool:
                for pattern in cfg.heal.ignore)
 
 
-def automerge_allowed(policy: AutoMerge, result: Result, files: list[str]) -> bool:
-    return (policy.enabled and not result.review and bool(files)
-            and all(any(fnmatch.fnmatchcase(path, pattern) for pattern in policy.paths) for path in files))
+def merge_blockers(policy: AutoMerge, result: Result, files: list[str]) -> list[str]:
+    """Plain-language reasons a fix cannot merge by itself; an empty list means it merges once CI passes."""
+    if not policy.enabled:
+        return ["Automatic merging is turned off for this bot, so every fix waits for a person."]
+    reasons = []
+    if not result.decision.routine:
+        reasons.append(f"The bot judged this a judgement call, not a routine fix: {result.decision.why}")
+    outside = [path for path in files if not any(fnmatch.fnmatchcase(path, pattern) for pattern in policy.paths)]
+    if outside:
+        reasons.append(f"It changes files outside the auto-merge allow-list ({', '.join(policy.paths)}): "
+                       + ", ".join(f"`{path}`" for path in outside))
+    return reasons
 
 
 # --------------------------------------------------------------------------- sweep
@@ -358,8 +367,7 @@ def heal_failure(env: Env, item: dict) -> dict:
             action="ask", title=f"{dag_id} › {task_id} is failing",
             summary=f"`{dag_id}` › `{task_id}` keeps failing and the bot could not finish a diagnosis in two "
                     f"attempts (last error: {run.error}). Someone needs to look at the log.",
-            details=f"```text\n{variables['log'][-3000:]}\n```",
-            question="Can you take a look at this failure?")
+            details=f"```text\n{variables['log'][-3000:]}\n```")
         return _publish(env, result, files, worktree, cfg.heal.auto_merge, facts=facts)
 
     return _run_agent(env, "heal", cfg.heal.agent, cfg.heal.prompt, variables, sha, subject, publish)
@@ -411,13 +419,18 @@ def answer_request(env: Env, item: dict) -> dict:
         labels = [label["name"] for label in issue.get("labels", [])]
         if is_pr:
             outcome = {}
-            if result.action == "fix" and files:
-                pushed = env.workspace.push(worktree, branch, result.title)
-                automerge = automerge_allowed(cfg.heal.auto_merge, result, gh.pull_files(number) or files)
-                gh.set_status(number, None if automerge else "review",
-                              [name for name in labels if name != AUTOMERGE_LABEL] + ([AUTOMERGE_LABEL] if automerge else []))
-                outcome = {"pushed": pushed}
-            gh.comment(number, _reply_text(result) + "\n\n" + reply)
+            if result.action == "fix":  # the PR's change stands (with new commits, if any): refresh its decision
+                pr_files = sorted(set(gh.pull_files(number)) | set(files))
+                if files:
+                    outcome["pushed"] = env.workspace.push(worktree, branch, result.title)
+                blockers = merge_blockers(cfg.heal.auto_merge, result, pr_files)
+                fixes = re.search(r"^Fixes #(\d+)", issue.get("body") or "", flags=re.M)
+                gh.update_issue(number, title=result.title,
+                                body=pr_body(result, blockers, int(fixes.group(1)) if fixes else None))
+                gh.set_status(number, "review" if blockers else None,
+                              [name for name in labels if name != AUTOMERGE_LABEL] + ([] if blockers else [AUTOMERGE_LABEL]))
+                outcome["automerge"] = not blockers
+            gh.comment(number, _reply_text(result, pr_updated=bool(outcome)) + "\n\n" + reply)
             return outcome
         if LABEL not in labels:
             labels.append(LABEL)
@@ -472,7 +485,7 @@ def _publish(env: Env, result: Result, files: list[str], worktree: Path, policy:
             return {"issue": target["number"], "duplicate": True}
     if result.action == "fix" and not files:
         result.details = ("_The bot reported a fix but did not change any files._\n\n" + result.details).strip()
-        result.action, result.question = "ask", result.question or "What should be done here?"
+        result.action = "ask"
     if result.action == "none" and issue is not None:
         return {"issue": issue["number"]}  # a plain answer; the reply comment carries it
     status = {"fix": "review", "wait": "waiting", "ask": "question", "none": "waiting"}[result.action]
@@ -502,24 +515,65 @@ def _publish(env: Env, result: Result, files: list[str], worktree: Path, policy:
 
 def _open_pull(env: Env, result: Result, files: list[str], worktree: Path, policy: AutoMerge,
                issue_number: int | None) -> dict:
-    automerge = automerge_allowed(policy, result, files)
+    blockers = merge_blockers(policy, result, files)
     branch = f"bots/{issue_number or now().strftime('%Y%m%d%H%M')}-{slug(result.title)}"
     message = result.title + (f"\n\nFixes #{issue_number}" if issue_number else "")
     env.workspace.push(worktree, branch, message)
-    body = "\n\n".join(part for part in [
-        result.summary, f"Fixes #{issue_number}" if issue_number else "", result.details, "---",
-        ("This will merge automatically once all checks pass. Remove the `bots:automerge` label to stop that."
-         if automerge else "Please review before merging. Comment `/bot <request>` to have me change it."),
-    ] if part)
-    pr = env.github.create_pull(branch, env.cfg.base_branch, result.title, body,
-                                [LABEL, AUTOMERGE_LABEL if automerge else STATUS_LABELS["review"]])
-    return {"pull": pr["number"], "branch": branch, "automerge": automerge}
+    pr = env.github.create_pull(branch, env.cfg.base_branch, result.title, pr_body(result, blockers, issue_number),
+                                [LABEL, STATUS_LABELS["review"] if blockers else AUTOMERGE_LABEL])
+    return {"pull": pr["number"], "branch": branch, "automerge": not blockers}
 
 
-def status_line(status: str, pr: int | None, failure: bool) -> str:
+def pr_body(result: Result, blockers: list[str], issue_number: int | None) -> str:
+    """What a reviewer reads: why it cannot merge by itself, the decision, the options and their trade-offs."""
+    decision = result.decision
+    parts = [result.summary]
+    if issue_number:
+        parts.append(f"Fixes #{issue_number}")
+    if blockers:
+        parts += [
+            "## Your decision",
+            "**Why this can't merge on its own:**\n" + "\n".join(f"- {reason}" for reason in blockers),
+            f"**The decision:** {decision.question}",
+            decision_table(decision, "this PR"),
+            "Merge this PR to go with ✅. To go another way, comment `/bot` with the option you want "
+            "(or anything else) and I'll rework the PR.",
+        ]
+    else:
+        parts += [
+            "## Merges automatically once checks pass",
+            f"Routine change: {decision.why}\n\nRemove the `bots:automerge` label to stop the merge.",
+            f"<details><summary>Options considered</summary>\n\n**{decision.question}**\n\n"
+            f"{decision_table(decision, 'this PR')}\n\n</details>",
+        ]
+    if result.details:
+        parts += ["## Details", result.details]
+    return "\n\n".join(parts)
+
+
+def decision_table(decision: agent.Decision, chosen_label: str) -> str:
+    def cell(text: str) -> str:
+        return text.replace("|", "\\|").replace("\n", "<br>")
+    rows = ["| | Option | Pros | Cons |", "|---|---|---|---|"]
+    rows += [f"| {'✅ ' + chosen_label if index == 0 else ''} | {cell(option.choice)} | {cell(option.pros)} "
+             f"| {cell(option.cons)} |" for index, option in enumerate(decision.options)]
+    return "\n".join(rows)
+
+
+def decision_block(decision: agent.Decision | None) -> list[str]:
+    """For an `ask`: the question, why it needs a person, and the options with the recommendation marked."""
+    if decision is None:
+        return ["", "**Decision needed:** someone has to look at this; see the details below."]
+    return ["", f"**Decision needed:** {decision.question}", "", f"**Why it needs you:** {decision.why}", "",
+            decision_table(decision, "recommended"), "",
+            "Reply with `/bot` and your choice (or anything else) and I'll carry on."]
+
+
+def status_line(status: str, pr: int | None, failure: bool, question: str | None = None) -> str:
     return {
-        "fixing": f"🔧 Fix in #{pr}; merges automatically once checks pass.",
-        "review": f"👀 Fix in #{pr}; waiting for your review." if pr else "👀 Waiting for your review.",
+        "fixing": f"🔧 Fix in #{pr}; routine, so it merges automatically once checks pass.",
+        "review": (f"👀 Fix in #{pr} needs your decision: {question}" if pr and question else
+                   f"👀 Fix in #{pr}; waiting for your review." if pr else "👀 Waiting for your review."),
         "waiting": "⏳ Nothing to change in the code right now. This closes by itself once the task is healthy again."
                    if failure else "⏳ Nothing to do right now.",
         "question": "❓ Needs a decision from you (below).",
@@ -527,12 +581,12 @@ def status_line(status: str, pr: int | None, failure: bool) -> str:
 
 
 def issue_body(result: Result, status: str, task: str | None, issue_keys: list[str], pr: int | None = None) -> str:
-    lines = [result.summary, "", f"**Status:** {status_line(status, pr, task is not None)}"]
+    question = result.decision.question if result.decision else None
+    lines = [result.summary, "", f"**Status:** {status_line(status, pr, task is not None, question)}"]
     if task:
         lines.append(task)
-    if result.action == "ask" and result.question:
-        lines += ["", f"**Decision needed:** {result.question}",
-                  "", "Reply with `/bot <your answer>` and I'll carry on."]
+    if result.action == "ask":
+        lines += decision_block(result.decision)
     if result.details:
         lines += ["", "<details><summary>Details</summary>", "", result.details, "", "</details>"]
     lines += ["", *(key_marker(key) for key in issue_keys)]
@@ -549,10 +603,12 @@ def _existing_task_line(body: str) -> str | None:
     return match.group(0) if match else None
 
 
-def _reply_text(result: Result) -> str:
+def _reply_text(result: Result, pr_updated: bool = False) -> str:
     text = result.summary
-    if result.action == "ask" and result.question:
-        text += f"\n\n**Question:** {result.question}"
+    if pr_updated:
+        text += "\n\nThe pull request description now shows the current decision and options."
+    elif result.action == "ask":
+        text += "\n" + "\n".join(decision_block(result.decision))
     if result.details:
         text += f"\n\n<details><summary>Details</summary>\n\n{result.details}\n\n</details>"
     return text

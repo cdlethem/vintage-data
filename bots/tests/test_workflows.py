@@ -1,12 +1,14 @@
+import json
 import sys
 from contextlib import contextmanager
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
 
 from airflow_bots import config, github, ledger, workflows
-from airflow_bots.agent import Result
+from airflow_bots.agent import Decision, Option, Result
 
 NOW = datetime.now(timezone.utc)
 
@@ -43,8 +45,8 @@ class FakeAirflow:
 
 
 class FakeWorkspace:
-    def __init__(self, root):
-        self.root = root
+    def __init__(self, root, changed=()):
+        self.root, self.changed, self.pushed = root, list(changed), []
 
     def fetch(self, branch):
         return "base"
@@ -54,7 +56,11 @@ class FakeWorkspace:
         yield self.root
 
     def changes(self, worktree, sha):
-        return [], ""
+        return self.changed, "diff" if self.changed else ""
+
+    def push(self, worktree, branch, message):
+        self.pushed.append(branch)
+        return "newsha"
 
     def files(self, sha):
         return {"dags/x.py"}
@@ -90,6 +96,9 @@ class FakeGitHub:
 
     def issue(self, number):
         return next(i for i in self.open_issues + self.closed if i["number"] == number)
+
+    def pull_files(self, number):
+        return []
 
     def __getattr__(self, name):  # every write is recorded
         return lambda *args, **kwargs: self.writes.append((name, args, kwargs)) or {"number": 99}
@@ -259,15 +268,36 @@ def test_fix_without_changes_becomes_a_question(cfg):
     assert not any(name == "create_pull" for name, _, _ in gh.writes)
 
 
-@pytest.mark.parametrize("review, files, allowed", [
-    (False, ["extract/fetch.py"], True),
-    (True, ["extract/fetch.py"], False),
-    (False, ["extract/fetch.py", "orchestration/dags/x.py"], False),
-    (False, [], False),
+def decision(routine=False):
+    return Decision(question="Should the fetcher accept a shorter last page?", why="It loosens a guard.",
+                    routine=routine, options=[Option("Accept it", "keeps data flowing", "looser check"),
+                                              Option("Leave the check", "strict", "task stays broken")])
+
+
+@pytest.mark.parametrize("routine, files, reasons", [
+    (True, ["extract/fetch.py"], []),
+    (False, ["extract/fetch.py"], ["judgement call"]),
+    (True, ["extract/fetch.py", "orchestration/dags/x.py"], ["outside the auto-merge allow-list"]),
+    (False, ["orchestration/dags/x.py"], ["judgement call", "outside the auto-merge allow-list"]),
 ])
-def test_automerge_policy(cfg, review, files, allowed):
-    result = Result(action="fix", title="t", summary="s", review=review)
-    assert workflows.automerge_allowed(cfg.heal.auto_merge, result, files) is allowed
+def test_a_fix_merges_by_itself_only_when_routine_and_on_the_allow_list(cfg, routine, files, reasons):
+    result = Result(action="fix", title="t", summary="s", decision=decision(routine))
+    blockers = workflows.merge_blockers(cfg.heal.auto_merge, result, files)
+    assert len(blockers) == len(reasons) and all(r in b for r, b in zip(reasons, blockers))
+    disabled = config.AutoMerge(enabled=False, paths=("**",))
+    assert "turned off" in workflows.merge_blockers(disabled, result, files)[0]
+
+
+def test_a_pr_that_needs_review_says_why_what_to_decide_and_the_trade_offs(cfg):
+    result = Result(action="fix", title="t", summary="PokéAPI fails.", details="evidence", decision=decision())
+    body = workflows.pr_body(result, workflows.merge_blockers(cfg.heal.auto_merge, result, ["dags/x.py"]), 7)
+    why, question, table = body.index("It loosens a guard."), body.index("Should the fetcher"), body.index("| Option |")
+    assert body.index("Fixes #7") < why < question < table < body.index("## Details")
+    assert "`dags/x.py`" in body
+    assert "| ✅ this PR | Accept it | keeps data flowing | looser check |" in body
+    assert "|  | Leave the check | strict | task stays broken |" in body
+    routine = replace(result, decision=decision(routine=True))
+    assert "Merges automatically" in workflows.pr_body(routine, [], 7)
 
 
 def test_daily_limits_stop_new_runs(cfg):
@@ -333,3 +363,25 @@ def test_host_paths_are_mapped_into_the_repository():
     assert workflows.locate("/srv/deploy/orchestration/dags/extract_dags.py", files) == (
         "orchestration/dags/extract_dags.py", "/srv/deploy")
     assert workflows.locate("/opt/airflow/dags/other.py", files) == ("/opt/airflow/dags/other.py", None)
+
+
+def test_a_bot_change_on_a_pr_rewrites_its_description_to_the_new_decision(cfg, monkeypatch, tmp_path):
+    answer = {"action": "fix", "title": "Keep the strict check, stop at the reported total", "summary": "Reworked.",
+              "decision": {"question": "Stop at the reported total instead?", "why": "Small, verified, same data.",
+                           "routine": True, "options": [
+                               {"choice": "Stop at the total", "pros": "strict", "cons": "trusts count"},
+                               {"choice": "Accept a short page", "pros": "simple", "cons": "looser"}]}}
+    failing_agent(monkeypatch, f"print({json.dumps(json.dumps(answer))})")
+    pr_issue = {"number": 8, "title": "old", "body": "old summary\n\nFixes #5\n\n## Your decision", "user": {"login": "bot"},
+                "labels": [{"name": "bots"}, {"name": "bots:review"}], "pull_request": {}}
+    gh = FakeGitHub(open_issues=[pr_issue], prs={8: {"head": {"ref": "bots/5-pokeapi"}}})
+    workspace = FakeWorkspace(tmp_path, changed=["extract/fetch.py"])
+    env = workflows.Env(cfg, gh, workspace)
+    item = {"kind": "request", "number": 8, "comment_id": 77, "author": "sam", "request": "go with the total"}
+    assert workflows.answer_request(env, item)["automerge"] is True
+    assert workspace.pushed == ["bots/5-pokeapi"]
+    fields = next(kwargs for name, args, kwargs in gh.writes if name == "update_issue" and args == (8,))
+    assert fields["title"] == answer["title"] and "Fixes #5" in fields["body"]
+    assert "Merges automatically" in fields["body"] and "Stop at the total" in fields["body"]
+    assert ("set_status", (8, None, ["bots", "bots:review", "bots:automerge"]), {}) in gh.writes
+    assert any(name == "comment" and "bots:reply-to=77" in args[1] for name, args, _ in gh.writes)

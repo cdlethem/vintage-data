@@ -1,0 +1,123 @@
+# Captured from run 20260929T224508-extract-uk-parliament-procedural-activity-run. The bot answered: fix - UK Parliament procedural activity extract fails on transient upstream 500s
+id: uk-parliament-intermittent-500s
+kind: heal
+base_sha: 3e3df3357738b38adf6f8a8d9c0136bf112ae42c
+expect:
+  action: [fix, ask]
+  routine: false
+  paths: ["extract/scripts/*uk_parliament*", "extract/tests/*uk_parliament*", "extract/test_*uk_parliament*"]
+rubric: |
+  - Identifies that the API intermittently returns HTTP 500 (and stalls) while the fetcher only retried a narrower set of errors.
+  - Any retry it adds is bounded in attempts and total time, so a sustained outage still fails the run visibly.
+  - The options weigh retrying transient errors inside the run against letting the run fail and relying on the next scheduled run.
+notes: Flapping upstream on 2026-09-29; the bot proposed widening the fetcher's bounded retries (PR #231).
+variables:
+  dag_id: extract__uk_parliament_procedural_activity
+  task_id: run
+  dag_file: orchestration/dags/extract_dags.py
+  pattern: 'It fails intermittently: 15 of its 96 runs in the last 24 hours failed, in 3 separate episodes, and its latest
+    run succeeded. Find out why some runs fail.'
+  log: |-
+    ::group::Log message source details
+    orchestration/airflow_home/logs/dag_id=extract__uk_parliament_procedural_activity/run_id=scheduled__2026-09-29T22:04:00+00:00/task_id=run/attempt=2.log
+    ::endgroup::
+    2026-09-29T22:09:12.604886Z INFO ::group::Pre Execute
+    2026-09-29T22:09:12.614034Z INFO DAG bundles loaded: dags-folder
+    2026-09-29T22:09:12.614334Z INFO Filling up the DagBag from orchestration/dags/extract_dags.py
+    2026-09-29T22:09:12.729717Z INFO Worker startup parse complete
+    2026-09-29T22:09:12.745198Z INFO ::endgroup::
+    2026-09-29T22:09:23.274262Z INFO stderr from fetch_uk_parliament_procedural_activity.py:
+    Fetching UK Parliament BusinessItems since 2026-09-24T23:00:00Z
+    Traceback (most recent call last):
+      File "extract/scripts/fetch_uk_parliament_procedural_activity.py", line 102, in request_json
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+             ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 189, in urlopen
+        return opener.open(url, data, timeout)
+               ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 495, in open
+        response = meth(req, response)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 604, in http_response
+        response = self.parent.error(
+            'http', request, response, code, msg, hdrs)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 533, in error
+        return self._call_chain(*args)
+               ~~~~~~~~~~~~~~~~^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 466, in _call_chain
+        result = func(*args)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 613, in http_error_default
+        raise HTTPError(req.full_url, code, msg, hdrs, fp)
+    urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+    The above exception was the direct cause of the following exception:
+
+    Traceback (most recent call last):
+      File "extract/scripts/fetch_uk_parliament_procedural_activity.py", line 306, in <module>
+        main()
+        ~~~~^^
+      File "extract/scripts/fetch_uk_parliament_procedural_activity.py", line 281, in main
+        rows = collect(since, args.timeout)
+      File "extract/scripts/fetch_uk_parliament_procedural_activity.py", line 208, in collect
+        document = request_json(endpoint_url(since, skip), timeout)
+      File "extract/scripts/fetch_uk_parliament_procedural_activity.py", line 112, in request_json
+        raise RuntimeError(http_error_message(url, error.code, body)) from error
+    RuntimeError: GET https://api.parliament.uk/odata/BusinessItem?%24select=LocalId%2CLayingDate%2CWithdrawalDate%2CBusinessItemDate&%24orderby=LayingDate+asc%2CLocalId+asc&%24top=100&%24skip=0&%24filter=LayingDate+ge+2026-09-24T23%3A00%3A00Z returned HTTP 500; response body omitted (0 bytes read)
+    2026-09-29T22:09:23.274917Z ERROR Task failed with exception
+      RuntimeError:
+        exception_type: RuntimeError
+        exit_status: 1
+        message: fetch_uk_parliament_procedural_activity.py exited 1 after 0 records
+        stderr: Fetching UK Parliament BusinessItems since 2026-09-24T23:00:00Z
+    Traceback (most recent call last):
+      File "extract/scripts/fetch_uk_parliament_procedural_activity.py", line 102, in request_json
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+             ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 189, in urlopen
+        return opener.open(url, data, timeout)
+               ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 495, in open
+        response = meth(req, response)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 604, in http_response
+        response = self.parent.error(
+            'http', request, response, code, msg, hdrs)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 533, in error
+        return self._call_chain(*args)
+               ~~~~~~~~~~~~~~~~^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 466, in _call_chain
+        result = func(*args)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 613, in http_error_default
+        raise HTTPError(req.full_url, code, msg, hdrs, fp)
+    urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+
+    The above exception was the direct cause of the following exception:
+
+    Traceback (most recent call last):
+      File "extract/scripts/fetch_uk_parliament_procedural_activity.py", line 306, in <module>
+        main()
+        ~~~~^^
+      File "extract/scripts/fetch_uk_parliament_procedural_activity.py", line 281, in main
+        rows = collect(since, args.timeout)
+      File "extract/scripts/fetch_uk_parliament_procedural_activity.py", line 208, in collect
+        document = request_json(endpoint_url(since, skip), timeout)
+      File "extract/scripts/fetch_uk_parliament_procedural_activity.py", line 112, in request_json
+        raise RuntimeError(http_error_message(url, error.code, body)) from error
+    RuntimeError: GET https://api.parliament.uk/odata/BusinessItem?%24select=LocalId%2CLayingDate%2CWithdrawalDate%2CBusinessItemDate&%24orderby=LayingDate+asc%2CLocalId+asc&%24top=100&%24skip=0&%24filter=LayingDate+ge+2026-09-24T23%3A00%3A00Z returned HTTP 500; response body omitted (0 bytes read)
+        traceback: RuntimeError: fetch_uk_parliament_procedural_activity.py exited 1 after 0 records
+
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:1579 in _run_task_and_map_outcome
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:197 in wrapper
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:2234 in _execute_task
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:197 in wrapper
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:2187 in _run_execute_callable
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/bases/operator.py:445 in wrapper
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/providers/standard/operators/python.py:231 in execute
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/providers/standard/operators/python.py:254 in execute_callable
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/callback_runner.py:97 in run
+        at orchestration/include/extract_runner.py:280 in run
+    2026-09-29T22:09:23.275065Z INFO ::group::Post Execute
+    2026-09-29T22:09:23.276622Z INFO ::endgroup::
+  open_issues: |-
+    - #224 Smithsonian volcanism extract fails: WFS server resets connections
+    - #223 Europe PMC extract failed: temporary upstream 503 outage
+    - #221 CelesTrak Socrates extract failing: celestrak.org not accepting connections
+    - #220 PokéAPI extract fails: upstream clamps last page size in pagination links

@@ -22,13 +22,32 @@ ACTIONS = ("fix", "wait", "ask", "none")
 
 
 @dataclass
+class Option:
+    choice: str
+    pros: str
+    cons: str
+
+
+@dataclass
+class Decision:
+    """The judgement call behind a fix or a question, laid out for a person."""
+    question: str               # the one thing a person has to decide
+    why: str                    # why the bot should not decide it alone (or, if routine, why no judgement is involved)
+    options: list[Option]       # real alternatives; the first is what the PR does / what the bot recommends
+    routine: bool = False       # fix only: no judgement involved, may merge automatically
+
+    @property
+    def chosen(self) -> Option:
+        return self.options[0]
+
+
+@dataclass
 class Result:
     action: str
     title: str
     summary: str
     details: str = ""
-    question: str = ""
-    review: bool = True
+    decision: Decision | None = None
     duplicate_of: int | None = None
 
 
@@ -73,15 +92,35 @@ def parse_result(text: str) -> Result:
     if not title or not summary:
         raise ValueError("result needs a title and a summary")
     duplicate = data.get("duplicate_of")
+    decision = parse_decision(data.get("decision")) if action in ("fix", "ask") else None
     return Result(
         action=action,
         title=title[:120],
         summary=summary,
         details=str(data.get("details") or "").strip(),
-        question=str(data.get("question") or "").strip(),
-        review=bool(data.get("review", True)),
+        decision=decision,
         duplicate_of=int(duplicate) if isinstance(duplicate, (int, str)) and str(duplicate).isdigit() else None,
     )
+
+
+def parse_decision(data: object) -> Decision:
+    """A fix or a question must lay out its decision completely; anything less is an unusable result."""
+    if not isinstance(data, dict):
+        raise ValueError("fix and ask need a decision object")
+    question, why = str(data.get("question") or "").strip(), str(data.get("why") or "").strip()
+    if not question or not why:
+        raise ValueError("decision needs a question and a why")
+    options = []
+    for item in data.get("options") or []:
+        if not isinstance(item, dict):
+            raise ValueError("each decision option must be an object")
+        option = Option(*(str(item.get(k) or "").strip() for k in ("choice", "pros", "cons")))
+        if not (option.choice and option.pros and option.cons):
+            raise ValueError("each option needs a choice, pros and cons")
+        options.append(option)
+    if len(options) < 2:
+        raise ValueError("decision needs at least two options")
+    return Decision(question=question, why=why, options=options, routine=data.get("routine") is True)
 
 
 def last_json_object(text: str) -> dict | None:
@@ -107,7 +146,7 @@ def run(agent: Agent, prompt: str, workdir: Path, run_dir: Path, parse=None) -> 
     prompt_file = run_dir / "prompt.md"
     prompt_file.write_text(prompt)
     values = {"prompt": prompt, "prompt_file": str(prompt_file), "workdir": str(workdir), "run_dir": str(run_dir)}
-    argv = [part.format(**values) for part in agent.command]
+    argv = [_fill(part, values) for part in agent.command]
     uses_stdin = not any("{prompt" in part for part in agent.command)
     env = {name: os.environ[name] for name in agent.env if name in os.environ}
 
@@ -145,6 +184,13 @@ def run(agent: Agent, prompt: str, workdir: Path, run_dir: Path, parse=None) -> 
     return outcome
 
 
+def _fill(part: str, values: dict) -> str:
+    """Replace the known {placeholders}; any other braces in a command stay literal."""
+    for name, value in values.items():
+        part = part.replace("{" + name + "}", value)
+    return part
+
+
 def _usage(kind: str, stdout: str, run_dir: Path) -> tuple[str, float | None, int]:
     """Return (final message text, cost in USD or None, total tokens)."""
     if kind == "claude":
@@ -158,20 +204,26 @@ def _usage(kind: str, stdout: str, run_dir: Path) -> tuple[str, float | None, in
         except (ValueError, AttributeError):
             return stdout, None, 0
     if kind == "omp":
-        # `omp -p --session-dir {run_dir}/session` writes JSONL records carrying usage.
-        cost, tokens, seen = 0.0, 0, False
+        # `omp -p --session-dir {run_dir}/session` writes JSONL records carrying usage and every message.
+        # Models sometimes give their answer in an earlier message and end with a remark, so the text
+        # searched for the result is the whole assistant transcript, not only the final message on stdout.
+        cost, tokens, seen, said = 0.0, 0, False, []
         for path in sorted((run_dir / "session").rglob("*.jsonl")):
             for line in path.read_text().splitlines():
                 try:
                     record = json.loads(line)
                 except ValueError:
                     continue
-                usage = record.get("usage") or (record.get("message") or {}).get("usage")
+                message = record.get("message") or {}
+                if message.get("role") == "assistant" and isinstance(message.get("content"), list):
+                    said += [part.get("text", "") for part in message["content"]
+                             if isinstance(part, dict) and part.get("type") == "text"]
+                usage = record.get("usage") or message.get("usage")
                 if not isinstance(usage, dict):
                     continue
                 seen = True
                 tokens += int(usage.get("totalTokens") or 0)
                 total = (usage.get("cost") or {}).get("total") if isinstance(usage.get("cost"), dict) else None
                 cost += float(total or 0)
-        return stdout, (cost if seen else None), tokens
+        return "\n".join(said) or stdout, (cost if seen else None), tokens
     return stdout, None, 0

@@ -19,7 +19,7 @@ import json
 import sqlite3
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -27,7 +27,7 @@ import yaml
 
 from . import agent
 from .config import PACKAGE_PROMPTS, Config
-from .workflows import build_prompt, slug
+from .workflows import build_prompt, issue_body, merge_blockers, pr_body, slug
 from .workspace import Workspace
 
 SCHEMA = """
@@ -115,6 +115,9 @@ def check(expect: dict, result: agent.Result | None, files: list[str]) -> dict:
         wanted = expect["action"] if isinstance(expect["action"], list) else [expect["action"]]
         got = result.action if result else None
         checks["action"] = (got in wanted, f"expected {'/'.join(wanted)}, got {got}")
+    if "routine" in expect:
+        got = result.decision.routine if result and result.decision else None
+        checks["routine"] = (got is expect["routine"], f"expected routine={expect['routine']}, got {got}")
     if "paths" in expect:
         outside = [f for f in files if not any(fnmatch.fnmatchcase(f, p) for p in expect["paths"])]
         checks["paths"] = (not outside, f"changed outside expected paths: {outside}" if outside else "ok")
@@ -124,6 +127,24 @@ def check(expect: dict, result: agent.Result | None, files: list[str]) -> dict:
     return checks
 
 
+def as_seen(cfg: Config, case: Case, result: agent.Result, files: list[str]) -> str:
+    """The pull request or issue text a person would read, rendered exactly as production does."""
+    if result.action == "fix" and files:
+        policy = cfg.jobs[case.kind.split(":", 1)[1]].auto_merge if case.kind.startswith("job:") else cfg.heal.auto_merge
+        return pr_body(result, merge_blockers(policy, result, files), issue_number=None)
+    shown = replace(result, action="ask") if result.action == "fix" else result
+    status = {"ask": "question", "wait": "waiting", "none": "waiting"}[shown.action]
+    return issue_body(shown, status, None, [])
+
+
+def rubric_for(case: Case, result: agent.Result) -> str:
+    """The case's own rubric plus the standing criteria for any fix or question that asks a person to decide."""
+    parts = [case.rubric] if case.rubric else []
+    if result.decision is not None:
+        parts.append((PACKAGE_PROMPTS / "decision_rubric.md").read_text().strip())
+    return "\n".join(parts)
+
+
 def parse_verdict(text: str) -> dict:
     data = agent.last_json_object(text)
     if not data or not isinstance(data.get("criteria"), list) or not data["criteria"]:
@@ -131,10 +152,11 @@ def parse_verdict(text: str) -> dict:
     return data
 
 
-def judge(cfg: Config, case: Case, prompt: str, result: agent.Result, diff: str, run_dir: Path) -> agent.Run:
+def judge(cfg: Config, rubric: str, prompt: str, result: agent.Result, seen: str, diff: str,
+          run_dir: Path) -> agent.Run:
     task = prompt if len(prompt) <= 12000 else prompt[:12000] + "\n...(truncated)"
     judge_prompt = agent.render(
-        (PACKAGE_PROMPTS / "judge.md").read_text(), task=task, rubric=case.rubric,
+        (PACKAGE_PROMPTS / "judge.md").read_text(), task=task, rubric=rubric, seen=seen,
         output=json.dumps(asdict(result), indent=2), diff=(diff[:30000] or "(no changes)"))
     with tempfile.TemporaryDirectory(prefix="bots-judge-") as scratch:
         return agent.run(cfg.agent(cfg.eval_judge), judge_prompt, Path(scratch), run_dir / "judge", parse=parse_verdict)
@@ -150,8 +172,11 @@ def run_case(cfg: Config, workspace: Workspace, case: Case, attempt: int, run_id
     (run_dir / "diff.patch").write_text(diff)
     checks = check(case.expect, bot.result, files)
     criteria, error, cost = [], bot.error, bot.cost_usd or 0.0
-    if bot.ok and case.rubric:
-        verdict = judge(cfg, case, prompt, bot.result, diff, run_dir)
+    rubric = rubric_for(case, bot.result) if bot.ok else ""
+    if rubric:
+        seen = as_seen(cfg, case, bot.result, files)
+        (run_dir / "seen.md").write_text(seen)
+        verdict = judge(cfg, rubric, prompt, bot.result, seen, diff, run_dir)
         cost += verdict.cost_usd or 0.0
         if verdict.ok:
             criteria = verdict.result["criteria"]

@@ -1,0 +1,182 @@
+# Captured from run 20260930T001509-extract-open-library-run. The bot answered: fix - Open Library extract fails: no retries on flapping upstream
+id: open-library-flapping-upstream
+kind: heal
+base_sha: 3e3df3357738b38adf6f8a8d9c0136bf112ae42c
+expect:
+  action: [fix, ask]
+  routine: false
+  paths: ["extract/scripts/*open_library*", "extract/test_*open_library*", "extract/tests/*open_library*"]
+rubric: |
+  - Recognises the upstream flapping: connection resets, timeouts and intermittent 404s on the same URL.
+  - If the change retries on HTTP 404, the text explains why a 404 is transient here and names the risk of hiding a real removal; the options include not retrying 404s.
+  - Any retry it adds is bounded in attempts and backoff.
+notes: Flapping upstream on 2026-09-30; the bot proposed adding bounded retries to the fetcher (PR #233).
+variables:
+  dag_id: extract__open_library
+  task_id: run
+  dag_file: orchestration/dags/extract_dags.py
+  pattern: 'It has failed on every run since 2026-09-30 00:11 UTC (2 failed runs in the last 24 hours). Last success: 2026-09-29
+    23:51 UTC.'
+  log: |-
+    ::group::Log message source details
+    orchestration/airflow_home/logs/dag_id=extract__open_library/run_id=scheduled__2026-09-30T00:06:00+00:00/task_id=run/attempt=2.log
+    ::endgroup::
+    2026-09-30T00:11:02.960694Z INFO ::group::Pre Execute
+    2026-09-30T00:11:02.970091Z INFO DAG bundles loaded: dags-folder
+    2026-09-30T00:11:02.970369Z INFO Filling up the DagBag from orchestration/dags/extract_dags.py
+    2026-09-30T00:11:03.082663Z INFO Worker startup parse complete
+    2026-09-30T00:11:03.100632Z INFO ::endgroup::
+    2026-09-30T00:11:33.154486Z INFO stderr from fetch_open_library.py:
+    Traceback (most recent call last):
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 1318, in do_open
+        h.request(req.get_method(), req.selector, req.data, headers,
+        ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                  encode_chunked=req.has_header('Transfer-encoding'))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/http/client.py", line 1386, in request
+        self._send_request(method, url, body, headers, encode_chunked)
+        ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/http/client.py", line 1432, in _send_request
+        self.endheaders(body, encode_chunked=encode_chunked)
+        ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/http/client.py", line 1381, in endheaders
+        self._send_output(message_body, encode_chunked=encode_chunked)
+        ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/http/client.py", line 1141, in _send_output
+        self.send(msg)
+        ~~~~~~~~~^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/http/client.py", line 1085, in send
+        self.connect()
+        ~~~~~~~~~~~~^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/http/client.py", line 1520, in connect
+        super().connect()
+        ~~~~~~~~~~~~~~~^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/http/client.py", line 1051, in connect
+        self.sock = self._create_connection(
+                    ~~~~~~~~~~~~~~~~~~~~~~~^
+            (self.host,self.port), self.timeout, self.source_address)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/socket.py", line 868, in create_connection
+        raise exceptions[0]
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/socket.py", line 853, in create_connection
+        sock.connect(sa)
+        ~~~~~~~~~~~~^^^^
+    TimeoutError: timed out
+
+    During handling of the above exception, another exception occurred:
+
+    Traceback (most recent call last):
+      File "extract/scripts/fetch_open_library.py", line 113, in <module>
+        for rec in fetch_recent(limit=limit, kind=kind):
+                   ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+      File "extract/scripts/fetch_open_library.py", line 95, in fetch_recent
+        for r in _get(url):
+                 ~~~~^^^^^
+      File "extract/scripts/fetch_open_library.py", line 59, in _get
+        with urllib.request.urlopen(req, timeout=30) as resp:
+             ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 189, in urlopen
+        return opener.open(url, data, timeout)
+               ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 489, in open
+        response = self._open(req, data)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 506, in _open
+        result = self._call_chain(self.handle_open, protocol, protocol +
+                                  '_open', req)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 466, in _call_chain
+        result = func(*args)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 1366, in https_open
+        return self.do_open(http.client.HTTPSConnection, req,
+               ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                            context=self._context)
+                            ^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 1321, in do_open
+        raise URLError(err)
+    urllib.error.URLError: <urlopen error timed out>
+    2026-09-30T00:11:33.155195Z ERROR Task failed with exception
+      RuntimeError:
+        exception_type: RuntimeError
+        exit_status: 1
+        message: fetch_open_library.py exited 1 after 0 records
+        stderr: ... [truncated]'Transfer-encoding'))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/http/client.py", line 1386, in request
+        self._send_request(method, url, body, headers, encode_chunked)
+        ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/http/client.py", line 1432, in _send_request
+        self.endheaders(body, encode_chunked=encode_chunked)
+        ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/http/client.py", line 1381, in endheaders
+        self._send_output(message_body, encode_chunked=encode_chunked)
+        ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/http/client.py", line 1141, in _send_output
+        self.send(msg)
+        ~~~~~~~~~^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/http/client.py", line 1085, in send
+        self.connect()
+        ~~~~~~~~~~~~^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/http/client.py", line 1520, in connect
+        super().connect()
+        ~~~~~~~~~~~~~~~^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/http/client.py", line 1051, in connect
+        self.sock = self._create_connection(
+                    ~~~~~~~~~~~~~~~~~~~~~~~^
+            (self.host,self.port), self.timeout, self.source_address)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/socket.py", line 868, in create_connection
+        raise exceptions[0]
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/socket.py", line 853, in create_connection
+        sock.connect(sa)
+        ~~~~~~~~~~~~^^^^
+    TimeoutError: timed out
+
+    During handling of the above exception, another exception occurred:
+
+    Traceback (most recent call last):
+      File "extract/scripts/fetch_open_library.py", line 113, in <module>
+        for rec in fetch_recent(limit=limit, kind=kind):
+                   ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+      File "extract/scripts/fetch_open_library.py", line 95, in fetch_recent
+        for r in _get(url):
+                 ~~~~^^^^^
+      File "extract/scripts/fetch_open_library.py", line 59, in _get
+        with urllib.request.urlopen(req, timeout=30) as resp:
+             ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 189, in urlopen
+        return opener.open(url, data, timeout)
+               ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 489, in open
+        response = self._open(req, data)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 506, in _open
+        result = self._call_chain(self.handle_open, protocol, protocol +
+                                  '_open', req)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 466, in _call_chain
+        result = func(*args)
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 1366, in https_open
+        return self.do_open(http.client.HTTPSConnection, req,
+               ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                            context=self._context)
+                            ^^^^^^^^^^^^^^^^^^^^^^
+      File "/home/colin/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/lib/python3.13/urllib/request.py", line 1321, in do_open
+        raise URLError(err)
+    urllib.error.URLError: <urlopen error timed out>
+        traceback: RuntimeError: fetch_open_library.py exited 1 after 0 records
+
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:1579 in _run_task_and_map_outcome
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:197 in wrapper
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:2234 in _execute_task
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:197 in wrapper
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/task_runner.py:2187 in _run_execute_callable
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/bases/operator.py:445 in wrapper
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/providers/standard/operators/python.py:231 in execute
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/providers/standard/operators/python.py:254 in execute_callable
+        at orchestration/.venv/lib/python3.13/site-packages/airflow/sdk/execution_time/callback_runner.py:97 in run
+        at orchestration/include/extract_runner.py:280 in run
+    2026-09-30T00:11:33.155345Z INFO ::group::Post Execute
+    2026-09-30T00:11:33.156831Z INFO ::endgroup::
+  open_issues: |-
+    - #230 UK Parliament procedural activity extract fails on transient upstream 500s
+    - #224 Smithsonian volcanism extract fails: WFS server resets connections
+    - #223 Europe PMC extract failed: temporary upstream 503 outage
+    - #221 CelesTrak Socrates extract failing: celestrak.org not accepting connections
+    - #220 PokéAPI extract fails: upstream clamps last page size in pagination links
