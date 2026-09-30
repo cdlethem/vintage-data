@@ -5,9 +5,11 @@ import io
 import json
 import pathlib
 import unittest
+import urllib.error
 from unittest.mock import patch
 
 
+payload_url = "https://openlibrary.org/recentchanges.json?limit=1"
 SCRIPT = pathlib.Path(__file__).with_name("fetch_open_library.py")
 SPEC = importlib.util.spec_from_file_location("fetch_open_library", SCRIPT)
 fetch_open_library = importlib.util.module_from_spec(SPEC)
@@ -125,6 +127,90 @@ class FetchRecentTests(unittest.TestCase):
                 self.assertEqual(records[0]["n_changes"], n_changes)
                 self.assertEqual(records[0]["changed_keys"], changed_keys)
 
+
+class RetriesTests(unittest.TestCase):
+    def run_fetch(self, urlopen, **kwargs):
+        with patch.object(fetch_open_library.urllib.request, "urlopen", urlopen), \
+             patch.object(fetch_open_library.time, "sleep") as sleep:
+            records = list(fetch_open_library.fetch_recent(**kwargs))
+        return records, sleep
+
+    def test_transient_timeout_retries_then_succeeds(self):
+        payload = [event("editor")]
+        outcomes = [urllib.error.URLError(TimeoutError("timed out")), payload]
+
+        def urlopen(request, timeout):
+            outcome = outcomes.pop(0)
+            if isinstance(outcome, BaseException):
+                raise outcome
+            return FixtureResponse(json.dumps(outcome))
+
+        records, sleep = self.run_fetch(urlopen, limit=1)
+        self.assertEqual(records[0]["id"], 1)
+        self.assertEqual([call.args for call in sleep.call_args_list], [(1.0,)])
+
+    def test_persistent_failure_raises_after_bounded_attempts(self):
+        def urlopen(request, timeout):
+            raise urllib.error.URLError(TimeoutError("timed out"))
+
+        with patch.object(fetch_open_library.urllib.request, "urlopen", urlopen), \
+             patch.object(fetch_open_library.time, "sleep") as sleep:
+            with self.assertRaises(urllib.error.URLError):
+                list(fetch_open_library.fetch_recent(limit=1))
+        self.assertEqual(sleep.call_count, fetch_open_library.MAX_ATTEMPTS - 1)
+        self.assertEqual(
+            [call.args for call in sleep.call_args_list],
+            [(1.0,), (2.0,)])
+
+    def test_transient_5xx_retries_then_succeeds(self):
+        payload = [event("editor")]
+        outcomes = [urllib.error.HTTPError(payload_url, 503, "unavailable", {}, None),
+                    payload]
+
+        def urlopen(request, timeout):
+            outcome = outcomes.pop(0)
+            if isinstance(outcome, BaseException):
+                raise outcome
+            return FixtureResponse(json.dumps(outcome))
+
+        records, sleep = self.run_fetch(urlopen, limit=1)
+        self.assertEqual(records[0]["id"], 1)
+        self.assertEqual([call.args for call in sleep.call_args_list], [(1.0,)])
+
+    def test_flapping_404_retries_then_succeeds(self):
+        payload = [event("editor")]
+        outcomes = [urllib.error.HTTPError(payload_url, 404, "not found", {}, None),
+                    payload]
+
+        def urlopen(request, timeout):
+            outcome = outcomes.pop(0)
+            if isinstance(outcome, BaseException):
+                raise outcome
+            return FixtureResponse(json.dumps(outcome))
+
+        records, sleep = self.run_fetch(urlopen, limit=1)
+        self.assertEqual(records[0]["id"], 1)
+        self.assertEqual([call.args for call in sleep.call_args_list], [(1.0,)])
+
+    def test_persistent_404_raises_after_bounded_attempts(self):
+        def urlopen(request, timeout):
+            raise urllib.error.HTTPError(payload_url, 404, "not found", {}, None)
+
+        with patch.object(fetch_open_library.urllib.request, "urlopen", urlopen), \
+             patch.object(fetch_open_library.time, "sleep") as sleep:
+            with self.assertRaises(urllib.error.HTTPError):
+                list(fetch_open_library.fetch_recent(limit=1))
+        self.assertEqual(sleep.call_count, fetch_open_library.MAX_ATTEMPTS - 1)
+
+    def test_non_retryable_http_status_fails_immediately(self):
+        def urlopen(request, timeout):
+            raise urllib.error.HTTPError(payload_url, 410, "gone", {}, None)
+
+        with patch.object(fetch_open_library.urllib.request, "urlopen", urlopen), \
+             patch.object(fetch_open_library.time, "sleep") as sleep:
+            with self.assertRaises(urllib.error.HTTPError):
+                list(fetch_open_library.fetch_recent(limit=1))
+        sleep.assert_not_called()
 
 if __name__ == "__main__":
     unittest.main()
