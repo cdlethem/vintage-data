@@ -1,6 +1,6 @@
 # Grade a maintenance bot's work
 
-A bot that maintains a data pipeline was given the task below. Grade what it did against the rubric.
+A bot that maintains a data pipeline was given the task below. Grade what it did against the rubric. You have no tools and no repository: everything you may use is in this message. Do not try to look anything up; answer straight away with the verdict described at the end.
 
 ## The task it was given (may be truncated)
 

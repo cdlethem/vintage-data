@@ -419,17 +419,18 @@ def answer_request(env: Env, item: dict) -> dict:
         labels = [label["name"] for label in issue.get("labels", [])]
         if is_pr:
             outcome = {}
-            if result.action == "fix" and files:
+            if result.action == "fix":  # the PR's change stands (with new commits, if any): refresh its decision
                 pr_files = sorted(set(gh.pull_files(number)) | set(files))
-                pushed = env.workspace.push(worktree, branch, result.title)
+                if files:
+                    outcome["pushed"] = env.workspace.push(worktree, branch, result.title)
                 blockers = merge_blockers(cfg.heal.auto_merge, result, pr_files)
                 fixes = re.search(r"^Fixes #(\d+)", issue.get("body") or "", flags=re.M)
                 gh.update_issue(number, title=result.title,
                                 body=pr_body(result, blockers, int(fixes.group(1)) if fixes else None))
                 gh.set_status(number, "review" if blockers else None,
                               [name for name in labels if name != AUTOMERGE_LABEL] + ([] if blockers else [AUTOMERGE_LABEL]))
-                outcome = {"pushed": pushed, "automerge": not blockers}
-            gh.comment(number, _reply_text(result, pushed_to_pr=bool(outcome)) + "\n\n" + reply)
+                outcome["automerge"] = not blockers
+            gh.comment(number, _reply_text(result, pr_updated=bool(outcome)) + "\n\n" + reply)
             return outcome
         if LABEL not in labels:
             labels.append(LABEL)
@@ -602,10 +603,10 @@ def _existing_task_line(body: str) -> str | None:
     return match.group(0) if match else None
 
 
-def _reply_text(result: Result, pushed_to_pr: bool = False) -> str:
+def _reply_text(result: Result, pr_updated: bool = False) -> str:
     text = result.summary
-    if pushed_to_pr:
-        text += "\n\nI pushed the change; the pull request description now shows the current decision."
+    if pr_updated:
+        text += "\n\nThe pull request description now shows the current decision and options."
     elif result.action == "ask":
         text += "\n" + "\n".join(decision_block(result.decision))
     if result.details:
