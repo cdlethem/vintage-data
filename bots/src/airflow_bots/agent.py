@@ -26,7 +26,6 @@ class Option:
     choice: str
     pros: str
     cons: str
-    chosen: bool = False
 
 
 @dataclass
@@ -34,12 +33,12 @@ class Decision:
     """The judgement call behind a fix or a question, laid out for a person."""
     question: str               # the one thing a person has to decide
     why: str                    # why the bot should not decide it alone (or, if routine, why no judgement is involved)
-    options: list[Option]       # real alternatives; exactly one is chosen (what the PR does / what the bot recommends)
+    options: list[Option]       # real alternatives; the first is what the PR does / what the bot recommends
     routine: bool = False       # fix only: no judgement involved, may merge automatically
 
     @property
     def chosen(self) -> Option:
-        return next(option for option in self.options if option.chosen)
+        return self.options[0]
 
 
 @dataclass
@@ -115,15 +114,12 @@ def parse_decision(data: object) -> Decision:
     for item in data.get("options") or []:
         if not isinstance(item, dict):
             raise ValueError("each decision option must be an object")
-        option = Option(*(str(item.get(k) or "").strip() for k in ("choice", "pros", "cons")),
-                        chosen=item.get("chosen") is True)
+        option = Option(*(str(item.get(k) or "").strip() for k in ("choice", "pros", "cons")))
         if not (option.choice and option.pros and option.cons):
             raise ValueError("each option needs a choice, pros and cons")
         options.append(option)
     if len(options) < 2:
         raise ValueError("decision needs at least two options")
-    if sum(option.chosen for option in options) != 1:
-        raise ValueError("exactly one option must be chosen")
     return Decision(question=question, why=why, options=options, routine=data.get("routine") is True)
 
 
@@ -208,20 +204,26 @@ def _usage(kind: str, stdout: str, run_dir: Path) -> tuple[str, float | None, in
         except (ValueError, AttributeError):
             return stdout, None, 0
     if kind == "omp":
-        # `omp -p --session-dir {run_dir}/session` writes JSONL records carrying usage.
-        cost, tokens, seen = 0.0, 0, False
+        # `omp -p --session-dir {run_dir}/session` writes JSONL records carrying usage and every message.
+        # Models sometimes give their answer in an earlier message and end with a remark, so the text
+        # searched for the result is the whole assistant transcript, not only the final message on stdout.
+        cost, tokens, seen, said = 0.0, 0, False, []
         for path in sorted((run_dir / "session").rglob("*.jsonl")):
             for line in path.read_text().splitlines():
                 try:
                     record = json.loads(line)
                 except ValueError:
                     continue
-                usage = record.get("usage") or (record.get("message") or {}).get("usage")
+                message = record.get("message") or {}
+                if message.get("role") == "assistant" and isinstance(message.get("content"), list):
+                    said += [part.get("text", "") for part in message["content"]
+                             if isinstance(part, dict) and part.get("type") == "text"]
+                usage = record.get("usage") or message.get("usage")
                 if not isinstance(usage, dict):
                     continue
                 seen = True
                 tokens += int(usage.get("totalTokens") or 0)
                 total = (usage.get("cost") or {}).get("total") if isinstance(usage.get("cost"), dict) else None
                 cost += float(total or 0)
-        return stdout, (cost if seen else None), tokens
+        return "\n".join(said) or stdout, (cost if seen else None), tokens
     return stdout, None, 0

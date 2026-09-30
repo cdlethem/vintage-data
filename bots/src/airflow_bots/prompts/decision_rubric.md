@@ -2,5 +2,5 @@
 - The decision is one concrete question a person can answer; it is the real judgement call behind this change, not a formality such as "should this be merged?".
 - The options are genuine alternatives a sensible engineer would weigh (including leaving things as they are when that is viable), not straw men set up to lose.
 - Every option has specific pros and cons for this pipeline (data completeness, correctness, load on the source, maintenance), not boilerplate that could be pasted onto any change.
-- The option marked as chosen is what the diff actually does (for a fix) or a recommendation that the evidence supports (for a question).
+- The option marked ✅ (listed first) is what the diff actually does (for a fix) or a recommendation that the evidence supports (for a question).
 - Whether the change is called routine is right: a fix that weakens a check, changes what data is collected or how it is read, or adds retries that could hide real failures is not routine.

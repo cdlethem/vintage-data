@@ -13,7 +13,7 @@ End your final message with one JSON object (a ```json block is fine) and nothin
     "why": "Accepting it loosens a check that guards against silently skipping records; a person should confirm that trade.",
     "routine": false,
     "options": [
-      {"choice": "Accept a smaller limit on the last page only (this PR)", "pros": "...", "cons": "...", "chosen": true},
+      {"choice": "Accept a smaller limit on the last page only", "pros": "...", "cons": "..."},
       {"choice": "Stop paginating once the reported total is reached", "pros": "...", "cons": "..."},
       {"choice": "Leave the check as it is", "pros": "...", "cons": "..."}
     ]
@@ -34,5 +34,5 @@ End your final message with one JSON object (a ```json block is fine) and nothin
   - `question`: the one judgement the outcome depends on, asked so that a person can answer it without reading the diff.
   - `why`: why this needs a person: which risk, behaviour change, or unknown you cannot settle yourself. For a routine fix, say why no judgement is involved.
   - `routine` (`fix` only): `true` only when the change is small, verified, and involves no judgement (no weakened checks, no change to what data is collected or how it is interpreted, no new retries that could hide real failures). Routine fixes may merge automatically; everything else waits for a person.
-  - `options`: at least two real alternatives a sensible engineer would consider, including leaving things as they are when that is viable. For each, concrete `pros` and `cons` for this pipeline (data completeness, correctness, load on the source, maintenance). Mark exactly one `"chosen": true`: for `fix`, the option your change implements; for `ask`, the one you recommend.
+  - `options`: at least two real alternatives a sensible engineer would consider, including leaving things as they are when that is viable. **List first the option your change implements (for `fix`) or the one you recommend (for `ask`)**; the bot marks the first option as the chosen one. For each, give concrete `pros` and `cons` for this pipeline (data completeness, correctness, load on the source, maintenance).
 - **duplicate_of**: the number of an open issue listed above that already covers the same root cause, otherwise `null`.

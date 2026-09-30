@@ -8,7 +8,7 @@ from airflow_bots.config import Agent
 
 
 DECISION = ('{"question": "Accept a shorter last page?", "why": "It loosens a guard.", "routine": false, "options": ['
-            '{"choice": "Accept it", "pros": "data flows", "cons": "looser", "chosen": true},'
+            '{"choice": "Accept it", "pros": "data flows", "cons": "looser"},'
             '{"choice": "Keep the check", "pros": "strict", "cons": "stays broken"}]}')
 
 
@@ -36,15 +36,25 @@ def with_decision(**changes):
     '{"action": "fix", "title": "t", "summary": "s"}',  # a fix must lay out its decision
     '{"action": "ask", "title": "t", "summary": "s", "decision": null}',
     with_decision(question=""),
-    with_decision(options=[{"choice": "Only one", "pros": "p", "cons": "c", "chosen": True}]),
-    with_decision(options=[{"choice": "A", "pros": "p", "cons": "c"}, {"choice": "B", "pros": "p", "cons": "c"}]),
-    with_decision(options=[{"choice": "A", "pros": "p", "cons": "c", "chosen": True},
-                           {"choice": "B", "pros": "p", "cons": "c", "chosen": True}]),
-    with_decision(options=[{"choice": "A", "pros": "p", "cons": "c", "chosen": True}, {"choice": "B", "pros": "p"}]),
+    with_decision(options=[{"choice": "Only one", "pros": "p", "cons": "c"}]),
+    with_decision(options=[{"choice": "A", "pros": "p", "cons": "c"}, {"choice": "B", "pros": "p"}]),
 ])
 def test_unusable_results_are_rejected(text):
     with pytest.raises(ValueError):
         agent.parse_result(text)
+
+
+def test_an_omp_answer_given_before_a_closing_remark_is_still_found(tmp_path):
+    """Seen live: the judge put its JSON in one message and ended with 'the verdict was already delivered'."""
+    session = tmp_path / "run" / "session"
+    session.mkdir(parents=True)
+    answer = '{"action": "none", "title": "t", "summary": "s"}'
+    messages = [{"role": "assistant", "content": [{"type": "text", "text": answer}]},
+                {"role": "assistant", "content": [{"type": "text", "text": "The answer was already given above."}]}]
+    (session / "s.jsonl").write_text("\n".join(json.dumps({"type": "message", "message": m}) for m in messages))
+    omp = Agent(command=(sys.executable, "-c", "print('The answer was already given above.')"), usage="omp")
+    run = agent.run(omp, "x", tmp_path, tmp_path / "run")
+    assert run.ok and run.result.action == "none"
 
 
 def test_render_fills_once_and_rejects_missing_values():

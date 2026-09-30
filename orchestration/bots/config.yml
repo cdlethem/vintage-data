@@ -29,6 +29,14 @@ agents:
     timeout_minutes: 120
     env: *env
     usage: omp
+  judge:
+    # Grades eval runs from the text it is given; with tools it wandered off and
+    # split its verdict across messages.
+    command: [omp, -p, --mode, text, --model, "@LOCAL", --no-title, --no-tools,
+              --session-dir, "{run_dir}/session", "{prompt}"]
+    timeout_minutes: 15
+    env: *env
+    usage: omp
 
 limits:
   daily_runs: 30
@@ -41,7 +49,7 @@ heal:
   lookback_hours: 24
   max_new_per_sweep: 2
   auto_merge:
-    enabled: true       # only when the bot says no review is needed and CI passes
+    enabled: true       # only for fixes the bot calls routine, inside these paths, with CI green
     paths: ["extract/scripts/*", "extract/sources/*", "extract/test_*.py", "extract/tests/*"]
 
 jobs:
@@ -52,4 +60,4 @@ jobs:
 
 evals:
   cases: evals
-  judge: default
+  judge: judge

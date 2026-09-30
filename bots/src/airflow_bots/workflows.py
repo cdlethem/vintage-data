@@ -554,8 +554,8 @@ def decision_table(decision: agent.Decision, chosen_label: str) -> str:
     def cell(text: str) -> str:
         return text.replace("|", "\\|").replace("\n", "<br>")
     rows = ["| | Option | Pros | Cons |", "|---|---|---|---|"]
-    rows += [f"| {'✅ ' + chosen_label if option.chosen else ''} | {cell(option.choice)} | {cell(option.pros)} "
-             f"| {cell(option.cons)} |" for option in decision.options]
+    rows += [f"| {'✅ ' + chosen_label if index == 0 else ''} | {cell(option.choice)} | {cell(option.pros)} "
+             f"| {cell(option.cons)} |" for index, option in enumerate(decision.options)]
     return "\n".join(rows)
 
 

@@ -16,7 +16,7 @@ On {{thread_kind}} #{{number}} "{{title}}", {{author}} wrote:
 
 {{open_issues}}
 
-Do what they asked. If they picked one of the options laid out earlier in the thread, implement that option and mark it as chosen in your decision. If it needs code changes, make them in this checkout and run the relevant checks. If they asked a question, answer it in `summary` and `details` (use `none` as the action when nothing else needs to happen). Stay within what was asked.
+Do what they asked. If they picked one of the options laid out earlier in the thread, implement that option and list it first in your decision. If it needs code changes, make them in this checkout and run the relevant checks. If they asked a question, answer it in `summary` and `details` (use `none` as the action when nothing else needs to happen). Stay within what was asked.
 
 {{instructions}}
 

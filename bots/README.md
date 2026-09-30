@@ -26,12 +26,12 @@ The agent is any command-line coding agent (omp, Claude Code, Codex, aider, or y
 ```json
 {"action": "fix | wait | ask | none", "title": "...", "summary": "...", "details": "...",
  "decision": {"question": "...", "why": "...", "routine": false,
-              "options": [{"choice": "...", "pros": "...", "cons": "...", "chosen": true},
+              "options": [{"choice": "...", "pros": "...", "cons": "..."},
                           {"choice": "...", "pros": "...", "cons": "..."}]},
  "duplicate_of": null}
 ```
 
-Every `fix` and every `ask` must lay out its **decision**: the one judgement the outcome depends on (`question`), why a person should make it (`why`), and at least two real options with their pros and cons, one of them marked `chosen` (what the PR does, or what the bot recommends). A result without a complete decision counts as a failed run. `routine: true` claims the fix involves no judgement at all; only then may it merge by itself.
+Every `fix` and every `ask` must lay out its **decision**: the one judgement the outcome depends on (`question`), why a person should make it (`why`), and at least two real options with their pros and cons, listing first what the PR does (or what the bot recommends). A result without a complete decision counts as a failed run. `routine: true` claims the fix involves no judgement at all; only then may it merge by itself.
 
 The bot itself commits and pushes. The agent never receives the GitHub token.
 

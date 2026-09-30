@@ -270,7 +270,7 @@ def test_fix_without_changes_becomes_a_question(cfg):
 
 def decision(routine=False):
     return Decision(question="Should the fetcher accept a shorter last page?", why="It loosens a guard.",
-                    routine=routine, options=[Option("Accept it", "keeps data flowing", "looser check", chosen=True),
+                    routine=routine, options=[Option("Accept it", "keeps data flowing", "looser check"),
                                               Option("Leave the check", "strict", "task stays broken")])
 
 
@@ -369,7 +369,7 @@ def test_a_bot_change_on_a_pr_rewrites_its_description_to_the_new_decision(cfg, 
     answer = {"action": "fix", "title": "Keep the strict check, stop at the reported total", "summary": "Reworked.",
               "decision": {"question": "Stop at the reported total instead?", "why": "Small, verified, same data.",
                            "routine": True, "options": [
-                               {"choice": "Stop at the total", "pros": "strict", "cons": "trusts count", "chosen": True},
+                               {"choice": "Stop at the total", "pros": "strict", "cons": "trusts count"},
                                {"choice": "Accept a short page", "pros": "simple", "cons": "looser"}]}}
     failing_agent(monkeypatch, f"print({json.dumps(json.dumps(answer))})")
     pr_issue = {"number": 8, "title": "old", "body": "old summary\n\nFixes #5\n\n## Your decision", "user": {"login": "bot"},
