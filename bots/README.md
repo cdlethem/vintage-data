@@ -42,7 +42,7 @@ The bot itself commits and pushes. The agent never receives the GitHub token.
 
 - `/bot <request>` works on any issue and on the bot's own PRs, from people with write access (owner, member, collaborator). The bot replies once per request.
 - A task is tracked by a hidden `<!-- bots:key=failure:<dag_id>/<task_id> -->` marker in the issue body (`flaky:` for a task that fails intermittently). A `failure:` issue counts as healthy once the latest run succeeds; a `flaky:` issue once the task has gone a full lookback window without failing. If the bot decides two failures share a root cause, the second task's marker is added to the first issue.
-- After an issue closes, failures within the next hour are treated as the old problem (a merged fix needs time to deploy). A later failure gets a new issue.
+- After an issue closes, failures within the next hour are treated as the old problem (a merged fix needs time to deploy). If the task fails again later within the lookback window, the bot reopens that issue with a comment instead of starting a new one; if a fix was tracked there, it asks you what to do next. Issues closed as "not planned" stay closed. Failures after the window get a new issue.
 - Auto-merge requires at least one CI check on the PR; with no CI configured the bot never merges.
 - A bot issue always shows the bot's current understanding at the top: after a `/bot` exchange the title and body are rewritten, and the conversation keeps the history.
 - If the agent crashes or times out, the `work` task fails in Airflow and the next sweep tries again; only a second failed attempt opens an issue asking a person to look.
