@@ -2,7 +2,8 @@
 """Tokyo MOU — current-month port-state-control detentions.
 
 Submits the public APCIS form's own month filter and extracts the detention table,
-including release date and deficiency details. The list is updated in real time. Verified
+including release date and deficiency details. The list is updated in real time; a month
+with no recorded detentions yields a valid empty run. Verified
 live 2026-09-04. Tokyo MOU terms apply. Stdlib only.
 """
 
@@ -23,6 +24,8 @@ SOURCE = "tokyo_mou_detentions"
 URL = "https://apcis.tmou.org/isss/public_apcis.php?Mode=DetList"
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 EXPECTED = ["IMO No.", "Ship Name", "Ship Flag", "Year of build", "Gross Tonnage", "Ship Type", "Classification society", "Related ROs", "Company", "Place of detention", "Date of detention", "Date of release", "Nature of deficiencies"]
+# APCIS's explicit message when a month has no recorded detentions yet (no table on the page).
+EMPTY_LIST_MARKER = "List of detentions is empty"
 
 MAX_ATTEMPTS = 3
 RETRY_DELAYS = (1, 2)
@@ -87,7 +90,9 @@ def fetch_detentions(year=None, month=None, limit: int = 1000, timeout: int = 60
     text = fetch_response(request, timeout)
     parser=Tables(); parser.feed(text)
     table=next((t for t in parser.tables if t and t[0][1:] == EXPECTED),None)
-    if table is None: raise ValueError("APCIS response is missing the detention table")
+    if table is None:
+        if EMPTY_LIST_MARKER in text: return
+        raise ValueError("APCIS response is missing the detention table")
     for cells in table[1:limit+1]:
         if len(cells) != len(EXPECTED) + 1: raise ValueError("detention row has an unexpected shape")
         row=dict(zip(EXPECTED,cells[1:])); imo=row["IMO No."]; detained=row["Date of detention"]

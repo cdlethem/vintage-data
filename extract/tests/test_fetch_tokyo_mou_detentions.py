@@ -94,6 +94,20 @@ class FetchDetentionsTests(unittest.TestCase):
         urlopen.assert_called_once()
         sleep.assert_not_called()
 
+    def test_empty_month_page_yields_no_records_without_retries(self):
+        page = (
+            "<html><body>"
+            "<form action=\"public_apcis.php?Mode=DetList\" name=\"FormToSend\" method=\"post\"></form>"
+            "<p align='center'><b>List of detentions is empty.<br><br>Please, refine your search<br><br></b></p>"
+            "</body></html>"
+        ).encode()
+        records, urlopen, sleep = self.fetch(Response(page))
+
+        self.assertEqual(records, [])
+        urlopen.assert_called_once()
+        sleep.assert_not_called()
+
+
     def test_short_row_fails_without_retries(self):
         row = [
             "1", "9876543", "Example", "Panama", "2001", "12345", "Cargo",
