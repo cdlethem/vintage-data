@@ -108,12 +108,11 @@ def plan(env: Env) -> list[dict]:
     lookback = timedelta(hours=cfg.heal.lookback_hours)
     open_issues = gh.issues(state="open")
     open_keys = {key for issue in open_issues for key in keys(issue.get("body"))}
-    closed = gh.issues(state="closed", since=(now() - lookback - CLOSE_GRACE).isoformat())
-    closed_at: dict[str, datetime] = {}
-    for issue in closed:
+    recently_closed: dict[str, dict] = {}  # key -> the most recently closed issue tracking it
+    for issue in gh.issues(state="closed", since=(now() - lookback - CLOSE_GRACE).isoformat()):
         for key in keys(issue.get("body")):
-            closed_at[key] = max(closed_at.get(key, datetime.min.replace(tzinfo=timezone.utc)),
-                                 _time(issue["closed_at"]))
+            if key not in recently_closed or issue["closed_at"] > recently_closed[key]["closed_at"]:
+                recently_closed[key] = issue
     muted = {key for issue in gh.issues(labels=f"{LABEL},{MUTE_LABEL}", state="all") for key in keys(issue.get("body"))}
 
     failing: dict[tuple[str, str], list[dict]] = {}
@@ -135,11 +134,36 @@ def plan(env: Env) -> list[dict]:
         if item is None:
             continue  # it recovered on its own
         key = failure_key(dag_id, task_id) if item["pattern"] == "persistent" else flaky_key(dag_id, task_id)
-        if key in closed_at and _time(tis[0]["end_date"]) < closed_at[key] + CLOSE_GRACE:
+        previous = recently_closed.get(key)
+        if previous:
+            if _time(tis[0]["end_date"]) >= _time(previous["closed_at"]) + CLOSE_GRACE:
+                _reopen(env, previous, tis[0], af)
             continue
         items.append(item)
     items += _requests(env)
     return items
+
+
+def _reopen(env: Env, issue: dict, latest: dict, af: Airflow) -> None:
+    """A task failed again soon after its issue closed: continue that issue instead of starting a new one.
+
+    Issues a person closed as "not planned" stay closed.
+    """
+    if issue.get("state_reason") == "not_planned":
+        return
+    gh, number = env.github, issue["number"]
+    when = _fmt(latest["end_date"])
+    note = f"🔁 Failing again: `{latest['dag_id']}` › `{latest['task_id']}` failed at {when} ([log]({af.link(latest)}))."
+    if status_of(issue) in ("fixing", "review"):
+        note += (" The fix tracked here did not stop it. Comment `/bot <instructions>` to have me look again, "
+                 "or close this issue as not planned.")
+        status = "question"
+    else:
+        note += " Reopening; this closes again once the task is healthy."
+        status = status_of(issue) or "waiting"
+    gh.update_issue(number, state="open")
+    gh.comment(number, note)
+    gh.set_status(number, status, [label["name"] for label in issue.get("labels", [])])
 
 
 def classify(cfg: Config, af: Airflow, dag_id: str, task_id: str, failures: list[dict]) -> dict | None:
