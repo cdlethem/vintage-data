@@ -189,6 +189,33 @@ class FetchPokeAPITests(unittest.TestCase):
         self.assertIn("offset=5", opener.calls[2][0].full_url)
 
 
+    def test_follows_final_hop_clamped_to_remaining_items(self):
+        first_page = page([pokemon(identifier) for identifier in range(1, 101)], 100, limit=5)
+        first_page["count"] = 105
+        last_page = page([pokemon(identifier) for identifier in range(101, 106)], None, limit=100)
+        last_page["count"] = 105
+
+        result, opener, _ = self.fetch([first_page, last_page], page_size=100)
+
+        self.assertFalse(result.truncated)
+        self.assertEqual([record["id"] for record in result.records], list(range(1, 106)))
+        self.assertEqual(
+            [call[0].full_url for call in opener.calls],
+            [
+                "https://pokeapi.co/api/v2/pokemon/?limit=100&offset=0",
+                "https://pokeapi.co/api/v2/pokemon/?offset=100&limit=5",
+            ],
+        )
+
+    def test_rejects_final_hop_limit_below_remaining_items(self):
+        first_page = page([pokemon(identifier) for identifier in range(1, 101)], 100, limit=4)
+        first_page["count"] = 105
+
+        with self.assertRaisesRegex(MODULE.PokeAPIError, "catalog pagination"):
+            self.fetch([first_page, page([pokemon(101)], None)], page_size=100)
+
+
+
     def test_rejects_looping_and_backward_next_links(self):
         for offset in (0, 2):
             with self.subTest(offset=offset):
