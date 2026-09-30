@@ -268,10 +268,11 @@ def work(env: Env, item: dict) -> dict:
     raise ValueError(f"unknown work item {item!r}")
 
 
-def open_issue_list(issues: list[dict]) -> str:
-    if not issues:
-        return "(none)"
-    return "\n".join(f"- #{issue['number']} {issue['title']}" for issue in issues[:50])
+def open_issue_list(issues: list[dict], pulls: list[dict]) -> str:
+    """What the bot already tracks, so an agent can spot duplicates (open PRs are not merged yet)."""
+    lines = [f"- issue #{issue['number']} {issue['title']}" for issue in issues[:50]]
+    lines += [f"- pull request #{pr['number']} {pr['title']} (not merged yet)" for pr in pulls[:50]]
+    return "\n".join(lines) or "(none)"
 
 
 def instructions(cfg: Config) -> str:
@@ -344,7 +345,7 @@ def heal_failure(env: Env, item: dict) -> dict:
     if deploy_root:  # show repository paths, so the agent edits its checkout and not the live deployment
         log = log.replace(deploy_root + "/", "")
     variables = {"dag_id": dag_id, "task_id": task_id, "dag_file": dag_file, "pattern": pattern,
-                 "log": log, "open_issues": open_issue_list(open_issues)}
+                 "log": log, "open_issues": open_issue_list(open_issues, env.github.pulls(LABEL))}
     facts = {"key": key, "dag_id": dag_id, "task_id": task_id, "failing": failing_line, "log_url": af.link(latest)}
     subject = f"{dag_id}.{task_id}"
 
@@ -397,7 +398,7 @@ def answer_request(env: Env, item: dict) -> dict:
                      "them to the same pull request." if is_pr else
                      "You are on the latest main branch. If you change files, the bot opens a pull request "
                      "that closes this issue."),
-        "open_issues": open_issue_list(gh.issues(state="open")),
+        "open_issues": open_issue_list(gh.issues(state="open"), gh.pulls(LABEL)),
     }
 
     def publish(run: agent.Run, files: list[str], worktree: Path) -> dict:
@@ -435,7 +436,8 @@ def run_job(env: Env, name: str) -> dict:
         raise OverBudget(reason)
     job = cfg.jobs[name]
     sha = env.workspace.fetch(cfg.base_branch)
-    variables = {"job_prompt": job.prompt.read_text(), "open_issues": open_issue_list(env.github.issues(state="open"))}
+    variables = {"job_prompt": job.prompt.read_text(),
+                 "open_issues": open_issue_list(env.github.issues(state="open"), env.github.pulls(LABEL))}
 
     def publish(run: agent.Run, files: list[str], worktree: Path) -> dict:
         if not run.ok:
