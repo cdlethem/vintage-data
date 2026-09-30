@@ -17,10 +17,17 @@ agents:
     # omp resolves the LOCAL role to the llama.cpp server; swap the model or the
     # whole command (claude, codex, aider...) freely. agent.sh keeps this
     # deployment's checkout read-only while the agent runs.
-    command: ["{config_dir}/agent.sh", omp, -p, --mode, text, --model, "@LOCAL", --max-time, 40m, --no-title, --auto-approve,
-              --session-dir, "{run_dir}/session", "{prompt}"]
+    command: &omp ["{config_dir}/agent.sh", omp, -p, --mode, text, --model, "@LOCAL", --no-title, --auto-approve,
+                   --session-dir, "{run_dir}/session", "{prompt}"]
     timeout_minutes: 45
-    env: [HOME, PATH, USER, LANG, TERM, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME]
+    env: &env [HOME, PATH, USER, LANG, TERM, XDG_CONFIG_HOME, XDG_DATA_HOME, XDG_CACHE_HOME]
+    usage: omp
+  long:
+    # Building a whole new source (research, fetcher, tests, live check) takes the
+    # local model well over 40 minutes.
+    command: *omp
+    timeout_minutes: 120
+    env: *env
     usage: omp
 
 limits:
@@ -41,6 +48,7 @@ jobs:
   new_source:
     schedule: "30 5 * * *"
     prompt: jobs/new_source.md
+    agent: long
 
 evals:
   cases: evals

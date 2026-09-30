@@ -108,12 +108,11 @@ def plan(env: Env) -> list[dict]:
     lookback = timedelta(hours=cfg.heal.lookback_hours)
     open_issues = gh.issues(state="open")
     open_keys = {key for issue in open_issues for key in keys(issue.get("body"))}
-    closed = gh.issues(state="closed", since=(now() - lookback - CLOSE_GRACE).isoformat())
-    closed_at: dict[str, datetime] = {}
-    for issue in closed:
+    recently_closed: dict[str, dict] = {}  # key -> the most recently closed issue tracking it
+    for issue in gh.issues(state="closed", since=(now() - lookback - CLOSE_GRACE).isoformat()):
         for key in keys(issue.get("body")):
-            closed_at[key] = max(closed_at.get(key, datetime.min.replace(tzinfo=timezone.utc)),
-                                 _time(issue["closed_at"]))
+            if key not in recently_closed or issue["closed_at"] > recently_closed[key]["closed_at"]:
+                recently_closed[key] = issue
     muted = {key for issue in gh.issues(labels=f"{LABEL},{MUTE_LABEL}", state="all") for key in keys(issue.get("body"))}
 
     failing: dict[tuple[str, str], list[dict]] = {}
@@ -135,11 +134,36 @@ def plan(env: Env) -> list[dict]:
         if item is None:
             continue  # it recovered on its own
         key = failure_key(dag_id, task_id) if item["pattern"] == "persistent" else flaky_key(dag_id, task_id)
-        if key in closed_at and _time(tis[0]["end_date"]) < closed_at[key] + CLOSE_GRACE:
+        previous = recently_closed.get(key)
+        if previous:
+            if _time(tis[0]["end_date"]) >= _time(previous["closed_at"]) + CLOSE_GRACE:
+                _reopen(env, previous, tis[0], af)
             continue
         items.append(item)
     items += _requests(env)
     return items
+
+
+def _reopen(env: Env, issue: dict, latest: dict, af: Airflow) -> None:
+    """A task failed again soon after its issue closed: continue that issue instead of starting a new one.
+
+    Issues a person closed as "not planned" stay closed.
+    """
+    if issue.get("state_reason") == "not_planned":
+        return
+    gh, number = env.github, issue["number"]
+    when = _fmt(latest["end_date"])
+    note = f"🔁 Failing again: `{latest['dag_id']}` › `{latest['task_id']}` failed at {when} ([log]({af.link(latest)}))."
+    if status_of(issue) in ("fixing", "review"):
+        note += (" The fix tracked here did not stop it. Comment `/bot <instructions>` to have me look again, "
+                 "or close this issue as not planned.")
+        status = "question"
+    else:
+        note += " Reopening; this closes again once the task is healthy."
+        status = status_of(issue) or "waiting"
+    gh.update_issue(number, state="open")
+    gh.comment(number, note)
+    gh.set_status(number, status, [label["name"] for label in issue.get("labels", [])])
 
 
 def classify(cfg: Config, af: Airflow, dag_id: str, task_id: str, failures: list[dict]) -> dict | None:
@@ -244,10 +268,11 @@ def work(env: Env, item: dict) -> dict:
     raise ValueError(f"unknown work item {item!r}")
 
 
-def open_issue_list(issues: list[dict]) -> str:
-    if not issues:
-        return "(none)"
-    return "\n".join(f"- #{issue['number']} {issue['title']}" for issue in issues[:50])
+def open_issue_list(issues: list[dict], pulls: list[dict]) -> str:
+    """What the bot already tracks, so an agent can spot duplicates (open PRs are not merged yet)."""
+    lines = [f"- issue #{issue['number']} {issue['title']}" for issue in issues[:50]]
+    lines += [f"- pull request #{pr['number']} {pr['title']} (not merged yet)" for pr in pulls[:50]]
+    return "\n".join(lines) or "(none)"
 
 
 def instructions(cfg: Config) -> str:
@@ -320,7 +345,7 @@ def heal_failure(env: Env, item: dict) -> dict:
     if deploy_root:  # show repository paths, so the agent edits its checkout and not the live deployment
         log = log.replace(deploy_root + "/", "")
     variables = {"dag_id": dag_id, "task_id": task_id, "dag_file": dag_file, "pattern": pattern,
-                 "log": log, "open_issues": open_issue_list(open_issues)}
+                 "log": log, "open_issues": open_issue_list(open_issues, env.github.pulls(LABEL))}
     facts = {"key": key, "dag_id": dag_id, "task_id": task_id, "failing": failing_line, "log_url": af.link(latest)}
     subject = f"{dag_id}.{task_id}"
 
@@ -373,7 +398,7 @@ def answer_request(env: Env, item: dict) -> dict:
                      "them to the same pull request." if is_pr else
                      "You are on the latest main branch. If you change files, the bot opens a pull request "
                      "that closes this issue."),
-        "open_issues": open_issue_list(gh.issues(state="open")),
+        "open_issues": open_issue_list(gh.issues(state="open"), gh.pulls(LABEL)),
     }
 
     def publish(run: agent.Run, files: list[str], worktree: Path) -> dict:
@@ -411,7 +436,8 @@ def run_job(env: Env, name: str) -> dict:
         raise OverBudget(reason)
     job = cfg.jobs[name]
     sha = env.workspace.fetch(cfg.base_branch)
-    variables = {"job_prompt": job.prompt.read_text(), "open_issues": open_issue_list(env.github.issues(state="open"))}
+    variables = {"job_prompt": job.prompt.read_text(),
+                 "open_issues": open_issue_list(env.github.issues(state="open"), env.github.pulls(LABEL))}
 
     def publish(run: agent.Run, files: list[str], worktree: Path) -> dict:
         if not run.ok:

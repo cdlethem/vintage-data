@@ -11,7 +11,7 @@ You are on call for this data pipeline. An Airflow task has a failure problem th
 {{log}}
 ```
 
-## Open issues the bot is already tracking
+## Open issues and pull requests the bot is already tracking
 
 {{open_issues}}
 
