@@ -18,6 +18,8 @@ Quirks:
   * date filter format: submittedDate:[YYYYMMDDHHMM TO YYYYMMDDHHMM] (GMT).
   * HTTP 429 retries are limited to three total attempts; each retry sleeps at
     least three seconds, at most 30 seconds, and no more than 60 seconds total.
+  * Transport failures (read timeouts, connection errors) share the same three-attempt
+    budget with 3s and 6s backoffs; the same 60-second cumulative sleep cap applies.
   * HTTP 406 is not retried; diagnostics retain only allowlisted content type
     and a bounded response-body shape, never raw headers or response text.
 
@@ -124,7 +126,13 @@ def fetch_new_papers(category: str = "cs.AI", hours_back: int = 24,
             sleep(delay)
             slept += delay
         except (urllib.error.URLError, TimeoutError, OSError):
-            raise
+            if attempt == MAX_ATTEMPTS:
+                raise
+            delay = min(MIN_RETRY_DELAY_SECONDS * (2 ** (attempt - 1)),
+                        MAX_RETRY_DELAY_SECONDS,
+                        MAX_CUMULATIVE_SLEEP_SECONDS - slept)
+            sleep(delay)
+            slept += delay
     fetched_at = now.isoformat()
     for entry in root.findall("a:entry", NS):
         yield parse_entry(entry, fetched_at)
@@ -173,7 +181,7 @@ def main(argv=None):
         _terminal_failure(f"HTTP {error.code} after {attempts} attempt(s){summary}")
         return 1
     except (urllib.error.URLError, TimeoutError, OSError):
-        _terminal_failure("transport failure")
+        _terminal_failure(f"transport failure after {MAX_ATTEMPTS} attempt(s)")
         return 1
     except ET.ParseError:
         _terminal_failure("XML parsing failure")

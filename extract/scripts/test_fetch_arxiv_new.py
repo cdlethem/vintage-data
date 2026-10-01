@@ -314,12 +314,38 @@ class FetchArxivNewTests(TestCase):
         self.assertEqual(raised.exception.arxiv_response_summary,
                          "content_type=missing, body=empty, body_prefix_bytes=0, body_truncated=False")
 
-    def test_transport_failure_is_immediate(self):
-        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=urllib.error.URLError("secret endpoint")) as urlopen:
-            with self.assertRaises(urllib.error.URLError):
-                list(MODULE.fetch_new_papers(sleep=mock.Mock(), clock=lambda: NOW))
+    def test_transport_failure_retries_then_succeeds(self):
+        records, urlopen, sleep = fetch([
+            urllib.error.URLError("transient connection reset"),
+            Response(ATOM),
+        ])
 
-        urlopen.assert_called_once()
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["id"], "http://arxiv.org/abs/2609.00001v1")
+        self.assertEqual(urlopen.call_count, 2)
+        sleep.assert_called_once_with(3)
+
+    def test_transport_timeout_retries_with_bounded_backoff(self):
+        sleep = mock.Mock()
+        with mock.patch.object(MODULE.urllib.request, "urlopen",
+                               side_effect=TimeoutError("The read operation timed out")) as urlopen:
+            with self.assertRaises(TimeoutError):
+                list(MODULE.fetch_new_papers(sleep=sleep, clock=lambda: NOW))
+
+        self.assertEqual(urlopen.call_count, 3)
+        self.assertEqual(sleep.call_args_list, [mock.call(3), mock.call(6)])
+
+    def test_transport_retries_share_cumulative_sleep_budget(self):
+        sleeps = []
+        records, urlopen, _ = fetch(
+            [urllib.error.URLError("transient"), http_error(429, "30"), Response(ATOM)],
+            sleep=sleeps.append,
+        )
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(urlopen.call_count, 3)
+        self.assertEqual(sleeps, [3, 30])
+        self.assertLessEqual(sum(sleeps), 60)
 
     def test_malformed_xml_is_not_retried(self):
         with mock.patch.object(MODULE.urllib.request, "urlopen", return_value=Response(MALFORMED_XML)) as urlopen:
@@ -392,8 +418,8 @@ class FetchArxivNewTests(TestCase):
 
     def test_cli_transport_failure_is_safe(self):
         self.assert_safe_cli_failure(
-            [{"kind": "transport"}],
-            "transport failure",
+            [{"kind": "transport"}] * 3,
+            "transport failure after 3 attempt(s)",
         )
 
     def test_cli_malformed_xml_is_safe(self):
