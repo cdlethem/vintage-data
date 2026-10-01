@@ -47,14 +47,16 @@ Quirks that will cost someone an afternoon:
 
 Etiquette: keyless, but crt.sh is a single-operator service (Sectigo-run) that
 explicitly asks for gentle use — no documented hard limit, but heavy/scripted querying
-gets IPs blocked. Query specific domains you actually care about, not broad wildcards
 in a loop, and self-impose real pacing (a few requests per minute at most).
+The single request per run is retried in a bounded way on transient 5xx/429/
+connection failures (see ``_get``) before the run is allowed to fail.
 
 Stdlib only.
 """
 import json
 import os
 import sys
+import time
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -62,16 +64,63 @@ from datetime import datetime, timezone
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 BASE = "https://crt.sh/"
 
+# crt.sh intermittently 502s while its front-end replicas catch up on
+# replication (chronic; observed live 2026-10-01). Retry transient failures
+# in a bounded way so a brief flap does not lose a whole run.
+MAX_ATTEMPTS = 4
+RETRY_BASE_DELAY = 5.0
+MAX_RETRY_DELAY = 30.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
+
+
+def _retry_delay(error: urllib.error.HTTPError, fallback: float) -> float:
+    """Return a courteous bounded delay from an HTTP Retry-After header."""
+    value = error.headers.get("Retry-After") if error.headers is not None else None
+    if value is not None:
+        try:
+            delay = float(value)
+        except (TypeError, ValueError):
+            delay = None
+        if delay is not None and delay >= 0:
+            return min(delay, MAX_RETRY_DELAY)
+    return min(fallback, MAX_RETRY_DELAY)
+
 
 def _get(query):
+    """Fetch one JSON document, with bounded retries on transient failures.
+
+    Transient failures -- 5xx, 429, and connection errors -- retry with
+    5s/10s/20s backoff (at most ~35 seconds of sleeping, well inside the
+    ten-minute task timeout). A persistent outage still fails the run after
+    the bounded attempts with its status surfaced; other HTTP errors (e.g.
+    404) fail immediately. A non-JSON body (an HTML error page, e.g. a
+    malformed query) is treated as an empty result, as before, and is never
+    retried.
+    """
     url = f"{BASE}?{urllib.parse.urlencode({'q': query, 'output': 'json'})}"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        body = resp.read()
-    try:
-        return json.loads(body)
-    except json.JSONDecodeError:
-        return []  # an error page (e.g. malformed query) is HTML, not JSON -- treat as empty
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                body = resp.read()
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = f"HTTP {exc.code}"
+            delay = _retry_delay(exc, RETRY_BASE_DELAY * (2 ** attempt))
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = str(exc.reason if isinstance(exc, urllib.error.URLError) else exc)
+            delay = min(RETRY_BASE_DELAY * (2 ** attempt), MAX_RETRY_DELAY)
+        else:
+            try:
+                return json.loads(body)
+            except json.JSONDecodeError:
+                return []  # an error page (e.g. malformed query) is HTML, not JSON -- treat as empty
+        print(f"certificate_transparency: transient failure ({reason}); retrying in {delay:.0f}s "
+              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+        time.sleep(delay)
 
 
 def fetch_certs(domain: str, wildcard: bool = False):
