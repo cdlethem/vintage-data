@@ -85,6 +85,15 @@
   ],
   "notes": "chart snapshot; rank/position churn between runs is the signal"
  },
+ "coingecko_markets": {
+  "type": "status",
+  "value_keys": [
+   "price",
+   "market_cap",
+   "total_volume"
+  ],
+  "notes": "hourly top-250 snapshot: same coin ids each run, price/market_cap/volume drift continuously; a frozen price across polls means upstream or extract is stuck"
+ },
  "tatoeba": {
   "type": "feed",
   "notes": "small volunteer project; hours with zero new eng-fra sentence pairs are normal, a full day of zero novelty is not"
