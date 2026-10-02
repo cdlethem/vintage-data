@@ -92,7 +92,7 @@
    "market_cap",
    "total_volume"
   ],
-  "notes": "hourly top-250 snapshot: same coin ids each run, price/market_cap/volume drift continuously; a frozen price across polls means upstream or extract is stuck"
+  "notes": "15-minute top-250 snapshot: same coin ids each run, price/market_cap/volume drift continuously; a frozen price across polls means upstream or extract is stuck"
  },
  "tatoeba": {
   "type": "feed",

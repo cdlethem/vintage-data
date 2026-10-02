@@ -311,10 +311,10 @@ class FetchCoinGeckoMarketsTests(unittest.TestCase):
         self.assertEqual(summary["rows"], 0)
         self.assertIsNone(summary["first_id"])
 
-    def test_source_configuration_is_hourly_and_attributed(self):
+    def test_source_configuration_is_quarter_hourly_and_attributed(self):
         text = SOURCE_CONFIG.read_text(encoding="utf-8")
 
-        self.assertRegex(text, r'(?m)^schedule: "27 \* \* \* \*"')
+        self.assertRegex(text, r'(?m)^schedule: "8-53/15 \* \* \* \*"')
         self.assertRegex(text, r"(?m)^enabled: true$")
         self.assertIn(
             'args: ["--per-page", "250", "--timeout", "30", "--retries", "2", "--retry-delay", "20"]',
@@ -325,7 +325,7 @@ class FetchCoinGeckoMarketsTests(unittest.TestCase):
         self.assertIn("attribution_required: true", text)
         self.assertIn("free tier", text)
         self.assertIn("10,000 calls/month", text)
-        self.assertIn("one snapshot per hour", text)
+        self.assertIn("one snapshot every 15 minutes", text)
 
 
 if __name__ == "__main__":

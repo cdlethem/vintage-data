@@ -6,7 +6,8 @@ market cap, in the configured quote currency. Records carry the stable
 CoinGecko coin id plus the market fields the snapshot returns (price,
 market cap, volume, 24h change, supply, all-time high/low). Free-tier rate
 limits make one call per poll the right size; the free tier also caps total
-monthly calls, so poll at most hourly.
+monthly calls, so keep the poll cadence modest (96/day at the configured
+15-minute schedule is under 30% of the cap).
 
 Stdlib only.
 """
