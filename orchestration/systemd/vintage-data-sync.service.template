@@ -6,9 +6,11 @@ After=network-online.target
 [Service]
 Type=oneshot
 # Only the reviewed release script runs as the unprivileged service user. The
-# root-owned unit contains the fixed privileged restart/rollback sequence.
-ExecStart=/bin/sh -c 'restart_runtime() { /usr/bin/systemctl restart airflow-api-server.service airflow-scheduler.service airflow-dag-processor.service && /usr/bin/systemctl try-restart "airflow-worker@*.service" || return 1; }; /usr/sbin/runuser -u @SERVICE_USER@ -- /usr/bin/env PATH=@SERVICE_PATH@ /usr/bin/python3 @PROJECT_ROOT@/orchestration/deploy/sync.py deploy; result=$$?; if [ "$$result" -eq 0 ]; then exit 0; fi; if [ "$$result" -ne 10 ]; then exit "$$result"; fi; if restart_runtime; then exit 0; fi; echo "restart failed; reverting release" >&2; /usr/sbin/runuser -u @SERVICE_USER@ -- /usr/bin/env PATH=@SERVICE_PATH@ /usr/bin/python3 @PROJECT_ROOT@/orchestration/deploy/sync.py rollback; rolled=$$?; if [ "$$rolled" -ne 10 ]; then exit 1; fi; restart_runtime || exit 1; exit 1'
-TimeoutStartSec=90min
+# root-owned unit installs the release's rendered unit files and holds the
+# restart/rollback sequence: workers may stop for up to their warm-shutdown
+# budget (longest in-flight task) before they come back with the new code.
+ExecStart=/bin/sh -c 'restart_runtime() { /usr/bin/install -m 0644 @PROJECT_ROOT@/orchestration/generated/systemd/airflow-api-server.service @PROJECT_ROOT@/orchestration/generated/systemd/airflow-scheduler.service @PROJECT_ROOT@/orchestration/generated/systemd/airflow-dag-processor.service @PROJECT_ROOT@/orchestration/generated/systemd/airflow-worker@.service /etc/systemd/system/ && /usr/bin/systemctl daemon-reload && /usr/bin/systemctl restart airflow-api-server.service airflow-scheduler.service airflow-dag-processor.service && /usr/bin/systemctl try-restart "airflow-worker@*.service" || return 1; }; /usr/sbin/runuser -u @SERVICE_USER@ -- /usr/bin/env PATH=@SERVICE_PATH@ /usr/bin/python3 @PROJECT_ROOT@/orchestration/deploy/sync.py deploy; result=$$?; if [ "$$result" -eq 0 ]; then exit 0; fi; if [ "$$result" -ne 10 ]; then exit "$$result"; fi; if restart_runtime; then exit 0; fi; echo "restart failed; reverting release" >&2; /usr/sbin/runuser -u @SERVICE_USER@ -- /usr/bin/env PATH=@SERVICE_PATH@ /usr/bin/python3 @PROJECT_ROOT@/orchestration/deploy/sync.py rollback; rolled=$$?; if [ "$$rolled" -ne 10 ]; then exit 1; fi; restart_runtime || exit 1; exit 1'
+TimeoutStartSec=150min
 
 [Install]
 WantedBy=multi-user.target
