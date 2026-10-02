@@ -1,0 +1,19 @@
+name: wikimedia_pageviews
+script: fetch_wikimedia_pageviews.py
+args: ["--article", "en", "wikipedia", "Albert_Einstein", "--article", "en", "wikipedia", "ChatGPT", "--article", "de", "wikipedia", "Albert_Einstein", "--days", "2", "--access", "all-access", "--agent", "user", "--timeout", "15", "--retries", "2", "--retry-budget", "90"]
+schedule: "27 5 * * *"  # UTC; daily, staggered. Per-article pageviews only publish completed UTC days, so one new day lands per run.
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+# Verified live 2026-10-02: the per-article endpoint returns completed days only
+# (a request spanning today returns through yesterday), each item carries
+# project/article/granularity/access/agent/timestamp/views, a 404 marks an
+# unknown article, and the API is keyless with no published rate limit.
+cadence_note: "daily per-article Wikipedia/Wiktionary/... pageview counts; the 2-day window adds exactly one new completed day per run and re-asserts the previous day in case it is revised"
+rate_limit: "keyless public API, no published limit; one serial request per configured article per run (3 configured), 15s request timeout, 2 retries, 90s run-wide retry budget, 1 MiB response cap"
+licence: "CC0 1.0 Universal (Wikimedia Analytics API data)"
+attribution: "Wikimedia Foundation, https://wikimedia.org/api/rest_v1/#metrics-pageviews"
+attribution_required: false

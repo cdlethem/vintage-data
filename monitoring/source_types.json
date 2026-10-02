@@ -236,5 +236,9 @@
  "ema_medicine_shortages": {
   "type": "snapshot",
   "notes": "EMA's complete shortage catalogue publishes twice daily; active, resolved, and discontinued entries can be added, revised, or removed. An unchanged snapshot (including HTTP 304) produces zero records and is normal."
+ },
+ "wikimedia_pageviews": {
+  "type": "feed",
+  "notes": "per-article daily views for a fixed article list; each completed UTC day adds new (article, day) ids, so novelty is expected on most daily runs"
  }
 }
