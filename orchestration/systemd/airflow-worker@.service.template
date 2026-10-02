@@ -18,8 +18,13 @@ WorkingDirectory=@PROJECT_ROOT@/orchestration
 ExecStart=@PROJECT_ROOT@/orchestration/.venv/bin/airflow celery worker --celery-hostname worker-%i
 Restart=on-failure
 RestartSec=5
-# Give SIGTERM warm shutdown time to finish in-flight tasks before SIGKILL.
-TimeoutStopSec=120
+# SIGTERM must reach only the worker's main process so celery's warm shutdown
+# can drain in-flight tasks. The default KillMode=control-group also signals
+# task subprocesses directly, killing mid-run extracts with no summary line.
+KillMode=mixed
+# Warm-shutdown budget: the longest task (120 min execution_timeout) plus
+# margin, after which systemd SIGKILLs whatever is left in the cgroup.
+TimeoutStopSec=135min
 
 [Install]
 WantedBy=multi-user.target
