@@ -136,6 +136,66 @@ class FetchZenodoTests(unittest.TestCase):
         self.assertEqual(diagnostic["attempt_count"], fetch_zenodo.MAX_ATTEMPTS)
         self.assertEqual(diagnostic["terminal_error"]["class"], "HTTPError")
 
+    def test_http_500_recovers_on_second_attempt(self):
+        error = urllib.error.HTTPError(BASE_URL, 500, "INTERNAL SERVER ERROR", {}, None)
+        with patch.object(fetch_zenodo.urllib.request, "urlopen", side_effect=[error, JsonResponse(self.document())]) as urlopen:
+            with patch.object(fetch_zenodo.time, "sleep") as sleep:
+                records = list(fetch_zenodo.fetch_recent())
+
+        self.assertEqual(records[0]["id"], 123)
+        self.assertEqual(urlopen.call_count, 2)
+        self.assertEqual(sleep.call_args_list, [unittest.mock.call(2)])
+
+    def test_transient_http_codes_are_retried(self):
+        for code in (429, 500, 502, 503):
+            with self.subTest(code=code):
+                error = urllib.error.HTTPError(BASE_URL, code, "error", {}, None)
+                with patch.object(fetch_zenodo.urllib.request, "urlopen", side_effect=[error, JsonResponse(self.document())]) as urlopen:
+                    with patch.object(fetch_zenodo.time, "sleep") as sleep:
+                        records = list(fetch_zenodo.fetch_recent())
+
+                self.assertEqual(records[0]["id"], 123)
+                self.assertEqual(urlopen.call_count, 2)
+                self.assertEqual(sleep.call_args_list, [unittest.mock.call(2)])
+
+    def test_http_500_exhaustion_raises_after_bounded_attempts(self):
+        stderr = io.StringIO()
+        error = urllib.error.HTTPError(BASE_URL, 500, "INTERNAL SERVER ERROR", {}, None)
+
+        with patch.object(fetch_zenodo.urllib.request, "urlopen", side_effect=error) as urlopen:
+            with patch.object(fetch_zenodo.time, "sleep") as sleep:
+                with contextlib.redirect_stderr(stderr):
+                    with self.assertRaises(urllib.error.HTTPError):
+                        list(fetch_zenodo.fetch_recent())
+
+        self.assertEqual(urlopen.call_count, fetch_zenodo.MAX_ATTEMPTS)
+        self.assertEqual(sleep.call_args_list, [
+            unittest.mock.call(2),
+            unittest.mock.call(5),
+            unittest.mock.call(10),
+            unittest.mock.call(10),
+        ])
+        diagnostic = json.loads(stderr.getvalue())
+        self.assertEqual(diagnostic["attempt_count"], fetch_zenodo.MAX_ATTEMPTS)
+        self.assertEqual(diagnostic["terminal_error"]["class"], "HTTPError")
+
+    def test_http_400_is_not_retried(self):
+        stderr = io.StringIO()
+        error = urllib.error.HTTPError(BASE_URL, 400, "Bad Request", {}, None)
+
+        with patch.object(fetch_zenodo.urllib.request, "urlopen", side_effect=error) as urlopen:
+            with patch.object(fetch_zenodo.time, "sleep") as sleep:
+                with contextlib.redirect_stderr(stderr):
+                    with self.assertRaises(urllib.error.HTTPError):
+                        list(fetch_zenodo.fetch_recent())
+
+        self.assertEqual(urlopen.call_count, 1)
+        self.assertEqual(sleep.call_args_list, [])
+        diagnostic = json.loads(stderr.getvalue())
+        self.assertEqual(diagnostic["attempt_count"], 1)
+        self.assertEqual(diagnostic["terminal_error"]["class"], "HTTPError")
+
+
     def test_read_timeout_recovers_on_second_attempt(self):
         """Verify timeout recovery with new delay of 2 seconds."""
         with patch.object(fetch_zenodo.urllib.request, "urlopen", side_effect=[TimeoutError("connection timed out"), JsonResponse(self.document())]) as urlopen:
@@ -246,7 +306,7 @@ class FetchZenodoTests(unittest.TestCase):
         stdout = io.StringIO()
         error = urllib.error.HTTPError(
             "https://example.invalid/?token=secret",
-            500,
+            400,
             TimeoutError("secret timeout detail"),
             {},
             None,
