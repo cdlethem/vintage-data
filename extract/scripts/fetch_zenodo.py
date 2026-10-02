@@ -58,6 +58,11 @@ BASE = "https://zenodo.org/api/records"
 REQUEST_TIMEOUT_SECONDS = 60
 MAX_ATTEMPTS = 5
 RETRY_DELAYS_SECONDS = (2, 5, 10)
+# Zenodo intermittently 500s (observed 2026-10-02: the 03:17 scheduled run
+# got HTTP 500 while the identical request succeeds seconds apart) — a
+# server-side blip, not a bad request. Retry transient HTTP codes and
+# timeouts in a bounded way before the run is allowed to fail.
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
 
 
 def _is_timeout(error):
@@ -70,7 +75,8 @@ def _is_timeout(error):
 
 def _is_retryable(error):
     return _is_timeout(error) or (
-        isinstance(error, urllib.error.HTTPError) and error.code == 504
+        isinstance(error, urllib.error.HTTPError)
+        and error.code in RETRYABLE_HTTP_CODES
     )
 
 
