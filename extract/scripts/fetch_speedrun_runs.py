@@ -44,6 +44,7 @@ Stdlib only.
 import json
 import os
 import sys
+import time
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -51,15 +52,42 @@ from datetime import datetime, timezone
 BASE = "https://www.speedrun.com/api/v1"
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 
+MAX_ATTEMPTS = 3
+RETRY_BASE_DELAY = 1.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
+
 
 def _get(path: str, **params):
+    """Fetch one JSON document, with bounded retries on transient failures.
+
+    speedrun.com intermittently returns 500s (observed 2026-10-01: the
+    15:44 and 15:49 UTC task attempts both got HTTP 500, while the identical
+    request succeeds seconds apart) — a server-side blip, not a bad request.
+    Transient HTTP (429/5xx) and transport failures retry with 1s/2s backoff
+    (at most ~3 seconds of waiting, well inside the ten-minute task timeout).
+    Non-retryable HTTP statuses and malformed JSON fail immediately.
+    """
     url = f"{BASE}/{path}"
     if params:
         url += "?" + urllib.parse.urlencode(params)
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT,
                                                "Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=45) as resp:
-        return json.load(resp)
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(req, timeout=45) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = f"HTTP {exc.code}"
+        except (urllib.error.URLError, TimeoutError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = str(exc.reason if isinstance(exc, urllib.error.URLError) else exc)
+        delay = RETRY_BASE_DELAY * (2 ** attempt)
+        print(f"speedrun_runs: transient failure ({reason}); retrying in {delay:.0f}s "
+              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+        time.sleep(delay)
 
 
 def fetch_recent_runs(max_items: int = 200, status: str | None = "verified",
