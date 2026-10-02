@@ -12,6 +12,7 @@ from types import SimpleNamespace
 import unittest
 from unittest import mock
 import urllib.error
+import urllib.parse
 
 import yaml
 
@@ -227,6 +228,8 @@ class FetchWikimediaPageviewsTests(unittest.TestCase):
             dict(timeout=0),
             dict(retries=MODULE.MAX_RETRIES + 1),
             dict(retry_budget=MODULE.MAX_RETRY_BUDGET + 1),
+            dict(min_interval=-1),
+            dict(min_interval=MODULE.MAX_MIN_INTERVAL + 1),
         ):
             with self.subTest(message=str(bad)):
                 client = mock.Mock()
@@ -260,6 +263,52 @@ class FetchWikimediaPageviewsTests(unittest.TestCase):
             client.get(request_url())
         self.assertEqual(client.opener.call_count, 1)
 
+    def test_min_interval_paces_consecutive_requests_and_counts_against_budget(self):
+        class Clock:
+            def __init__(self):
+                self.t = 0.0
+
+            def __call__(self):
+                return self.t
+
+        clock = Clock()
+        sleeps = []
+        responses = iter([JsonResponse(document()) for _ in range(3)])
+
+        opens = []
+
+        def opener(request, timeout=None):
+            opens.append(request.full_url)
+            response = next(responses)
+            response._url = request.full_url
+            return response
+
+        def sleeper(delay):
+            sleeps.append(delay)
+            clock.t += delay
+
+        client = MODULE.WikimediaClient(
+            timeout=7,
+            retries=0,
+            retry_budget=30,
+            min_interval=1.0,
+            opener=opener,
+            clock=clock,
+            sleeper=sleeper,
+        )
+        client.get(request_url())
+        client.get(request_url())
+        self.assertEqual(opens, [request_url(), request_url()])
+        self.assertEqual(sleeps, [1.0])
+
+        # A pacing wait that would overrun the remaining budget fails before
+        # touching the network: _last_start + min_interval past the deadline.
+        clock.t = 29.0
+        client._last_start = 29.0  # remaining budget is 1.0s == the pacing wait
+        with self.assertRaisesRegex(MODULE.RetryBudgetError, "pacing"):
+            client.get(request_url())
+        self.assertEqual(len(opens), 2)
+
     def test_response_contract_is_enforced(self):
         base = {"fetch": lambda responses: self.fetch([["en", "wikipedia", "Albert_Einstein"]], responses)}
         cases = (
@@ -289,7 +338,7 @@ class FetchWikimediaPageviewsTests(unittest.TestCase):
         def scripted_open(request, timeout=None):
             segments = request.full_url.split("/")
             project_segment = segments[segments.index("per-article") + 1]
-            title = segments[segments.index("user") + 1]
+            title = urllib.parse.unquote(segments[segments.index("user") + 1])
             language, project = project_segment.split(".", 1)
             return JsonResponse(
                 document(
@@ -330,7 +379,7 @@ class FetchWikimediaPageviewsTests(unittest.TestCase):
             ),
             contextlib.redirect_stdout(stdout),
         ):
-            MODULE.main(config["args"])
+            MODULE.main(config["args"] + ["--min-interval", "0"])
 
         lines = stdout.getvalue().splitlines()
         self.assertEqual(len(lines), len(articles) * 2)
@@ -386,7 +435,11 @@ class FetchWikimediaPageviewsTests(unittest.TestCase):
         self.assertLessEqual(args.timeout, MODULE.MAX_TIMEOUT)
         self.assertLessEqual(args.retries, MODULE.MAX_RETRIES)
         self.assertLessEqual(args.retry_budget, MODULE.MAX_RETRY_BUDGET)
-        worst_case_request_time = len(args.article) * (args.retries + 1) * args.timeout
+        self.assertGreaterEqual(args.min_interval, 0)
+        self.assertLessEqual(args.min_interval, MODULE.MAX_MIN_INTERVAL)
+        worst_case_request_time = len(args.article) * (
+            (args.retries + 1) * args.timeout + args.min_interval
+        )
         self.assertLessEqual(
             min(worst_case_request_time, args.retry_budget), config["timeout_minutes"] * 60
         )

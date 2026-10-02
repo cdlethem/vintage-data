@@ -5,7 +5,9 @@ Each ``--article LANGUAGE PROJECT TITLE`` is one request covering the most recen
 ``--days`` *completed* UTC days (default 2: yesterday and the day before). The
 per-article endpoint publishes completed days only — it never returns the current
 partial day — so a daily poll adds exactly one new day per run while the overlap
-catches late revisions of the newest day.
+catches late revisions of the newest day. Requests are paced at least
+``--min-interval`` seconds apart (default 1) so the keyless endpoint is not
+burst-loaded; the pacing time counts against the run-wide retry budget.
 
 The data is CC0 1.0 (Wikimedia Analytics API) and keyless. Each emitted record is
 one (article, day) observation; ``id`` is a stable hash of the normalized request
@@ -61,15 +63,17 @@ LANGUAGE_RE = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 TIMESTAMP_RE = re.compile(r"^\d{8}00$")
 MAX_LANGUAGE_BYTES = 32
 MAX_TITLE_BYTES = 512
-MAX_ARTICLES = 20
+MAX_ARTICLES = 1000
 DEFAULT_DAYS = 2
 MAX_DAYS = 31
 DEFAULT_TIMEOUT = 15.0
 MAX_TIMEOUT = 60.0
 DEFAULT_RETRIES = 2
 MAX_RETRIES = 3
-DEFAULT_RETRY_BUDGET = 90.0
-MAX_RETRY_BUDGET = 180.0
+DEFAULT_RETRY_BUDGET = 3000.0
+MAX_RETRY_BUDGET = 3000.0
+DEFAULT_MIN_INTERVAL = 1.0
+MAX_MIN_INTERVAL = 30.0
 MAX_RESPONSE_BYTES = 1024 * 1024
 MAX_BACKOFF = 8.0
 RETRYABLE_STATUS = frozenset({408, 425, 429, 500, 502, 503, 504})
@@ -124,6 +128,16 @@ def _positive_number(value: Any, name: str, maximum: float) -> float:
         or not 0 < value <= maximum
     ):
         raise ValueError(f"{name} must be a number in (0, {maximum}]")
+    return float(value)
+
+
+def _nonnegative_number(value: Any, name: str, maximum: float) -> float:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not 0 <= value <= maximum
+    ):
+        raise ValueError(f"{name} must be a number in [0, {maximum}]")
     return float(value)
 
 
@@ -293,15 +307,18 @@ class WikimediaClient:
         timeout: float,
         retries: int,
         retry_budget: float,
+        min_interval: float = 0.0,
         opener: Callable[..., Any] | None = None,
         clock: Callable[[], float] | None = None,
         sleeper: Callable[[float], None] | None = None,
     ) -> None:
         self.timeout = timeout
         self.retries = retries
+        self.min_interval = min_interval
         self.clock = clock or time.monotonic
         self.sleeper = sleeper or time.sleep
         self.deadline = self.clock() + retry_budget
+        self._last_start: float | None = None
         self.opener = opener or urllib.request.build_opener(RejectRedirects()).open
 
     def _remaining(self) -> float:
@@ -317,6 +334,15 @@ class WikimediaClient:
             remaining = self._remaining()
             if remaining <= 0:
                 raise RetryBudgetError("Wikimedia retry budget exhausted before request")
+            if self.min_interval and self._last_start is not None:
+                wait = self._last_start + self.min_interval - self.clock()
+                if wait > 0:
+                    if wait >= remaining:
+                        raise RetryBudgetError(
+                            "Wikimedia pacing exceeds the remaining retry budget"
+                        )
+                    self.sleeper(wait)
+            self._last_start = self.clock()
             try:
                 with self.opener(request, timeout=min(self.timeout, remaining)) as response:
                     final_url = response.geturl() if hasattr(response, "geturl") else url
@@ -369,6 +395,7 @@ def fetch_pageviews(
     timeout: float = DEFAULT_TIMEOUT,
     retries: int = DEFAULT_RETRIES,
     retry_budget: float = DEFAULT_RETRY_BUDGET,
+    min_interval: float = DEFAULT_MIN_INTERVAL,
     client: WikimediaClient | None = None,
     now: Callable[[], datetime] | None = None,
 ) -> list[dict[str, Any]]:
@@ -380,6 +407,7 @@ def fetch_pageviews(
     _bounded_int(retries, "retries", 0, MAX_RETRIES)
     timeout = _positive_number(timeout, "timeout", MAX_TIMEOUT)
     retry_budget = _positive_number(retry_budget, "retry_budget", MAX_RETRY_BUDGET)
+    min_interval = _nonnegative_number(min_interval, "min_interval", MAX_MIN_INTERVAL)
     _choice(access, "access", ACCESS_VALUES)
     _choice(agent, "agent", AGENT_VALUES)
 
@@ -408,6 +436,7 @@ def fetch_pageviews(
         timeout=timeout,
         retries=retries,
         retry_budget=retry_budget,
+        min_interval=min_interval,
     )
 
     records: list[dict[str, Any]] = []
@@ -467,6 +496,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT)
     parser.add_argument("--retries", type=int, default=DEFAULT_RETRIES)
     parser.add_argument("--retry-budget", type=float, default=DEFAULT_RETRY_BUDGET)
+    parser.add_argument("--min-interval", type=float, default=DEFAULT_MIN_INTERVAL)
     return parser
 
 
@@ -481,6 +511,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             timeout=args.timeout,
             retries=args.retries,
             retry_budget=args.retry_budget,
+            min_interval=args.min_interval,
         )
         payload = serialize_pageviews(records)
     except (ValueError, WikimediaError) as exc:
