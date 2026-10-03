@@ -1,0 +1,25 @@
+name: eia_electricity_rto
+script: fetch_eia_electricity_rto.py
+args: []
+schedule: "25 15 * * *"  # UTC; daily after EIA's morning EIA-930 publication (8:30 ET = 12:30/13:30 UTC)
+enabled: true
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+# Form EIA-930 operational data: hourly net generation (MWh) per balancing
+# authority (~110 respondents) per fuel type (coal, gas, wind, solar,
+# nuclear, ...). Verified 2026-10-03: ~477 rows/hour, ~11.5k rows/day, so a
+# daily poll is 3 paginated requests (5000-row JSON cap) plus one
+# latest-period probe. The series trails real time by ~23.5h (latest period
+# at 05:30 UTC on 2026-10-03 was 2026-10-02T06), so daily polling captures
+# every newly finalized hour with no faster-than-needed load. The DEMO_KEY
+# quota is ~10 requests per UTC day (x-ratelimit-limit: 10, 429 retry-after
+# to the next UTC midnight), so a normal 4-request day leaves headroom and a
+# multi-day backlog drains a few pages per day via the saved watermark.
+cadence_note: "one daily poll collects the ~24 newly published hourly (balancing authority, fuel type) generation rows; EIA-930 publishes daily with a 1-2 day reporting lag, so the hourly watermark advances one day per run; in-place revisions of already-collected hours are not re-fetched (series-as-first-published); a 429 mid-catch-up saves the partial watermark and resumes next run (degraded/partial)"
+rate_limit: "shared registration-free DEMO_KEY; observed x-ratelimit-limit: 10 per UTC day (2026-10-03); fetcher makes 4 requests/day (probe + 3 pages), paces at 1.5s intervals, and treats 429 as terminal for the run (no in-process retry) so the shared quota is never burned on retries"
+licence: "US federal government data, public domain (EIA Copyrights and Reuse policy); API Terms of Service ask for source identification"
+attribution: "U.S. Energy Information Administration, Form EIA-930 (https://www.eia.gov/opendata/)"
+attribution_required: true
