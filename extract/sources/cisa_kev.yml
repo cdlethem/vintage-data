@@ -1,0 +1,19 @@
+name: cisa_kev
+script: fetch_cisa_kev.py
+args: []
+schedule: "27 9 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: >-
+  full-catalog daily snapshot (~1.7 MB, 1,733 entries); CISA appends 17-43
+  entries per month (verified 2026-10-04) and occasionally revises or removes
+  entries in place, so a dateAdded watermark would miss changes and the whole
+  catalog is re-emitted for the warehouse to dedupe on cveID
+rate_limit: "one bounded request per run to a stable public JSON feed; no published limit"
+licence: "US federal government work, public domain (17 U.S.C. 105)"
+attribution: "CISA Known Exploited Vulnerabilities catalog, https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
+attribution_required: false
