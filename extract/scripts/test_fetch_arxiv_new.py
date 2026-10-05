@@ -228,12 +228,12 @@ class FetchArxivNewTests(TestCase):
         )
         sleep.assert_called_once_with(8)
 
-    def test_retry_after_delta_seconds_is_courteous_and_capped(self):
+    def test_retry_after_delta_seconds_is_floored_and_respected(self):
         _, _, sleep = fetch([http_error(429, "1"), Response(ATOM)])
         sleep.assert_called_once_with(3)
 
         _, _, sleep = fetch([http_error(429, "120"), Response(ATOM)])
-        sleep.assert_called_once_with(30)
+        sleep.assert_called_once_with(120)
 
     def test_retry_after_http_dates_are_calculated_from_injected_clock(self):
         future = (NOW + timedelta(seconds=12)).strftime("%a, %d %b %Y %H:%M:%S GMT")
@@ -244,32 +244,63 @@ class FetchArxivNewTests(TestCase):
         _, _, sleep = fetch([http_error(429, past), Response(ATOM)])
         sleep.assert_called_once_with(3)
 
-    def test_missing_or_malformed_retry_after_uses_minimum_delay(self):
+    def test_missing_or_malformed_retry_after_uses_first_fallback_delay(self):
         for retry_after in (None, "not-a-date", "-1"):
             with self.subTest(retry_after=retry_after):
                 _, _, sleep = fetch([http_error(429, retry_after), Response(ATOM)])
-                sleep.assert_called_once_with(3)
+                sleep.assert_called_once_with(15)
 
     def test_cumulative_sleep_cap_applies_across_retries(self):
         sleeps = []
         records, urlopen, _ = fetch(
-            [http_error(429, "30"), http_error(429, "30"), Response(ATOM)], sleep=sleeps.append
+            [http_error(429, "400"), http_error(429, "400"), Response(ATOM)],
+            sleep=sleeps.append,
         )
 
         self.assertEqual(len(records), 1)
         self.assertEqual(urlopen.call_count, 3)
-        self.assertEqual(sleeps, [30, 30])
-        self.assertLessEqual(sum(sleeps), 60)
+        self.assertEqual(sleeps, [400, 5])
+        self.assertLessEqual(sum(sleeps), MODULE.RATE_LIMIT_MAX_CUMULATIVE_SLEEP_SECONDS)
 
     def test_429_exhaustion_closes_errors_without_final_sleep(self):
-        errors = [http_error(429, "30") for _ in range(3)]
+        errors = [http_error(429, "30")
+                  for _ in range(MODULE.RATE_LIMIT_MAX_ATTEMPTS)]
         sleep = mock.Mock()
         with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=errors):
             with self.assertRaises(urllib.error.HTTPError):
                 list(MODULE.fetch_new_papers(sleep=sleep, clock=lambda: NOW))
 
-        self.assertEqual(sleep.call_args_list, [mock.call(30), mock.call(30)])
+        self.assertEqual(sleep.call_args_list,
+                         [mock.call(30)] * (MODULE.RATE_LIMIT_MAX_ATTEMPTS - 1))
         self.assertTrue(all(error.fp.closed for error in errors))
+
+    def test_429_without_retry_after_uses_bounded_backoff_schedule(self):
+        errors = [http_error(429)
+                  for _ in range(MODULE.RATE_LIMIT_MAX_ATTEMPTS)]
+        sleep = mock.Mock()
+        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=errors):
+            with self.assertRaises(urllib.error.HTTPError) as raised:
+                list(MODULE.fetch_new_papers(sleep=sleep, clock=lambda: NOW))
+
+        self.assertEqual(raised.exception.code, 429)
+        self.assertEqual(sleep.call_args_list,
+                         [mock.call(delay)
+                          for delay in MODULE.RATE_LIMIT_FALLBACK_DELAYS_SECONDS])
+        self.assertLessEqual(
+            sum(MODULE.RATE_LIMIT_FALLBACK_DELAYS_SECONDS),
+            MODULE.RATE_LIMIT_MAX_CUMULATIVE_SLEEP_SECONDS,
+        )
+
+    def test_429_retry_after_above_remaining_budget_is_clamped(self):
+        sleeps = []
+        records, urlopen, _ = fetch(
+            [http_error(429, "405"), http_error(429, "405"), Response(ATOM)],
+            sleep=sleeps.append,
+        )
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(urlopen.call_count, 3)
+        self.assertEqual(sleeps, [405, 0])
 
     def test_non_429_failure_is_immediate(self):
         error = http_error(503)
@@ -345,7 +376,7 @@ class FetchArxivNewTests(TestCase):
         self.assertEqual(len(records), 1)
         self.assertEqual(urlopen.call_count, 3)
         self.assertEqual(sleeps, [3, 30])
-        self.assertLessEqual(sum(sleeps), 60)
+        self.assertLessEqual(sum(sleeps), MODULE.RATE_LIMIT_MAX_CUMULATIVE_SLEEP_SECONDS)
 
     def test_malformed_xml_is_not_retried(self):
         with mock.patch.object(MODULE.urllib.request, "urlopen", return_value=Response(MALFORMED_XML)) as urlopen:
@@ -388,8 +419,8 @@ class FetchArxivNewTests(TestCase):
 
     def test_cli_429_exhaustion_is_safe_and_bounded(self):
         self.assert_safe_cli_failure(
-            [{"kind": "http", "status": 429, "retry_after": "30"}] * 3,
-            "HTTP 429 after 3 attempt(s)",
+            [{"kind": "http", "status": 429, "retry_after": "30"}] * 6,
+            "HTTP 429 after 6 attempt(s)",
         )
 
     def test_cli_non_429_http_failure_is_safe_and_immediate(self):

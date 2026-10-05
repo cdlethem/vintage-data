@@ -16,10 +16,15 @@ Quirks:
   * New submissions are announced in daily batches (Sun-Thu ~20:00 ET), so a
     smart cadence is ~1-4 polls/day per category, not minutes.
   * date filter format: submittedDate:[YYYYMMDDHHMM TO YYYYMMDDHHMM] (GMT).
-  * HTTP 429 retries are limited to three total attempts; each retry sleeps at
-    least three seconds, at most 30 seconds, and no more than 60 seconds total.
-  * Transport failures (read timeouts, connection errors) share the same three-attempt
-    budget with 3s and 6s backoffs; the same 60-second cumulative sleep cap applies.
+  * HTTP 429 (per-IP rate limiting) is retried up to six total attempts,
+    sleeping the server's Retry-After when present, else
+    15s/30s/60s/120s/180s, capped at 405s of cumulative sleep (inside the
+    ten-minute task timeout). arXiv throttles an IP for minutes at a time
+    around the daily new-submission announcement batch, so a short budget
+    fails exactly then.
+  * Transport failures (read timeouts, connection errors) keep the
+    three-attempt budget with 3s and 6s backoffs; their sleeps draw on the
+    same cumulative budget, so a mixed run never exceeds the 405-second cap.
   * HTTP 406 is not retried; diagnostics retain only allowlisted content type
     and a bounded response-body shape, never raw headers or response text.
 
@@ -46,26 +51,42 @@ MIN_RETRY_DELAY_SECONDS = 3
 MAX_RETRY_DELAY_SECONDS = 30
 MAX_CUMULATIVE_SLEEP_SECONDS = 60
 
+# arXiv throttles per-IP for minutes at a time (observed 2026-10-05: 20+
+# minutes of 429s with no Retry-After header, in the hours after the daily
+# new-submission announcement). 429 therefore gets its own longer budget,
+# bounded so that full exhaustion plus six 60-second read timeouts stays
+# inside the ten-minute task timeout for the normal fast-429 case.
+RATE_LIMIT_MAX_ATTEMPTS = 6
+RATE_LIMIT_FALLBACK_DELAYS_SECONDS = (15, 30, 60, 120, 180)
+RATE_LIMIT_MAX_CUMULATIVE_SLEEP_SECONDS = 405
 
-def retry_after_delay(headers, now: datetime) -> float:
-    """Return a courteous, bounded delay from an HTTP Retry-After header."""
+
+def parse_retry_after(headers, now: datetime):
+    """Return the server-requested delay in seconds, or None if unusable."""
     value = headers.get("Retry-After") if headers is not None else None
-    delay = None
-    if isinstance(value, str):
-        value = value.strip()
-        if value.isdigit():
-            delay = int(value)
-        else:
-            try:
-                retry_at = parsedate_to_datetime(value)
-                if retry_at.tzinfo is None:
-                    retry_at = retry_at.replace(tzinfo=timezone.utc)
-                delay = (retry_at - now).total_seconds()
-            except (IndexError, TypeError, ValueError):
-                pass
-    if delay is None or delay < 0:
-        return MIN_RETRY_DELAY_SECONDS
-    return max(MIN_RETRY_DELAY_SECONDS, min(MAX_RETRY_DELAY_SECONDS, delay))
+    if not isinstance(value, str):
+        return None
+    value = value.strip()
+    if value.isdigit():
+        return float(value)
+    try:
+        retry_at = parsedate_to_datetime(value)
+    except (IndexError, TypeError, ValueError):
+        return None
+    if retry_at.tzinfo is None:
+        retry_at = retry_at.replace(tzinfo=timezone.utc)
+    return (retry_at - now).total_seconds()
+
+
+def rate_limit_delay(headers, now: datetime, retries: int, remaining: float) -> float:
+    """Bounded 429 delay: Retry-After when usable, else the backoff schedule."""
+    requested = parse_retry_after(headers, now)
+    if requested is None:
+        delay = RATE_LIMIT_FALLBACK_DELAYS_SECONDS[min(
+            retries, len(RATE_LIMIT_FALLBACK_DELAYS_SECONDS) - 1)]
+    else:
+        delay = max(MIN_RETRY_DELAY_SECONDS, requested)
+    return max(0.0, min(delay, remaining))
 
 
 def _close_http_error(error):
@@ -109,7 +130,8 @@ def fetch_new_papers(category: str = "cs.AI", hours_back: int = 24,
     req = urllib.request.Request(f"{BASE}?{params}",
                                  headers={"User-Agent": USER_AGENT})
     slept = 0
-    for attempt in range(1, MAX_ATTEMPTS + 1):
+    rate_limit_retries = 0
+    for attempt in range(1, RATE_LIMIT_MAX_ATTEMPTS + 1):
         try:
             with urllib.request.urlopen(req, timeout=60) as resp:
                 root = ET.fromstring(resp.read())
@@ -119,18 +141,21 @@ def fetch_new_papers(category: str = "cs.AI", hours_back: int = 24,
             if status == 406:
                 error.arxiv_response_summary = _rejection_summary(error)
             _close_http_error(error)
-            if status != 429 or attempt == MAX_ATTEMPTS:
+            if status != 429:
                 raise
-            delay = min(retry_after_delay(headers, clock()),
-                        MAX_CUMULATIVE_SLEEP_SECONDS - slept)
+            rate_limit_retries += 1
+            if rate_limit_retries >= RATE_LIMIT_MAX_ATTEMPTS:
+                raise
+            delay = rate_limit_delay(headers, clock(), rate_limit_retries - 1,
+                                     RATE_LIMIT_MAX_CUMULATIVE_SLEEP_SECONDS - slept)
             sleep(delay)
             slept += delay
         except (urllib.error.URLError, TimeoutError, OSError):
-            if attempt == MAX_ATTEMPTS:
+            if attempt >= MAX_ATTEMPTS:
                 raise
-            delay = min(MIN_RETRY_DELAY_SECONDS * (2 ** (attempt - 1)),
-                        MAX_RETRY_DELAY_SECONDS,
-                        MAX_CUMULATIVE_SLEEP_SECONDS - slept)
+            delay = max(0.0, min(MIN_RETRY_DELAY_SECONDS * (2 ** (attempt - 1)),
+                                 MAX_RETRY_DELAY_SECONDS,
+                                 MAX_CUMULATIVE_SLEEP_SECONDS - slept))
             sleep(delay)
             slept += delay
     fetched_at = now.isoformat()
@@ -176,7 +201,7 @@ def main(argv=None):
         for record in fetch_new_papers(category=category):
             print(json.dumps(record, ensure_ascii=False))
     except urllib.error.HTTPError as error:
-        attempts = MAX_ATTEMPTS if error.code == 429 else 1
+        attempts = RATE_LIMIT_MAX_ATTEMPTS if error.code == 429 else 1
         summary = f"; {error.arxiv_response_summary}" if error.code == 406 else ""
         _terminal_failure(f"HTTP {error.code} after {attempts} attempt(s){summary}")
         return 1
