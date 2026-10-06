@@ -1,0 +1,15 @@
+name: polymarket_events
+script: fetch_polymarket_events.py
+args: []
+schedule: "41 6 * * *"  # UTC; daily, staggered offset 41
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "implied probabilities move continuously; daily snapshot of the top ~350 active events by 24h volume plus ~700 resolutions from the past 24h, both above a $10k volume floor"
+rate_limit: "no documented limit on the keyless Gamma API (Cloudflare-fronted); ~40-60 requests per daily run"
+licence: "no explicit data licence published; keyless public API mirroring on-chain (Polygon) trading records"
+attribution: "Polymarket (Polymarket US Inc.), https://polymarket.com/"
+attribution_required: true
