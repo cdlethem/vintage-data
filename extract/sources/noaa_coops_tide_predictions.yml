@@ -1,0 +1,14 @@
+name: noaa_coops_tide_predictions
+script: fetch_noaa_coops_tide_predictions.py
+args: ["--lookback-days", "2", "--timeout", "30", "--retries", "2", "--request-delay", "1"]
+schedule: "38 5 * * *"  # UTC; daily, one new set of high/low predictions per station per day
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "high/low tide predictions for 25 major US ports; predictions for each day are issued in advance and are stable once the day passes, so a daily run with a per-station date watermark is gap-free"
+rate_limit: "keyless CO-OPS Data Retrieval API; 25 requests/day ~1s apart (~250/month-class load); 429/5xx responses retry twice with bounded exponential backoff"
+licence: "United States government work; attribute NOAA/NOS/Center for Operational Oceanographic Products and Services and the named station"
+attribution_required: true
