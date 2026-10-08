@@ -1,0 +1,21 @@
+name: github_advisories
+script: fetch_github_advisories.py
+args: []
+schedule: "8,23,38,53 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 45
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+# Verified live 2026-10-08: keyless GET api.github.com/advisories returned
+# current-day records; the UTC day 2026-10-07 holds 407 advisories, so the
+# data changes many times per hour and a 15-minute cadence is well below the
+# five-minute floor. The endpoint ignores `page` beyond the first 100
+# records, so the fetcher bisection-splits time windows instead of paging,
+# and self-imposes 1 s spacing against the 60 req/hour unauthenticated limit
+# (sleeps until X-RateLimit-Reset on 403/429 and retries once).
+cadence_note: "new open-source security advisories as published (pip/npm/maven/cargo/...); ~400/day measured, continuous; watermark replays after failed runs"
+rate_limit: "keyless: 60 req/hour unauthenticated; script self-imposes 1 req/s and sleeps until x-ratelimit-reset on 403/429"
+licence: "GitHub API terms of service; Global Advisory Database is public data (entries aggregate GHSA/NVD/OSV sources; reporter credits are excluded from collected records as personal data)"
+attribution_required: false
