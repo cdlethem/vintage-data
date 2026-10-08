@@ -26,6 +26,10 @@ polite pool and rate limits become generous.
 
 Quirks:
   * Use cursor=* deep paging, never page/offset, for large pulls.
+  * The API intermittently answers valid queries with HTTP 500 (observed
+    live 2026-10-08: the same page request failed 3 of 6 times). Each page
+    is therefore retried a bounded number of times on 429/5xx/connection
+    failures with backoff before the run is allowed to fail.
   * created-date captures registrations of old back-catalog too (journal
     transfers). Filter by publication year if you only want new literature.
   * select= keeps payloads small; full records are huge.
@@ -36,6 +40,8 @@ import argparse
 import json
 import os
 import pathlib
+import sys
+import time
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -46,6 +52,16 @@ USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or f"vintage-data/0.1 (mailto:
 DEFAULT_DATA_ROOT = "~/.local/share/vintage-data/extract"
 
 SELECT = "DOI,title,abstract,created,type,publisher,container-title,subject,author"
+
+# api.crossref.org intermittently answers valid queries with HTTP 500 (the
+# same valid query failed 3 of 6 times when observed live 2026-10-08). Retry
+# transient failures per page in a bounded way so a brief flap does not
+# lose a whole run; a persistent outage still fails the run with its status
+# surfaced. Other HTTP errors (e.g. 404) are not retried.
+MAX_ATTEMPTS = 4
+RETRY_BASE_DELAY = 5.0
+MAX_RETRY_DELAY = 30.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
 
 
 def state_path(explicit: str | None = None) -> pathlib.Path:
@@ -75,6 +91,49 @@ def save_state(path: pathlib.Path, state: dict):
     os.replace(staged, path)
 
 
+def _retry_delay(error: urllib.error.HTTPError, fallback: float) -> float:
+    """Return a courteous bounded delay from an HTTP Retry-After header."""
+    value = error.headers.get("Retry-After") if error.headers is not None else None
+    if value is not None:
+        try:
+            delay = float(value)
+        except (TypeError, ValueError):
+            delay = None
+        if delay is not None and delay >= 0:
+            return min(delay, MAX_RETRY_DELAY)
+    return min(fallback, MAX_RETRY_DELAY)
+
+
+def _get_page(query: str) -> dict:
+    """Fetch one cursor page of works as its JSON message, with bounded retries.
+
+    Transient failures -- 429, 5xx, and connection errors -- retry with
+    5s/10s/20s backoff (at most ~35 seconds of sleeping per page, well
+    inside the ten-minute task timeout); other HTTP errors (e.g. 404)
+    fail immediately.
+    """
+    req = urllib.request.Request(f"{BASE}?{query}",
+                                 headers={"User-Agent": USER_AGENT})
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                return json.load(resp)["message"]
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = f"HTTP {exc.code}"
+            delay = _retry_delay(exc, RETRY_BASE_DELAY * (2 ** attempt))
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = str(exc.reason if isinstance(exc, urllib.error.URLError) else exc)
+            delay = min(RETRY_BASE_DELAY * (2 ** attempt), MAX_RETRY_DELAY)
+        print(f"crossref_new_dois: transient failure ({reason}); retrying in {delay:.0f}s "
+              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+        time.sleep(delay)
+    raise AssertionError("unreachable")
+
+
 def fetch_new_works(hours_back: int = 1, rows: int = 1000, watermark: str = "",
                     boundary: frozenset = frozenset()):
     """Yield works registered after ``watermark`` (or in the last ``hours_back`` hours).
@@ -95,10 +154,7 @@ def fetch_new_works(hours_back: int = 1, rows: int = 1000, watermark: str = "",
             "filter": flt, "select": SELECT,
             "rows": rows, "cursor": cursor, "mailto": MAILTO,
         })
-        req = urllib.request.Request(f"{BASE}?{params}",
-                                     headers={"User-Agent": USER_AGENT})
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            msg = json.load(resp)["message"]
+        msg = _get_page(params)
         items = msg.get("items", [])
         if not items:
             return
