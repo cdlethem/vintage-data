@@ -1,0 +1,14 @@
+name: us_treasury_yield_curve
+script: fetch_us_treasury_yield_curve.py
+args: []
+schedule: "15 21 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "one par-yield-curve row per US business day, published ~20:30 UTC (4:30 PM ET); daily 21:15 UTC poll after publication, watermark skips weekends/holidays"
+rate_limit: "no published quota; one ~16 KB CSV request per day, about 300 requests/year"
+licence: "US Government work, public domain"
+attribution_required: false
