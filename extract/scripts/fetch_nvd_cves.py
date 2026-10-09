@@ -61,7 +61,7 @@ def _get(params: dict):
 
 
 def fetch_cves(days_back: int = 1, by: str = "published",
-               results_per_page: int = 200, slim: bool = True,
+               results_per_page: int = 2000, slim: bool = True,
                no_rejected: bool = True):
     """by='published' for new CVEs, by='modified' for revised ones."""
     now = datetime.now(timezone.utc)
