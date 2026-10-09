@@ -4,7 +4,7 @@ args: ["modified"]
 schedule: "12,42 * * * *"  # UTC
 enabled: true
 retries: 1
-timeout_minutes: 10
+timeout_minutes: 20  # 2-day modified window reaches ~7.5k records during NVD bulk re-score sweeps; full fetch can exceed 10 min
 sink: local
 
 # Vetting metadata (documentation only, not read by the DAG factory)
