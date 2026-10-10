@@ -1,0 +1,45 @@
+name: boe_rates
+script: fetch_boe_rates.py
+args: []
+# One bounded request per day. BoE's Bank Rate and SONIA daily series update on
+# business days around 09:30 UK time (09:30/10:30 UTC across DST) with a
+# 1-2 business-day publication lag; 12:20 UTC sits comfortably after both
+# DST variants and is a staggered minute not used by other daily sources.
+schedule: "20 12 * * *" # UTC
+enabled: false
+retries: 1
+timeout_minutes: 10
+sink: local
+run_summary:
+  required: true
+
+# Fixed daily cadence: a single bounded BoE request per day. The Bank's daily
+# series do not change faster than once per business day, so adaptive
+# scheduling must not activate this source.
+cadence:
+  auto: false
+cadence_note: "Bank Rate + SONIA daily series; one bounded BoE CSV request per day"
+rate_limit: "one request per daily run"
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+licence: "UK Open Government Licence v3.0 for the Bank of England's own series (copyright Governor and Company of the Bank of England)"
+attribution: "Bank of England (BoE), BoE statistics database, https://www.bankofengland.co.uk/boeapps/database/"
+attribution_required: true
+licensing_note: >-
+  Only the Bank's own series are collected, all reproduced under the UK Open
+  Government Licence v3.0. The database's daily spot exchange-rate series
+  (XUDL* codes) are intentionally excluded: the Bank's terms state those are
+  reproduced under licence from third parties (LSEG) and are not covered by
+  the OGL, so collecting them would require separate permission.
+deduplication_note: >-
+  The <series>:<date> id is the source-natural identity; a trailing lookback
+  window (default 14 days, max 60) plus a per-series date watermark means an
+  outage re-fetches the gap without re-emitting already-collected dates.
+rate_limit_note: "single serial request per run; no published quota, conservative"
+
+# Do not enable until an operator records a successful live BoE smoke, the
+# staged-to-scripts copy, DAG discovery and cadence-plan checks, and confirms
+# the series set against the live database.
+import_checks:
+  - "staged copy retained in discovery/staged_scripts (none: authored directly in extract/scripts)"
+  - "one bounded request per run; state written outside the checkout only"
