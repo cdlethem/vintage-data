@@ -40,14 +40,18 @@ Quirks that will cost someone an afternoon:
 
 Etiquette: keyless, no key required for these read endpoints, but Software Heritage
 documents anonymous rate limits (roughly 120 requests/hour, checked via response
-headers `X-RateLimit-Remaining` at request time) — self-impose well under that, and
-check the header if you're polling many origins.
+headers `X-RateLimit-Remaining` at request time) -- self-impose well under that, and
+check the header if you're polling many origins. The search endpoint is also
+intermittently slow (a healthy 200 probe took ~9-14s on 2026-10-10); the single
+request per run is retried in a bounded way on transient 5xx/429/timeouts/
+connection failures (see ``_get``) before the run is allowed to fail.
 
 Stdlib only.
 """
 import json
 import os
 import sys
+import time
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -55,12 +59,57 @@ from datetime import datetime, timezone
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 BASE = "https://archive.softwareheritage.org/api/1"
 
+# Software Heritage's search endpoint intermittently stalls beyond the
+# 30-second read timeout (observed live 2026-10-10: a healthy 200 probe
+# took ~9-14s). Retry transient failures in a bounded way so a brief
+# stall does not lose a whole run.
+MAX_ATTEMPTS = 4
+RETRY_BASE_DELAY = 5.0
+MAX_RETRY_DELAY = 30.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
+
+
+def _retry_delay(error: urllib.error.HTTPError, fallback: float) -> float:
+    """Return a courteous bounded delay from an HTTP Retry-After header."""
+    value = error.headers.get("Retry-After") if error.headers is not None else None
+    if value is not None:
+        try:
+            delay = float(value)
+        except (TypeError, ValueError):
+            delay = None
+        if delay is not None and delay >= 0:
+            return min(delay, MAX_RETRY_DELAY)
+    return min(fallback, MAX_RETRY_DELAY)
+
 
 def _get(url):
+    """Fetch one JSON document, with bounded retries on transient failures.
+
+    Transient failures -- 5xx, 429, and read/connection timeouts -- retry
+    with 5s/10s/20s backoff (at most ~35 seconds of sleeping on top of four
+    30-second request attempts, well inside the ten-minute task timeout).
+    A persistent stall still fails the run after the bounded attempts with
+    its status surfaced; other HTTP errors (e.g. 404) fail immediately.
+    """
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT,
                                                 "Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.load(resp)
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = f"HTTP {exc.code}"
+            delay = _retry_delay(exc, RETRY_BASE_DELAY * (2 ** attempt))
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = str(exc.reason if isinstance(exc, urllib.error.URLError) else exc)
+            delay = min(RETRY_BASE_DELAY * (2 ** attempt), MAX_RETRY_DELAY)
+        print(f"software_heritage: transient failure ({reason}); retrying in {delay:.0f}s "
+              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+        time.sleep(delay)
 
 
 def search_origins(query: str, limit: int = 20):
