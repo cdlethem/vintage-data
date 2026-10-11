@@ -1,0 +1,15 @@
+name: fred_series
+script: fetch_fred_series.py
+args: ["--bootstrap-days", "365", "--lookback-days", "14", "--timeout", "30", "--retries", "3", "--retry-delay", "5", "--request-interval", "3"]
+schedule: "45 22 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Vetting metadata (documentation only, not read by DAG factory)
+cadence_note: "25-series US macro panel; daily releases (fed funds, SOFR, yields, 10y-2y spread, equities, commodities, VIX, M2) land 20:30-22:00 UTC and monthly releases (CPI, PCE, UNRATE, PAYEMS, housing) mid-month, so a 22:45 UTC run sits after every daily publication and the panel changes at daily cadence"
+rate_limit: "keyless CSV endpoint with no published limit; observed hard throttle on sustained traffic (~12 requests in a minute degraded to hung reads for ~15 minutes) — ~25 paced requests/day is negligible, and the fetcher backs off on 429/5xx/timeouts"
+licence: "FRED terms of use (fred.stlouisfed.org/legal/terms) — subset use with attribution to original source and FRED; per-series labels are 'Public Domain: Citation requested' or 'Copyrighted: Citation required'; excessive extraction and AI training are prohibited"
+attribution: "FRED, Federal Reserve Bank of St. Louis, https://fred.stlouisfed.org/ (original data provider credited per series)"
+attribution_required: true
