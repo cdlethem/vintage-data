@@ -1,0 +1,17 @@
+name: met_norway
+script: fetch_met_norway.py
+args: ["--timeout", "30"]
+schedule: "37 * * * *"  # UTC; staggered minute, not on the dot per the service ToS
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+run_summary:
+  required: true
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "MET Norway's national model is re-run roughly every 10 minutes (verified live 2026-10-12); each hourly poll snapshots the 86-hour forecast for ten major Norwegian cities"
+rate_limit: "keyless; 10 sequential requests per run, 0.5 s apart, far under the 20 requests/second per-application limit"
+licence: "NLOD 2.0 and CC-BY 4.0"
+attribution: "Data from MET Norway, https://api.met.no"
+attribution_required: true
