@@ -48,12 +48,18 @@ Stdlib only.
 import json
 import os
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 APP_TOKEN = None      # free, no approval; raises rate limits. Set it.
+
+MAX_ATTEMPTS = 3
+RETRY_BASE_DELAY = 1.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
 
 # A starter map of live-ish civic feeds. Verify each before trusting.
 FEEDS = {
@@ -66,6 +72,16 @@ FEEDS = {
 
 
 def _get(domain: str, dataset: str, **params):
+    """Query the SODA API, retrying transient failures with a finite bound.
+
+    data.seattle.gov's edge intermittently presents a certificate that is
+    not valid for the hostname (observed 2026-10-12: a fraction of TLS
+    handshakes return the `cos-data.seattle.gov` certificate and fail with
+    Hostname mismatch). Transient transport failures (including SSL
+    handshake/verification errors) and 429/5xx retry with 1s/2s backoff;
+    non-transient errors and exhausted attempts raise the final failure
+    unchanged.
+    """
     url = f"https://{domain}/resource/{dataset}.json"
     if params:
         url += "?" + urllib.parse.urlencode(params)
@@ -73,8 +89,22 @@ def _get(domain: str, dataset: str, **params):
     if APP_TOKEN:
         headers["X-App-Token"] = APP_TOKEN
     req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        return json.load(resp)
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = f"HTTP {exc.code}"
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = str(exc.reason if isinstance(exc, urllib.error.URLError) else exc)
+        delay = RETRY_BASE_DELAY * (2 ** attempt)
+        print(f"socrata_civic: transient failure ({reason}); retrying in {delay:.0f}s "
+              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+        time.sleep(delay)
 
 
 def discover_columns(domain: str, dataset: str):
