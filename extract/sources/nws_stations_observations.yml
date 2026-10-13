@@ -1,0 +1,28 @@
+name: nws_stations_observations
+script: fetch_nws_stations_observations.py
+# Curated 24-station list (major US ASOS stations) lives in the script; growth
+# is a script edit. One request per station per run, paced to 1/s.
+args: ["--timeout", "30", "--min-interval", "1"]
+schedule: "22 * * * *"  # UTC; hourly, staggered (minute 22 is unused by other sources)
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+# Verified live 2026-10-13: all 24 stations returned fresh observations from
+# the 05:20-05:30Z window on the /stations/<id>/observations/latest endpoint
+# (MCO/Orlando is absent from the NWS station index; KTPA/Tampa covers
+# central Florida). Major ASOS stations publish a new METAR every ~5 minutes,
+# so each hourly run captures at most one new observation per station
+# (~576 rows/day, ~1 MB/day raw). The state file's per-station watermark
+# skips stations whose latest observation is not newer than the last emitted
+# one, so quiet periods emit no duplicate rows.
+cadence:
+  auto: false
+
+cadence_note: "latest surface observation (temperature, dewpoint, wind, pressure, visibility, humidity, 3h precipitation) per station; data changes at least hourly, hourly polling with a staleness guard"
+rate_limit: "keyless open API; NWS asks for a descriptive User-Agent and reasonable pacing; script self-imposes 1 request/second (24 requests per run)"
+licence: "US Government work, public domain; NWS open API is 'open data, free to use for any purpose' (https://www.weather.gov/documentation/services-web-api)"
+attribution: "National Weather Service, NOAA (api.weather.gov)"
+attribution_required: false
