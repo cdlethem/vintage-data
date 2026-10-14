@@ -1,0 +1,19 @@
+name: bank_of_canada_valet
+script: fetch_bank_of_canada_valet.py
+args: []
+schedule: "30 6 * * *"  # UTC; business-daily FX/rates finalize 17:00 ET, so next-morning 06:30 UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: >-
+  Eight CAD cross FX averages and the CORRA/overnight-money-market rates
+  publish business-daily; M1+/M2 publish monthly. One batched request per run;
+  per-series date watermarks keep the steady-state window to a few days and
+  emit nothing on weekends/holidays (a no-op run, as designed).
+rate_limit: "one Valet GET per run (comma-batched 12 series); no published limit"
+licence: "Bank of Canada Terms of Use: free use, copy, distribution and transmission with attribution"
+attribution: "Bank of Canada, Valet API (bankofcanada.ca/valet)"
+attribution_required: true
