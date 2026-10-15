@@ -16,6 +16,7 @@ import gzip
 import io
 import json
 import os
+import ssl
 import sys
 import time
 import urllib.error
@@ -24,11 +25,19 @@ import urllib.request
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Iterable
 
 SOURCE = "infodengue_city_alerts"
 URL = "https://info.dengue.mat.br/api/alertcity"
 IBGE_MUNICIPIOS_URL = "https://servicodados.ibge.gov.br/api/v1/localidades/municipios"
+# Since 2026-10-15 IBGE presents only the leaf certificate in its TLS handshake and
+# no longer sends the intermediate, so clients without "Sectigo Public Server
+# Authentication CA DV R36" cached cannot complete verification ("unable to get local
+# issuer certificate"). The intermediate (fetched from the leaf's AIA) is pinned here
+# so the chain is fully verified against the system Sectigo root. Remove it once IBGE
+# serves the intermediate in the handshake again.
+IBGE_INTERMEDIATE_PEM = Path(__file__).resolve().parent.parent / "certs" / "sectigo-public-server-authentication-ca-dv-r36.pem"
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 REQUEST_DELAY_S = 0.3
 MAX_ATTEMPTS = 3
@@ -72,10 +81,17 @@ class Metrics:
             self.max_week = week
 
 
+def _ibge_context() -> ssl.SSLContext:
+    """Default verification context plus IBGE's currently-missing intermediate CA."""
+    context = ssl.create_default_context()
+    context.load_verify_locations(str(IBGE_INTERMEDIATE_PEM))
+    return context
+
+
 def fetch_municipality_geocodes(timeout: int = 30) -> list[str]:
     """Return every current IBGE municipality geocode, deterministically sorted."""
     request = urllib.request.Request(IBGE_MUNICIPIOS_URL, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    with urllib.request.urlopen(request, timeout=timeout, context=_ibge_context()) as response:
         raw = response.read()
         if response.headers.get("Content-Encoding") == "gzip":
             raw = gzip.decompress(raw)
