@@ -1,0 +1,18 @@
+name: nifc_wildfires
+script: fetch_nifc_wildfires.py
+args: ["--timeout", "60"]
+schedule: "41 6 * * *"  # UTC; daily snapshot, staggered away from the 6:15/6:30/6:37 cluster
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+run_summary:
+  required: true
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily snapshot of every currently active US wildland fire, prescribed fire and incident complex from the NIFC WFIGS layer; the layer is refreshed continuously, so one daily capture records size/containment evolution and new ignitions (live check 2026-10-15: 430 incidents, newest update within ~2 h)"
+rate_limit: "keyless public ArcGIS layer; one count request plus one page per 1,000 incidents (2 pages at current volume, 3 total requests per run)"
+licence: "United States government work, public domain"
+attribution: "National Interagency Fire Center (NIFC), WFIGS incident layer"
+attribution_required: true
+replay_note: "successful committed files are ledger-idempotent; rerunning extraction intentionally creates a new timestamped snapshot, and closed incidents drop out of the current layer"
