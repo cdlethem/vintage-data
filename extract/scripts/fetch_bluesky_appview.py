@@ -19,11 +19,17 @@ For a true firehose (every public post in real time, zero auth), use the
 Jetstream websocket instead — see IDEAS.md; that needs a ws client, so it is
 not covered by this polling script.
 
+The single request per run is retried in a bounded way on transient
+read/connection timeouts and 5xx/429 responses (see ``_get``) so a brief
+flap does not lose a whole run.
+
 Stdlib only.
 """
 import json
 import os
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -31,12 +37,58 @@ from datetime import datetime, timezone
 APPVIEW = "https://public.api.bsky.app/xrpc"
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 
+# The public AppView host occasionally drops a request (read timeout, 5xx,
+# 429) mid-stream. A brief flap must not lose a whole run, so the single
+# request per run is retried in a bounded way.
+MAX_ATTEMPTS = 4
+RETRY_BASE_DELAY = 5.0
+MAX_RETRY_DELAY = 30.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
+
+
+def _retry_delay(error: urllib.error.HTTPError, fallback: float) -> float:
+    """Return a courteous bounded delay from an HTTP Retry-After header."""
+    value = error.headers.get("Retry-After") if error.headers is not None else None
+    if value is not None:
+        try:
+            delay = float(value)
+        except (TypeError, ValueError):
+            delay = None
+        if delay is not None and delay >= 0:
+            return min(delay, MAX_RETRY_DELAY)
+    return min(fallback, MAX_RETRY_DELAY)
+
 
 def _get(method: str, **params):
+    """Fetch one JSON document, retrying transient failures in a bounded way.
+
+    Transient failures -- 5xx/429 and read/connection timeouts -- are retried
+    with 5s/10s/20s backoff (at most ~35s of sleeping, well inside the
+    ten-minute task timeout) so a brief flap does not lose a whole run. A
+    persistent outage still fails the run after the bounded attempts with its
+    status surfaced; other HTTP errors (e.g. 404, 403) fail immediately.
+    """
     url = f"{APPVIEW}/{method}?" + urllib.parse.urlencode(params)
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.load(resp)
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                body = resp.read()
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = f"HTTP {exc.code}"
+            delay = _retry_delay(exc, RETRY_BASE_DELAY * (2 ** attempt))
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = str(exc.reason if isinstance(exc, urllib.error.URLError) else exc)
+            delay = min(RETRY_BASE_DELAY * (2 ** attempt), MAX_RETRY_DELAY)
+        else:
+            return json.loads(body)
+        print(f"bluesky_appview: transient failure ({reason}); retrying in {delay:.0f}s "
+              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+        time.sleep(delay)
 
 
 def _norm_post(p: dict, now: str) -> dict:
