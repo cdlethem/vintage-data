@@ -1,0 +1,18 @@
+name: iss_position
+script: fetch_iss_position.py
+args: []
+schedule: "1-59/5 * * * *"  # UTC; five-minute offset 1 (offsets 0, 2, 4 already used by other 5-minute sources)
+enabled: false
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Do not enable until an operator records a successful live fetch smoke and an
+# Airflow import check. Confined verification is offline and must not mutate
+# Airflow.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "ISS sub-satellite point moves continuously (~27.6 km/s); every 5-minute poll is a new observation (~288 rows/day)"
+rate_limit: "keyless WTIA v1 API; observed X-Rate-Limit of 350 requests per 5 minutes; one request per 5-minute run"
+licence: "unstated (free public service); positions computed from public-domain NORAD/NASA TLE ephemerides"
+attribution: "Where the ISS at? (wheretheiss.at)"
+attribution_required: true
