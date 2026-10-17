@@ -57,7 +57,11 @@ class FixedDateTime(datetime):
 
 class FetchUkParliamentProceduralActivityTests(unittest.TestCase):
     def test_recovers_from_502_with_bounded_retry_after_values(self):
-        cases = ((None, 1), ("not-a-delay", 1), ("900", 30))
+        cases = (
+            (None, MODULE.DEFAULT_RETRY_DELAY_SECONDS),
+            ("not-a-delay", MODULE.DEFAULT_RETRY_DELAY_SECONDS),
+            ("900", MODULE.MAX_RETRY_DELAY_SECONDS),
+        )
         for retry_after, expected_delay in cases:
             with self.subTest(retry_after=retry_after), mock.patch.object(
                 MODULE.urllib.request, "urlopen", side_effect=[http_transient(502, retry_after), response({"value": []})]
@@ -97,7 +101,7 @@ class FetchUkParliamentProceduralActivityTests(unittest.TestCase):
         with mock.patch.object(
             MODULE.urllib.request, "urlopen", side_effect=[http_transient(500, "1")] * MODULE.MAX_TRANSIENT_ATTEMPTS
         ) as urlopen, mock.patch.object(MODULE.time, "sleep") as sleep:
-            with self.assertRaisesRegex(RuntimeError, "HTTP 500 after 4 attempts; retry limit exhausted"):
+            with self.assertRaisesRegex(RuntimeError, f"HTTP 500 after {MODULE.MAX_TRANSIENT_ATTEMPTS} attempts; retry limit exhausted"):
                 MODULE.collect(None, 9)
         self.assertEqual(urlopen.call_count, MODULE.MAX_TRANSIENT_ATTEMPTS)
         self.assertEqual(sleep.call_count, MODULE.MAX_TRANSIENT_ATTEMPTS - 1)
@@ -118,7 +122,7 @@ class FetchUkParliamentProceduralActivityTests(unittest.TestCase):
             "urlopen",
             side_effect=[urllib.error.URLError("connection reset")] * MODULE.MAX_TRANSIENT_ATTEMPTS,
         ) as urlopen, mock.patch.object(MODULE.time, "sleep") as sleep:
-            with self.assertRaisesRegex(RuntimeError, "failed after 4 attempts: connection reset"):
+            with self.assertRaisesRegex(RuntimeError, f"failed after {MODULE.MAX_TRANSIENT_ATTEMPTS} attempts: connection reset"):
                 MODULE.collect(None, 9)
         self.assertEqual(urlopen.call_count, MODULE.MAX_TRANSIENT_ATTEMPTS)
         self.assertEqual(sleep.call_count, MODULE.MAX_TRANSIENT_ATTEMPTS - 1)
