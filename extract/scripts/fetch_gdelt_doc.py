@@ -16,6 +16,12 @@ def _get(query):
     url=BASE+"?"+urllib.parse.urlencode({"query":query,"mode":"ArtList","format":"json","sort":"DateDesc","timespan":"60min","maxrecords":250})
     req=urllib.request.Request(url,headers={"User-Agent":USER_AGENT})
     with urllib.request.urlopen(req,timeout=30) as r: return json.load(r), getattr(r,"status",200)
+def open_circuit(path,state,started,status,base_cooldown,extra=None):
+    n=state["consecutive_429"]+1; cooldown=min(86400,max(base_cooldown,3600*2**(n-1)))
+    state.update({"last_status":status,"consecutive_429":n,"retry_count":state["retry_count"]+1,"cooldown_s":cooldown,"next_probe_at":(started+timedelta(seconds=cooldown)).isoformat()}); save_state(path,state)
+    metrics={"status":status,"cooldown_s":cooldown,"next_probe_at":state["next_probe_at"]}
+    if extra: metrics.update(extra)
+    print(PREFIX+json.dumps({"health":"open_circuit","completeness":"unknown","records":0,"requests":{"attempted":1},"metrics":metrics}),file=sys.stderr); return 0
 def main(argv=None):
     p=argparse.ArgumentParser(); p.add_argument("--query",default='"artificial intelligence"'); p.add_argument("--state-file"); a=p.parse_args(argv)
     path=pathlib.Path(a.state_file) if a.state_file else state_path(); state=load_state(path); started=now(); state["last_attempt_at"]=started.isoformat()
@@ -26,15 +32,17 @@ def main(argv=None):
     except urllib.error.HTTPError as exc:
         state["last_status"]=exc.code
         if exc.code != 429: save_state(path,state); print(PREFIX+json.dumps({"health":"failed","completeness":"failed","records":0,"requests":{"attempted":1},"error":str(exc)}),file=sys.stderr); return 1
-        n=state["consecutive_429"]+1; retry=exc.headers.get("Retry-After")
+        retry=exc.headers.get("Retry-After")
         try: retry_s=max(0,int(float(retry)))
         except (TypeError,ValueError): retry_s=0
-        cooldown=min(86400,max(retry_s,3600*2**(n-1))); state.update({"consecutive_429":n,"retry_count":state["retry_count"]+1,"cooldown_s":cooldown,"next_probe_at":(started+timedelta(seconds=cooldown)).isoformat()}); save_state(path,state)
-        print(PREFIX+json.dumps({"health":"open_circuit","completeness":"unknown","records":0,"requests":{"attempted":1},"metrics":{"status":429,"cooldown_s":cooldown,"next_probe_at":state["next_probe_at"]}}),file=sys.stderr); return 0
+        return open_circuit(path,state,started,429,retry_s)
     except Exception as exc:
         state["last_status"]="error"; save_state(path,state); print(PREFIX+json.dumps({"health":"failed","completeness":"failed","records":0,"requests":{"attempted":1},"error":str(exc)}),file=sys.stderr); return 1
     articles=data.get("articles") if isinstance(data,dict) else None
-    if not isinstance(articles,list): print(PREFIX+json.dumps({"health":"failed","completeness":"failed","records":0,"requests":{"attempted":1},"error":"invalid GDELT schema"}),file=sys.stderr); return 1
+    if not isinstance(articles,list):
+        # A 200 without the articles list (GDELT's empty-object soft throttle) is
+        # rate limiting, not a schema change: open the circuit like a 429.
+        return open_circuit(path,state,started,status,0,{"response":"no_articles"})
     stamp=started.isoformat()
     for item in articles: print(json.dumps({"source":"gdelt_doc","fetched_at":stamp,"id":item.get("url"),"published":item.get("seendate"),"title":item.get("title"),"domain":item.get("domain"),"language":item.get("language"),"sourcecountry":item.get("sourcecountry"),"url":item.get("url")},ensure_ascii=False))
     state.update({"last_status":status,"consecutive_429":0,"cooldown_s":3600,"next_probe_at":(started+timedelta(hours=1)).isoformat()})
