@@ -289,7 +289,7 @@ args: [
     "--article", "th", "wikipedia", "ข้าว",
     "--days", "2", "--access", "all-access", "--agent", "user", "--timeout", "15", "--retries", "2", "--retry-budget", "3000", "--min-interval", "1"
 ]
-schedule: "27 5 * * *"  # UTC; daily, staggered. Per-article pageviews only publish completed UTC days, so one new day lands per run.
+schedule: "27 5 * * *"  # UTC; daily, staggered. The per-article endpoint lags completed UTC days by up to a few days; the fetcher probes the latest published day once per run and anchors the 2-day window there, so one new day lands per run once published.
 enabled: true
 retries: 1
 timeout_minutes: 55
@@ -302,8 +302,14 @@ sink: local
 # unknown article, and the API is keyless with no published rate limit.
 # Full 281-article list verified live the same day: exit 0, 559 records
 # (three brand-new pages lack the older day), ~4.7 minutes at 1s pacing.
-cadence_note: "daily per-article Wikipedia pageview counts for a curated 281-article list across 35 language editions; the 2-day window adds exactly one new completed day per run and re-asserts the previous day in case it is revised"
-rate_limit: "keyless public API, no published limit; 281 serial requests per run (one per article, 2-day window) paced at least 1s apart, 15s request timeout, 2 retries, 3000s run-wide request budget, 1 MiB response cap"
+# Observed live 2026-10-18: a completed day's per-article numbers land with a
+# variable lag of up to ~2-3 days after the day ends (2026-10-15 was the
+# newest published day on 2026-10-18 05:50 UTC), and a request whose window
+# contains no published day is a 404 with the same body as an unknown article.
+# The fetcher therefore probes once per run and anchors the window at the
+# latest published day.
+cadence_note: "daily per-article Wikipedia pageview counts for a curated 281-article list across 35 language editions; the 2-day window is anchored at the latest published day (probed once per run) and re-asserts the previous day in case it is revised"
+rate_limit: "keyless public API, no published limit; 282 serial requests per run (one publish probe plus one per article, 2-day window) paced at least 1s apart, 15s request timeout, 2 retries, 3000s run-wide request budget, 1 MiB response cap"
 licence: "CC0 1.0 Universal (Wikimedia Analytics API data)"
 attribution: "Wikimedia Foundation, https://wikimedia.org/api/rest_v1/#metrics-pageviews"
 attribution_required: false

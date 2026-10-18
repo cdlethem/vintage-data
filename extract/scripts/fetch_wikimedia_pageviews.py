@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """Fetch explicitly configured Wikimedia per-article daily pageviews as bounded NDJSON.
 
-Each ``--article LANGUAGE PROJECT TITLE`` is one request covering the most recent
-``--days`` *completed* UTC days (default 2: yesterday and the day before). The
-per-article endpoint publishes completed days only — it never returns the current
-partial day — so a daily poll adds exactly one new day per run while the overlap
-catches late revisions of the newest day. Requests are paced at least
-``--min-interval`` seconds apart (default 1) so the keyless endpoint is not
-burst-loaded; the pacing time counts against the run-wide retry budget.
+Each ``--article LANGUAGE PROJECT TITLE`` is one request covering ``--days``
+*completed* UTC days (default 2). The per-article endpoint never returns the
+current partial day, and it publishes each completed day with a variable lag of
+up to several days after the day ends — yesterday is not always retrievable
+yet, and a request covering only unpublished days is an HTTP 404. The
+extractor therefore makes one probe request for the first configured article
+over a window wider than the longest expected lag, anchors the window at the
+latest published day it finds, and then fetches every article over that
+window. A daily poll adds exactly one new day per run once it is published,
+and the overlap catches late revisions of the newest day.
 
 The data is CC0 1.0 (Wikimedia Analytics API) and keyless. Each emitted record is
 one (article, day) observation; ``id`` is a stable hash of the normalized request
@@ -76,6 +79,7 @@ DEFAULT_MIN_INTERVAL = 1.0
 MAX_MIN_INTERVAL = 30.0
 MAX_RESPONSE_BYTES = 1024 * 1024
 MAX_BACKOFF = 8.0
+PROBE_DAYS = 14  # probe window width; the endpoint's publish lag stays far below this
 RETRYABLE_STATUS = frozenset({408, 425, 429, 500, 502, 503, 504})
 
 
@@ -386,6 +390,45 @@ class WikimediaClient:
         raise AssertionError("unreachable")
 
 
+def probe_latest_day(
+    http: WikimediaClient,
+    probe: ArticleRequest,
+    *,
+    start: date,
+    end: date,
+    fetched_at: str,
+) -> str:
+    """Return the latest published daily marker in [start, end] for ``probe``.
+
+    The probe reuses the full per-item contract, so a malformed probe response
+    fails the run the same way a malformed article response would.
+    """
+    start_s = start.strftime("%Y%m%d")
+    end_s = end.strftime("%Y%m%d")
+    url = probe.url(start_s, end_s)
+    document = http.get(url)
+    if not isinstance(document, dict):
+        raise WikimediaError("pageviews probe response is not an object")
+    items = document.get("items")
+    if not isinstance(items, list):
+        raise WikimediaError("pageviews probe response is missing an items list")
+    latest: str | None = None
+    for item in items:
+        record = normalize_view(
+            item,
+            probe,
+            fetched_at=fetched_at,
+            url=url,
+            start=start_s,
+            end=end_s,
+        )
+        if latest is None or record["timestamp"] > latest:
+            latest = record["timestamp"]
+    if latest is None:
+        raise WikimediaError("pageviews probe found no published days in the window")
+    return latest
+
+
 def fetch_pageviews(
     articles: Sequence[Sequence[str]],
     *,
@@ -425,12 +468,6 @@ def fetch_pageviews(
     current = (now or (lambda: datetime.now(timezone.utc)))()
     if current.tzinfo is None:
         raise ValueError("now must return a timezone-aware datetime")
-    # The per-article endpoint only publishes completed UTC days; the most recent
-    # completed day is yesterday, so end the window there.
-    end = current.astimezone(timezone.utc).date() - timedelta(days=1)
-    start = end - timedelta(days=days - 1)
-    start_s = start.strftime("%Y%m%d")
-    end_s = end.strftime("%Y%m%d")
     fetched_at = current.astimezone(timezone.utc).isoformat()
     http = client or WikimediaClient(
         timeout=timeout,
@@ -438,6 +475,27 @@ def fetch_pageviews(
         retry_budget=retry_budget,
         min_interval=min_interval,
     )
+    # The endpoint publishes each completed UTC day with a variable lag of up
+    # to several days after the day ends, so yesterday may not be retrievable
+    # yet; a window of only unpublished days is an HTTP 404. One probe for the
+    # first configured article finds the latest published day and anchors the
+    # requested window there.
+    probe_end = current.astimezone(timezone.utc).date() - timedelta(days=1)
+    probe_start = probe_end - timedelta(days=max(days, PROBE_DAYS) - 1)
+    try:
+        probe_marker = probe_latest_day(
+            http,
+            requests[0],
+            start=probe_start,
+            end=probe_end,
+            fetched_at=fetched_at,
+        )
+    except WikimediaError as exc:
+        raise WikimediaError(f"pageviews publish probe failed: {exc}") from exc
+    end = datetime.strptime(probe_marker[:8], "%Y%m%d").date()
+    start = end - timedelta(days=days - 1)
+    start_s = start.strftime("%Y%m%d")
+    end_s = end.strftime("%Y%m%d")
 
     records: list[dict[str, Any]] = []
     for article in requests:
