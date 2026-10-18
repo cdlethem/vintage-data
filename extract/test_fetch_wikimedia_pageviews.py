@@ -4,7 +4,7 @@ import contextlib
 import importlib.util
 import io
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
 import tempfile
@@ -28,8 +28,10 @@ MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
-# NOW is 2026-10-02 05:27 UTC; the per-article endpoint publishes completed UTC
-# days only, so the most recent completed day is 2026-10-01.
+# NOW is 2026-10-02 05:27 UTC. The per-article endpoint never returns the
+# current partial day and lags completed days by up to a few days; the
+# scripted probe below reports 2026-10-01 as the latest published day, so the
+# anchored window is START..END in every test.
 NOW = datetime(2026, 10, 2, 5, 27, tzinfo=timezone.utc)
 START, END = "20260930", "20261001"
 
@@ -84,12 +86,39 @@ def request_url(title="Albert_Einstein", access="all-access", agent="user", star
     )
 
 
+# Probe window: the MODULE.PROBE_DAYS most recent completed days, ending yesterday.
+PROBE_WINDOW_START = (NOW.date() - timedelta(days=MODULE.PROBE_DAYS)).strftime("%Y%m%d")
+PROBE_WINDOW_END = (NOW.date() - timedelta(days=1)).strftime("%Y%m%d")
+
+
+def probe_response(first, access="all-access", agent="user", latest=PROBE_WINDOW_END):
+    """Scripted probe answer: items through ``latest`` for the first article."""
+    probe = MODULE.make_article_request(first[0], first[1], first[2], access, agent)
+    markers = sorted({f"{PROBE_WINDOW_START}00", f"{latest}00"})
+    return JsonResponse(
+        document(
+            *[
+                item(
+                    title=probe.requested_title,
+                    language=probe.language,
+                    project=probe.project,
+                    access=access,
+                    agent=agent,
+                    timestamp=marker,
+                    views=index + 1,
+                )
+                for index, marker in enumerate(markers)
+            ]
+        )
+    )
+
+
 def http_error(code):
     return urllib.error.HTTPError(request_url(), code, "error", {}, io.BytesIO(b"error"))
 
 
 class FetchWikimediaPageviewsTests(unittest.TestCase):
-    def fetch(self, articles, responses, **changes):
+    def fetch(self, articles, responses, probe=True, **changes):
         arguments = {
             "timeout": 7,
             "retries": 0,
@@ -100,6 +129,13 @@ class FetchWikimediaPageviewsTests(unittest.TestCase):
             "days": 2,
         }
         arguments.update(changes)
+        # The publish probe goes out first, for the first configured article.
+        if probe:
+            responses = [
+                probe_response(articles[0], arguments["access"], arguments["agent"]),
+            ] + list(responses)
+        else:
+            responses = list(responses)
 
         def scripted_opener(request, timeout=None):
             response = responses.pop(0)
@@ -168,6 +204,65 @@ class FetchWikimediaPageviewsTests(unittest.TestCase):
 
         # The current, incomplete day must never be requested.
         self.assertNotIn(NOW.strftime("%Y%m%d"), opener.call_args.args[0].full_url)
+
+    def test_probe_window_covers_recent_completed_days_ending_yesterday(self):
+        _, opener = self.fetch([["en", "wikipedia", "Albert_Einstein"]], [JsonResponse(document())])
+        probe_url = opener.call_args_list[0].args[0].full_url
+        self.assertIn(
+            f"/{MODULE.GRANULARITY}/{PROBE_WINDOW_START}/{PROBE_WINDOW_END}",
+            probe_url,
+        )
+        # The current, incomplete day must never be probed either.
+        self.assertNotIn(NOW.strftime("%Y%m%d"), probe_url)
+
+    def test_window_anchors_at_latest_published_day(self):
+        # The probe reports 2026-09-29 as the latest published day (the two
+        # most recent completed days are not retrievable yet), so the window
+        # shifts back and article requests never cover an unpublished day.
+        responses = [
+            probe_response(["en", "wikipedia", "Albert_Einstein"], latest="20260929"),
+            JsonResponse(
+                document(
+                    item(timestamp="2026092800", views=10),
+                    item(timestamp="2026092900", views=20),
+                ),
+                url=request_url(start="20260928", end="20260929"),
+            ),
+        ]
+        records, opener = self.fetch([["en", "wikipedia", "Albert_Einstein"]], responses, probe=False)
+        self.assertEqual(opener.call_count, 2)
+        self.assertEqual(
+            opener.call_args.args[0].full_url,
+            request_url(start="20260928", end="20260929"),
+        )
+        self.assertEqual(
+            [record["timestamp"] for record in records],
+            ["2026092800", "2026092900"],
+        )
+
+    def test_probe_failure_fails_before_any_article_request(self):
+        for failure, message in (
+            (http_error(404), "publish probe failed"),
+            (
+                lambda request, timeout=None: JsonResponse(document(), url=request.full_url),
+                "no published days",
+            ),
+        ):
+            with self.subTest(message=message):
+                opener = mock.Mock(side_effect=failure)
+                client = MODULE.WikimediaClient(
+                    timeout=7,
+                    retries=0,
+                    retry_budget=30,
+                    opener=opener,
+                )
+                with self.assertRaisesRegex(MODULE.WikimediaError, message):
+                    MODULE.fetch_pageviews(
+                        [["en", "wikipedia", "Albert_Einstein"]],
+                        client=client,
+                        now=lambda: NOW,
+                    )
+                self.assertEqual(opener.call_count, 1)
 
     def test_record_identity_is_stable_and_separates_dimensions(self):
         first, _ = self.fetch(
@@ -370,6 +465,11 @@ class FetchWikimediaPageviewsTests(unittest.TestCase):
         finally:
             sys.path.remove(str(include_dir))
 
+        class frozen_datetime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return NOW
+
         stdout = io.StringIO()
         with (
             mock.patch.object(
@@ -377,6 +477,7 @@ class FetchWikimediaPageviewsTests(unittest.TestCase):
                 "build_opener",
                 return_value=mock.Mock(open=scripted_open),
             ),
+            mock.patch.object(MODULE, "datetime", frozen_datetime),
             contextlib.redirect_stdout(stdout),
         ):
             MODULE.main(config["args"] + ["--min-interval", "0"])
