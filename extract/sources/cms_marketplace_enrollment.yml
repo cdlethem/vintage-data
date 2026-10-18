@@ -1,0 +1,22 @@
+name: cms_marketplace_enrollment
+script: fetch_cms_marketplace_enrollment.py
+args: []
+schedule: "29 6 * * 1"  # UTC; weekly on Monday -- releases are monthly with a ~6-month lag, so a weekly poll is comfortably slower than the data changes
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+# CMS Data Hub series 1829fdb3-a6f9-4036-856a-3af1f7828c8c: monthly effectuated
+# enrollment on the ACA Marketplace (HealthCare.gov FFP/SBE-FP vs state-run SBE),
+# by state, 2016 to present. Verified live 2026-10-18: 6,588 rows in two pages
+# of 5,000 (keyless), newest release covering through 2026-02 (CCIIO publishes
+# with a lag of roughly half a year after the reference month). Each release
+# appends new month rows; the fetcher watermarks (state, platform, year, month)
+# keys and emits only unseen rows, so an unchanged month yields a quiet zero-row
+# run.
+cadence_note: "monthly release of new enrollment months (each with ~6-month publication lag); weekly poll keeps lag to days, not weeks"
+rate_limit: "keyless public API, no published limit; 2 requests per run (page size 5,000 is the documented maximum) plus bounded retries on transient 503s"
+licence: "public domain -- U.S. federal government work (CMS Data Hub catalog records carry the USA.gov Public Domain 1.0 label); CMS asks for attribution"
+attribution_required: true
