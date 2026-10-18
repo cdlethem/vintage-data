@@ -41,25 +41,43 @@ Quirks that will cost someone an afternoon:
 Etiquette: keyless, no published rate limit, but Tatoeba is a nonprofit-run community
 project. Self-impose gentle polling (this is a slow-growing corpus; hourly is plenty).
 
+Transient transport failures (read timeouts, connection resets) are retried up to
+three times with short delays; HTTP error statuses and malformed payloads fail
+immediately. The server is occasionally slow on cold requests (observed >30s first
+response), which a single 30s-timeout attempt does not survive.
+
 Stdlib only.
 """
+import http.client
 import json
 import os
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 BASE = "https://tatoeba.org/en/api_v0/search"
+MAX_ATTEMPTS = 3
+RETRY_DELAY_SECONDS = (2, 4)
 
 
 def _get(**params):
     url = f"{BASE}?{urllib.parse.urlencode(params)}"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT,
                                                 "Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.load(resp)
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError:
+            raise
+        except (TimeoutError, OSError, http.client.HTTPException):
+            if attempt == MAX_ATTEMPTS:
+                raise
+            time.sleep(RETRY_DELAY_SECONDS[attempt - 1])
 
 
 def fetch_recent(from_lang: str = "eng", to_lang: str = "fra"):
