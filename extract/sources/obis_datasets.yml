@@ -1,0 +1,23 @@
+name: obis_datasets
+script: fetch_obis_datasets.py
+args: []
+schedule: "52 8 * * *"  # UTC; daily, staggered
+enabled: true
+retries: 1
+timeout_minutes: 20
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+# OBIS (Ocean Biodiversity Information System, IOC-UNESCO) is the global
+# archive of marine biodiversity data. The v3 API /dataset endpoint has no
+# cursor pagination, so the fetcher snapshots the whole public catalog in a
+# single request (~7k datasets, ~34 MB, ~75 s verified 2026-10-19) and emits
+# only datasets that are new or changed since the persisted state (first run
+# is the full baseline). The catalog changes on a days-to-weeks timescale:
+# new datasets are ingested roughly weekly (newest `created` observed:
+# 2026-10-14) and record-count statistics update when datasets are
+# re-processed, so daily is the honest cadence.
+cadence_note: "daily diff of the full OBIS public dataset catalog: new datasets, ingest timestamps, record counts, institutes, extent, intellectual rights"
+rate_limit: "keyless public API, no published limit; one ~34 MB catalog request per day"
+licence: "Per OBIS data policy (https://manual.obis.org/policy.html): dataset-level licences are CC0, CC BY (commonly 4.0) or CC BY-NC; each record's intellectualrights field carries its dataset's terms"
+attribution_required: true
