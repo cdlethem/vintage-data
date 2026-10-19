@@ -5,14 +5,19 @@ Recent reception reports provide a human-observed complement to machine telemetr
 Verified live 2026-09-03 through AMSAT's official keyless v1 API. Reports include a
 stable ID, satellite, report time, canonical status, grid square, and amateur callsign.
 Callsigns are public attribution identifiers; do not repurpose them for profiling. Poll
-every 15 minutes.
+every 15 minutes. The upstream host intermittently stalls for tens of seconds, so
+transient transport failures (timeouts, connection resets) are retried up to three
+times with short delays; HTTP error statuses and malformed payloads fail immediately.
 
 Stdlib only.
 """
 
 import argparse
+import http.client
 import json
 import os
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -20,6 +25,8 @@ from datetime import datetime, timezone
 SOURCE = "amsat_status_reports"
 URL = "https://www.amsat.org/status/api/v1/reports.php"
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
+MAX_ATTEMPTS = 3
+RETRY_DELAY_SECONDS = (2, 4)
 
 
 def fetch_reports(hours: int = 24, limit: int = 100, timeout: int = 30):
@@ -30,8 +37,17 @@ def fetch_reports(hours: int = 24, limit: int = 100, timeout: int = 30):
         f"{URL}?{query}", headers={"User-Agent": USER_AGENT}
     )
     fetched_at = datetime.now(timezone.utc).isoformat()
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        document = json.load(response)
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                document = json.load(response)
+            break
+        except urllib.error.HTTPError:
+            raise
+        except (TimeoutError, OSError, http.client.HTTPException):
+            if attempt == MAX_ATTEMPTS:
+                raise
+            time.sleep(RETRY_DELAY_SECONDS[attempt - 1])
     rows = document.get("data")
     if not isinstance(rows, list):
         raise TypeError("AMSAT response is missing data")
