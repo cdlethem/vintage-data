@@ -1,0 +1,30 @@
+name: ons_cpi
+script: fetch_ons_statistics.py
+# Keyless ONS data API, explicit CPI All-Items basket: monthly index
+# (d7bt), monthly rate (d7oe) and annual rate (d7g7), each bounded to the
+# 36 most recent observations so releases and recent revisions are captured
+# without re-collecting the full history.
+args:
+  - "ons_cpi"
+  - "--series"
+  - "/economy/inflationandpriceindices/timeseries/d7bt/mm23"
+  - "--series"
+  - "/economy/inflationandpriceindices/timeseries/d7oe/mm23"
+  - "--series"
+  - "/economy/inflationandpriceindices/timeseries/d7g7/mm23"
+  - "--periods"
+  - "36"
+  - "--timeout"
+  - "60"
+schedule: "25 7 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "CPI releases monthly mid-month with revisions to recent periods; daily snapshot of the last 36 periods"
+rate_limit: "no published hard limit; 3 small JSON requests per daily run"
+licence: "Open Government Licence v3.0 (OGL)"
+attribution: "UK Office for National Statistics, https://www.ons.gov.uk/"
+attribution_required: true
