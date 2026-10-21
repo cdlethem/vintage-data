@@ -1,0 +1,14 @@
+name: fda_enforcement
+script: fetch_fda_enforcement.py
+args: []
+schedule: "33 2 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "US FDA food, drug and device recalls / market withdrawals by report_date; FDA refreshes the openFDA datasets in batches, roughly daily to weekly, and a run may legitimately return zero rows"
+rate_limit: "no key required; openFDA allows 240 req/min and 1,000 req/day per IP; a run makes at most a few requests per endpoint (3 endpoints)"
+licence: "US Government work; public domain, CC0 1.0 Universal (openFDA)"
+attribution_required: false
