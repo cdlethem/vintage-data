@@ -133,9 +133,9 @@ class FetchEnvironmentAgencyFloodsTests(unittest.TestCase):
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0]["id"], floods_document()["items"][0]["@id"])
         self.assertEqual(urlopen.call_count, 2)
-        sleep.assert_called_once_with(MODULE.SERVICE_RETRY_DELAY_SECONDS)
+        sleep.assert_called_once_with(MODULE.DEFAULT_RETRY_DELAY_SECONDS)
 
-    def test_non_503_http_error_fails_without_retry(self):
+    def test_non_transient_http_error_fails_without_retry(self):
         error = urllib.error.HTTPError(MODULE.URL, 404, "Not found", {}, None)
         with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error) as urlopen, mock.patch.object(
             MODULE.time, "sleep"
@@ -144,6 +144,53 @@ class FetchEnvironmentAgencyFloodsTests(unittest.TestCase):
                 list(MODULE.fetch_warnings())
         urlopen.assert_called_once()
         sleep.assert_not_called()
+
+    def test_transient_500_recovers_after_one_delay(self):
+        error = urllib.error.HTTPError(MODULE.URL, 500, "Server error", {}, None)
+        with mock.patch.object(
+            MODULE.urllib.request, "urlopen", side_effect=[error, response(floods_document())]
+        ) as urlopen, mock.patch.object(MODULE.time, "sleep") as sleep:
+            records = list(MODULE.fetch_warnings())
+        self.assertEqual(len(records), 1)
+        self.assertEqual(urlopen.call_count, 2)
+        sleep.assert_called_once_with(MODULE.DEFAULT_RETRY_DELAY_SECONDS)
+
+    def test_retry_after_header_is_honored(self):
+        error = urllib.error.HTTPError(MODULE.URL, 503, "Backend fetch failed", {"Retry-After": "7"}, None)
+        with mock.patch.object(
+            MODULE.urllib.request, "urlopen", side_effect=[error, response(floods_document())]
+        ), mock.patch.object(MODULE.time, "sleep") as sleep:
+            list(MODULE.fetch_warnings())
+        sleep.assert_called_once_with(7)
+
+    def test_retry_after_header_is_clamped(self):
+        error = urllib.error.HTTPError(MODULE.URL, 503, "Backend fetch failed", {"Retry-After": "999"}, None)
+        with mock.patch.object(
+            MODULE.urllib.request, "urlopen", side_effect=[error, response(floods_document())]
+        ), mock.patch.object(MODULE.time, "sleep") as sleep:
+            list(MODULE.fetch_warnings())
+        sleep.assert_called_once_with(MODULE.MAX_RETRY_DELAY_SECONDS)
+
+    def test_retry_delay_budget_stops_before_unbounded_wait(self):
+        error = urllib.error.HTTPError(MODULE.URL, 503, "Backend fetch failed", {"Retry-After": "120"}, None)
+        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error) as urlopen, mock.patch.object(
+            MODULE.time, "sleep"
+        ) as sleep:
+            with self.assertRaises(urllib.error.HTTPError):
+                list(MODULE.fetch_warnings())
+        # Two clamped 30-second sleeps fill the 60-second cumulative budget; the third is refused.
+        self.assertEqual(urlopen.call_count, 3)
+        self.assertEqual(sleep.call_count, 2)
+
+    def test_connection_error_is_retried_then_raised(self):
+        failure = urllib.error.URLError("connection refused")
+        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=failure) as urlopen, mock.patch.object(
+            MODULE.time, "sleep"
+        ) as sleep:
+            with self.assertRaises(urllib.error.URLError):
+                list(MODULE.fetch_warnings())
+        self.assertEqual(urlopen.call_count, MODULE.MAX_TRANSIENT_ATTEMPTS)
+        self.assertEqual(sleep.call_count, MODULE.MAX_TRANSIENT_ATTEMPTS - 1)
 
     def test_main_exhausted_503_fails_with_redacted_stderr_and_no_records(self):
         error = urllib.error.HTTPError(
@@ -158,8 +205,8 @@ class FetchEnvironmentAgencyFloodsTests(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertEqual(output.getvalue(), "")
         self.assertEqual(diagnostics.getvalue(), "Environment Agency flood warnings: HTTP 503\n")
-        self.assertEqual(urlopen.call_count, 2)
-        sleep.assert_called_once_with(MODULE.SERVICE_RETRY_DELAY_SECONDS)
+        self.assertEqual(urlopen.call_count, MODULE.MAX_TRANSIENT_ATTEMPTS)
+        self.assertEqual(sleep.call_count, MODULE.MAX_TRANSIENT_ATTEMPTS - 1)
 
     def test_main_successful_empty_response_is_not_a_failure(self):
         with mock.patch.object(
