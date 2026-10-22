@@ -94,6 +94,10 @@
   ],
   "notes": "15-minute top-250 snapshot: same coin ids each run, price/market_cap/volume drift continuously; a frozen price across polls means upstream or extract is stuck"
  },
+ "eu_publications": {
+  "type": "feed",
+  "notes": "daily CELLAR WORK notifications; ~2,700 non-TED new/updated publications per day (measured 2026-10-22), near-zero novelty on weekends is normal"
+ },
  "tatoeba": {
   "type": "feed",
   "notes": "small volunteer project; hours with zero new eng-fra sentence pairs are normal, a full day of zero novelty is not"
