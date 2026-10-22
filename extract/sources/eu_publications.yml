@@ -1,0 +1,14 @@
+name: eu_publications
+script: fetch_eu_publications.py
+args: []
+schedule: "8 5 * * *"  # UTC; EU publications land all day, 04:08 captures the previous day
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "CELLAR WORK-level create/update notifications: OJ acts, regulations, directives, CJEU judgments, Commission notices, consolidations. One-day window measured 2026-10-22: 2,663 non-TED notifications (345 creates, 2,318 updates); near-zero novelty on weekends is normal"
+rate_limit: "no published limit; measured 2026-10-22: 5 pages of 1,000 items per one-day run, 0.5s pause between pages"
+licence: "EU data free for any use under the EU data reuse policy (Reg. 1001/1993); attribute to the Publications Office of the European Union (EUR-Lex)"
+attribution_required: true
