@@ -5,14 +5,17 @@ Temporary candidates appear, accumulate observations, then confirm or disappear.
 Verified live 2026-09-03 at the MPC tabular NEOCP page. Its HTML uses malformed
 ``<tr>`` openers where some row closers should be and hidden sort values inside cells;
 the parser deliberately handles both. Rows moved to the comet confirmation page remain
-in the table with blank scores and are excluded. MPC asks clients to stay at or below
-five requests per second; this client makes one request per run.
+MPC asks clients to stay at or below five requests per second; this client makes one request per run,
+retrying a transient transport failure or 429/5xx response at most twice with 1s/2s backoff.
 
 Stdlib only.
 """
 import argparse
 import json
 import os
+import sys
+import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from html.parser import HTMLParser
@@ -20,6 +23,10 @@ from html.parser import HTMLParser
 SOURCE = "mpc_neocp_candidates"
 URL = "https://minorplanetcenter.net/iau/NEO/toconfirm_tabular.html"
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
+
+MAX_ATTEMPTS = 3
+RETRY_BASE_DELAY = 1.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
 
 
 class TableParser(HTMLParser):
@@ -76,8 +83,23 @@ def fetch_candidates(limit: int = 100, timeout: int = 30):
         return
     request = urllib.request.Request(URL, headers={"User-Agent": USER_AGENT})
     fetched_at = datetime.now(timezone.utc).isoformat()
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        text = response.read().decode("iso-8859-1", "replace")
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                text = response.read().decode("iso-8859-1", "replace")
+            break
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = f"HTTP {exc.code}"
+        except (urllib.error.URLError, TimeoutError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = str(exc.reason if isinstance(exc, urllib.error.URLError) else exc)
+        delay = RETRY_BASE_DELAY * (2 ** attempt)
+        print(f"mpc_neocp: transient failure ({reason}); retrying in {delay:.0f}s "
+              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+        time.sleep(delay)
 
     parser = TableParser()
     parser.feed(text)
