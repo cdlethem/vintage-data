@@ -9,6 +9,6 @@ sink: local
 
 # Vetting metadata (documentation only, not read by the DAG factory)
 cadence_note: "current NEO confirmation-page candidates; appear, accumulate obs, then confirm or disappear"
-rate_limit: "MPC asks <=5 req/sec; this client makes one request per run"
+rate_limit: "MPC asks <=5 req/sec; this client makes one request per run, at most three on transient failures"
 licence: "MPC (Minor Planet Center)"
 attribution_required: true
