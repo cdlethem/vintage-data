@@ -1,0 +1,24 @@
+name: ghcn_daily
+script: fetch_ghcn_daily.py
+args: ["--timeout", "60"]
+schedule: "33 2 * * *"  # UTC
+enabled: false
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Keep paused until an operator records a successful live NCEI source smoke and
+# read-only Airflow import checks. Confined verification is offline and does not
+# mutate Airflow metadata.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: >-
+  one bounded NCEI data-service request per daily run covering 17 major US
+  stations; the service publishes each observation date roughly five days
+  after it is measured (verified 2026-10-23: newest row 2026-10-18), with a
+  new date appearing about daily. The watermark is the newest emitted DATE;
+  a run that finds no new data keeps the old watermark so the next run
+  retries the same window and nothing is re-emitted.
+rate_limit: "one request per run, one per day; stations and elements fixed in the fetcher (17 stations x 6 elements)"
+licence: "NCEI/NOAA data are U.S. Government works and generally public domain"
+attribution: "NOAA National Centers for Environmental Information (NCEI), GHCN-Daily, https://www.ncei.noaa.gov/products/land-based-stations/global-historical-climatology-network-daily"
+attribution_required: true
