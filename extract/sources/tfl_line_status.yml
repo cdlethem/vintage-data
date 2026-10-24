@@ -1,0 +1,15 @@
+name: tfl_line_status
+script: fetch_tfl_line_status.py
+args: []
+schedule: "7-59/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "live incident and planned-works status for 5 London transport modes (~694 lines/routes); notices appear and clear continuously through service hours"
+rate_limit: "keyless TfL API: 50 anonymous requests/minute; one run issues 5 mode requests"
+licence: "Open Government Licence v3.0 (OGL v3.0)"
+attribution: "Contains TfL open data. Data provided by Transport for London, https://tfl.gov.uk/info-for/open-data-users/our-open-data"
+attribution_required: true
