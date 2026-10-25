@@ -1,0 +1,16 @@
+name: effis_fire_stats
+script: fetch_effis_fire_stats.py
+args: []
+schedule: "29 7 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily year-to-date cumulative burned-forest-area snapshot per region (satellite Rapid Damage Assessment); the cumulative advances day by day and resets each calendar year"
+rate_limit: "one bounded request per run; no published limit, poll daily"
+licence: "EU public sector information, CC BY 4.0 (EFFIS data license implementing the Commission reuse policy)"
+attribution: "European Forest Fire Information System (EFFIS), JRC / Copernicus Emergency Management Service, https://effis.jrc.ec.europa.eu/"
+attribution_required: true
+precision_note: "Estimates from satellite (MODIS/VIIRS) rapid damage assessment; regional roll-up only (EU, EU_non, ME_AF, total) — the per-country filter endpoint is broken upstream (HTTP 500), so no finer geography is available."
