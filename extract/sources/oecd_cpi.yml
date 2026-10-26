@@ -1,0 +1,23 @@
+name: oecd_cpi
+script: fetch_oecd_cpi.py
+# One exact key, rolling 15-month window: monthly headline national CPI index
+# level (all items, COICOP 2018, unadjusted) for every OECD reference area.
+args: ["--timeout", "60", "--retries", "2", "--retry-delay", "15"]
+schedule: "47 12 * * *"  # UTC; staggered daily, between the other macro-statistics runs
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# OECD publishes each member's monthly CPI with a two-to-five-week lag and
+# revises older months at any time; daily polling captures new months and
+# revisions without querying the catalogue, matching the other SDMX sources.
+cadence:
+  auto: false
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "one bounded keyless SDMX-JSON request per daily run: headline monthly CPI index, all OECD areas, rolling 15-month window (~470 observations, ~35 KiB upstream, ~370 KiB raw NDJSON)"
+rate_limit: "keyless public API, no published hard limit; one bounded data request per daily run, plus up to two bounded retries on transient 429/5xx"
+licence: "OECD terms and conditions: data reusable for any purpose including commercial, with attribution to OECD; dataset-specific and third-party restrictions are preserved by the terms"
+attribution: "OECD, Consumer price indices (CPIs, HICPs), COICOP 2018, OECD Data Explorer, https://data-explorer.oecd.org/"
+attribution_required: true
