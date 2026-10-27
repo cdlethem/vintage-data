@@ -1,0 +1,27 @@
+name: fed_h10_fx
+script: fetch_fed_h10_fx.py
+args: []
+schedule: "45 22 * * *"  # UTC; H.10 publishes 15:45 ET on business days, 22:45 UTC is after it in EST and EDT
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+# The H.10 release publishes daily spot foreign-exchange rates (currency
+# units per US dollar) for 23 currencies plus six trade-weighted index
+# series (Broad, AFE, EME, and three currency groups) every business day.
+# The full-history SDMX-XML zip (FRB_h10_xml.zip, ~2 MB) is republished
+# with each release; the 29 daily (FREQ=9) series carry full daily history
+# back to 1971-01-04 (earlier dates for some series start later: CNY 1981,
+# BRL/BRDG 1995, AFE/BRD/EME 2006; BRDG/MJCG/OITG ended 2019-12-31)
+# (verified 2026-10-27: newest daily date 2026-10-23, Header Prepared
+# 2026-10-26T15:27:12, zip last-modified 2026-10-26). The fetcher baselines
+# the full daily history on its first run (~316k rows, ~75 MB NDJSON, one
+# time), then re-emits only a trailing 14-day window so Fed restatements
+# land as new raw rows; runs against an unchanged file emit nothing.
+cadence_note: "one new business-day of daily FX rates per release; a daily run is the honest cadence because no release happens on weekends"
+rate_limit: "US federal public data, keyless; one 2 MB download per run"
+licence: "US federal public data (Board of Governors of the Federal Reserve System; works of the US federal government are not subject to copyright)"
+attribution: "Board of Governors of the Federal Reserve System, Foreign Exchange Rates (H.10)"
+attribution_required: true
