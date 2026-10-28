@@ -14,12 +14,21 @@ import csv
 import io
 import json
 import os
+import sys
+import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
 SOURCE = "quebec_emergency_departments"
 URL = "https://www.msss.gouv.qc.ca/professionnels/statistiques/documents/urgences/Releve_horaire_urgences_7jours_nbpers.csv"
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
+# The MSSS front-end intermittently stalls mid-transfer (observed 2026-10-28:
+# read timeout after its 302 redirect in the task log). Retry transient
+# failures in a bounded way so one slow hop does not lose a whole run.
+MAX_ATTEMPTS = 3
+RETRY_BASE_DELAY = 1.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
 
 
 def fetch_departments(limit: int = 500, timeout: int = 30):
@@ -27,8 +36,25 @@ def fetch_departments(limit: int = 500, timeout: int = 30):
         return
     request = urllib.request.Request(URL, headers={"User-Agent": USER_AGENT})
     fetched_at = datetime.now(timezone.utc).isoformat()
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        text = response.read().decode("cp1252")
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                text = response.read().decode("cp1252")
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = f"HTTP {exc.code}"
+            exc.close()
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = str(exc.reason if isinstance(exc, urllib.error.URLError) else exc)
+        else:
+            break
+        delay = min(RETRY_BASE_DELAY * (2 ** attempt), timeout)
+        print(f"quebec_emergency_departments: transient failure ({reason}); retrying in {delay:.0f}s "
+              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+        time.sleep(delay)
     reader = csv.DictReader(io.StringIO(text))
     if not reader.fieldnames or "No_permis_installation" not in [
         name.strip() for name in reader.fieldnames
