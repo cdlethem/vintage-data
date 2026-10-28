@@ -3,7 +3,7 @@ script: fetch_open_library.py
 args: []
 schedule: "6-51/15 * * * *"  # UTC
 enabled: true
-retries: 1
+retries: 2  # 503 windows observed lasting 5+ minutes (2026-10-28); one 5-min task retry is not enough
 timeout_minutes: 10
 sink: local
 

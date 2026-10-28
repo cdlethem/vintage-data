@@ -43,6 +43,7 @@ seconds, so every few minutes is reasonable for most use; don't poll sub-second.
 
 Stdlib only.
 """
+import email.utils
 import json
 import os
 import sys
@@ -53,40 +54,79 @@ from datetime import datetime, timezone
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 BASE = "https://openlibrary.org/recentchanges.json"
 
-MAX_ATTEMPTS = 3
-RETRY_BASE_DELAY = 1.0
-RETRYABLE_HTTP_CODES = frozenset({404, 429, 500, 502, 503, 504})
+# Open Library has multi-minute unhealthy windows (2026-10-28: sustained
+# HTTP 503s for over five minutes) on top of the seconds-scale flapping
+# seen 2026-09-30, so the delay budget spans minutes, not seconds.
+TRANSIENT_STATUS = frozenset({404, 429, 500, 502, 503, 504})
+MAX_TRANSIENT_ATTEMPTS = 10
+DEFAULT_RETRY_DELAY_SECONDS = 5
+MAX_RETRY_DELAY_SECONDS = 30
+MAX_RETRY_CUMULATIVE_DELAY_SECONDS = 480
+
+
+def next_delay(attempt, headers, now=None):
+    """Bounded delay before the next attempt.
+
+    Grows exponentially from DEFAULT to MAX (5, 10, 20, 30, ... seconds),
+    stretched to a valid Retry-After header value when the server asks for
+    a longer pause; clamped to [DEFAULT, MAX].
+    """
+    delay = DEFAULT_RETRY_DELAY_SECONDS * (2 ** (attempt - 1))
+    value = headers.get("Retry-After") if headers is not None else None
+    if isinstance(value, str):
+        value = value.strip()
+        try:
+            if value.isdigit():
+                delay = max(delay, int(value))
+            else:
+                retry_at = email.utils.parsedate_to_datetime(value)
+                if retry_at.tzinfo is None:
+                    retry_at = retry_at.replace(tzinfo=timezone.utc)
+                delay = max(delay, (retry_at - (now or datetime.now(timezone.utc))).total_seconds())
+        except (IndexError, TypeError, ValueError):
+            pass
+    return max(DEFAULT_RETRY_DELAY_SECONDS, min(MAX_RETRY_DELAY_SECONDS, delay))
 
 
 def _get(url):
     """Fetch one JSON document, with bounded retries on transient failures.
 
-    Open Library is intermittently unhealthy (observed 2026-09-30): connection
-    resets, connect timeouts, and 404s on this live endpoint alternating with 200 OK
-    seconds apart — a server-side glitch, not a missing resource. Those transient
-    failures retry with 1s/2s backoff (at most ~95 seconds, well inside the
-    ten-minute task timeout). A persistent 404 (endpoint truly gone) still fails
-    fast after the bounded attempts with its status surfaced. Malformed JSON fails
-    immediately and is never retried.
+    Open Library is intermittently unhealthy: connection resets, connect
+    timeouts, and 404s alternating with 200 OK seconds apart (observed
+    2026-09-30), and sustained multi-minute HTTP 503 windows (observed
+    2026-10-28). Those transient failures retry with exponential 5-30-second
+    delays (stretched to a longer Retry-After value when the server sends
+    one), bounded by a 480-second cumulative delay budget — well inside the
+    ten-minute task timeout. A persistent non-transient status (and a
+    persistent 404, endpoint truly gone) still fails after the bounded
+    attempts with its status surfaced. Malformed JSON fails immediately and
+    is never retried.
     """
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT,
                                                 "Accept": "application/json"})
-    for attempt in range(MAX_ATTEMPTS):
+    cumulative_delay = 0
+    for attempt in range(1, MAX_TRANSIENT_ATTEMPTS + 1):
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
                 return json.load(resp)
         except urllib.error.HTTPError as exc:
-            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+            if exc.code not in TRANSIENT_STATUS:
                 raise
+            last_error = exc
             reason = f"HTTP {exc.code}"
+            delay = next_delay(attempt, exc.headers)
         except (urllib.error.URLError, TimeoutError) as exc:
-            if attempt == MAX_ATTEMPTS - 1:
-                raise
+            last_error = exc
             reason = str(exc.reason if isinstance(exc, urllib.error.URLError) else exc)
-        delay = RETRY_BASE_DELAY * (2 ** attempt)
+            delay = next_delay(attempt, None)
+        if attempt == MAX_TRANSIENT_ATTEMPTS:
+            raise last_error
+        if cumulative_delay + delay > MAX_RETRY_CUMULATIVE_DELAY_SECONDS:
+            raise last_error
         print(f"open_library: transient failure ({reason}); retrying in {delay:.0f}s "
-              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+              f"(attempt {attempt} of {MAX_TRANSIENT_ATTEMPTS})", file=sys.stderr)
         time.sleep(delay)
+        cumulative_delay += delay
 
 
 def _normalize_author(author):
