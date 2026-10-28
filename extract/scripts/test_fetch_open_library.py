@@ -147,7 +147,8 @@ class RetriesTests(unittest.TestCase):
 
         records, sleep = self.run_fetch(urlopen, limit=1)
         self.assertEqual(records[0]["id"], 1)
-        self.assertEqual([call.args for call in sleep.call_args_list], [(1.0,)])
+        self.assertEqual([call.args for call in sleep.call_args_list],
+                         [(fetch_open_library.DEFAULT_RETRY_DELAY_SECONDS,)])
 
     def test_persistent_failure_raises_after_bounded_attempts(self):
         def urlopen(request, timeout):
@@ -157,10 +158,10 @@ class RetriesTests(unittest.TestCase):
              patch.object(fetch_open_library.time, "sleep") as sleep:
             with self.assertRaises(urllib.error.URLError):
                 list(fetch_open_library.fetch_recent(limit=1))
-        self.assertEqual(sleep.call_count, fetch_open_library.MAX_ATTEMPTS - 1)
+        self.assertEqual(sleep.call_count, fetch_open_library.MAX_TRANSIENT_ATTEMPTS - 1)
         self.assertEqual(
             [call.args for call in sleep.call_args_list],
-            [(1.0,), (2.0,)])
+            [(5.0,), (10.0,), (20.0,), (30.0,), (30.0,), (30.0,), (30.0,), (30.0,), (30.0,)])
 
     def test_transient_5xx_retries_then_succeeds(self):
         payload = [event("editor")]
@@ -175,7 +176,8 @@ class RetriesTests(unittest.TestCase):
 
         records, sleep = self.run_fetch(urlopen, limit=1)
         self.assertEqual(records[0]["id"], 1)
-        self.assertEqual([call.args for call in sleep.call_args_list], [(1.0,)])
+        self.assertEqual([call.args for call in sleep.call_args_list],
+                         [(fetch_open_library.DEFAULT_RETRY_DELAY_SECONDS,)])
 
     def test_flapping_404_retries_then_succeeds(self):
         payload = [event("editor")]
@@ -190,7 +192,8 @@ class RetriesTests(unittest.TestCase):
 
         records, sleep = self.run_fetch(urlopen, limit=1)
         self.assertEqual(records[0]["id"], 1)
-        self.assertEqual([call.args for call in sleep.call_args_list], [(1.0,)])
+        self.assertEqual([call.args for call in sleep.call_args_list],
+                         [(fetch_open_library.DEFAULT_RETRY_DELAY_SECONDS,)])
 
     def test_persistent_404_raises_after_bounded_attempts(self):
         def urlopen(request, timeout):
@@ -200,7 +203,7 @@ class RetriesTests(unittest.TestCase):
              patch.object(fetch_open_library.time, "sleep") as sleep:
             with self.assertRaises(urllib.error.HTTPError):
                 list(fetch_open_library.fetch_recent(limit=1))
-        self.assertEqual(sleep.call_count, fetch_open_library.MAX_ATTEMPTS - 1)
+        self.assertEqual(sleep.call_count, fetch_open_library.MAX_TRANSIENT_ATTEMPTS - 1)
 
     def test_non_retryable_http_status_fails_immediately(self):
         def urlopen(request, timeout):
@@ -211,6 +214,39 @@ class RetriesTests(unittest.TestCase):
             with self.assertRaises(urllib.error.HTTPError):
                 list(fetch_open_library.fetch_recent(limit=1))
         sleep.assert_not_called()
+
+    def test_retry_after_header_is_honored(self):
+        payload = [event("editor")]
+        headers = {"Retry-After": "7"}
+        outcomes = [urllib.error.HTTPError(payload_url, 503, "unavailable", headers, None),
+                    payload]
+
+        def urlopen(request, timeout):
+            outcome = outcomes.pop(0)
+            if isinstance(outcome, BaseException):
+                raise outcome
+            return FixtureResponse(json.dumps(outcome))
+
+        records, sleep = self.run_fetch(urlopen, limit=1)
+        self.assertEqual(records[0]["id"], 1)
+        self.assertEqual([call.args for call in sleep.call_args_list], [(7,)])
+
+    def test_retry_after_header_is_clamped(self):
+        payload = [event("editor")]
+        headers = {"Retry-After": "999"}
+        outcomes = [urllib.error.HTTPError(payload_url, 503, "unavailable", headers, None),
+                    payload]
+
+        def urlopen(request, timeout):
+            outcome = outcomes.pop(0)
+            if isinstance(outcome, BaseException):
+                raise outcome
+            return FixtureResponse(json.dumps(outcome))
+
+        records, sleep = self.run_fetch(urlopen, limit=1)
+        self.assertEqual(records[0]["id"], 1)
+        self.assertEqual([call.args for call in sleep.call_args_list],
+                         [(fetch_open_library.MAX_RETRY_DELAY_SECONDS,)])
 
 if __name__ == "__main__":
     unittest.main()
