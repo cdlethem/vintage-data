@@ -25,11 +25,19 @@ spikes on an article routinely PRECEDE mainstream news coverage of an event.
 Pair with the pageviews REST API (hourly per-article view counts) for a
 demand-side signal alongside this supply-side one.
 
+Reliability: the MediaWiki API edge intermittently 503s under load (observed
+live 2026-10-28: windows of several minutes of 503 with `Retry-After: 8` on
+en.wikipedia recentchanges). Each page request is therefore retried in a
+bounded way on 429/5xx and connection failures (see ``_fetch_page``) before a
+run is allowed to fail.
+
 Stdlib only.
 """
 import json
 import os
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -37,6 +45,58 @@ from datetime import datetime, timezone
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"  # Wikimedia REQUIRES this
 
 RCPROPS = "title|timestamp|ids|sizes|flags|user|comment|tags"
+
+# The MediaWiki API edge intermittently 503s under load (observed live
+# 2026-10-28: windows of 503 with `Retry-After: 8` on en.wikipedia
+# recentchanges). Retry transient failures in a bounded way so a brief flap
+# does not lose a whole run.
+MAX_ATTEMPTS = 4
+RETRY_BASE_DELAY = 5.0
+MAX_RETRY_DELAY = 30.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
+
+
+def _retry_delay(error: urllib.error.HTTPError, fallback: float) -> float:
+    """Return a courteous bounded delay from an HTTP Retry-After header."""
+    value = error.headers.get("Retry-After") if error.headers is not None else None
+    if value is not None:
+        try:
+            delay = float(value)
+        except (TypeError, ValueError):
+            delay = None
+        if delay is not None and delay >= 0:
+            return min(delay, MAX_RETRY_DELAY)
+    return min(fallback, MAX_RETRY_DELAY)
+
+
+def _fetch_page(api: str, params: dict) -> dict:
+    """Fetch one recentchanges page, retrying transient failures with a finite bound.
+
+    Transient failures -- 429/5xx and connection errors -- retry with
+    5s/10s/20s/30s backoff honoring Retry-After (at most ~65 seconds of sleeping,
+    well inside the ten-minute task timeout). A persistent outage still fails
+    the run after the bounded attempts with its status surfaced; other HTTP
+    errors (e.g. 404) fail immediately.
+    """
+    url = api + "?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = f"HTTP {exc.code}"
+            delay = _retry_delay(exc, RETRY_BASE_DELAY * (2 ** attempt))
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = str(exc.reason if isinstance(exc, urllib.error.URLError) else exc)
+            delay = min(RETRY_BASE_DELAY * (2 ** attempt), MAX_RETRY_DELAY)
+        print(f"wikimedia_changes: transient failure ({reason}); retrying in {delay:.0f}s "
+              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+        time.sleep(delay)
 
 
 def fetch_recent_changes(lang: str = "en", limit: int = 500,
@@ -55,10 +115,7 @@ def fetch_recent_changes(lang: str = "en", limit: int = 500,
         p = dict(params)
         if cont:
             p["rccontinue"] = cont
-        req = urllib.request.Request(api + "?" + urllib.parse.urlencode(p),
-                                     headers={"User-Agent": USER_AGENT})
-        with urllib.request.urlopen(req, timeout=45) as resp:
-            data = json.load(resp)
+        data = _fetch_page(api, p)
         now = datetime.now(timezone.utc).isoformat()
         for rc in data.get("query", {}).get("recentchanges", []):
             old, new = rc.get("oldlen"), rc.get("newlen")
