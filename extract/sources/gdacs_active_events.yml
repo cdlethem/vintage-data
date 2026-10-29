@@ -1,0 +1,16 @@
+name: gdacs_active_events
+script: fetch_gdacs_active_events.py
+args: ["--timeout", "60"]
+schedule: "1-46/15 * * * *"  # UTC; staggered 15-minute snapshots of the recent-event cache
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "the GDACS recent-event cache (earthquakes, tropical cyclones, floods, droughts, volcanoes, wildfires) is regenerated on every catalog update; a 15-minute snapshot captures new events, alert-level changes and closures"
+rate_limit: "one bounded request per run to the public EVENTS4APP JSON endpoint (~136 KB, at most 100 events; the documented hard cap, so a very busy window can shed the oldest events)"
+licence: "GDACS data are free to use (UN/European Commission cooperation framework); acknowledgement of the source is requested"
+attribution: "Global Disaster Awareness and Coordination System, GDACS (https://www.gdacs.org/)"
+attribution_required: true
+precision_note: "General-reference event locations from source reports; not authoritative for emergency response or precise event boundaries."
