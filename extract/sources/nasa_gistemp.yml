@@ -1,0 +1,20 @@
+name: nasa_gistemp
+script: fetch_nasa_gistemp.py
+args: ["--timeout", "30"]
+schedule: "46 8 * * *"  # UTC; daily snapshot of monthly-updated tables
+enabled: false
+retries: 1
+timeout_minutes: 5
+sink: local
+run_summary:
+  required: true
+
+# Do not enable until an operator records a live NASA GISS source smoke and
+# read-only Airflow import checks. Confined verification is offline and does
+# not mutate Airflow metadata.
+# Vetting metadata (documentation only, not read by the DAG factory)
+rate_limit: "three bounded text/CSV requests per run (one per area table), each about 13 KB"
+cadence_note: "GISTEMP v4 monthly land-ocean temperature anomaly tables relative to the 1951-1980 baseline (global, NH, SH) gain one new month roughly two weeks after month-end; daily snapshots capture each release without faster polling"
+licence: "NASA-produced data; U.S. government work and generally public domain"
+attribution: "NASA GISS Surface Temperature Analysis (GISTEMP v4), https://data.giss.nasa.gov/gistemp/"
+attribution_required: true
