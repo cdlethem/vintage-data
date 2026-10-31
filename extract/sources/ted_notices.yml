@@ -1,0 +1,14 @@
+name: ted_notices
+script: fetch_ted_notices.py
+args: []
+schedule: "21-56/15 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "EU public procurement notices (all sectors, all member states) are published continuously Monday-Friday, mainly 00:01-09:00 CET plus amendments and award notices all day; 2,000+ per day; 15-minute polling with an id watermark"
+rate_limit: "one keyless RSS request per run (96/day, ~500 KB each); no published limit"
+licence: "freely reusable for commercial and non-commercial purposes under the EU Commission reuse policy (Commission Decision 2011/833/EU)"
+attribution_required: true
