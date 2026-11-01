@@ -46,12 +46,16 @@ Quirks that will cost someone an afternoon:
 
 Etiquette: keyless, no published rate limit found. Self-impose 1 req/s; this is
 federal spending-transparency infrastructure, not a high-traffic consumer API.
+The single request per run is retried in a bounded way on transient 5xx/429/
+connection failures (see ``_post``) before the run is allowed to fail.
 
 Stdlib only.
 """
 import json
 import os
 import sys
+import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
@@ -60,15 +64,59 @@ URL = "https://api.usaspending.gov/api/v2/search/spending_by_award/"
 FIELDS = ["Award ID", "Recipient Name", "Start Date", "Last Modified Date",
          "Award Amount", "Awarding Agency"]
 
+# The endpoint intermittently stalls under load (observed 2026-11-01: a 30s
+# read timeout on the single request lost the whole run). Retry transient
+# failures in a bounded way so a brief flap does not lose a whole run.
+MAX_ATTEMPTS = 4
+RETRY_BASE_DELAY = 5.0
+MAX_RETRY_DELAY = 30.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
+
+
+def _retry_delay(error: urllib.error.HTTPError, fallback: float) -> float:
+    """Return a courteous bounded delay from an HTTP Retry-After header."""
+    value = error.headers.get("Retry-After") if error.headers is not None else None
+    if value is not None:
+        try:
+            delay = float(value)
+        except (TypeError, ValueError):
+            delay = None
+        if delay is not None and delay >= 0:
+            return min(delay, MAX_RETRY_DELAY)
+    return min(fallback, MAX_RETRY_DELAY)
+
 
 def _post(body):
+    """Fetch one JSON document, with bounded retries on transient failures.
+
+    Transient failures -- 5xx, 429, and connection errors (including read
+    timeouts) -- retry with 5s/10s/20s backoff (at most ~35 seconds of
+    sleeping, well inside the ten-minute task timeout). A persistent outage
+    still fails the run after the bounded attempts with its status surfaced;
+    other HTTP errors (e.g. 404) fail immediately.
+    """
     data = json.dumps(body).encode()
     req = urllib.request.Request(URL, data=data, method="POST",
                                  headers={"User-Agent": USER_AGENT,
                                          "Content-Type": "application/json",
                                          "Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.load(resp)
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = f"HTTP {exc.code}"
+            delay = _retry_delay(exc, RETRY_BASE_DELAY * (2 ** attempt))
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = str(exc.reason if isinstance(exc, urllib.error.URLError) else exc)
+            delay = min(RETRY_BASE_DELAY * (2 ** attempt), MAX_RETRY_DELAY)
+        print(f"usaspending: transient failure ({reason}); retrying in {delay:.0f}s "
+              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+        time.sleep(delay)
 
 
 def fetch_recent(days: int = 30, limit: int = 25):
