@@ -42,12 +42,17 @@ Etiquette: keyless. Lichess publishes a general API rate-limit guideline of roug
 request/second sustained per client with brief bursts tolerated; this script's two
 endpoints are cheap and infrequent, but self-impose that pace if you add more calls.
 
-Stdlib only.
+**Transport note (2026-11-01)**: requests go through a `curl` subprocess, not
+`urllib`. Since 2026-11-01 the Cloudflare edge in front of lichess.org answers
+Python's HTTP/1.1 TLS fingerprint with a 403 "Just a moment..." challenge page on
+*every* endpoint (including the homepage), while curl is served normally —
+verified with the same User-Agent: `urllib` 403, `curl` 200 on `/api/tv/channels`.
+Stdlib only; `curl` is a system dependency.
 """
 import json
 import os
+import subprocess
 import sys
-import urllib.request
 from datetime import datetime, timezone
 
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
@@ -55,10 +60,17 @@ BASE = "https://lichess.org/api"
 
 
 def _get(url):
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT,
-                                                "Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.load(resp)
+    """GET via a curl subprocess (see transport note in the module docstring)."""
+    proc = subprocess.run(
+        ["curl", "-sS", "--fail", "--max-time", "30",
+         "-H", f"User-Agent: {USER_AGENT}",
+         "-H", "Accept: application/json", url],
+        capture_output=True, text=True, timeout=35,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"GET {url} failed (curl exit {proc.returncode}): {proc.stderr.strip()}")
+    return json.loads(proc.stdout)
 
 
 def fetch_tv():
