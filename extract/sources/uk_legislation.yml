@@ -1,0 +1,17 @@
+name: uk_legislation
+script: fetch_uk_legislation.py
+args: []
+schedule: "38 7 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 15
+sink: local
+
+cadence:
+  auto: false
+
+cadence_note: "one daily pass over the new-legislation feed; items are published on UK business days, typically ~20-30 per day"
+rate_limit: "documented fair use 3,000 requests per 5 minutes per IP; one paginated feed stream per run (typically one 100-item page, at most a handful on the initial lookback)"
+licence: "Open Government Licence v3.0"
+attribution: "Contains public sector information licensed under the Open Government Licence v3.0 (OGL v3)"
+attribution_required: true
