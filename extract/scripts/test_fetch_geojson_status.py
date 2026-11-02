@@ -97,23 +97,33 @@ def test_valid_empty_collection_is_a_successful_empty_result():
         assert fetch() == []
 
 
-def test_http_500_raises_explicit_failure_with_no_successful_empty_output():
-    error = urllib.error.HTTPError(MODULE.FEEDS["fema_shelters"][0], 500, "Internal Server Error", {}, None)
-    with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error):
-        with pytest.raises(urllib.error.HTTPError) as excinfo:
-            fetch()
-
-    assert excinfo.value.code == 500
-
-
-@pytest.mark.parametrize("status", [400, 403, 404, 503])
-def test_other_http_error_statuses_raise(status):
+@pytest.mark.parametrize("status", [429, 500, 502, 503, 504])
+def test_persistent_transient_http_status_raises_after_final_attempt(status):
     error = urllib.error.HTTPError(MODULE.FEEDS["fema_shelters"][0], status, "error", {}, None)
-    with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error):
+    with (
+        mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error) as urlopen,
+        mock.patch.object(MODULE.time, "sleep"),
+    ):
         with pytest.raises(urllib.error.HTTPError) as excinfo:
             fetch()
 
     assert excinfo.value.code == status
+    assert urlopen.call_count == 3
+
+
+@pytest.mark.parametrize("status", [400, 403, 404])
+def test_non_transient_http_status_raises_immediately(status):
+    error = urllib.error.HTTPError(MODULE.FEEDS["fema_shelters"][0], status, "error", {}, None)
+    with (
+        mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error) as urlopen,
+        mock.patch.object(MODULE.time, "sleep") as sleep,
+    ):
+        with pytest.raises(urllib.error.HTTPError) as excinfo:
+            fetch()
+
+    assert excinfo.value.code == status
+    urlopen.assert_called_once()
+    sleep.assert_not_called()
 
 
 def test_transport_unavailability_raises_url_error():
@@ -151,17 +161,25 @@ def test_persistent_transport_failure_raises_after_final_attempt():
     assert urlopen.call_count == 3
 
 
-def test_http_error_statuses_are_not_retried():
-    error = urllib.error.HTTPError(MODULE.FEEDS["fema_shelters"][0], 503, "Service Unavailable", {}, None)
+def test_transient_http_status_is_retried_then_succeeds():
+    document = feature_collection([shelter_feature("SH-503")])
+    errors = [
+        urllib.error.HTTPError(MODULE.FEEDS["fema_shelters"][0], 503, "Service Unavailable", {}, None)
+        for _ in range(2)
+    ]
     with (
-        mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error) as urlopen,
+        mock.patch.object(
+            MODULE.urllib.request,
+            "urlopen",
+            side_effect=[*errors, response(document)],
+        ) as urlopen,
         mock.patch.object(MODULE.time, "sleep") as sleep,
     ):
-        with pytest.raises(urllib.error.HTTPError):
-            fetch()
+        records = fetch()
 
-    urlopen.assert_called_once()
-    sleep.assert_not_called()
+    assert len(records) == 1
+    assert urlopen.call_count == 3
+    assert [call.args[0] for call in sleep.call_args_list] == [2, 4]
 
 
 def test_malformed_json_raises_json_decode_error():

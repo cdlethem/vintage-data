@@ -6,8 +6,9 @@ Dakota DOT alerts. All three were fetched live 2026-09-03 and expose stable feat
 plus mutable operational properties. Configure ``--feed`` so each Airflow source can
 run independently. An empty FeatureCollection is valid; disappearance is meaningful
 only after a successful complete response. Transient transport failures (timeouts,
-connection resets) are retried up to three times with short delays; HTTP error
-statuses and malformed payloads fail immediately.
+connection resets) and transient HTTP statuses (429, 5xx) are retried up to three
+times with short delays; other HTTP error statuses and malformed payloads fail
+immediately.
 
 Stdlib only.
 """
@@ -41,6 +42,7 @@ FEEDS = {
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 MAX_ATTEMPTS = 3
 RETRY_DELAY_SECONDS = (2, 4)
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
 
 
 def fetch_features(feed: str = "fema_shelters", limit: int = 2000, timeout: int = 60):
@@ -54,8 +56,10 @@ def fetch_features(feed: str = "fema_shelters", limit: int = 2000, timeout: int 
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 document = json.load(response)
             break
-        except urllib.error.HTTPError:
-            raise
+        except urllib.error.HTTPError as error:
+            if error.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS:
+                raise
+            time.sleep(RETRY_DELAY_SECONDS[attempt - 1])
         except (TimeoutError, OSError, http.client.HTTPException):
             if attempt == MAX_ATTEMPTS:
                 raise
