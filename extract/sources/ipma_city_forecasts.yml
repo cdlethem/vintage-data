@@ -1,0 +1,22 @@
+name: ipma_city_forecasts
+script: fetch_ipma_forecasts.py
+args: []
+schedule: "30 10,20 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Fixed twice-daily schedule matched to IPMA's 00UTC model run (published
+# around 10:00 UTC) and 12UTC model run (published around 20:00 UTC); forecast
+# values for a lead day only change on those runs, so an activity-driven
+# cadence has nothing to learn.
+cadence:
+  auto: false
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "5-day daily forecast per district for all 35 Portuguese districts/islands, revised with the twice-daily model runs; fetched just after each publication"
+rate_limit: "no published limit; 38 keyless GETs per run (1 district list, 2 lookup tables, 35 forecasts; district count drifts with the source)"
+licence: "IPMA terms of use: free personal and public use without profit-making or offensive purpose; source attribution required"
+attribution: "IPMA - Instituto Português do Mar e da Atmosfera, I.P., https://api.ipma.pt/"
+attribution_required: true
