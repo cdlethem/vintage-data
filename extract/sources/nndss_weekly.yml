@@ -1,0 +1,17 @@
+name: nndss_weekly
+script: fetch_nndss_weekly.py
+args: []
+schedule: "17 5 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: >-
+  New provisional MMWR weekly batch lands roughly weekly (verified 2026-11-02:
+  newest batch 2026-W42, dataset rows updated 2026-10-28); the fetcher emits
+  only weeks past its watermark, so a daily poll is slower than the data changes
+rate_limit: "no published limit; anonymous SODA shares a throttled pool, at most 2 requests per run"
+licence: "US Government work (CDC), public domain"
+attribution_required: false
