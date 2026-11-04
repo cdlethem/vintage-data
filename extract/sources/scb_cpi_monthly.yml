@@ -1,0 +1,15 @@
+name: scb_cpi_monthly
+script: fetch_scb_cpi_monthly.py
+args: []
+schedule: "45 1 * * *"  # UTC
+enabled: true
+retries: 2
+timeout_minutes: 5
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "monthly CPI published by Statistics Sweden around the 12th-14th; poll daily, re-emitting a 3-month window so revisions are captured"
+rate_limit: "keyless SCB PxWebApi v2; documented limit 30 calls per 10 s per IP, this source makes 2 per run"
+licence: "CC0 (SCB PxWebApi /config declares the CC0 public-domain dedication)"
+attribution: "Source: Statistics Sweden (SCB), https://www.scb.se/PR0101-en"
+attribution_required: true
