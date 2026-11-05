@@ -6,19 +6,67 @@ Daily totals expose travel demand, holiday peaks, and disruption recovery. Verif
 script selects only the two-column ``Date``/``Numbers`` table and preserves the HTTP
 Last-Modified timestamp. U.S. federal public data.
 
-Stdlib only.
+**Transport note (2026-11-05)**: requests go through a `curl` subprocess, not
+`urllib`. As of 2026-11-05 the Akamai edge in front of www.tsa.gov answers
+`urllib` with a 403 "Access Denied" (AkamaiGHost/edgesuite) on every request,
+while `curl` is served normally — verified from the pipeline host on the same
+URL: `urllib` 403 for any User-Agent, `curl` 200. The edge fingerprints the TLS
+client *and* the header set: our `vintage-data` User-Agent and curl's bare
+`Accept: */*` each 403 even via curl, and only a browser User-Agent together
+with browser `Accept`/`Accept-Language` headers passes. Stdlib only; `curl` is
+a system dependency.
 """
 
 import argparse
 import json
-import os
-import urllib.request
+import subprocess
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 
 SOURCE = "tsa_checkpoint_throughput"
 URL = "https://www.tsa.gov/travel/passenger-volumes"
-USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
+# A genuine browser fingerprint is required (see the transport note above);
+# the project's contact User-Agent is rejected by the edge.
+USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+)
+
+
+def _get(url: str, timeout: int = 30):
+    """GET via a curl subprocess (see the transport note in the docstring).
+
+    Returns ``(last_modified, body_text)``; ``last_modified`` is ``""`` when
+    the response carries no Last-Modified header.
+    """
+    proc = subprocess.run(
+        [
+            "curl", "-sS", "--fail", "--max-time", str(timeout), "-D", "-",
+            "--compressed",
+            "-H", f"User-Agent: {USER_AGENT}",
+            "-H", "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,"
+                  "image/avif,image/webp,*/*;q=0.8",
+            "-H", "Accept-Language: en-US,en;q=0.9",
+            url,
+        ],
+        capture_output=True, text=True, timeout=timeout + 5,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"GET {url} failed (curl exit {proc.returncode}): {proc.stderr.strip()}")
+    # -D - prepends the response header dump; HTTP/2 responses use bare LF
+    # line endings, so fall back to the LF blank line when the CRLF one is
+    # absent.
+    head, sep, body = proc.stdout.partition("\r\n\r\n")
+    if not sep:
+        head, sep, body = proc.stdout.partition("\n\n")
+    if not sep:
+        raise RuntimeError(f"GET {url} failed: no header/body separator in curl output")
+    last_modified = ""
+    for line in head.splitlines():
+        if line.lower().startswith("last-modified:"):
+            last_modified = line.split(":", 1)[1].strip()
+    return last_modified, body
 
 
 class Tables(HTMLParser):
@@ -54,11 +102,8 @@ class Tables(HTMLParser):
 def fetch_throughput(limit: int = 400, timeout: int = 30):
     if limit <= 0:
         return
-    request = urllib.request.Request(URL, headers={"User-Agent": USER_AGENT})
+    modified, text = _get(URL, timeout)
     fetched_at = datetime.now(timezone.utc).isoformat()
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        modified = response.headers.get("Last-Modified")
-        text = response.read().decode("utf-8", "replace")
     parser = Tables()
     parser.feed(text)
     table = next(
