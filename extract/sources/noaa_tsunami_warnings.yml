@@ -1,0 +1,15 @@
+name: noaa_tsunami_warnings
+script: fetch_noaa_tsunami_warnings.py
+args: []
+schedule: "11,26,41,56 * * * *"  # UTC
+enabled: true
+retries: 2
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "current CAP 1.2 products from the PAAQ and PHEB tsunami warning centers; products appear irregularly after earthquakes (several per month typical), so a 15-minute poll keeps statement revisions and cancellations without busy polling"
+rate_limit: "two static XML documents, a few KiB each, 96 polls/day total; no published quota"
+licence: "US Government work (NOAA/NWS Tsunami Warning Centers), public domain"
+attribution: "NOAA Tsunami Warning Centers, https://www.tsunami.gov/"
+attribution_required: false
