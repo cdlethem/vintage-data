@@ -1,0 +1,26 @@
+name: bis_policy_rates
+script: fetch_bis_policy_rates.py
+# One keyless all-series request for the whole WS_CBPOL table (38 reporting
+# areas, incl. the XM euro-area aggregate, in monthly and daily frequency)
+# over a rolling window. Stateful: per-series watermarks keep scheduled runs
+# to genuinely new observations plus a re-emission of each series' latest
+# period so corrections to the newest value surface on the next run.
+args: ["--lookback-days", "365", "--timeout", "60"]
+schedule: "34 06 * * *"  # UTC; daily poll for the weekly (Monday) BIS release
+enabled: false
+retries: 1
+timeout_minutes: 10
+sink: local
+run_summary:
+  required: true
+
+cadence:
+  auto: false
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "data changes weekly (new business-day observation per Monday release, new month-end period monthly); one WS_CBPOL all-series request per daily run over a 365-day rolling window, steady-state output limited by per-series watermarks to new observations plus each series' latest period"
+rate_limit: "one bounded SDMX-JSON request per run (~0.4 MB for a 365-day window); no published BIS rate limit"
+licence: "BIS copyright and permissions: statistical data may be reproduced and distributed free of charge with the BIS cited as the source (https://www.bis.org/terms_conditions.htm)"
+attribution: "Bank for International Settlements (BIS), Data Portal, https://data.bis.org/"
+attribution_required: true
+activation_note: "keep paused until independent review, authorized live-source smoke, and a read-only Airflow import check are recorded"
