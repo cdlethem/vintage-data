@@ -1,0 +1,26 @@
+name: fed_h41
+script: fetch_fed_h41.py
+args: [--weeks, "13"]
+schedule: "38 4 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Keep the declared daily schedule fixed; the weekly Friday release and the
+# Board's revisions of recent weeks are not an activity signal for adaptive
+# scheduling.
+cadence:
+  auto: false
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: >-
+  H.4.1 publishes weekly on Fridays (~16:15 US Eastern) with Wednesday levels;
+  the daily poll also picks up the Board's revisions of recent weeks. Each run
+  re-emits the last 13 weekly periods (one quarter) for every active series.
+rate_limit: >-
+  keyless, no published limit; one ~9 MB zip download per run; be polite via
+  User-Agent.
+licence: "US Government work, public domain"
+attribution: "Federal Reserve Board of the Federal Reserve System, H.4.1 release, https://www.federalreserve.gov/releases/h41/"
+attribution_required: true
