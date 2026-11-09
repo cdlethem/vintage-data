@@ -39,6 +39,10 @@ Quirks that will cost someone an afternoon:
       `stackoverflow` produces a new question every few minutes; a niche site might
       go hours between questions, which is a real signal about that community, not
       a broken query.
+    * api.stackexchange.com sits behind **Cloudflare** and can return **521
+      "web server is down"** when the origin is briefly unreachable. That is a
+      transient flap, not a client error: `_get` retries it (and other 5xx/429
+      and connection errors) a bounded number of times with backoff.
 
 Etiquette: keyless, documented quota of roughly 300 requests/day per IP anonymously
 (10,000/day with a free registered app key, which this script doesn't use to stay
@@ -49,6 +53,7 @@ Stdlib only.
 import json
 import os
 import sys
+import time
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -56,15 +61,59 @@ from datetime import datetime, timezone
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 BASE = "https://api.stackexchange.com/2.3/questions"
 
+# api.stackexchange.com sits behind Cloudflare and intermittently 521s when
+# the origin is briefly unreachable (observed live 2026-11-09, a single 521
+# lost the 19:05 UTC run). Retry transient failures in a bounded way so a
+# brief flap does not lose a whole run.
+MAX_ATTEMPTS = 4
+RETRY_BASE_DELAY = 5.0
+MAX_RETRY_DELAY = 30.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504, 521})
+
+
+def _retry_delay(error: urllib.error.HTTPError, fallback: float) -> float:
+    """Return a courteous bounded delay from an HTTP Retry-After header."""
+    value = error.headers.get("Retry-After") if error.headers is not None else None
+    if value is not None:
+        try:
+            delay = float(value)
+        except (TypeError, ValueError):
+            delay = None
+        if delay is not None and delay >= 0:
+            return min(delay, MAX_RETRY_DELAY)
+    return min(fallback, MAX_RETRY_DELAY)
+
 
 def _get(site, pagesize, page):
+    """Fetch one page of questions, retrying transient failures (5xx/429 and
+    connection errors) with 5s/10s/20s backoff -- at most ~35 seconds of
+    sleeping, well inside the ten-minute task timeout. A persistent outage
+    still fails the run after the bounded attempts with its status surfaced;
+    other HTTP errors (e.g. 404) fail immediately. At most three extra
+    requests on a failure is negligible against the ~300/day anonymous quota
+    for a run that makes one request every thirty minutes."""
     params = {"order": "desc", "sort": "creation", "site": site,
              "pagesize": pagesize, "page": page}
     req = urllib.request.Request(f"{BASE}?{urllib.parse.urlencode(params)}",
                                  headers={"User-Agent": USER_AGENT,
                                          "Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.load(resp)
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = f"HTTP {exc.code}"
+            delay = _retry_delay(exc, RETRY_BASE_DELAY * (2 ** attempt))
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = str(exc.reason if isinstance(exc, urllib.error.URLError) else exc)
+            delay = min(RETRY_BASE_DELAY * (2 ** attempt), MAX_RETRY_DELAY)
+        print(f"stackexchange: transient failure ({reason}); retrying in {delay:.0f}s "
+              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+        time.sleep(delay)
 
 
 def fetch_recent(site: str = "stackoverflow", pagesize: int = 25, page: int = 1):
