@@ -12,6 +12,11 @@ information when EMA is acknowledged in every copy.  This does not cover third-p
 material.  Attribution: "Source: European Medicines Agency (EMA), medicine shortages
 catalogue" with the source URL.
 
+EMA fronts the site with an Akamai edge that intermittently returns 429 "Sorry"
+pages for single requests (observed 2026-11-09: 429 at 17:27 UTC while the
+05:22 UTC run the same day succeeded).  Transient failures are therefore retried
+in a bounded way before a run is allowed to fail.
+
 Verified against the official endpoint on 2026-09-07.  Python standard library only.
 """
 
@@ -22,6 +27,7 @@ import os
 import pathlib
 import sys
 import tempfile
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -104,26 +110,73 @@ def save_state(path: pathlib.Path, state: dict) -> None:
 def response_context(body: bytes) -> str:
     return body[:500].decode("utf-8", errors="replace").replace("\n", " ")
 
+# The EMA front end (Akamai) intermittently 429s a single request even at the
+# 12-hourly cadence, and occasionally returns transient 5xx or drops the
+# connection. Retry transient failures in a bounded way so a brief flap does not
+# lose a whole run. At most 4 attempts; sleeps of 5s/10s/20s (capped at 30s)
+# total under a minute, well inside the ten-minute task timeout.
+MAX_ATTEMPTS = 4
+RETRY_BASE_DELAY = 5.0
+MAX_RETRY_DELAY = 30.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
+
+
+def _retry_delay(error: urllib.error.HTTPError, fallback: float) -> float:
+    """Return a courteous bounded delay from an HTTP Retry-After header."""
+    value = error.headers.get("Retry-After") if error.headers is not None else None
+    if value is not None:
+        try:
+            delay = float(value)
+        except (TypeError, ValueError):
+            delay = None
+        if delay is not None and delay >= 0:
+            return min(delay, MAX_RETRY_DELAY)
+    return min(fallback, MAX_RETRY_DELAY)
+
+
+def _reason(error: Exception) -> object:
+    if isinstance(error, urllib.error.URLError):
+        return error.reason
+    return error
+
 
 def fetch_snapshot(timeout: int, last_modified: str | None) -> tuple[dict, str | None, str] | None:
     headers = {"User-Agent": USER_AGENT}
     if last_modified:
         headers["If-Modified-Since"] = last_modified
     request = urllib.request.Request(URL, headers=headers)
-    try:
-        response = urllib.request.urlopen(request, timeout=timeout)
-    except urllib.error.HTTPError as error:
-        if error.code == 304:
-            return None
-        raise RuntimeError(
-            f"EMA shortages request failed: endpoint={URL} status={error.code} "
-            f"body={response_context(error.read())!r}"
-        ) from error
-    except urllib.error.URLError as error:
-        raise RuntimeError(f"EMA shortages request failed: endpoint={URL} error={error.reason}") from error
-    with response:
-        body = response.read()
-        last_modified = response.headers.get("Last-Modified")
+    body: bytes | None = None
+    response_headers = None
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                body = response.read()
+                response_headers = response.headers
+            break
+        except urllib.error.HTTPError as error:
+            if error.code == 304:
+                return None
+            if error.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise RuntimeError(
+                    f"EMA shortages request failed: endpoint={URL} status={error.code} "
+                    f"body={response_context(error.read())!r}"
+                ) from error
+            delay = _retry_delay(error, RETRY_BASE_DELAY * (2 ** attempt))
+            reason = f"HTTP {error.code}"
+        except (urllib.error.URLError, TimeoutError, OSError) as error:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise RuntimeError(
+                    f"EMA shortages request failed: endpoint={URL} error={_reason(error)}"
+                ) from error
+            delay = min(RETRY_BASE_DELAY * (2 ** attempt), MAX_RETRY_DELAY)
+            reason = _reason(error)
+        print(
+            f"ema_medicine_shortages: transient failure ({reason}); "
+            f"retrying in {delay:.0f}s (attempt {attempt + 1} of {MAX_ATTEMPTS - 1})",
+            file=sys.stderr,
+        )
+        time.sleep(delay)
+    last_modified = response_headers.get("Last-Modified")
     try:
         document = json.loads(body)
     except json.JSONDecodeError as error:
