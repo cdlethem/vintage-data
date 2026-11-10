@@ -1,0 +1,15 @@
+name: npm_downloads
+script: fetch_npm_downloads.py
+args: ["--timeout", "30"]
+schedule: "33 3 * * *"  # UTC
+enabled: true
+retries: 2
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "npm publishes download counts once per calendar day with ~1-day lag; one run fetches the last 3 completed days so each day is covered by three consecutive runs"
+rate_limit: "one bulk range request per run (up to 128 unscoped packages per request); 429s retried with backoff"
+licence: "npm public download statistics (npm registry, operated by GitHub)"
+attribution: "npm, https://www.npmjs.com/"
+attribution_required: true
