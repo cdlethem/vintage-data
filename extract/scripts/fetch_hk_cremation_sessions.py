@@ -11,6 +11,11 @@ The host requires TLS legacy renegotiation, so the client enables that option ex
 (``OP_LEGACY_SERVER_CONNECT``); certificate verification stays on. FEHD terms apply and
 the service limits repeated sessions, so poll only a few times a day.
 
+During the daily maintenance window the site serves a notice page in place of the
+availability table; the fetcher recognises that notice and emits an empty run
+instead of failing, so a scheduled poll that lands in the window is a gap, not an
+alert.
+
 Stdlib only.
 """
 
@@ -19,6 +24,7 @@ import json
 import os
 import re
 import ssl
+import sys
 import urllib.request
 from datetime import datetime, timezone
 from html.parser import HTMLParser
@@ -28,6 +34,7 @@ URL = "https://app.fehd.gov.hk/cremview/viewAvailableSession.do?lang=en"
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 DATE_HEADER = "Date (dd/mm/yyyy)"
 SESSION = re.compile(r"^(\d+)\s*\(\s*(\d+)\s*\)$")
+MAINTENANCE_NOTICE = re.compile(r"will be suspended from[^<]*maintenance", re.IGNORECASE)
 
 
 class Tables(HTMLParser):
@@ -71,6 +78,13 @@ def fetch_sessions(timeout: int = 30):
     fetched_at = datetime.now(timezone.utc).isoformat()
     with urllib.request.urlopen(request, timeout=timeout, context=_context()) as response:
         text = response.read().decode("utf-8", "replace")
+    if MAINTENANCE_NOTICE.search(text):
+        print(
+            "FEHD is in its scheduled maintenance window; the availability table is "
+            "unavailable this run, emitting no records",
+            file=sys.stderr,
+        )
+        return
     parser = Tables()
     parser.feed(text)
     # "Last updated:" and its timestamp are split across elements, so read the parsed cell.
