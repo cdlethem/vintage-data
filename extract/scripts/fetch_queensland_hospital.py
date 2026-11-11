@@ -16,6 +16,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -25,6 +26,41 @@ BASE_URL = "https://openhospitals.health.qld.gov.au/facility/"
 SITEMAP = "https://openhospitals.health.qld.gov.au/sitemap.xml"
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 
+# The publisher's Azure front end intermittently 5xxs single URLs while the
+# rest of the site serves normally (observed 2026-11-11: sitemap.xml 500 for
+# a whole scheduled run, homepage 200). The sitemap is the one request whose
+# failure loses the entire run, so it alone gets a bounded retry.
+MAX_ATTEMPTS = 4
+RETRY_BASE_DELAY = 5.0
+MAX_RETRY_DELAY = 30.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
+
+
+def _get_with_retries(url: str, timeout: int) -> str:
+    """Fetch one document, retrying transient failures with a finite bound.
+
+    Transient failures -- 5xx, 429, and connection errors -- retry with
+    5s/10s/20s backoff (at most ~35 seconds of sleeping, well inside the
+    fifteen-minute task timeout). A persistent outage still fails the run
+    after the bounded attempts with its status surfaced; other HTTP errors
+    (e.g. 404) fail immediately.
+    """
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            return _get(url, timeout)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = f"HTTP {exc.code}"
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = str(getattr(exc, "reason", exc))
+        delay = min(RETRY_BASE_DELAY * (2 ** attempt), MAX_RETRY_DELAY)
+        print(f"queensland_hospital: transient failure ({reason}); retrying in {delay:.0f}s "
+              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+        time.sleep(delay)
+
 
 def _get(url: str, timeout: int) -> str:
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
@@ -33,7 +69,7 @@ def _get(url: str, timeout: int) -> str:
 
 
 def discover_slugs(timeout: int = 30):
-    slugs = dict.fromkeys(re.findall(r"/facility/([^<\s/]+)</loc>", _get(SITEMAP, timeout)))
+    slugs = dict.fromkeys(re.findall(r"/facility/([^<\s/]+)</loc>", _get_with_retries(SITEMAP, timeout)))
     if not slugs:
         raise ValueError("sitemap exposed no facility pages; structure changed")
     return list(slugs)
