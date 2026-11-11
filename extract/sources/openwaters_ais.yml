@@ -1,0 +1,14 @@
+name: openwaters_ais
+script: fetch_openwaters_ais.py
+args: []
+schedule: "1-59/5 * * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "live AIS snapshot of the Strait of Dover box; positions refresh continuously as receivers report, five-minute polling is far slower than the data changes"
+rate_limit: "anonymous tier 120 requests/minute per address, box capped at 100 sq deg; one request per 5 min (288/day) in a 0.5 sq deg box"
+licence: "AIS is a public maritime-safety broadcast; Open Waters AIS API terms allow anonymous reads; attribution required and carried in each response"
+attribution_required: true
