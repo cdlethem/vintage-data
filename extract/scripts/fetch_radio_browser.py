@@ -42,6 +42,7 @@ import os
 import random
 import sys
 import urllib.parse
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
@@ -50,34 +51,65 @@ FALLBACK = "https://de1.api.radio-browser.info"
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 
 _server = None
+_candidates: list[str] | None = None
 
 
-def _pick_server() -> str:
-    """Resolve a mirror rather than pinning one, as the project requests."""
-    global _server
-    if _server:
-        return _server
+def _candidate_servers() -> list[str]:
+    """Discovered mirror pool, ordered: random pick first, then the rest,
+    then the documented fallback."""
+    global _candidates, _server
+    if _candidates is not None:
+        return _candidates
+    hosts: list[str] = []
     try:
         req = urllib.request.Request(SERVER_LIST,
                                      headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(req, timeout=20) as resp:
             hosts = [h.get("name") for h in json.load(resp) if h.get("name")]
-        if hosts:
-            _server = "https://" + random.choice(hosts)
-            return _server
     except Exception:
         pass
-    _server = FALLBACK
-    return _server
+    if hosts:
+        picked = random.choice(hosts)
+        _candidates = ["https://" + h
+                       for h in [picked] + [h for h in hosts if h != picked]]
+    else:
+        _candidates = [FALLBACK]
+    if FALLBACK not in _candidates:
+        _candidates.append(FALLBACK)
+    _server = _candidates[0]
+    return _candidates
 
 
 def _get(path: str, **params):
-    url = f"{_pick_server()}/json/{path}"
+    """GET one endpoint, failing over to the next mirror in the pool when a
+    mirror is dead (TLS failure, refused/reset connection, timeout, or a
+    non-JSON body). Application-level HTTP errors are not retried."""
+    global _server
+    url_path = f"/json/{path}"
     if params:
-        url += "?" + urllib.parse.urlencode(params)
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=45) as resp:
-        return json.load(resp)
+        url_path += "?" + urllib.parse.urlencode(params)
+    last_error: Exception | None = None
+    for server in _candidate_servers():
+        req = urllib.request.Request(server + url_path,
+                                     headers={"User-Agent": USER_AGENT})
+        try:
+            with urllib.request.urlopen(req, timeout=45) as resp:
+                payload = json.load(resp)
+        except urllib.error.HTTPError:
+            # The mirror answered; another mirror won't fix an application
+            # status, so propagate it unchanged.
+            raise
+        except (OSError, json.JSONDecodeError) as exc:
+            last_error = exc
+            print(f"radio_browser: {server} unavailable "
+                  f"({type(exc).__name__}: {exc}); trying next mirror",
+                  file=sys.stderr)
+            continue
+        _server = server
+        return payload
+    raise RuntimeError(
+        f"radio_browser: all mirrors failed for {url_path}: {last_error}"
+    ) from last_error
 
 
 def _norm(s: dict, now: str) -> dict:
