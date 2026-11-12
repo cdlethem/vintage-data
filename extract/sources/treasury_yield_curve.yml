@@ -1,0 +1,14 @@
+name: treasury_yield_curve
+script: fetch_treasury_yield_curve.py
+args: []
+schedule: "30 17 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Daily Treasury yield curve; one business-day row published after each market close (weekdays)"
+rate_limit: "keyless static HTML on home.treasury.gov; one request per calendar year per run"
+licence: "public domain (U.S. Government work, 17 U.S.C. sec. 105)"
+attribution_required: false
