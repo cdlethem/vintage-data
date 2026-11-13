@@ -1,0 +1,20 @@
+name: spc_tornado_reports
+script: fetch_spc_tornado_reports.py
+args: ["--timeout", "60"]
+schedule: "12 6 * * *"  # UTC; daily poll of a file SPC revises in place
+enabled: false
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Do not enable until an operator records a successful live SPC source smoke and
+# a read-only Airflow import check. Offline verification mocks HTTP and does not
+# mutate Airflow metadata.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "full 1950-present U.S. tornado report history (~75,000 rows); SPC revises the file in place as NWS Storm Data is finalized, with a new annual release each spring, so one daily snapshot tracks revisions"
+rate_limit: "two bounded requests per run: the 64 KB data page to resolve the newest all-tornadoes file, then that one ~9 MB CSV; no pagination"
+licence: "United States government work (NOAA Storm Prediction Center); public domain"
+attribution: "Storm Prediction Center (SPC) Severe Weather Database, https://www.spc.noaa.gov/wcm/"
+attribution_required: true
+deduplication_note: "SPC om numbers are unique only within a year and multi-state tornadoes repeat per state, so the record id is the SHA-256 of the full canonical row; upstream revisions re-key affected rows and old raw rows remain insert-only"
+coverage_note: "one row per tornado report or state/county segment; count tornadoes on sg=1 rows. edat/etime are empty on older rows and all values are preserved verbatim as source strings"
