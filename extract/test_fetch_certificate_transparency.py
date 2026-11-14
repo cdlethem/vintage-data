@@ -81,7 +81,7 @@ class FetchCertificateTransparencyTests(unittest.TestCase):
         self.assertEqual(url, MODULE.BASE + "?q=wikipedia.org&output=json")
 
     def test_recovers_from_transient_server_errors(self):
-        for code in (429, 500, 502, 503, 504):
+        for code in (404, 429, 500, 502, 503, 504):
             with self.subTest(code=code), mock.patch.object(
                 MODULE.urllib.request, "urlopen",
                 side_effect=[http_transient(code), response([certificate()])]
@@ -137,13 +137,13 @@ class FetchCertificateTransparencyTests(unittest.TestCase):
         self.assertEqual(sleep.call_count, MODULE.MAX_ATTEMPTS - 1)
 
     def test_fails_immediately_for_non_retryable_http_errors(self):
-        error = urllib.error.HTTPError(MODULE.BASE, 404, "Not Found", {}, io.BytesIO(b"down"))
+        error = urllib.error.HTTPError(MODULE.BASE, 403, "Forbidden", {}, io.BytesIO(b"blocked"))
         with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error) as urlopen, mock.patch.object(
             MODULE.time, "sleep"
         ) as sleep:
             with self.assertRaises(urllib.error.HTTPError) as ctx:
                 list(MODULE.fetch_certs("wikipedia.org"))
-            self.assertEqual(ctx.exception.code, 404)
+            self.assertEqual(ctx.exception.code, 403)
         self.assertEqual(urlopen.call_count, 1)
         sleep.assert_not_called()
 

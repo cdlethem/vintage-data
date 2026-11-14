@@ -48,7 +48,7 @@ Quirks that will cost someone an afternoon:
 Etiquette: keyless, but crt.sh is a single-operator service (Sectigo-run) that
 explicitly asks for gentle use — no documented hard limit, but heavy/scripted querying
 in a loop, and self-impose real pacing (a few requests per minute at most).
-The single request per run is retried in a bounded way on transient 5xx/429/
+The single request per run is retried in a bounded way on transient 404/5xx/429/
 connection failures (see ``_get``) before the run is allowed to fail.
 
 Stdlib only.
@@ -65,12 +65,14 @@ USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https:/
 BASE = "https://crt.sh/"
 
 # crt.sh intermittently 502s while its front-end replicas catch up on
-# replication (chronic; observed live 2026-10-01). Retry transient failures
-# in a bounded way so a brief flap does not lose a whole run.
+# replication (chronic; observed live 2026-10-01), and its front-end also
+# returns transient 404s during outages — observed live 2026-11-14, with the
+# same URL returning 200 minutes later. Retry transient failures in a
+# bounded way so a brief flap does not lose a whole run.
 MAX_ATTEMPTS = 4
 RETRY_BASE_DELAY = 5.0
 MAX_RETRY_DELAY = 30.0
-RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
+RETRYABLE_HTTP_CODES = frozenset({404, 429, 500, 502, 503, 504})
 
 
 def _retry_delay(error: urllib.error.HTTPError, fallback: float) -> float:
@@ -89,13 +91,13 @@ def _retry_delay(error: urllib.error.HTTPError, fallback: float) -> float:
 def _get(query):
     """Fetch one JSON document, with bounded retries on transient failures.
 
-    Transient failures -- 5xx, 429, and connection errors -- retry with
-    5s/10s/20s backoff (at most ~35 seconds of sleeping, well inside the
-    ten-minute task timeout). A persistent outage still fails the run after
-    the bounded attempts with its status surfaced; other HTTP errors (e.g.
-    404) fail immediately. A non-JSON body (an HTML error page, e.g. a
-    malformed query) is treated as an empty result, as before, and is never
-    retried.
+    Transient failures -- 5xx, 429, transient 404s (crt.sh's front-end
+    404s during outages), and connection errors -- retry with 5s/10s/20s
+    backoff (at most ~35 seconds of sleeping, well inside the ten-minute
+    task timeout). A persistent failure (including a 404 for a genuinely
+    gone endpoint) still fails the run after the bounded attempts with its
+    status surfaced. A non-JSON body (an HTML error page, e.g. a malformed
+    query) is treated as an empty result, as before, and is never retried.
     """
     url = f"{BASE}?{urllib.parse.urlencode({'q': query, 'output': 'json'})}"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
