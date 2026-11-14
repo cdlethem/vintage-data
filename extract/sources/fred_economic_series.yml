@@ -1,0 +1,20 @@
+name: fred_economic_series
+script: fetch_fred_economic_series.py
+args: []
+schedule: "0 12 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Keep the declared daily schedule fixed; release timing is not an activity
+# signal for adaptive scheduling.
+cadence:
+  auto: false
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily check; the six series update at most daily and the 180-day lookback re-covers revisions"
+rate_limit: "no published limit for keyless CSV downloads; 6 small requests per run"
+licence: "FRED terms of use permit free personal and non-commercial use with attribution; the underlying series are US federal government data"
+attribution: "Federal Reserve Bank of St. Louis, FRED, https://fred.stlouisfed.org/"
+attribution_required: true
