@@ -1,0 +1,14 @@
+name: biorxiv_preprints
+script: fetch_biorxiv_preprints.py
+args: ["7"]
+schedule: "31 6 * * *"  # UTC; daily. Posts dated day D are complete by the end of UTC day D, so one new completed day lands per run; the watermark day is re-queried each run to catch late-indexed posts (ids are stable, so overlap is idempotent).
+enabled: true
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "bioRxiv + medRxiv new preprint posts (metadata: title, abstract, authors, corresponding institution, category, per-paper CC license, DOI). Measured 2026-11-06..13: bioRxiv 3-317 posts/day (~245 avg), medRxiv ~61/day; zero on Sundays (2026-11-08 bioRxiv had 3). args = cold-start window only (7 days); afterwards the per-server date watermark bounds each run to one new day plus the re-queried watermark day."
+rate_limit: "keyless official API (api.biorxiv.org), fixed 30 posts/page cursor pagination, ~14 requests/day at steady state; in-script bounded retries (3 attempts, 60 s cumulative sleep cap) for 429/5xx and transport failures"
+licence: "Preprint metadata served by the official public bioRxiv/medRxiv API (Center for Open Science); metadata collection via the API is the platform's stated use. No full text is fetched; each paper keeps its own CC license, preserved in the license field."
+attribution_required: true
