@@ -52,11 +52,16 @@ occasionally rate-limit at the CDN level). Poll `station_status` at roughly the 
 it actually updates (spec suggests <=60s); polling faster than the feed's own TTL
 (`data.ttl` in the discovery/status payloads) is pure waste.
 
+Transient network failures (DNS resolution flaps, connection resets, read timeouts)
+are retried up to three times with 1s/2s backoff; a persistent failure still fails the
+run after the bounded attempts with the original error.
+
 Stdlib only.
 """
 import json
 import os
 import sys
+import time
 import urllib.request
 from datetime import datetime, timezone
 
@@ -70,12 +75,28 @@ SYSTEMS = {
     "citibike": "https://gbfs.citibikenyc.com/gbfs/gbfs.json",
 }
 
+MAX_ATTEMPTS = 3
+RETRY_BASE_DELAY = 1.0
+
 
 def _get(url):
+    """Fetch one JSON document, retrying transient transport failures."""
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT,
                                                 "Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.load(resp)
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError:
+            raise
+        except (urllib.error.URLError, TimeoutError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = exc.reason if isinstance(exc, urllib.error.URLError) else exc
+            delay = RETRY_BASE_DELAY * (2 ** attempt)
+            print(f"gbfs: transient failure ({reason}); retrying in {delay:.0f}s "
+                  f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+            time.sleep(delay)
 
 
 def discover(gbfs_url: str, lang: str | None = None):
