@@ -40,9 +40,11 @@ Quirks that will cost someone an afternoon:
       clean key-value structure — extracted with a regex over the unescaped text.
     * This is Atom XML, not JSON — parsed with `xml.etree.ElementTree` and the Atom
       namespace, per this catalog's stdlib-only convention.
-    * One atom request timed out on a retry attempt during investigation while a
-      plain HTML request to the same base endpoint succeeded — SEC.gov can be slow
-      under load; a generous timeout and a retry are worth having.
+    * SEC.gov can be slow under load — one atom request timed out during
+      investigation, and on 2026-11-16 the feed stalled mid-response for at
+      least 11.5 minutes (every task attempt read-timed out, 15:31–15:43 UTC).
+      The 45s socket timeout plus the bounded 5s/10s retry in `_get_atom`
+      cover short stalls; longer outages fall back to the DAG's task retries.
 
 Etiquette: keyless, but SEC.gov **requires** a descriptive `User-Agent` identifying
 your organisation and a contact (stated in their own fair-access policy, verified via
@@ -56,9 +58,15 @@ import json
 import os
 import re
 import sys
+import time
+import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
+
+MAX_ATTEMPTS = 3
+RETRY_BASE_DELAY = 5.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
 
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 NS = {"a": "http://www.w3.org/2005/Atom"}
@@ -69,11 +77,32 @@ SUMMARY_RE = re.compile(r"Filed:</b>\s*([\d-]+).*?AccNo:</b>\s*(\S+).*?Size:</b>
 
 
 def _get_atom(form_type: str = "", count: int = 40):
+    """Fetch one atom page, retrying transient failures with a finite bound.
+
+    Transient transport failures (read timeouts, connection errors) and 429/5xx
+    retry with 5s/10s backoff (at most ~150 seconds, well inside the
+    ten-minute task timeout). A persistent failure raises the final error
+    unchanged after the bounded attempts.
+    """
     params = (f"?action=getcurrent&type={form_type}&company=&dateb=&owner=include"
              f"&count={count}&output=atom")
     req = urllib.request.Request(BASE + params, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=45) as resp:
-        return resp.read()
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(req, timeout=45) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = f"HTTP {exc.code}"
+        except (urllib.error.URLError, TimeoutError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = str(exc.reason if isinstance(exc, urllib.error.URLError) else exc)
+        delay = RETRY_BASE_DELAY * (2 ** attempt)
+        print(f"sec_edgar: transient failure ({reason}); retrying in {delay:.0f}s "
+              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+        time.sleep(delay)
 
 
 def fetch_recent(form_type: str = "", count: int = 40):
