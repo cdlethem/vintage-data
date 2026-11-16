@@ -5,8 +5,10 @@ Population versus usable operational capacity exposes estate pressure. Verified 
 2026-09-03 through the GOV.UK Content API and its newest ODS attachment. The spreadsheet
 uses repeated cells, merged headings, comma-formatted integers, and three comparison
 periods; this parser expands those cells into stable period/metric/population-group
-records. The publication normally updates Monday. Data is under the Open Government
-Licence; discover daily and expect records weekly.
+Licence; discover daily and expect records weekly. The content API and its
+asset host occasionally flap (observed 2026-11-16: a transient DNS resolution
+failure during the scheduled run); transient transport failures and 429/5xx
+responses retry with 1s/2s backoff, at most three attempts per request.
 
 Stdlib only.
 """
@@ -15,6 +17,8 @@ import io
 import json
 import os
 import re
+import sys
+import time
 import urllib.error
 import urllib.request
 import zipfile
@@ -41,15 +45,45 @@ def _content_url(year: int):
     )
 
 
+MAX_ATTEMPTS = 3
+RETRY_BASE_DELAY = 1.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
+
+
+def _urlopen(request, timeout: int):
+    """Open one request, retrying transient failures within a bounded budget.
+
+    A DNS blip (socket.gaierror surfaced as URLError) or a 429/5xx response must
+    not lose the whole run, so they retry with 1s/2s backoff (at most 3 seconds
+    of sleeping). Non-retryable statuses such as 404 raise immediately so the
+    caller's year fallback keeps working.
+    """
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            return urllib.request.urlopen(request, timeout=timeout)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = f"HTTP {exc.code}"
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = str(exc.reason if isinstance(exc, urllib.error.URLError) else exc)
+        delay = RETRY_BASE_DELAY * (2 ** attempt)
+        print(f"uk_prison_estate: transient failure ({reason}); retrying in {delay:.0f}s "
+              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+        time.sleep(delay)
+
+
 def _get_json(url: str, timeout: int):
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    with _urlopen(request, timeout) as response:
         return json.load(response)
 
 
 def _get_bytes(url: str, timeout: int):
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    with _urlopen(request, timeout) as response:
         return response.read()
 
 
