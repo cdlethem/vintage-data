@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
+import urllib.error
 
 
 SCRIPT = pathlib.Path(__file__).with_name("fetch_melbourne_pedestrians.py")
@@ -118,6 +119,90 @@ class MelbourneSummaryTests(unittest.TestCase):
             self.assertEqual(len(stdout.getvalue().splitlines()), 1)
             self.assertEqual(stderr.getvalue(), "")
             self.assertFalse(state.exists())
+
+
+class MelbourneRetriesTests(unittest.TestCase):
+    def run_extractor(self, urlopen, *args):
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with (
+            patch.object(module.urllib.request, "urlopen", urlopen),
+            patch.object(module.time, "sleep") as sleep,
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(stderr),
+        ):
+            result = module.main(list(args))
+        return result, stdout.getvalue().splitlines(), stderr.getvalue().splitlines(), sleep
+
+    def summary(self, errors):
+        self.assertTrue(any(line.startswith(module.SUMMARY_PREFIX) for line in errors), errors)
+        return json.loads(errors[-1][len(module.SUMMARY_PREFIX):])
+
+    def test_transient_5xx_retries_then_succeeds(self):
+        outcomes = [urllib.error.HTTPError(module.URL, 503, "unavailable", {}, None), [row()]]
+
+        def urlopen(request, timeout):
+            outcome = outcomes.pop(0)
+            if isinstance(outcome, BaseException):
+                raise outcome
+            return Response(json.dumps(outcome).encode())
+
+        with tempfile.TemporaryDirectory() as directory:
+            state = pathlib.Path(directory) / "state.json"
+            result, output, errors, sleep = self.run_extractor(urlopen, "--state-file", str(state))
+            self.assertEqual(result, 0)
+            self.assertEqual(len(output), 1)
+            self.assertEqual([call.args for call in sleep.call_args_list], [(1.0,)])
+            self.assertEqual(self.summary(errors)["requests"]["attempted"], 2)
+
+    def test_transient_timeout_retries_then_succeeds(self):
+        outcomes = [urllib.error.URLError(TimeoutError("timed out")), [row()]]
+
+        def urlopen(request, timeout):
+            outcome = outcomes.pop(0)
+            if isinstance(outcome, BaseException):
+                raise outcome
+            return Response(json.dumps(outcome).encode())
+
+        with tempfile.TemporaryDirectory() as directory:
+            state = pathlib.Path(directory) / "state.json"
+            result, output, errors, sleep = self.run_extractor(urlopen, "--state-file", str(state))
+            self.assertEqual(result, 0)
+            self.assertEqual(len(output), 1)
+            self.assertEqual([call.args for call in sleep.call_args_list], [(1.0,)])
+            self.assertEqual(self.summary(errors)["requests"]["attempted"], 2)
+
+    def test_persistent_failure_fails_after_bounded_attempts(self):
+        calls = []
+
+        def urlopen(request, timeout):
+            calls.append(1)
+            raise urllib.error.URLError(TimeoutError("timed out"))
+
+        with tempfile.TemporaryDirectory() as directory:
+            state = pathlib.Path(directory) / "state.json"
+            result, output, errors, sleep = self.run_extractor(urlopen, "--state-file", str(state))
+            self.assertEqual(result, 1)
+            self.assertEqual(output, [])
+            self.assertEqual(len(calls), module.MAX_ATTEMPTS)
+            self.assertEqual([call.args for call in sleep.call_args_list], [(1.0,), (2.0,)])
+            self.assertEqual(self.summary(errors)["health"], "failed")
+            self.assertFalse(state.exists())
+
+    def test_non_retryable_http_status_fails_immediately(self):
+        calls = []
+
+        def urlopen(request, timeout):
+            calls.append(1)
+            raise urllib.error.HTTPError(module.URL, 404, "not found", {}, None)
+
+        with tempfile.TemporaryDirectory() as directory:
+            state = pathlib.Path(directory) / "state.json"
+            result, output, errors, sleep = self.run_extractor(urlopen, "--state-file", str(state))
+            self.assertEqual(result, 1)
+            self.assertEqual(output, [])
+            self.assertEqual(len(calls), 1)
+            sleep.assert_not_called()
+            self.assertEqual(self.summary(errors)["health"], "failed")
 
 
 if __name__ == "__main__":
