@@ -9,6 +9,10 @@ collected — never individual juror information. Four courthouse blocks were ve
 Publisher wording is kept verbatim; group ranges are additionally parsed so cohort
 activation can be measured without re-reading prose.
 
+The single request per run is retried in a bounded way on transient transport
+failures (connection errors, DNS blips, read timeouts) before the run is
+allowed to fail.
+
 Stdlib only.
 """
 
@@ -16,6 +20,8 @@ import argparse
 import json
 import os
 import re
+import sys
+import time
 import urllib.request
 from datetime import datetime, timezone
 
@@ -28,6 +34,13 @@ COURTHOUSE = re.compile(
 DATE = re.compile(r"^[A-Z][a-z]+ \d{1,2}, \d{4}$")
 GROUPS = re.compile(r"\b(\d{2,4})\s*-\s*(\d{2,4})\b")
 
+# The court's host intermittently fails DNS resolution (observed 2026-11-16 in
+# task log: gaierror -3, a single attempt lost the whole run). Retry transient
+# transport failures in a bounded way so a brief flap does not lose a run.
+MAX_ATTEMPTS = 4
+RETRY_BASE_DELAY = 5.0
+MAX_RETRY_DELAY = 30.0
+
 
 def _lines(text: str):
     stripped = re.sub(r"<[^>]+>", "\n", text).replace("&nbsp;", " ")
@@ -38,8 +51,22 @@ def _lines(text: str):
 def fetch_instructions(timeout: int = 30):
     request = urllib.request.Request(URL, headers={"User-Agent": USER_AGENT})
     fetched_at = datetime.now(timezone.utc).isoformat()
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        lines = _lines(response.read().decode("utf-8", "replace"))
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                body = response.read()
+            break
+        except urllib.error.HTTPError:
+            raise  # a real HTTP status is not a transport blip; fail loudly
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            delay = min(RETRY_BASE_DELAY * (2 ** attempt), MAX_RETRY_DELAY)
+            reason = exc.reason if isinstance(exc, urllib.error.URLError) else exc
+            print(f"sd_juror_standby: transient failure ({reason}); retrying in {delay:.0f}s "
+                  f"(attempt {attempt + 1} of {MAX_ATTEMPTS})", file=sys.stderr)
+            time.sleep(delay)
+    lines = _lines(body.decode("utf-8", "replace"))
     starts = [
         index
         for index, line in enumerate(lines)
