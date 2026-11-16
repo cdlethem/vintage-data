@@ -55,6 +55,10 @@ DEFAULT_QUERY = "FIRST_PDATE:[NOW-14DAY TO NOW]"
 STATE_VERSION = 1
 MAX_PAGE_SIZE = 1000
 MAX_ANNOTATION_IDS_PER_REQUEST = 8
+MAX_RETRIES = 5
+DEFAULT_RETRY_BUDGET_SECONDS = 180.0
+MAX_RETRY_BUDGET_SECONDS = 300.0
+MAX_RETRY_DELAY_SECONDS = 30.0
 SUMMARY_PREFIX = "VINTAGE_RUN_SUMMARY\t"
 
 
@@ -110,7 +114,14 @@ def _body_context(body: bytes) -> str:
 
 
 class HttpClient:
-    """Paced JSON GET client with bounded transient retries."""
+    """Paced JSON GET client with bounded transient retries.
+
+    Transient transport failures (DNS resolution blips, connection resets, read
+    timeouts) and retriable HTTP statuses are retried per request with 2-30-second
+    exponential backoff. Every request in the run shares one finite retry-time
+    budget, so a brief upstream or resolver outage rides out while a persistent
+    one still fails inside the task timeout.
+    """
 
     def __init__(
         self,
@@ -118,6 +129,7 @@ class HttpClient:
         retries: int,
         request_interval: float,
         *,
+        retry_budget: float = DEFAULT_RETRY_BUDGET_SECONDS,
         opener=None,
         clock=time.monotonic,
         sleeper=time.sleep,
@@ -125,10 +137,12 @@ class HttpClient:
         self.timeout = timeout
         self.retries = retries
         self.request_interval = request_interval
+        self.retry_budget = retry_budget
         self.opener = urllib.request.urlopen if opener is None else opener
         self.clock = clock
         self.sleeper = sleeper
         self._last_request: float | None = None
+        self._retry_deadline = self.clock() + retry_budget
 
     def _pace(self) -> None:
         if self._last_request is not None:
@@ -137,14 +151,23 @@ class HttpClient:
                 self.sleeper(delay)
         self._last_request = self.clock()
 
+    def _retry_remaining(self) -> float:
+        return max(0.0, self._retry_deadline - self.clock())
+
     def get_json(self, url: str, endpoint: str) -> Any:
         for attempt in range(self.retries + 1):
+            remaining = self._retry_remaining()
+            if remaining <= 0:
+                raise RuntimeError(
+                    f"Europe PMC {endpoint} request failed: transient retry budget "
+                    f"of {self.retry_budget:g} seconds exhausted"
+                )
             self._pace()
             request = urllib.request.Request(
                 url, headers={"Accept": "application/json", "User-Agent": USER_AGENT}
             )
             try:
-                with self.opener(request, timeout=self.timeout) as response:
+                with self.opener(request, timeout=min(self.timeout, remaining)) as response:
                     body = response.read()
             except urllib.error.HTTPError as error:
                 body = error.read()
@@ -169,7 +192,13 @@ class HttpClient:
                     f"Europe PMC {endpoint} request failed after {self.retries + 1} attempts: "
                     f"{failure}"
                 ) from failure
-            self.sleeper(min(2**attempt, 30))
+            delay = min(float(2 ** (attempt + 1)), MAX_RETRY_DELAY_SECONDS)
+            if delay > self._retry_remaining():
+                raise RuntimeError(
+                    f"Europe PMC {endpoint} request failed after {attempt + 1} attempts: "
+                    f"transient retry budget of {self.retry_budget:g} seconds exhausted"
+                ) from failure
+            self.sleeper(delay)
         raise AssertionError("unreachable")
 
 
@@ -580,6 +609,12 @@ def main(argv: Sequence[str] | None = None, *, out=None) -> None:
     parser.add_argument("--timeout", type=_positive_float, default=30.0)
     parser.add_argument("--retries", type=_nonnegative_int, default=2)
     parser.add_argument(
+        "--retry-budget",
+        type=_positive_float,
+        default=DEFAULT_RETRY_BUDGET_SECONDS,
+        help="run-wide seconds of transient-retry backoff time",
+    )
+    parser.add_argument(
         "--request-interval",
         type=_nonnegative_float,
         default=0.5,
@@ -592,6 +627,10 @@ def main(argv: Sequence[str] | None = None, *, out=None) -> None:
         parser.error("--query must not be empty")
     if args.page_size > MAX_PAGE_SIZE:
         parser.error(f"--page-size must not exceed {MAX_PAGE_SIZE}")
+    if args.retries > MAX_RETRIES:
+        parser.error(f"--retries must not exceed {MAX_RETRIES}")
+    if args.retry_budget > MAX_RETRY_BUDGET_SECONDS:
+        parser.error(f"--retry-budget must not exceed {MAX_RETRY_BUDGET_SECONDS:g}")
     if args.no_state and args.state_file:
         parser.error("--no-state and --state-file cannot be combined")
     if args.cursor is not None and not args.cursor:
@@ -607,7 +646,12 @@ def main(argv: Sequence[str] | None = None, *, out=None) -> None:
     saved_cursor = state["cursor_mark"] if state.get("query") == args.query else "*"
     starting_cursor = args.cursor or saved_cursor
     fetched_at = datetime.now(timezone.utc).isoformat()
-    client = HttpClient(args.timeout, args.retries, args.request_interval)
+    client = HttpClient(
+        args.timeout,
+        args.retries,
+        args.request_interval,
+        retry_budget=args.retry_budget,
+    )
     null_drops: list[int] = [0]
     records, next_cursor = fetch_bounded(
         query=args.query,
