@@ -45,12 +45,17 @@ Quirks that will bite you:
     return 503. Slice geographically.
   * Open Government Licence — attribution required.
 
+The API occasionally flaps (observed 2026-11-16: a transient DNS resolution
+failure during the scheduled run); transient transport failures and 429/5xx
+responses retry with 1s/2s backoff, at most three attempts per request.
+
 Stdlib only.
 """
 import argparse
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -59,6 +64,35 @@ from datetime import datetime, timezone
 BASE = "https://data.police.uk/api"
 USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https://github.com/cdlethem/vintage-data)"
 
+MAX_ATTEMPTS = 3
+RETRY_BASE_DELAY = 1.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
+
+
+def _urlopen(request, timeout: int):
+    """Open one request, retrying transient failures within a bounded budget.
+
+    A DNS blip (socket.gaierror surfaced as URLError) or a 429/5xx response must
+    not lose the whole run, so they retry with 1s/2s backoff (at most 3 seconds
+    of sleeping). Non-retryable statuses such as 404 raise immediately so the
+    caller's empty-list fallback keeps working.
+    """
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            return urllib.request.urlopen(request, timeout=timeout)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = f"HTTP {exc.code}"
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = str(exc.reason if isinstance(exc, urllib.error.URLError) else exc)
+        delay = RETRY_BASE_DELAY * (2 ** attempt)
+        print(f"uk_police: transient failure ({reason}); retrying in {delay:.0f}s "
+              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+        time.sleep(delay)
+
 
 def _get(path: str, **params):
     url = f"{BASE}/{path}"
@@ -66,7 +100,7 @@ def _get(path: str, **params):
         url += "?" + urllib.parse.urlencode(params)
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
+        with _urlopen(req, 60) as resp:
             return json.load(resp)
     except urllib.error.HTTPError as e:
         if e.code == 404:
