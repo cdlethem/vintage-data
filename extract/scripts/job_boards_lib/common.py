@@ -5,6 +5,7 @@ import html
 import json
 import os
 import re
+import sys
 import threading
 import time
 import urllib.error
@@ -38,7 +39,8 @@ class Board:
 
 
 class HttpClient:
-    """Thread-safe per-provider concurrency and minimum-request-gap policy."""
+    """Thread-safe per-provider concurrency, request-gap policy, and a bounded
+    retry for transient HTTP and transport failures."""
 
     def __init__(self):
         self._sems: dict[str, threading.Semaphore] = {}
@@ -109,10 +111,19 @@ class HttpClient:
                         raise
                     retry_after = exc.headers.get("Retry-After")
                     self._observe(retry=True)
+                except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                    # Transport failure (DNS, connect, reset, read timeout):
+                    # bounded retry, same policy as the standalone fetchers.
+                    if attempt == 2:
+                        raise
+                    retry_after = None
+                    self._observe(retry=True)
             try:
                 delay = min(float(retry_after), 30.0) if retry_after else 2 ** attempt
             except ValueError:
                 delay = 2 ** attempt
+            print(f"job_boards: {provider}: transient failure; retrying in {delay:.0f}s "
+                  f"(attempt {attempt + 1} of 2)", file=sys.stderr)
             time.sleep(delay)
         raise AssertionError("unreachable")
 
