@@ -1,0 +1,17 @@
+name: nws_station_observations
+script: fetch_nws_station_observations.py
+args: ["--timeout", "30", "--request-delay", "1"]
+schedule: "42 * * * *"  # UTC; ASOS reports land roughly hourly, so hourly is the fastest useful poll
+enabled: true
+retries: 2
+timeout_minutes: 10
+sink: local
+run_summary:
+  required: true
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "hourly watermark over a fixed 15-station basket of major U.S. metro ASOS stations; each run emits only reports newer than the stored per-station watermark, bounded by a 48-hour first-run/catch-up floor (verified live: cold run emitted recent reports, immediate re-run emitted 0)"
+rate_limit: "api.weather.gov publishes no fixed quota and asks for a descriptive User-Agent; one serial request per station (15 total) with a 1-second pause, hourly"
+licence: "US National Weather Service / US Government work, public domain"
+attribution: "National Weather Service (NWS), https://www.weather.gov/"
+attribution_required: true
