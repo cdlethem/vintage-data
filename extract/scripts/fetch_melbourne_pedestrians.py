@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fetch Melbourne's past-hour pedestrian-count snapshot with an atomic watermark."""
 from __future__ import annotations
-import argparse, json, os, pathlib, sys, urllib.request
+import argparse, json, os, pathlib, sys, time, urllib.error, urllib.request
 from datetime import datetime, timedelta, timezone
 
 SOURCE = "melbourne_pedestrians"
@@ -10,6 +10,9 @@ USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https:/
 DEFAULT_DATA_ROOT = "~/.local/share/vintage-data/extract"
 SUMMARY_PREFIX = "VINTAGE_RUN_SUMMARY\t"
 COUNT_FIELDS = {"direction_1", "direction_2", "total_of_directions"}
+MAX_ATTEMPTS = 3
+RETRY_BASE_DELAY = 1.0
+RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
 
 
 def state_path(explicit: str | None = None) -> pathlib.Path:
@@ -27,19 +30,46 @@ def save_watermark(path: pathlib.Path, watermark: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True); staged = path.with_name(path.name + ".tmp")
     staged.write_text(json.dumps({"sensing_datetime": watermark}) + "\n", encoding="utf-8"); os.replace(staged, path)
 
-def _download(timeout: int) -> list[dict]:
+def _download(timeout: int) -> tuple[list[dict], int]:
+    """Fetch the full snapshot with a bounded retry on transient failures.
+
+    The City's OpenDataSoft endpoint flaps (a 2026-11-16 blip failed both task
+    attempts in well under a second) and the full snapshot takes ~30s to
+    download. 429/5xx responses and transport errors retry with 1s/2s backoff
+    (at most ~3s of sleeping, well inside the 15-minute task timeout);
+    non-transient HTTP errors and validation failures raise on first
+    occurrence. Returns the validated record list and the number of HTTP
+    attempts made.
+    """
     req = urllib.request.Request(URL, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=timeout) as response: document = json.load(response)
-    if not isinstance(document, list): raise TypeError("Melbourne download is not a JSON record list")
-    for item in document:
-        if not isinstance(item, dict) or not isinstance(item.get("fields"), dict) or not item.get("recordid"):
-            raise ValueError("Melbourne download contains malformed record envelope")
-    return document
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as response: document = json.load(response)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = f"HTTP {exc.code}"
+        except (urllib.error.URLError, TimeoutError) as exc:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            reason = str(exc.reason if isinstance(exc, urllib.error.URLError) else exc)
+        else:
+            if not isinstance(document, list): raise TypeError("Melbourne download is not a JSON record list")
+            for item in document:
+                if not isinstance(item, dict) or not isinstance(item.get("fields"), dict) or not item.get("recordid"):
+                    raise ValueError("Melbourne download contains malformed record envelope")
+            return document, attempt + 1
+        delay = RETRY_BASE_DELAY * (2 ** attempt)
+        print(f"melbourne_pedestrians: transient failure ({reason}); retrying in {delay:.0f}s "
+              f"(attempt {attempt + 1} of {MAX_ATTEMPTS - 1})", file=sys.stderr)
+        time.sleep(delay)
+    raise AssertionError("unreachable")
 
 def fetch_counts(minutes: int = 90, timeout: int = 30, watermark: str = "", progress=None):
     if minutes <= 0: return
     fetched_at = datetime.now(timezone.utc); cutoff = max(watermark, (fetched_at - timedelta(minutes=minutes)).isoformat()) if watermark else (fetched_at - timedelta(minutes=minutes)).isoformat()
-    rows = _download(timeout)
+    rows, attempts = _download(timeout)
+    if progress is not None: progress["requests"] = attempts
     normalized = []
     for item in rows:
         fields = item["fields"]; sensed_at = fields.get("sensing_datetime"); location = fields.get("location_id")
@@ -67,6 +97,6 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:
         print(SUMMARY_PREFIX + json.dumps({"health":"failed", "completeness":"failed", "records":records, "error":str(exc)}), file=sys.stderr)
         return 1
-    print(SUMMARY_PREFIX + json.dumps({"health":"healthy", "completeness":"complete", "records":records, "coverage":{"watermark_before":watermark, "watermark_after":progress["sensing_datetime"]}, "requests":{"attempted":1}}), file=sys.stderr)
+    print(SUMMARY_PREFIX + json.dumps({"health":"healthy", "completeness":"complete", "records":records, "coverage":{"watermark_before":watermark, "watermark_after":progress["sensing_datetime"]}, "requests":{"attempted":progress.get("requests", 0)}}), file=sys.stderr)
     return 0
 if __name__ == "__main__": raise SystemExit(main())
