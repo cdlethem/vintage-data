@@ -2,6 +2,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import socket
 from pathlib import Path
 import tempfile
 import unittest
@@ -530,7 +531,55 @@ class EuropePmcTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "failed after 3 attempts"):
             client.get_json("https://example.test/search", "search")
         self.assertEqual(3, len(opener.requests))
-        self.assertEqual([1, 2], sleeps)
+        self.assertEqual([2.0, 4.0], sleeps)
+
+    def test_transient_dns_failure_is_retried_with_bounded_backoff(self):
+        opener = QueueOpener(
+            [
+                urllib.error.URLError(
+                    socket.gaierror(-3, "Temporary failure in name resolution")
+                ),
+                search([result("1")], None, 1),
+            ]
+        )
+        sleeps = []
+        client = europe_pmc.HttpClient(30, 5, 0, opener=opener, sleeper=sleeps.append)
+        document = client.get_json("https://example.test/search", "search")
+
+        self.assertEqual(1, len(document["resultList"]["result"]))
+        self.assertEqual(2, len(opener.requests))
+        self.assertEqual([2.0], sleeps)
+
+    def test_transient_retries_exhaust_a_shared_run_budget(self):
+        opener = QueueOpener([urllib.error.URLError("offline")] * 10)
+        sleeps = []
+        clock_now = 0.0
+
+        def clock() -> float:
+            return clock_now
+
+        def sleeper(delay: float) -> None:
+            nonlocal clock_now
+            sleeps.append(delay)
+            clock_now += delay
+
+        client = europe_pmc.HttpClient(
+            30, 5, 0, retry_budget=6, opener=opener, clock=clock, sleeper=sleeper
+        )
+        with self.assertRaisesRegex(RuntimeError, "retry budget"):
+            client.get_json("https://example.test/search", "search")
+        self.assertEqual(2, len(opener.requests))
+        self.assertEqual([2.0, 4.0], sleeps)
+        with self.assertRaisesRegex(RuntimeError, "retry budget"):
+            client.get_json("https://example.test/annotations", "annotations")
+        self.assertEqual(2, len(opener.requests))
+
+    def test_cli_rejects_unbounded_retry_settings(self):
+        with self.assertRaises(SystemExit):
+            europe_pmc.main(["--no-state", "--retries", "6"])
+        with self.assertRaises(SystemExit):
+            europe_pmc.main(["--no-state", "--retry-budget", "999"])
+
     def test_annotation_requests_are_bounded_and_flatten_each_batch(self):
         publications = [result(str(number)) for number in range(9)]
         first_batch = [annotation_article(str(number)) for number in range(8)]
