@@ -1,0 +1,24 @@
+name: gdelt_events
+script: fetch_gdelt_events.py
+args: []
+schedule: "*/15 * * * *" # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+run_summary:
+  required: true
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: >
+  GDELT publishes a new 15-minute event file (plus lastupdate.txt) roughly
+  15 minutes after each boundary. Each run ingests the newest unprocessed
+  file, so a 15-minute poll keeps up; a late file is picked up by the next
+  run (gap is flagged in the run summary, not silently skipped).
+rate_limit: >
+  Two small GETs per run (lastupdate.txt ~1KB, export zip ~50-100KB) = ~96
+  requests/day, far under any plausible cap for their public distribution
+  channel; 15-minute polling is the usage pattern GDELT documents.
+licence: "GDELT Project: data free for research and non-commercial use (GDELT Terms of Service)"
+attribution: "The GDELT Project, https://www.gdeltproject.org/"
+attribution_required: true
