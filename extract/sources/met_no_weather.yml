@@ -1,0 +1,15 @@
+name: met_no_weather
+script: fetch_met_no_weather.py
+args: ["--timeout", "30", "--request-delay", "1"]
+schedule: "29 */6 * * *"  # UTC; forecasts refresh hourly (Nordic) / every 6 h (rest of world); six-hour collection is conservative
+# Disabled until a first live run and its warehouse load have been checked.
+enabled: false
+retries: 1
+timeout_minutes: 5
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "six-hour UTC snapshots of a fixed six-location basket, eight hourly variables plus the one-hour weather symbol, bounded nine-day forecast horizon; one request per location per run"
+rate_limit: "service terms cap total traffic at 20 requests/second and forbid repeating an identical request more often than every 30 minutes (Nordic) or 3 hours (elsewhere); this source makes six requests every six hours, staggered at :29"
+licence: "NLOD 2.0 / CC BY 4.0; attribute MET Norway (https://api.met.no/) as the data source"
+attribution_required: true
