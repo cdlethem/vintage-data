@@ -1,0 +1,15 @@
+name: nhc_hurdat2_atlantic
+script: fetch_nhc_hurdat2_atlantic.py
+args: []
+schedule: "23 5 * * *"  # UTC; daily check for a new NHC archive release
+enabled: true
+retries: 1
+timeout_minutes: 15
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "new NHC HURDAT2 release: a new storm, a track revision, a re-analysis, or a season report (snapshot file replaced in place, so change is detected by ETag/sha256)"
+rate_limit: "no published limit; one directory listing plus one ~7 MB text file per run, served from a CloudFront edge cache"
+licence: "US Government work (NOAA NHC), public domain"
+attribution: "National Hurricane Center, https://www.nhc.noaa.gov/data/hurdat/"
+attribution_required: false
