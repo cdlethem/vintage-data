@@ -249,5 +249,9 @@
  "wikimedia_pageviews": {
   "type": "feed",
   "notes": "per-article daily views for a fixed article list; each completed UTC day adds new (article, day) ids, so novelty is expected on most daily runs"
- }
+},
+ "usno_earth_rotation": {
+  "type": "feed",
+  "notes": "IERS daily EOP finals; one new final row per UTC day appears the next day, so ~1 record per daily run is normal and zero on a rerun"
+}
 }

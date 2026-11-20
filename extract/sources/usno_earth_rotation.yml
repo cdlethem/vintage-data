@@ -1,0 +1,25 @@
+name: usno_earth_rotation
+script: fetch_usno_earth_rotation.py
+args: []
+schedule: "55 19 * * *"  # UTC; daily after USNO's ~17:00Z finals publication
+enabled: true
+retries: 1
+timeout_minutes: 5
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+# USNO's Earth Rotation and Reference Systems Service publishes the IERS
+# finals for Earth orientation in a fixed-width text file
+# (https://maia.usno.navy.mil/ser7/finals.daily): one new final row per
+# calendar day with UT1-UTC, polar motion x/y, length of day, and
+# precession-nutation corrections plus their uncertainties. The file is
+# republished around 17:00Z (verified 2026-11-20: directory listing shows
+# the 2026-11-19 update, and the newest final row is MJD 61363.00 =
+# 2026-11-19, one day behind the clock as expected). finals.daily carries
+# ~90 days of finals plus ~90 days of daily-revised predictions; the
+# fetcher keeps only final rows (IERS flag I) behind an MJD watermark, so a
+# steady run emits exactly one new row per day.
+cadence_note: "one new final row per UTC day; the day's values are published the following day around 17:00Z, so a 19:55Z daily poll is the honest cadence"
+rate_limit: "one bounded GET per run, ~33 KB; no published limit"
+licence: "U.S. government work (USNO / IERS); public domain, no terms restrict collection"
+attribution_required: true
