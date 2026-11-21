@@ -1,0 +1,15 @@
+name: adsbfi_hubs
+script: fetch_adsbfi_hubs.py
+args: []
+schedule: "26-56/15 * * * *"  # UTC; minutes 26/41/56, staggered against other 5- and 15-minute sources
+enabled: true
+retries: 1
+timeout_minutes: 5
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "aircraft positions refresh continuously from community receivers; eight major hub snapshots are taken every 15 minutes"
+rate_limit: "public adsb.fi limit is 1 request/second; each run makes 8 hub requests at least 1 second apart"
+licence: "adsb.fi open data: personal, non-commercial use only; attribution to adsb.fi is required"
+attribution: "adsb.fi open data API, https://www.adsb.fi/ (ADS-B positions contributed by community receivers)"
+attribution_required: true
