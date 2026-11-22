@@ -49,7 +49,17 @@ def _get(path: str, **params):
 
 
 def _ms(v):
-    return datetime.fromtimestamp(v / 1000, tz=timezone.utc).isoformat() if v else None
+    """UNIX ms → ISO-8601 UTC; None when absent or unrepresentable.
+
+    Some markets carry sentinel timestamps (e.g. ``closeTime`` just past
+    year 9999 for "never closes"), which ``datetime`` cannot render.
+    """
+    if not v:
+        return None
+    try:
+        return datetime.fromtimestamp(v / 1000, tz=timezone.utc).isoformat()
+    except (OverflowError, OSError, ValueError):
+        return None
 
 
 def _norm(m: dict, now: str) -> dict:
