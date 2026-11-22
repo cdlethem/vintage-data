@@ -1,0 +1,15 @@
+name: pypistats_downloads
+script: fetch_pypistats_downloads.py
+args: []
+schedule: "37 7 * * *"  # UTC; pypistats updates once daily and the newest row is the previous UTC day
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "pypistats refreshes its BigQuery-backed download stats once a day; at 07:37 UTC the newest row in the series is the previous UTC day, so a daily pull collects exactly the newly final day per package"
+rate_limit: "IP-based rate limiting with no published quota; a burst of ~10 fast requests drew a 429. 50 sequential requests spaced 2 seconds apart, with 429/5xx retried on growing delay"
+licence: "PSF public PyPI download statistics (Google BigQuery) served by the PSF-hosted pypistats.org"
+attribution: "pypistats.org (PyPI download stats hosted by the Python Software Foundation), https://pypistats.org/"
+attribution_required: true
