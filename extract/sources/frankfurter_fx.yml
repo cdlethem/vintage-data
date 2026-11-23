@@ -1,0 +1,22 @@
+name: frankfurter_fx
+script: fetch_frankfurter_fx.py
+# One bounded ECB-provider request per daily run: USD reference rates for the
+# 25-currency ECB basket over the seven complete UTC calendar dates before the
+# run. The API snaps each bound to the last ECB business day on or before it.
+args: ["--lookback-days", "7", "--timeout", "60", "--retries", "2", "--retry-delay", "10"]
+schedule: "23 17 * * *"  # UTC; ECB publishes reference rates around 16:00 UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Daily publication (weekdays) does not justify adaptive scheduling.
+cadence:
+  auto: false
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "ECB publishes one reference-rate set per business day; the daily run re-fetches a seven-UTC-calendar-day window so weekends, holidays, late publication and revisions are covered by bounded overlap, and stable date:base:quote ids keep replay deduplication exact"
+rate_limit: "no published limit for the public API; one bounded request per daily run"
+licence: "Frankfurter API terms: free, keyless, commercial use and long-term storage permitted (code MIT); ECB reference-rate figures remain under the ECB's data re-use terms"
+attribution: "Frankfurter (https://frankfurter.dev), data from the European Central Bank"
+attribution_required: false
