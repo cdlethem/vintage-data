@@ -1,0 +1,17 @@
+name: ons_statistics
+script: fetch_ons_statistics.py
+args: []
+schedule: "29 4 * * *"  # UTC; daily poll; the fastest-changing dataset in the basket (weekly deaths) updates weekly
+# Keep disabled until an operator records both a successful live-source smoke and a
+# successful Airflow import check. Confined verification must not perform those checks
+# or mutate Airflow metadata.
+enabled: false
+retries: 1
+timeout_minutes: 20
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "Daily poll of the latest time-series version for five ONS datasets (labour market, GDP, retail sales, CPIH inflation, weekly deaths); the complete historical CSV is downloaded each run and only rows with a never-before-seen dimension combination are emitted, so ONS revisions keep the first-observed value"
+rate_limit: "no published quota on the beta API; 10 metadata calls plus 5 CSV downloads per run, about 330 requests/month at daily cadence"
+licence: "Open Government Licence v3.0; attribute 'Contains public sector information from the UK Office for National Statistics, licensed under the Open Government Licence v3.0'"
+attribution_required: true
