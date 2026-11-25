@@ -1,0 +1,15 @@
+name: cisa_kev
+script: fetch_cisa_kev.py
+args: []
+schedule: "41 18 * * *"  # UTC; daily after CISA's US business day (latest release observed 17:47Z)
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "the complete catalog is re-published on every change (~20-43 CVEs added per month 2026-04..2026-11, i.e. several times a week); one daily poll captures each re-publication and the fetcher emits only the delta, so the warehouse sees new/updated/removed KEV entries, not full-catalog duplication"
+rate_limit: "keyless; one bounded ~1.9 MB request per day to the public catalog JSON feed; no published quota"
+licence: "CC0 1.0 Universal per the CISA KEV license (https://www.cisa.gov/sites/default/files/licenses/kev/license.txt)"
+attribution: "CISA Known Exploited Vulnerabilities (KEV) Catalog, https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
+attribution_required: false
