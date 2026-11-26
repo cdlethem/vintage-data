@@ -43,6 +43,7 @@ requests/minute for anonymous use; self-impose well under that for routine polli
 Stdlib only.
 """
 import argparse
+import email.utils
 import json
 import os
 import sys
@@ -56,28 +57,42 @@ USER_AGENT = os.environ.get("EXTRACT_USER_AGENT") or "vintage-data/0.1 (+https:/
 BASE = "https://zenodo.org/api/records"
 
 REQUEST_TIMEOUT_SECONDS = 60
-MAX_ATTEMPTS = 5
-RETRY_DELAYS_SECONDS = (2, 5, 10)
-# Zenodo intermittently 500s (observed 2026-10-02: the 03:17 scheduled run
-# got HTTP 500 while the identical request succeeds seconds apart) — a
-# server-side blip, not a bad request. Retry transient HTTP codes and
-# timeouts in a bounded way before the run is allowed to fail.
+# Zenodo is intermittently unhealthy: seconds-scale flapping (observed
+# 2026-10-02: the 03:17 scheduled run got HTTP 500 while the identical
+# request succeeds seconds apart) and sustained multi-minute HTTP 503
+# windows (observed 2026-11-26: 503s across the 08:17 run and its
+# five-minute task retry, ~6+ minutes), so the delay budget spans
+# minutes, not seconds. Retry transient HTTP codes and transport
+# failures in a bounded way before the run is allowed to fail.
 RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
+MAX_TRANSIENT_ATTEMPTS = 10
+DEFAULT_RETRY_DELAY_SECONDS = 5
+MAX_RETRY_DELAY_SECONDS = 30
+MAX_RETRY_CUMULATIVE_DELAY_SECONDS = 480
 
 
-def _is_timeout(error):
-    if isinstance(error, urllib.error.HTTPError):
-        return False
-    return isinstance(error, TimeoutError) or (
-        isinstance(error, urllib.error.URLError)
-        and isinstance(error.reason, TimeoutError)
-    )
+def next_delay(attempt, headers, now=None):
+    """Bounded delay before the next attempt.
 
-def _is_retryable(error):
-    return _is_timeout(error) or (
-        isinstance(error, urllib.error.HTTPError)
-        and error.code in RETRYABLE_HTTP_CODES
-    )
+    Grows exponentially from DEFAULT to MAX (5, 10, 20, 30, ... seconds),
+    stretched to a valid Retry-After header value when the server asks for
+    a longer pause; clamped to [DEFAULT, MAX].
+    """
+    delay = DEFAULT_RETRY_DELAY_SECONDS * (2 ** (attempt - 1))
+    value = headers.get("Retry-After") if headers is not None else None
+    if isinstance(value, str):
+        value = value.strip()
+        try:
+            if value.isdigit():
+                delay = max(delay, int(value))
+            else:
+                retry_at = email.utils.parsedate_to_datetime(value)
+                if retry_at.tzinfo is None:
+                    retry_at = retry_at.replace(tzinfo=timezone.utc)
+                delay = max(delay, (retry_at - (now or datetime.now(timezone.utc))).total_seconds())
+        except (IndexError, TypeError, ValueError):
+            pass
+    return max(DEFAULT_RETRY_DELAY_SECONDS, min(MAX_RETRY_DELAY_SECONDS, delay))
 
 
 def _report_request_failure(params, error, attempt_count):
@@ -109,20 +124,45 @@ def _validate_response(doc):
 
 
 def _get(**params):
+    """Fetch one records document, retrying transient failures in a bounded way.
+
+    Transient HTTP codes and transport failures (timeouts, DNS blips,
+    connection resets) retry with exponential 5-30-second delays (stretched
+    to a longer Retry-After value when the server sends one), bounded by a
+    480-second cumulative delay budget — well inside the ten-minute task
+    timeout. Non-retryable HTTP codes, malformed JSON, and schema mismatches
+    fail immediately, never retried.
+    """
     url = f"{BASE}?{urllib.parse.urlencode(params)}"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT,
                                                 "Accept": "application/json"})
-    for attempt_count in range(1, MAX_ATTEMPTS + 1):
+    cumulative_delay = 0
+    for attempt_count in range(1, MAX_TRANSIENT_ATTEMPTS + 1):
         try:
             with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as resp:
                 return _validate_response(json.load(resp))
+        except urllib.error.HTTPError as error:
+            if error.code not in RETRYABLE_HTTP_CODES:
+                _report_request_failure(params, error, attempt_count)
+                raise
+            last_error = error
+            delay = next_delay(attempt_count, error.headers)
+        except (urllib.error.URLError, TimeoutError) as error:
+            last_error = error
+            delay = next_delay(attempt_count, None)
         except Exception as error:
-            if _is_retryable(error) and attempt_count < MAX_ATTEMPTS:
-                delay_index = min(attempt_count - 1, len(RETRY_DELAYS_SECONDS) - 1)
-                time.sleep(RETRY_DELAYS_SECONDS[delay_index])
-                continue
             _report_request_failure(params, error, attempt_count)
             raise
+        if attempt_count == MAX_TRANSIENT_ATTEMPTS:
+            _report_request_failure(params, last_error, attempt_count)
+            raise last_error
+        if cumulative_delay + delay > MAX_RETRY_CUMULATIVE_DELAY_SECONDS:
+            _report_request_failure(params, last_error, attempt_count)
+            raise last_error
+        print(f"zenodo: transient failure; retrying in {delay:.0f}s "
+              f"(attempt {attempt_count} of {MAX_TRANSIENT_ATTEMPTS})", file=sys.stderr)
+        time.sleep(delay)
+        cumulative_delay += delay
 
 
 def fetch_recent(size: int = 25, query: str | None = None):

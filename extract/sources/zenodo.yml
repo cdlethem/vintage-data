@@ -3,7 +3,7 @@ script: fetch_zenodo.py
 args: []
 schedule: "17,47 * * * *"  # UTC
 enabled: true
-retries: 1
+retries: 2  # 503 windows observed lasting ~6 minutes (2026-11-26); one 5-min task retry is not enough
 timeout_minutes: 10
 sink: local
 
