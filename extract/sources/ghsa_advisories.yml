@@ -1,0 +1,25 @@
+name: ghsa_advisories
+script: fetch_ghsa_advisories.py
+args: ["--lookback-days", "5", "--max-days", "14", "--max-pages", "200", "--max-records", "20000", "--timeout", "30", "--request-delay", "1"]
+schedule: "23 9 * * *"  # UTC; one daily run, staggered away from other 9am and 23-minute sources
+enabled: true
+retries: 2
+timeout_minutes: 30
+sink: local
+run_summary:
+  required: true
+
+# No API key is required or accepted: the unauthenticated api.github.com core
+# rate limit is 60 requests/hour, and the configured run stays far below it
+# (one cursor-paginated day bucket per UTC day, ~10 pages/day in November 2026,
+# serial, one second apart). State is a single updated_at watermark, written
+# atomically outside the repository only after all stdout records and the
+# reserved summary line flush. The window is re-fetched around the watermark
+# day and filtered client-side, so a failed run's replay emits no duplicates.
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "daily incremental run over the watermark day through today; first run covers five days; gaps longer than fourteen days are dropped and reported in the summary"
+rate_limit: "at most ~20 serial cursor requests per run (two day buckets of 100 records each at current update volume), paced one second apart, well under the unauthenticated 60 requests/hour core limit"
+licence: "public GitHub Security Advisories; each advisory is published by its reporter or vendor under their own terms, and no licence restricting automated collection of the public database was identified"
+attribution: "GitHub Global Advisory Database, https://github.com/advisories"
+attribution_required: true
+deduplication_note: "RAW is insert-only; the updated_at watermark makes replays idempotent, and updated advisories reappear intentionally as new versions of the same ghsa_id"
