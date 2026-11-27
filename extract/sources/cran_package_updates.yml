@@ -1,0 +1,14 @@
+name: cran_package_updates
+script: fetch_cran_package_updates.py
+args: []
+schedule: "10 3 * * *"  # UTC
+enabled: true
+retries: 1
+timeout_minutes: 10
+sink: local
+
+# Vetting metadata (documentation only, not read by the DAG factory)
+cadence_note: "R packages with a current version published since the previous run (new packages plus updates)"
+rate_limit: "1 index page + 1 page per updated package per run (~70 rows/day); no published limit, polite via User-Agent"
+licence: "CRAN package index, public data; metadata only (each package remains under its own licence)"
+attribution_required: false
